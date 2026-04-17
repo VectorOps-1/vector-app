@@ -35,12 +35,19 @@ jobs:
     needs: build
 
     steps:
-      - name: Download artifact      - name: Login to Azure
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E7A3FCB8C9864806A49A8D1A0C3A42B3 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_85366A0A353547FCA2080497E6D316A1 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44FDB48506B447B8B6A945AF495E5D30 }}Deploy to Azure
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44FDB48506B447B8B6A945AF495E5D30 }}
+
+      - name: Deploy to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'vector-app'
