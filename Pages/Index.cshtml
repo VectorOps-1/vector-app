@@ -4,13 +4,11 @@
     ViewData["Title"] = "Home page";
 }
 
-<!-- Splash Screen -->
-<div id="splash" style="height:100vh; display:flex; justify-content:center; align-items:center; background:black;">
-    <img src="/Vector2.0.png" style="width:150px; display:block; margin:0 auto; opacity:0; animation: fadeIn 2s forwards;" />
+<div id="splash">
+    <img src="/Vector2.0.png" alt="Vector Logo" />
 </div>
 
-<!-- Main Content -->
-<div id="mainContent" style="display:none;" class="text-center">
+<div id="mainContent" class="text-center">
     <h1 class="display-4">Vector Ops</h1>
     <p>Equipment | Vehicles | Staff | Stock</p>
 
@@ -23,21 +21,71 @@
 </div>
 
 <style>
-@@keyframes fadeIn {
-    to { opacity: 1; }
-}
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: black;
+    }
+
+    #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: black;
+        opacity: 1;
+        transition: opacity 1.2s ease-in-out;
+        z-index: 9999;
+    }
+
+    #splash img {
+        width: 180px;
+        opacity: 0;
+        transform: scale(0.96);
+        animation: fadeLogo 1.4s ease-out forwards;
+    }
+
+    #mainContent {
+        opacity: 0;
+        transition: opacity 0.8s ease-in-out;
+        padding-top: 120px;
+        min-height: 100vh;
+        background: white;
+    }
+
+    #mainContent.show {
+        opacity: 1;
+    }
+
+    #splash.hide {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @@keyframes fadeLogo {
+        from {
+            opacity: 0;
+            transform: scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
 </style>
 
 <script>
-<script>
-    setTimeout(function () {
-        document.getElementById("splash").style.transition = "opacity 1.2s ease";
-        document.getElementById("splash").style.opacity = "0";
+    window.addEventListener("load", function () {
+        setTimeout(function () {
+            document.getElementById("splash").classList.add("hide");
+            document.getElementById("mainContent").classList.add("show");
+        }, 1600);
 
         setTimeout(function () {
             document.getElementById("splash").style.display = "none";
-            document.getElementById("mainContent").style.display = "block";
-        }, 1200);
-    }, 1800);
+        }, 2800);
+    });
+</script>
 </script>
 </script>
