@@ -21,7 +21,7 @@
 
 <div id="mainContent" class="home-screen">
     <div class="home-inner">
-        <h1 class="home-title">Vector</h1>
+        <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
         <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
 
         <div class="menu-row">
@@ -81,7 +81,7 @@
 
    animation:
     taglineAppear 0.01s linear 1s forwards,
-    typing 1s steps(12, end) 1s forwards,
+    typing 0.25s steps(12, end) 1s forwards,
     blink 0.7s step-end 1s 4,
     hideCursor 0.01s linear 3s forwards;
 }
@@ -110,6 +110,16 @@
         text-align: center;
         padding-top: 110px;
     }
+
+.home-logo {
+    width: 320px;
+    max-width: 80%;
+    margin-bottom: 20px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    mix-blend-mode: multiply;
+}
 
     .home-title {
         font-size: 72px;
