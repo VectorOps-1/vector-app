@@ -5,13 +5,9 @@
 }
 
 <script>
-    (function () {
-        try {
-            if (sessionStorage.getItem("homeSplashDone") === "true") {
-                document.documentElement.classList.add("skip-splash");
-            }
-        } catch (e) { }
-    })();
+    if (sessionStorage.getItem("splashShown") === "true") {
+        document.documentElement.classList.add("skip-splash");
+    }
 </script>
 
 <div id="splash">
@@ -234,7 +230,7 @@
         setTimeout(function () {
             splash.classList.add("hide");
             mainContent.classList.add("show");
-            sessionStorage.setItem("homeSplashDone", "true");
+            sessionStorage.setItem("splashShown", "true");
         }, 2600);
 
         setTimeout(function () {
