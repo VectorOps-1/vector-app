@@ -5,7 +5,7 @@
 }
 
 <div id="splash">
-    <img src="/Vector2.0.png" alt="Vector Logo" />
+    <img src="/vector-splash.png" alt="Vector Splash" />
 </div>
 
 <div id="mainContent" class="text-center">
@@ -24,38 +24,27 @@
     html, body {
         margin: 0;
         padding: 0;
-        background: black;
     }
 
     #splash {
         position: fixed;
         inset: 0;
+        background: black;
         display: flex;
         justify-content: center;
         align-items: center;
-        background: black;
-        opacity: 1;
-        transition: opacity 1.2s ease-in-out;
         z-index: 9999;
+        opacity: 1;
+        transition: opacity 1.4s ease-in-out;
     }
 
     #splash img {
-        width: 180px;
+        width: 600px;
+        max-width: 80vw;
+        height: auto;
+        display: block;
         opacity: 0;
-        transform: scale(0.96);
-        animation: fadeLogo 1.4s ease-out forwards;
-    }
-
-    #mainContent {
-        opacity: 0;
-        transition: opacity 0.8s ease-in-out;
-        padding-top: 120px;
-        min-height: 100vh;
-        background: white;
-    }
-
-    #mainContent.show {
-        opacity: 1;
+        animation: logoFadeIn 1.4s ease-out forwards;
     }
 
     #splash.hide {
@@ -63,7 +52,18 @@
         pointer-events: none;
     }
 
-    @@keyframes fadeLogo {
+    #mainContent {
+        min-height: 100vh;
+        padding-top: 120px;
+        opacity: 0;
+        transition: opacity 1.0s ease-in-out;
+    }
+
+    #mainContent.show {
+        opacity: 1;
+    }
+
+    @@keyframes logoFadeIn {
         from {
             opacity: 0;
             transform: scale(0.96);
@@ -80,10 +80,10 @@
         setTimeout(function () {
             document.getElementById("splash").classList.add("hide");
             document.getElementById("mainContent").classList.add("show");
-        }, 1600);
+        }, 1800);
 
         setTimeout(function () {
             document.getElementById("splash").style.display = "none";
-        }, 2800);
+        }, 3200);
     });
 </script>
