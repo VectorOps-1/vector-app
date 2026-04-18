@@ -21,15 +21,17 @@
     </div>
 </div>
 
-<div id="mainContent" class="container text-center">
-    <h1 class="display-4">Vector</h1>
-    <p>Equipment | Vehicles | Staff | Stock</p>
+<div id="mainContent" class="home-screen">
+    <div class="home-inner">
+        <h1 class="home-title">Vector</h1>
+        <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
 
-    <div class="menu-row">
-        <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
-        <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
-        <a class="menu-btn stock-btn" href="/Stock">Stock</a>
-        <a class="menu-btn staff-btn" href="#">Staff</a>
+        <div class="menu-row">
+            <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
+            <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
+            <a class="menu-btn stock-btn" href="/Stock">Stock</a>
+            <a class="menu-btn staff-btn" href="#">Staff</a>
+        </div>
     </div>
 </div>
 
@@ -37,19 +39,18 @@
     html, body {
         margin: 0;
         padding: 0;
-        background: black;
     }
 
     #splash {
         position: fixed;
         inset: 0;
-        background: black;
+        background: #000;
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 9999;
         opacity: 1;
-        transition: opacity 1.2s ease;
+        transition: opacity 0.9s ease;
     }
 
     .splash-content {
@@ -60,24 +61,36 @@
 
     #splash img {
         width: 80vw;
-        max-width: 900px;
-        min-width: 240px;
+        max-width: 950px;
+        min-width: 260px;
+        height: auto;
+        display: block;
         opacity: 0;
-        animation: logoFadeIn 1.2s ease forwards;
+        transform: scale(0.97);
+        animation: logoFadeIn 1.4s ease-out forwards;
     }
 
     .tagline {
-        margin-top: 20px;
-        font-size: 34px;
+        margin-top: 26px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 36px;
         font-weight: 700;
+        letter-spacing: 0.5px;
         color: #4da3ff;
         overflow: hidden;
         white-space: nowrap;
-        border-right: 2px solid rgba(77,163,255,0.7);
+        border-right: 2px solid rgba(77, 163, 255, 0.8);
         width: 0;
+        opacity: 0;
         animation:
-            typing 1.6s steps(12, end) 0.5s forwards,
-            blink 0.7s step-end infinite;
+            taglineAppear 0.01s linear 0.55s forwards,
+            typing 1.6s steps(12, end) 0.55s forwards,
+            blink 0.7s step-end infinite 0.55s;
+        text-shadow:
+            0 1px 0 #1a4f99,
+            0 2px 0 #143f7a,
+            0 4px 12px rgba(0, 0, 0, 0.65),
+            0 0 10px rgba(77, 163, 255, 0.22);
     }
 
     #splash.hide {
@@ -85,66 +98,118 @@
         pointer-events: none;
     }
 
-    #mainContent {
+    .home-screen {
         display: none;
         min-height: 100vh;
-        padding-top: 120px;
+        background: #ffffff;
         opacity: 0;
-        transition: opacity 0.8s ease;
-        color: white;
+        transition: opacity 0.7s ease;
     }
 
-    #mainContent.show {
-        display: block;
+    .home-screen.show {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
         opacity: 1;
+    }
+
+    .home-inner {
+        text-align: center;
+        padding-top: 110px;
+    }
+
+    .home-title {
+        margin: 0;
+        font-size: 72px;
+        font-weight: 300;
+        line-height: 1;
+        color: #111;
+    }
+
+    .home-subtitle {
+        margin-top: 14px;
+        margin-bottom: 34px;
+        font-size: 24px;
+        color: #2f2f2f;
     }
 
     .menu-row {
         display: flex;
         justify-content: center;
-        gap: 16px;
+        gap: 18px;
         flex-wrap: wrap;
-        margin-top: 30px;
     }
 
     .menu-btn {
-        padding: 14px 28px;
-        border-radius: 10px;
-        font-size: 18px;
-        font-weight: 600;
+        display: inline-block;
+        min-width: 165px;
+        padding: 16px 28px;
+        border-radius: 14px;
         text-decoration: none;
-        color: white;
-        box-shadow: 0 6px 14px rgba(0,0,0,0.4);
-        transition: all 0.15s ease;
+        font-size: 18px;
+        font-weight: 700;
+        border: none;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
 
     .menu-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 22px rgba(0,0,0,0.5);
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
     }
 
     .menu-btn:active {
         transform: translateY(1px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
     }
 
-    .vehicle-btn { background: #6c757d; }
-    .equipment-btn { background: #0d6efd; }
-    .stock-btn { background: #ffc107; color: black; }
-    .staff-btn { background: #198754; }
+    .vehicle-btn {
+        background: #7b848d;
+        color: #fff;
+    }
+
+    .equipment-btn {
+        background: #1976ff;
+        color: #fff;
+    }
+
+    .stock-btn {
+        background: #f4bf06;
+        color: #111;
+    }
+
+    .staff-btn {
+        background: #189255;
+        color: #fff;
+    }
 
     html.skip-splash #splash {
         display: none !important;
     }
 
-    html.skip-splash #mainContent {
-        display: block !important;
+    html.skip-splash .home-screen {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
         opacity: 1 !important;
+        background: #ffffff !important;
     }
 
     @@keyframes logoFadeIn {
-        from { opacity: 0; transform: scale(0.96); }
-        to { opacity: 1; transform: scale(1); }
+        from {
+            opacity: 0;
+            transform: scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    @@keyframes taglineAppear {
+        to {
+            opacity: 1;
+        }
     }
 
     @@keyframes typing {
@@ -162,16 +227,18 @@
         const splash = document.getElementById("splash");
         const mainContent = document.getElementById("mainContent");
 
-        if (document.documentElement.classList.contains("skip-splash")) return;
+        if (document.documentElement.classList.contains("skip-splash")) {
+            return;
+        }
 
-        setTimeout(() => {
+        setTimeout(function () {
             splash.classList.add("hide");
             mainContent.classList.add("show");
             sessionStorage.setItem("homeSplashDone", "true");
-        }, 1800);
+        }, 2600);
 
-        setTimeout(() => {
+        setTimeout(function () {
             splash.style.display = "none";
-        }, 3000);
+        }, 3600);
     });
 </script>
