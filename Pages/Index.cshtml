@@ -6,7 +6,6 @@
 
 <script>
     // TEMP: force splash to show while fixing layout
-    sessionStorage.removeItem("splashShown");
 
     if (sessionStorage.getItem("splashShown") === "true") {
         document.documentElement.classList.add("skip-splash");
@@ -194,7 +193,7 @@ html.skip-splash .home-screen {
 
 @@keyframes typing {
     from { width: 0; }
-    to { width: 12ch; }
+    to { width: 14ch; }
 }
 
 @@keyframes blink {
