@@ -190,19 +190,13 @@
         const splash = document.getElementById("splash");
         const mainContent = document.getElementById("mainContent");
 
-        if (!sessionStorage.getItem("splashShown")) {
-            setTimeout(function () {
-                splash.classList.add("hide");
-                mainContent.classList.add("show");
-                sessionStorage.setItem("splashShown", "true");
-            }, 1800);
-
-            setTimeout(function () {
-                splash.style.display = "none";
-            }, 3200);
-        } else {
-            splash.style.display = "none";
+        setTimeout(function () {
+            splash.classList.add("hide");
             mainContent.classList.add("show");
-        }
+        }, 1800);
+
+        setTimeout(function () {
+            splash.style.display = "none";
+        }, 3200);
     });
 </script>
