@@ -64,7 +64,7 @@
         min-width: 260px;
         opacity: 0;
         transform: scale(0.95);
-        animation: logoFadeIn 1.6s ease-out forwards;
+        animation: logoFadeIn 2.6s ease-out forwards;
     }
 
 .tagline {
@@ -80,10 +80,10 @@
     opacity: 0;
 
     animation:
-        taglineAppear 0.01s linear 0.8s forwards,
-        typing 1.6s steps(12, end) 0.8s forwards,
-        blink 0.7s step-end 0.8s 6,
-        hideCursor 0.01s linear 2.4s forwards;
+    taglineAppear 0.01s linear 1.2s forwards,
+    typing 2.6s steps(12, end) 1.2s forwards,
+    blink 0.7s step-end 1.2s 6,
+    hideCursor 0.01s linear 3.8s forwards;
 }
 
     #splash.hide {
@@ -178,7 +178,7 @@
 
     @@keyframes typing {
         from { width: 0; }
-        to { width: 12ch; }
+        to { width: 13ch; }
     }
 
     @@keyframes blink {
