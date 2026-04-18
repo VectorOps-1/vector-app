@@ -67,22 +67,24 @@
         animation: logoFadeIn 1.6s ease-out forwards;
     }
 
-    .tagline {
-        margin-top: 26px;
-        font-size: 36px;
-        font-weight: 700;
-        color: #4da3ff;
-        overflow: hidden;
-        white-space: nowrap;
-        border-right: 2px solid rgba(77,163,255,0.8);
-        width: 0;
-        opacity: 0;
+.tagline {
+    margin-top: 26px;
+    font-family: "Engravers MT", serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #4da3ff;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid rgba(77,163,255,0.8);
+    width: 0;
+    opacity: 0;
 
-        animation:
-            taglineAppear 0.01s linear 0.8s forwards,
-            typing 1.6s steps(12, end) 0.8s forwards,
-            blink 0.7s step-end infinite 0.8s;
-    }
+    animation:
+        taglineAppear 0.01s linear 0.8s forwards,
+        typing 1.6s steps(12, end) 0.8s forwards,
+        blink 0.7s step-end 0.8s 6,
+        hideCursor 0.01s linear 2.4s forwards;
+}
 
     #splash.hide {
         opacity: 0;
@@ -182,6 +184,9 @@
     @@keyframes blink {
         50% { border-color: transparent; }
     }
+@@keyframes hideCursor {
+    to { border-right-color: transparent; }
+}
 </style>
 
 <script>
