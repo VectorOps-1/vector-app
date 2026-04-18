@@ -19,6 +19,7 @@
 
 <div id="mainContent" class="home-screen">
     <div class="home-inner">
+
         <div class="home-label">Operations Dashboard</div>
 
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
@@ -35,6 +36,7 @@
         </div>
 
         <div class="home-footer">Vector v0.1</div>
+
     </div>
 </div>
 
@@ -63,34 +65,39 @@ html, body {
     align-items: center;
 }
 
+/* LOGO FADE */
 #splash img {
     width: 80vw;
     max-width: 950px;
     min-width: 260px;
     opacity: 0;
     transform: scale(0.95);
-    animation: logoFadeIn 2.6s ease-out forwards;
+    animation: logoFadeIn 1.5s ease-out forwards;
 }
 
+/* TAGLINE */
 .tagline {
     margin-top: 26px;
     font-family: "Engravers MT", serif;
     font-size: 36px;
     font-weight: 700;
     color: #ffffff;
+
     overflow: hidden;
     white-space: nowrap;
     border-right: 2px solid rgba(255,255,255,0.85);
+
     width: 0;
     opacity: 0;
 
     animation:
-        taglineAppear 0.01s linear 1s forwards,
-        typing 0.5s steps(12, end) 1s forwards,
-        blink 0.7s step-end 1s 4,
-        hideCursor 0.01s linear 2s forwards;
+        taglineAppear 0.01s linear 0.6s forwards,
+        typing 1s steps(12, end) 0.6s forwards,
+        blink 0.7s step-end 0.6s 3,
+        hideCursor 0.01s linear 1.6s forwards;
 }
 
+/* HIDE SPLASH */
 #splash.hide {
     opacity: 0;
     pointer-events: none;
@@ -127,7 +134,7 @@ html, body {
 }
 
 .home-logo {
-    width: 420px;
+    width: 540px; /* increased ~30% */
     max-width: 80%;
     margin-bottom: 12px;
     display: block;
@@ -157,12 +164,7 @@ html, body {
     flex-wrap: wrap;
 }
 
-/* ONLY COLORS HERE (structure is global now) */
-.vehicle-btn { background: #7b848d; color: black; }
-.equipment-btn { background: #1976ff; color: black; }
-.stock-btn { background: #f4bf06; color: black; }
-.staff-btn { background: #189255; color: black; }
-
+/* FOOTER */
 .home-footer {
     margin-top: 34px;
     font-size: 12px;
@@ -170,7 +172,7 @@ html, body {
     color: #7a8491;
 }
 
-/* SPLASH CONTROL */
+/* SPLASH SKIP */
 html.skip-splash #splash {
     display: none !important;
 }
@@ -192,7 +194,7 @@ html.skip-splash .home-screen {
 
 @@keyframes typing {
     from { width: 0; }
-    to { width: 16ch; }
+    to { width: 12ch; } /* EXACT length of "Create Order" */
 }
 
 @@keyframes blink {
@@ -206,6 +208,7 @@ html.skip-splash .home-screen {
 
 <script>
 window.addEventListener("load", function () {
+
     const splash = document.getElementById("splash");
     const mainContent = document.getElementById("mainContent");
 
@@ -213,18 +216,20 @@ window.addEventListener("load", function () {
         return;
     }
 
+    // TOTAL SPLASH TIME (~3 seconds)
     setTimeout(function () {
         splash.classList.add("hide");
 
         setTimeout(function () {
             mainContent.classList.add("show");
             sessionStorage.setItem("splashShown", "true");
-        }, 1000);
+        }, 800);
 
-    }, 2000);
+    }, 3000);
 
     setTimeout(function () {
         splash.style.display = "none";
-    }, 3200);
+    }, 3800);
+
 });
 </script>
