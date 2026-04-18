@@ -17,9 +17,13 @@ html {
   min-height: 100%;
 }
 
+/* UNIVERSAL BACKGROUND */
 body {
   margin-bottom: 60px;
+  background: #F4F7FB;
 }
+
+/* UNIVERSAL BUTTON STRUCTURE */
 .menu-btn {
     min-width: 165px;
     padding: 16px 28px;
@@ -43,3 +47,9 @@ body {
     box-shadow: 0 6px 14px rgba(0,0,0,0.16);
     filter: brightness(0.95);
 }
+
+/* UNIVERSAL BUTTON COLORS */
+.vehicle-btn { background: #7b848d; color: black; }
+.equipment-btn { background: #1976ff; color: black; }
+.stock-btn { background: #f4bf06; color: black; }
+.staff-btn { background: #189255; color: black; }
