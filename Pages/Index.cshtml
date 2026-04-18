@@ -21,7 +21,12 @@
 
 <div id="mainContent" class="home-screen">
     <div class="home-inner">
+        <div class="home-label">Operations Dashboard</div>
+
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
+
+        <div class="home-context">Client: Client Business Name</div>
+
         <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
 
         <div class="menu-row">
@@ -30,6 +35,8 @@
             <a class="menu-btn stock-btn" href="/Stock">Stock</a>
             <a class="menu-btn staff-btn" href="#">Staff</a>
         </div>
+
+        <div class="home-footer">Vector v0.1</div>
     </div>
 </div>
 
@@ -67,24 +74,23 @@
         animation: logoFadeIn 4.6s ease-out forwards;
     }
 
-.tagline {
-    margin-top: 26px;
-    font-family: "Engravers MT", serif;
-    font-size: 36px;
-    font-weight: 700;
-    color: #ffffff;
-    overflow: hidden;
-    white-space: nowrap;
-    border-right: 2px solid rgba(77,163,255,0.8);
-    width: 0;
-    opacity: 0;
-
-   animation:
-    taglineAppear 0.01s linear 1s forwards,
-    typing 1s steps(12, end) 1s forwards,
-    blink 0.7s step-end 1s 4,
-    hideCursor 0.01s linear 3s forwards;
-}
+    .tagline {
+        margin-top: 26px;
+        font-family: "Engravers MT", serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: #ffffff;
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid rgba(77,163,255,0.8);
+        width: 0;
+        opacity: 0;
+        animation:
+            taglineAppear 0.01s linear 1s forwards,
+            typing 1s steps(12, end) 1s forwards,
+            blink 0.7s step-end 1s 4,
+            hideCursor 0.01s linear 3s forwards;
+    }
 
     #splash.hide {
         opacity: 0;
@@ -108,18 +114,35 @@
 
     .home-inner {
         text-align: center;
-        padding-top: 110px;
+        padding-top: 86px;
+        padding-bottom: 30px;
     }
 
-.home-logo {
-    width: 420px;
-    max-width: 80%;
-    margin-bottom: 20px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-    mix-blend-mode: multiply;
-}
+    .home-label {
+        margin-bottom: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #5f6b7a;
+    }
+
+    .home-logo {
+        width: 420px;
+        max-width: 80%;
+        margin-bottom: 12px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        mix-blend-mode: multiply;
+    }
+
+    .home-context {
+        margin-bottom: 10px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #6b7280;
+    }
 
     .home-title {
         font-size: 72px;
@@ -128,8 +151,8 @@
     }
 
     .home-subtitle {
-        margin-top: 14px;
-        margin-bottom: 34px;
+        margin-top: 0;
+        margin-bottom: 26px;
         font-size: 24px;
         color: #2f2f2f;
     }
@@ -150,23 +173,32 @@
         font-weight: 700;
         border: 1px solid #000;
         box-shadow: 0 12px 26px rgba(0,0,0,0.18);
-        transition: all 0.15s ease;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
     }
 
     .menu-btn:hover {
         transform: translateY(-3px);
         box-shadow: 0 16px 32px rgba(0,0,0,0.22);
+        filter: brightness(0.98);
     }
 
     .menu-btn:active {
         transform: translateY(1px);
         box-shadow: 0 6px 14px rgba(0,0,0,0.16);
+        filter: brightness(0.95);
     }
 
     .vehicle-btn { background: #7b848d; color: black; }
     .equipment-btn { background: #1976ff; color: black; }
     .stock-btn { background: #f4bf06; color: black; }
     .staff-btn { background: #189255; color: black; }
+
+    .home-footer {
+        margin-top: 34px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #7a8491;
+    }
 
     html.skip-splash #splash {
         display: none !important;
@@ -194,9 +226,10 @@
     @@keyframes blink {
         50% { border-color: transparent; }
     }
-@@keyframes hideCursor {
-    to { border-right-color: transparent; }
-}
+
+    @@keyframes hideCursor {
+        to { border-right-color: transparent; }
+    }
 </style>
 
 <script>
@@ -208,7 +241,6 @@
             return;
         }
 
-        // SHOW SPLASH LONG ENOUGH TO SEE FADE
         setTimeout(function () {
             splash.classList.add("hide");
 
@@ -217,7 +249,7 @@
                 sessionStorage.setItem("splashShown", "true");
             }, 1000);
 
-        }, 2500); // <-- THIS IS THE KEY (VISIBLE TIME)
+        }, 2500);
 
         setTimeout(function () {
             splash.style.display = "none";
