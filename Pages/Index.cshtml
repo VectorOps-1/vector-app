@@ -8,10 +8,7 @@
     <div class="splash-content">
         <img src="/vector-splash.png" alt="Vector Splash" />
 
-        <div class="tagline">
-            <span class="word1">Create</span>
-            <span class="word2">Order</span>
-        </div>
+        <div class="tagline">Create Order</div>
     </div>
 </div>
 
@@ -51,13 +48,12 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 18px;
     }
 
     #splash img {
-        width: 72vw;
-        max-width: 840px;
-        min-width: 220px;
+        width: 80vw;
+        max-width: 1000px;
+        min-width: 260px;
         height: auto;
         display: block;
         margin: 0 auto;
@@ -65,36 +61,28 @@
         animation: logoFadeIn 1.4s ease-out forwards;
     }
 
+    /* TAGLINE - TYPING EFFECT */
     .tagline {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        line-height: 1;
+        margin-top: 10mm;
         font-family: Georgia, "Times New Roman", serif;
-        font-size: 32px;
+        font-size: 36px;
         font-weight: 700;
         letter-spacing: 1px;
-        margin-top: 4px;
-    }
-
-    .tagline span {
-        opacity: 0;
-        transform: translateY(8px);
         color: #4da3ff;
+
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid rgba(77,163,255,0.7);
+
+        width: 0;
+        animation: typing 1.8s steps(13, end) forwards, blink 0.7s step-end infinite;
+
         text-shadow:
             0 1px 0 #1a4f99,
-            0 2px 4px rgba(0, 0, 0, 0.65),
-            0 0 10px rgba(77, 163, 255, 0.35);
-    }
-
-    .word1 {
-        animation: fadeUp 0.8s ease-out forwards;
-        animation-delay: 0.7s;
-    }
-
-    .word2 {
-        animation: fadeUp 0.8s ease-out forwards;
-        animation-delay: 1.3s;
+            0 2px 0 #143f7a,
+            0 3px 0 #0f325f,
+            0 4px 10px rgba(0, 0, 0, 0.7),
+            0 0 10px rgba(77, 163, 255, 0.25);
     }
 
     #splash.hide {
@@ -130,8 +118,7 @@
         text-decoration: none;
         font-size: 18px;
         font-weight: 600;
-        background: white;
-        border: 2px solid transparent;
+        border: 2px solid;
         box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
         transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
@@ -147,23 +134,27 @@
     }
 
     .equipment-btn {
-        color: #0d6efd;
-        border-color: #86b7fe;
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
     }
 
     .vehicle-btn {
-        color: #6c757d;
-        border-color: #adb5bd;
+        background: #6c757d;
+        border-color: #6c757d;
+        color: white;
     }
 
     .staff-btn {
-        color: #198754;
-        border-color: #75d7a4;
+        background: #198754;
+        border-color: #198754;
+        color: white;
     }
 
     .stock-btn {
-        color: #d39e00;
-        border-color: #ffd454;
+        background: #ffc107;
+        border-color: #ffc107;
+        color: black;
     }
 
     @@keyframes logoFadeIn {
@@ -177,11 +168,13 @@
         }
     }
 
-    @@keyframes fadeUp {
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    @@keyframes typing {
+        from { width: 0 }
+        to { width: 12ch }
+    }
+
+    @@keyframes blink {
+        50% { border-color: transparent }
     }
 </style>
 
@@ -200,10 +193,10 @@
             splash.classList.add("hide");
             mainContent.classList.add("show");
             sessionStorage.setItem("homeSplashDone", "true");
-        }, 1800);
+        }, 2000);
 
         setTimeout(function () {
             splash.style.display = "none";
-        }, 3200);
+        }, 3500);
     });
 </script>
