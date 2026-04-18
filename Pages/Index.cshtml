@@ -5,6 +5,9 @@
 }
 
 <script>
+    // TEMP: force splash to show while fixing layout
+    sessionStorage.removeItem("splashShown");
+
     if (sessionStorage.getItem("splashShown") === "true") {
         document.documentElement.classList.add("skip-splash");
     }
@@ -19,7 +22,6 @@
 
 <div id="mainContent" class="home-screen">
     <div class="home-inner">
-
         <div class="home-label">Operations Dashboard</div>
 
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
@@ -36,7 +38,6 @@
         </div>
 
         <div class="home-footer">Vector v0.1</div>
-
     </div>
 </div>
 
@@ -65,7 +66,6 @@ html, body {
     align-items: center;
 }
 
-/* LOGO FADE */
 #splash img {
     width: 80vw;
     max-width: 950px;
@@ -75,29 +75,24 @@ html, body {
     animation: logoFadeIn 1.5s ease-out forwards;
 }
 
-/* TAGLINE */
 .tagline {
     margin-top: 26px;
     font-family: "Engravers MT", serif;
     font-size: 36px;
     font-weight: 700;
     color: #ffffff;
-
     overflow: hidden;
     white-space: nowrap;
     border-right: 2px solid rgba(255,255,255,0.85);
-
     width: 0;
     opacity: 0;
-
     animation:
         taglineAppear 0.01s linear 0.6s forwards,
         typing 1s steps(12, end) 0.6s forwards,
         blink 0.7s step-end 0.6s 3,
-        hideCursor 0.01s linear 1.6s forwards;
+        hideCursor 0.01s linear 1.7s forwards;
 }
 
-/* HIDE SPLASH */
 #splash.hide {
     opacity: 0;
     pointer-events: none;
@@ -106,7 +101,8 @@ html, body {
 /* HOME */
 .home-screen {
     display: none;
-    min-height: 100vh;
+    width: 100%;
+    min-height: calc(100vh - 70px);
     opacity: 0;
     transition: opacity 0.7s ease;
 }
@@ -114,14 +110,17 @@ html, body {
 .home-screen.show {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     opacity: 1;
 }
 
 .home-inner {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
     text-align: center;
-    padding-top: 86px;
-    padding-bottom: 30px;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
 }
 
 .home-label {
@@ -134,7 +133,7 @@ html, body {
 }
 
 .home-logo {
-    width: 540px; /* increased ~30% */
+    width: 540px;
     max-width: 80%;
     margin-bottom: 12px;
     display: block;
@@ -164,7 +163,6 @@ html, body {
     flex-wrap: wrap;
 }
 
-/* FOOTER */
 .home-footer {
     margin-top: 34px;
     font-size: 12px;
@@ -179,6 +177,8 @@ html.skip-splash #splash {
 
 html.skip-splash .home-screen {
     display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     opacity: 1 !important;
 }
 
@@ -194,7 +194,7 @@ html.skip-splash .home-screen {
 
 @@keyframes typing {
     from { width: 0; }
-    to { width: 12ch; } /* EXACT length of "Create Order" */
+    to { width: 12ch; }
 }
 
 @@keyframes blink {
@@ -208,7 +208,6 @@ html.skip-splash .home-screen {
 
 <script>
 window.addEventListener("load", function () {
-
     const splash = document.getElementById("splash");
     const mainContent = document.getElementById("mainContent");
 
@@ -216,7 +215,6 @@ window.addEventListener("load", function () {
         return;
     }
 
-    // TOTAL SPLASH TIME (~3 seconds)
     setTimeout(function () {
         splash.classList.add("hide");
 
@@ -230,6 +228,5 @@ window.addEventListener("load", function () {
     setTimeout(function () {
         splash.style.display = "none";
     }, 3800);
-
 });
 </script>
