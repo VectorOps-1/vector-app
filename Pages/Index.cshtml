@@ -4,11 +4,13 @@
     ViewData["Title"] = "Home page";
 }
 
+<!-- Splash -->
 <div id="splash">
     <img src="/vector-splash.png" alt="Vector Splash" />
 </div>
 
-<div id="mainContent" class="text-center">
+<!-- Main -->
+<div id="mainContent" class="container text-center">
     <h1 class="display-4">Vector Ops</h1>
     <p>Equipment | Vehicles | Staff | Stock</p>
 
@@ -26,6 +28,7 @@
         padding: 0;
     }
 
+    /* SPLASH */
     #splash {
         position: fixed;
         inset: 0;
@@ -52,14 +55,17 @@
         pointer-events: none;
     }
 
+    /* MAIN CONTENT */
     #mainContent {
+        display: none;
         min-height: 100vh;
-        padding-top: 120px;
+        padding-top: 140px;
         opacity: 0;
-        transition: opacity 1.0s ease-in-out;
+        transition: opacity 1s ease-in-out;
     }
 
     #mainContent.show {
+        display: block;
         opacity: 1;
     }
 
@@ -77,6 +83,7 @@
 
 <script>
     window.addEventListener("load", function () {
+
         setTimeout(function () {
             document.getElementById("splash").classList.add("hide");
             document.getElementById("mainContent").classList.add("show");
@@ -85,5 +92,6 @@
         setTimeout(function () {
             document.getElementById("splash").style.display = "none";
         }, 3200);
+
     });
 </script>
