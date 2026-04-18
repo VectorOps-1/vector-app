@@ -190,9 +190,16 @@
         const splash = document.getElementById("splash");
         const mainContent = document.getElementById("mainContent");
 
+        if (sessionStorage.getItem("homeSplashDone") === "true") {
+            splash.style.display = "none";
+            mainContent.classList.add("show");
+            return;
+        }
+
         setTimeout(function () {
             splash.classList.add("hide");
             mainContent.classList.add("show");
+            sessionStorage.setItem("homeSplashDone", "true");
         }, 1800);
 
         setTimeout(function () {
