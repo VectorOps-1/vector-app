@@ -29,8 +29,15 @@
 </style>
 
 <script>
+<script>
     setTimeout(function () {
-        document.getElementById("splash").style.display = "none";
-        document.getElementById("mainContent").style.display = "block";
-    }, 2500);
+        document.getElementById("splash").style.transition = "opacity 1.2s ease";
+        document.getElementById("splash").style.opacity = "0";
+
+        setTimeout(function () {
+            document.getElementById("splash").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+        }, 1200);
+    }, 1800);
+</script>
 </script>
