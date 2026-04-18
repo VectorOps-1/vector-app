@@ -5,7 +5,14 @@
 }
 
 <div id="splash">
-    <img src="/vector-splash.png" alt="Vector Splash" />
+    <div class="splash-content">
+        <img src="/vector-splash.png" alt="Vector Splash" />
+
+        <div class="tagline">
+            <span class="word1">Create</span>
+            <span class="word2">Order</span>
+        </div>
+    </div>
 </div>
 
 <div id="mainContent" class="container text-center mt-5">
@@ -40,6 +47,13 @@
         transition: opacity 1.4s ease-in-out;
     }
 
+    .splash-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+    }
+
     #splash img {
         width: 72vw;
         max-width: 840px;
@@ -49,6 +63,38 @@
         margin: 0 auto;
         opacity: 0;
         animation: logoFadeIn 1.4s ease-out forwards;
+    }
+
+    .tagline {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        margin-top: 4px;
+    }
+
+    .tagline span {
+        opacity: 0;
+        transform: translateY(8px);
+        color: #4da3ff;
+        text-shadow:
+            0 1px 0 #1a4f99,
+            0 2px 4px rgba(0, 0, 0, 0.65),
+            0 0 10px rgba(77, 163, 255, 0.35);
+    }
+
+    .word1 {
+        animation: fadeUp 0.8s ease-out forwards;
+        animation-delay: 0.7s;
+    }
+
+    .word2 {
+        animation: fadeUp 0.8s ease-out forwards;
+        animation-delay: 1.3s;
     }
 
     #splash.hide {
@@ -130,27 +176,33 @@
             transform: scale(1);
         }
     }
+
+    @@keyframes fadeUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <script>
-    if (!sessionStorage.getItem("splashShown")) {
+    window.addEventListener("load", function () {
+        const splash = document.getElementById("splash");
+        const mainContent = document.getElementById("mainContent");
 
-        window.addEventListener("load", function () {
-
+        if (!sessionStorage.getItem("splashShown")) {
             setTimeout(function () {
-                document.getElementById("splash").classList.add("hide");
-                document.getElementById("mainContent").classList.add("show");
+                splash.classList.add("hide");
+                mainContent.classList.add("show");
                 sessionStorage.setItem("splashShown", "true");
             }, 1800);
 
             setTimeout(function () {
-                document.getElementById("splash").style.display = "none";
+                splash.style.display = "none";
             }, 3200);
-
-        });
-
-    } else {
-        document.getElementById("splash").style.display = "none";
-        document.getElementById("mainContent").classList.add("show");
-    }
+        } else {
+            splash.style.display = "none";
+            mainContent.classList.add("show");
+        }
+    });
 </script>
