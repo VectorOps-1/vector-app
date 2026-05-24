@@ -1,0 +1,85 @@
+@page
+@model HomeModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="home-screen ready show">
+    <div class="home-inner">
+        <div class="home-label">Operations Dashboard</div>
+
+        <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
+
+        <div class="home-context">Client: @ViewData["ClientName"]</div>
+
+        <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
+
+        <div class="menu-row">
+            <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
+            <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
+            <a class="menu-btn stock-btn" href="/Stock">Stock</a>
+            <a class="menu-btn staff-btn" href="#">Staff</a>
+        </div>
+
+        <div class="home-footer">Vector v0.1</div>
+    </div>
+</div>
+
+<style>
+.home-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.home-inner {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.home-logo {
+    width: 540px;
+    max-width: 80%;
+    margin-bottom: 12px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    mix-blend-mode: multiply;
+}
+
+.home-context {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.home-subtitle {
+    margin-top: 0;
+    margin-bottom: 26px;
+    font-size: 24px;
+    color: #2f2f2f;
+}
+
+.home-footer {
+    margin-top: 34px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #7a8491;
+}
+</style>
