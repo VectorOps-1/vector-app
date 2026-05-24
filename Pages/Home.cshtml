@@ -13,6 +13,13 @@
 
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
 
+        @if (isSeniorManagement)
+        {
+            <div class="menu-row master-setup-row">
+                <a class="menu-btn equipment-btn" href="/MasterSetup">Master Setup</a>
+            </div>
+        }
+
         <div class="home-context">Client: @ViewData["ClientName"]</div>
         <div class="view-badge">@viewName</div>
 
@@ -42,10 +49,9 @@
             @if (isSeniorManagement)
             {
                 <div class="section-divider"></div>
-                <div class="section-label">Senior Management Setup</div>
+                <div class="section-label">Senior Management Actions</div>
 
                 <div class="menu-row home-menu-row setup-action-row">
-                    <a class="menu-btn equipment-btn" href="/MasterSetup">Master Setup</a>
                     <a class="menu-btn staff-btn" href="#">Send Task to Staff</a>
                 </div>
             }
@@ -101,6 +107,10 @@
     margin-left: auto;
     margin-right: auto;
     mix-blend-mode: multiply;
+}
+
+.master-setup-row {
+    margin-bottom: 18px;
 }
 
 .home-context {
