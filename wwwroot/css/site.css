@@ -23,10 +23,21 @@ body {
   background: #F4F7FB;
 }
 
+.menu-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    row-gap: 26px;
+    flex-wrap: wrap;
+}
+
 /* UNIVERSAL BUTTON STRUCTURE (FORCED GLOBAL) */
 .menu-btn {
-    display: inline-block;
-    min-width: 165px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 185px;
+    min-height: 58px;
     padding: 16px 28px;
 
     border-radius: 12px !important;
