@@ -85,9 +85,9 @@ html, body {
     opacity: 0;
     animation:
         taglineAppear 0.01s linear 0.6s forwards,
-        typing 1s steps(12, end) 0.6s forwards,
+        typing 1.25s steps(12, end) 0.6s forwards,
         blink 0.7s step-end 0.6s 3,
-        hideCursor 0.01s linear 1.7s forwards;
+        hideCursor 0.01s linear 2s forwards;
 }
 
 #splash.hide {
@@ -194,7 +194,7 @@ html.skip-splash .home-screen {
 
 @@keyframes typing {
     from { width: 0; }
-    to { width: 14ch; }
+    to { width: 13em; }
 }
 
 @@keyframes blink {
@@ -224,10 +224,10 @@ window.addEventListener("load", function () {
         });
 
         sessionStorage.setItem("splashShown", "true");
-    }, 3000);
+    }, 3400);
 
     setTimeout(function () {
         splash.style.display = "none";
-    }, 4000);
+    }, 4400);
 });
 </script>
