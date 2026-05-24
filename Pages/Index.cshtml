@@ -1,7 +1,7 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Select Access";
 }
 
 <script>
@@ -17,21 +17,19 @@
     </div>
 </div>
 
-<div id="mainContent" class="home-screen">
-    <div class="home-inner">
-        <div class="home-label">Operations Dashboard</div>
+<div id="mainContent" class="selector-screen">
+    <div class="selector-inner">
+        <div class="home-label">Vector Access</div>
 
-        <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
+        <img src="/vector-splash.png" class="selector-logo" alt="Vector Logo" />
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
 
-        <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
+        <p class="selector-title">Select operational database</p>
 
         <div class="menu-row">
-            <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
-            <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
-            <a class="menu-btn stock-btn" href="/Stock">Stock</a>
-            <a class="menu-btn staff-btn" href="#">Staff</a>
+            <a class="menu-btn staff-btn" href="/Home?access=operational-staff">Operational Staff</a>
+            <a class="menu-btn equipment-btn" href="/Home?access=manager">Manager</a>
         </div>
 
         <div class="home-footer">Vector v0.1</div>
@@ -44,7 +42,6 @@ html, body {
     padding: 0;
 }
 
-/* SPLASH */
 #splash {
     position: fixed;
     inset: 0;
@@ -95,8 +92,7 @@ html, body {
     pointer-events: none;
 }
 
-/* HOME */
-.home-screen {
+.selector-screen {
     display: none;
     width: 100%;
     min-height: calc(100vh - 70px);
@@ -104,19 +100,19 @@ html, body {
     transition: opacity 0.7s ease;
 }
 
-.home-screen.ready {
+.selector-screen.ready {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.home-screen.show {
+.selector-screen.show {
     opacity: 1;
 }
 
-.home-inner {
+.selector-inner {
     width: 100%;
-    max-width: 1100px;
+    max-width: 900px;
     margin: 0 auto;
     text-align: center;
     padding: 40px 20px 30px 20px;
@@ -132,9 +128,9 @@ html, body {
     color: #5f6b7a;
 }
 
-.home-logo {
-    width: 540px;
-    max-width: 80%;
+.selector-logo {
+    width: 420px;
+    max-width: 78%;
     margin-bottom: 12px;
     display: block;
     margin-left: auto;
@@ -149,18 +145,11 @@ html, body {
     color: #6b7280;
 }
 
-.home-subtitle {
+.selector-title {
     margin-top: 0;
     margin-bottom: 26px;
     font-size: 24px;
     color: #2f2f2f;
-}
-
-.menu-row {
-    display: flex;
-    justify-content: center;
-    gap: 18px;
-    flex-wrap: wrap;
 }
 
 .home-footer {
@@ -170,19 +159,17 @@ html, body {
     color: #7a8491;
 }
 
-/* SPLASH SKIP */
 html.skip-splash #splash {
     display: none !important;
 }
 
-html.skip-splash .home-screen {
+html.skip-splash .selector-screen {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     opacity: 1 !important;
 }
 
-/* ANIMATIONS */
 @@keyframes logoFadeIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
