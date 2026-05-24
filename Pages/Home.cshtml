@@ -1,17 +1,20 @@
 @page
 @model HomeModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Home";
     var isStaff = Model.AccessView == "staff";
     var isSeniorManagement = Model.AccessView == "senior-management";
     var viewName = isStaff ? "Staff View" : isSeniorManagement ? "Senior Management View" : "Operational Management View";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
 }
 
 <div class="home-screen ready show">
     <div class="home-inner">
         <div class="home-label">Operations Dashboard</div>
 
-        <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
+        <img src="@companyLogoPath" class="home-logo" alt="Company Logo" />
 
         @if (isSeniorManagement)
         {
@@ -102,11 +105,12 @@
 .home-logo {
     width: 540px;
     max-width: 80%;
+    max-height: 240px;
+    object-fit: contain;
     margin-bottom: 12px;
     display: block;
     margin-left: auto;
     margin-right: auto;
-    mix-blend-mode: multiply;
 }
 
 .master-setup-row {
