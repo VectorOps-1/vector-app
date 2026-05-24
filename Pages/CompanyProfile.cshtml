@@ -5,11 +5,13 @@
 @{
     ViewData["Title"] = "Company Profile";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
 
 <div class="setup-screen">
     <div class="setup-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
         <div class="home-label">Master Setup</div>
         <h2 class="page-title">Company Profile</h2>
         <p class="page-subtitle">Editable company identity and supplier information</p>
@@ -47,8 +49,15 @@
     max-width: 72%;
     max-height: 180px;
     object-fit: contain;
-    margin: 0 auto 18px auto;
+    margin: 0 auto 12px auto;
     display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
 }
 
 .home-label {
