@@ -37,6 +37,9 @@
                 <a class="menu-btn staff-btn" href="#">Staff</a>
             </div>
 
+            <div class="section-divider"></div>
+            <div class="section-label">Operational Staff Actions</div>
+
             <div class="menu-row home-menu-row staff-action-row">
                 <a class="menu-btn equipment-btn" href="#">Complete Checklist</a>
                 <a class="menu-btn staff-btn" href="#">Upload Personal Documents</a>
@@ -115,8 +118,24 @@
     row-gap: 24px;
 }
 
+.section-divider {
+    width: min(760px, 86%);
+    height: 1px;
+    margin: 36px auto 14px auto;
+    background: rgba(66, 84, 102, 0.28);
+}
+
+.section-label {
+    margin-bottom: 18px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
 .staff-action-row {
-    margin-top: 28px;
+    margin-top: 0;
 }
 
 .staff-action-row .menu-btn {
