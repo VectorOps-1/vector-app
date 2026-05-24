@@ -1,0 +1,57 @@
+@page
+@model CompleteChecklistModel
+@{
+    ViewData["Title"] = "Complete Checklist";
+}
+
+<div class="checklist-select-screen">
+    <div class="checklist-select-inner">
+        <div class="home-label">Staff Action</div>
+        <h2 class="page-title">Complete Checklist</h2>
+
+        <div class="menu-row checklist-frequency-row">
+            <a class="menu-btn equipment-btn" href="#">Daily</a>
+            <a class="menu-btn vehicle-btn" href="#">Monthly</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.checklist-select-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.checklist-select-inner {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 28px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.checklist-frequency-row {
+    gap: 24px;
+    row-gap: 24px;
+}
+</style>
