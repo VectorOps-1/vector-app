@@ -1,11 +1,15 @@
 @page
 @model DailyChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Daily Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
 }
 
 <div class="checklist-select-screen">
     <div class="checklist-select-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="home-label">Complete Checklist</div>
         <h2 class="page-title">Daily Checklist</h2>
 
@@ -32,6 +36,15 @@
     text-align: center;
     padding: 40px 20px 30px 20px;
     box-sizing: border-box;
+}
+
+.page-logo {
+    width: 320px;
+    max-width: 72%;
+    max-height: 180px;
+    object-fit: contain;
+    margin: 0 auto 18px auto;
+    display: block;
 }
 
 .home-label {
