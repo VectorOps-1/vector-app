@@ -1,0 +1,107 @@
+@page
+@model CompanyNameModel
+@{
+    ViewData["Title"] = "Company Name";
+}
+
+<div class="name-screen">
+    <div class="name-inner">
+        <div class="home-label">Company Profile</div>
+        <h2 class="page-title">Company Name</h2>
+        <p class="page-subtitle">This name appears across Vector after access selection</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="name-form">
+            <label class="field-label" asp-for="CompanyName">Company name</label>
+            <input class="name-input" asp-for="CompanyName" maxlength="160" />
+            <button class="menu-btn equipment-btn save-name-btn" type="submit">Save Name</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.name-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.name-inner {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.status-message {
+    width: min(520px, 90%);
+    margin: 0 auto 22px auto;
+    padding: 12px 16px;
+    border: 1px solid rgba(31, 111, 91, 0.22);
+    border-radius: 8px;
+    background: rgba(31, 111, 91, 0.08);
+    color: #1f6f5b;
+    font-weight: 700;
+}
+
+.name-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.field-label {
+    width: min(520px, 90%);
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.name-input {
+    width: min(520px, 90%);
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 18px;
+    color: #111827;
+}
+
+.save-name-btn {
+    margin-top: 8px;
+    border: none;
+}
+</style>
