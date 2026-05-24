@@ -7,11 +7,12 @@
 
 <div class="home-screen ready show">
     <div class="home-inner">
-        <div class="home-label">@(isOperationalStaff ? "Operational Staff" : "Operations Dashboard")</div>
+        <div class="home-label">Operations Dashboard</div>
 
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <div class="view-badge">@(isOperationalStaff ? "Operational Staff View" : "Manager View")</div>
 
         @if (isOperationalStaff)
         {
@@ -87,10 +88,19 @@
 }
 
 .home-context {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     font-size: 12px;
     font-weight: 500;
     color: #6b7280;
+}
+
+.view-badge {
+    margin-bottom: 18px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #425466;
 }
 
 .home-subtitle {
