@@ -29,15 +29,15 @@ body {
     min-width: 165px;
     padding: 16px 28px;
 
-    border-radius: 14px !important;
+    border-radius: 12px !important;
 
     text-decoration: none;
     font-size: 18px;
     font-weight: 700;
 
-    border: 1px solid #000 !important;
+    border: 1px solid rgba(15, 23, 42, 0.18) !important;
 
-    box-shadow: 0 12px 26px rgba(0,0,0,0.18) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16) !important;
 
     transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 
@@ -46,19 +46,19 @@ body {
 
 .menu-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 16px 32px rgba(0,0,0,0.22) !important;
-    filter: brightness(0.98);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.20) !important;
+    filter: brightness(1.03);
 }
 
 .menu-btn:active {
     transform: translateY(1px);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.16) !important;
-    filter: brightness(0.95);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16) !important;
+    filter: brightness(0.96);
 }
 
 /* UNIVERSAL BUTTON COLORS */
-.vehicle-btn { background: #7b848d; color: black; }
-.equipment-btn { background: #1976ff; color: black; }
-.stock-btn { background: #f4bf06; color: black; }
-.staff-btn { background: #189255; color: black; }
-.report-btn { background: #d92f2f; color: black; }
+.vehicle-btn { background: #425466; color: #ffffff; }
+.equipment-btn { background: #0F6B8F; color: #ffffff; }
+.stock-btn { background: #7A6A2E; color: #ffffff; }
+.staff-btn { background: #1F6F5B; color: #ffffff; }
+.report-btn { background: #A33A3A; color: #ffffff; }
