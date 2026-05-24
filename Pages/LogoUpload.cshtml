@@ -1,0 +1,121 @@
+@page
+@model LogoUploadModel
+@{
+    ViewData["Title"] = "Logo Upload";
+}
+
+<div class="logo-upload-screen">
+    <div class="logo-upload-inner">
+        <div class="home-label">Company Profile</div>
+        <h2 class="page-title">Logo Upload</h2>
+        <p class="page-subtitle">Upload or replace the company logo</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.ExistingLogoPath))
+        {
+            <div class="logo-preview-wrap">
+                <img class="logo-preview" src="@Model.ExistingLogoPath" alt="Current company logo" />
+            </div>
+        }
+
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            <input class="file-input" asp-for="LogoFile" type="file" accept="image/png,image/jpeg" />
+            <button class="menu-btn equipment-btn save-logo-btn" type="submit">Save Logo</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.logo-upload-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-upload-inner {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.status-message {
+    width: min(520px, 90%);
+    margin: 0 auto 22px auto;
+    padding: 12px 16px;
+    border: 1px solid rgba(31, 111, 91, 0.22);
+    border-radius: 8px;
+    background: rgba(31, 111, 91, 0.08);
+    color: #1f6f5b;
+    font-weight: 700;
+}
+
+.logo-preview-wrap {
+    width: min(420px, 90%);
+    min-height: 180px;
+    margin: 0 auto 26px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(66, 84, 102, 0.22);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 22px;
+}
+
+.logo-preview {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.file-input {
+    width: min(420px, 90%);
+    padding: 14px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.save-logo-btn {
+    border: none;
+}
+</style>
