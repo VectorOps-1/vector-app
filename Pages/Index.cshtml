@@ -14,7 +14,9 @@
     <div class="splash-content">
         <img src="/vector-splash.png" alt="Vector Splash" />
         <div class="splash-brand">VECTOR - EMS</div>
-        <div class="tagline">Create Order</div>
+        <div class="tagline" aria-label="Create Order">
+            <span id="taglineText" class="tagline-text"></span><span id="taglineCursor" class="tagline-cursor"></span>
+        </div>
     </div>
 </div>
 
@@ -90,16 +92,24 @@ html, body {
     font-size: 36px;
     font-weight: 700;
     color: #ffffff;
-    overflow: hidden;
     white-space: nowrap;
-    border-right: 2px solid rgba(255,255,255,0.85);
-    width: 0;
+    opacity: 0;
+    text-transform: uppercase;
+    animation: taglineAppear 0.01s linear 1.45s forwards;
+}
+
+.tagline-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    background: rgba(255,255,255,0.85);
+    vertical-align: -0.08em;
     opacity: 0;
     animation:
-        taglineAppear 0.01s linear 1.45s forwards,
-        typing 1.25s steps(12, end) 1.45s forwards,
-        blink 0.7s step-end 1.45s 3,
-        hideCursor 0.01s linear 2.85s forwards;
+        cursorAppear 0.01s linear 1.45s forwards,
+        blinkCursor 0.7s step-end 1.45s 3,
+        hideTypedCursor 0.01s linear 2.85s forwards;
 }
 
 #splash.hide {
@@ -199,17 +209,16 @@ html.skip-splash .selector-screen {
     to { opacity: 1; }
 }
 
-@@keyframes typing {
-    from { width: 0; }
-    to { width: 12.2ch; }
+@@keyframes cursorAppear {
+    to { opacity: 1; }
 }
 
-@@keyframes blink {
-    50% { border-color: transparent; }
+@@keyframes blinkCursor {
+    50% { opacity: 0; }
 }
 
-@@keyframes hideCursor {
-    to { border-right-color: transparent; }
+@@keyframes hideTypedCursor {
+    to { opacity: 0; }
 }
 </style>
 
@@ -217,10 +226,26 @@ html.skip-splash .selector-screen {
 window.addEventListener("load", function () {
     const splash = document.getElementById("splash");
     const mainContent = document.getElementById("mainContent");
+    const taglineText = document.getElementById("taglineText");
+    const phrase = "Create Order";
 
     if (document.documentElement.classList.contains("skip-splash")) {
         return;
     }
+
+    setTimeout(function () {
+        let index = 0;
+        const typeNextCharacter = function () {
+            taglineText.textContent = phrase.slice(0, index);
+            index += 1;
+
+            if (index <= phrase.length) {
+                setTimeout(typeNextCharacter, 90);
+            }
+        };
+
+        typeNextCharacter();
+    }, 1450);
 
     setTimeout(function () {
         mainContent.classList.add("ready");
