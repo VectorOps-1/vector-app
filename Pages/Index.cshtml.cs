@@ -1,19 +1,19 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class IndexModel : PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
+    private readonly IWebHostEnvironment _environment;
 
-    public IndexModel(ILogger<IndexModel> logger)
+    public IndexModel(IWebHostEnvironment environment)
     {
-        _logger = logger;
+        _environment = environment;
     }
 
     public void OnGet()
     {
-        ViewData["ClientName"] = "Client Business Name";
+        ViewData["ClientName"] = CompanyBranding.GetCompanyName(_environment);
     }
 }
