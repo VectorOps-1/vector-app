@@ -67,6 +67,19 @@ body {
     filter: brightness(0.96);
 }
 
+@media (max-width: 575px) {
+    .menu-row {
+        gap: 18px;
+        row-gap: 18px;
+        padding: 0 18px;
+    }
+
+    .menu-btn {
+        width: 100%;
+        max-width: 320px;
+    }
+}
+
 /* UNIVERSAL BUTTON COLORS */
 .vehicle-btn { background: #425466; color: #ffffff; }
 .equipment-btn { background: #0F6B8F; color: #ffffff; }
