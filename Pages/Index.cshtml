@@ -5,8 +5,6 @@
 }
 
 <script>
-    // TEMP: force splash to show while fixing layout
-
     if (sessionStorage.getItem("splashShown") === "true") {
         document.documentElement.classList.add("skip-splash");
     }
@@ -106,10 +104,13 @@ html, body {
     transition: opacity 0.7s ease;
 }
 
-.home-screen.show {
+.home-screen.ready {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.home-screen.show {
     opacity: 1;
 }
 
@@ -215,17 +216,18 @@ window.addEventListener("load", function () {
     }
 
     setTimeout(function () {
+        mainContent.classList.add("ready");
         splash.classList.add("hide");
 
-        setTimeout(function () {
+        requestAnimationFrame(function () {
             mainContent.classList.add("show");
-            sessionStorage.setItem("splashShown", "true");
-        }, 800);
+        });
 
+        sessionStorage.setItem("splashShown", "true");
     }, 3000);
 
     setTimeout(function () {
         splash.style.display = "none";
-    }, 3800);
+    }, 4000);
 });
 </script>
