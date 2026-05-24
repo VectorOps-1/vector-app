@@ -26,11 +26,12 @@
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
 
-        <p class="selector-title">Select operational database</p>
+        <p class="selector-title">Select access level</p>
 
         <div class="menu-row">
-            <a class="menu-btn staff-btn" href="/Home?access=operational-staff">Operational Staff</a>
-            <a class="menu-btn equipment-btn" href="/Home?access=manager">Manager</a>
+            <a class="menu-btn staff-btn" href="/Home?access=staff">Staff</a>
+            <a class="menu-btn equipment-btn" href="/Home?access=operational-management">Operational Management</a>
+            <a class="menu-btn vehicle-btn" href="/Home?access=senior-management">Senior Management</a>
         </div>
 
         <div class="home-footer">Vector v0.1</div>
