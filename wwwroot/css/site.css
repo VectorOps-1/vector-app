@@ -26,8 +26,8 @@ body {
 .menu-row {
     display: flex;
     justify-content: center;
-    gap: 24px;
-    row-gap: 26px;
+    gap: 18px;
+    row-gap: 18px;
     flex-wrap: wrap;
 }
 
@@ -36,7 +36,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 185px;
+    min-width: 165px;
     min-height: 58px;
     padding: 16px 28px;
 
