@@ -2,24 +2,48 @@
 @model HomeModel
 @{
     ViewData["Title"] = "Home";
+    var isOperationalStaff = Model.AccessView == "operational-staff";
 }
 
 <div class="home-screen ready show">
     <div class="home-inner">
-        <div class="home-label">Operations Dashboard</div>
+        <div class="home-label">@(isOperationalStaff ? "Operational Staff" : "Operations Dashboard")</div>
 
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
 
-        <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
+        @if (isOperationalStaff)
+        {
+            <p class="home-subtitle">Staff Actions</p>
 
-        <div class="menu-row home-menu-row">
-            <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
-            <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
-            <a class="menu-btn stock-btn" href="/Stock">Stock</a>
-            <a class="menu-btn staff-btn" href="#">Staff</a>
-        </div>
+            <div class="menu-row home-menu-row staff-action-row">
+                <a class="menu-btn equipment-btn" href="#">Complete Checklist</a>
+                <a class="menu-btn staff-btn" href="#">Upload Personal Documents</a>
+                <a class="menu-btn vehicle-btn" href="#">Upload Accreditation/ Certification</a>
+                <a class="menu-btn report-btn" href="#">Report Issue</a>
+                <a class="menu-btn stock-btn" href="#">Receive Action From Manager</a>
+            </div>
+        }
+        else
+        {
+            <p class="home-subtitle">Equipment | Vehicles | Staff | Stock</p>
+
+            <div class="menu-row home-menu-row">
+                <a class="menu-btn vehicle-btn" href="/Vehicles">Vehicles</a>
+                <a class="menu-btn equipment-btn" href="/Equipment">Equipment</a>
+                <a class="menu-btn stock-btn" href="/Stock">Stock</a>
+                <a class="menu-btn staff-btn" href="#">Staff</a>
+            </div>
+
+            <div class="menu-row home-menu-row staff-action-row">
+                <a class="menu-btn equipment-btn" href="#">Complete Checklist</a>
+                <a class="menu-btn staff-btn" href="#">Upload Personal Documents</a>
+                <a class="menu-btn vehicle-btn" href="#">Upload Accreditation/ Certification</a>
+                <a class="menu-btn report-btn" href="#">Report Issue</a>
+                <a class="menu-btn stock-btn" href="#">Receive Action From Manager</a>
+            </div>
+        }
 
         <div class="home-footer">Vector v0.1</div>
     </div>
@@ -79,6 +103,14 @@
 .home-menu-row {
     gap: 24px;
     row-gap: 24px;
+}
+
+.staff-action-row {
+    margin-top: 28px;
+}
+
+.staff-action-row .menu-btn {
+    min-width: 240px;
 }
 
 .home-footer {
