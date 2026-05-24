@@ -1,11 +1,15 @@
 @page
 @model MasterSetupModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Master Setup";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
 }
 
 <div class="setup-screen">
     <div class="setup-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="home-label">Senior Management</div>
         <h2 class="page-title">Master Setup</h2>
         <p class="page-subtitle">Company onboarding and editable setup records</p>
@@ -39,6 +43,15 @@
     text-align: center;
     padding: 40px 20px 30px 20px;
     box-sizing: border-box;
+}
+
+.page-logo {
+    width: 320px;
+    max-width: 72%;
+    max-height: 180px;
+    object-fit: contain;
+    margin: 0 auto 18px auto;
+    display: block;
 }
 
 .home-label {
