@@ -2,7 +2,9 @@
 @model HomeModel
 @{
     ViewData["Title"] = "Home";
-    var isOperationalStaff = Model.AccessView == "operational-staff";
+    var isStaff = Model.AccessView == "staff";
+    var isSeniorManagement = Model.AccessView == "senior-management";
+    var viewName = isStaff ? "Staff View" : isSeniorManagement ? "Senior Management View" : "Operational Management View";
 }
 
 <div class="home-screen ready show">
@@ -12,9 +14,9 @@
         <img src="/vector-splash.png" class="home-logo" alt="Vector Logo" />
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
-        <div class="view-badge">@(isOperationalStaff ? "Operational Staff View" : "Manager View")</div>
+        <div class="view-badge">@viewName</div>
 
-        @if (isOperationalStaff)
+        @if (isStaff)
         {
             <p class="home-subtitle">Staff Actions</p>
 
@@ -37,13 +39,16 @@
                 <a class="menu-btn staff-btn" href="#">Staff</a>
             </div>
 
-            <div class="section-divider"></div>
-            <div class="section-label">Manager Setup</div>
+            @if (isSeniorManagement)
+            {
+                <div class="section-divider"></div>
+                <div class="section-label">Senior Management Setup</div>
 
-            <div class="menu-row home-menu-row setup-action-row">
-                <a class="menu-btn equipment-btn" href="#">Upload Existing Data/ Template</a>
-                <a class="menu-btn staff-btn" href="#">Send Task to Staff</a>
-            </div>
+                <div class="menu-row home-menu-row setup-action-row">
+                    <a class="menu-btn equipment-btn" href="/MasterSetup">Master Setup</a>
+                    <a class="menu-btn staff-btn" href="#">Send Task to Staff</a>
+                </div>
+            }
 
             <div class="section-divider compact-divider"></div>
             <div class="section-label">Operational Staff Actions</div>
