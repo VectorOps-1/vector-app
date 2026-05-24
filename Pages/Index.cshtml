@@ -13,6 +13,7 @@
 <div id="splash">
     <div class="splash-content">
         <img src="/vector-splash.png" alt="Vector Splash" />
+        <div class="splash-brand">VECTOR - EMS</div>
         <div class="tagline">Create Order</div>
     </div>
 </div>
@@ -69,8 +70,21 @@ html, body {
     animation: logoFadeIn 1.5s ease-out forwards;
 }
 
+.splash-brand {
+    margin-top: 18px;
+    font-family: "Engravers MT", serif;
+    font-size: 35px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #d8dde4 0%, #9fb8cc 36%, #f05a55 72%, #f2f4f7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0;
+    animation: brandFadeIn 0.8s ease-out 0.7s forwards;
+}
+
 .tagline {
-    margin-top: 26px;
+    margin-top: 18px;
     font-family: "Engravers MT", serif;
     font-size: 36px;
     font-weight: 700;
@@ -81,10 +95,10 @@ html, body {
     width: 0;
     opacity: 0;
     animation:
-        taglineAppear 0.01s linear 0.6s forwards,
-        typing 1.25s steps(12, end) 0.6s forwards,
-        blink 0.7s step-end 0.6s 3,
-        hideCursor 0.01s linear 2s forwards;
+        taglineAppear 0.01s linear 1.45s forwards,
+        typing 1.25s steps(12, end) 1.45s forwards,
+        blink 0.7s step-end 1.45s 3,
+        hideCursor 0.01s linear 2.85s forwards;
 }
 
 #splash.hide {
@@ -175,6 +189,11 @@ html.skip-splash .selector-screen {
     to { opacity: 1; transform: scale(1); }
 }
 
+@@keyframes brandFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @@keyframes taglineAppear {
     to { opacity: 1; }
 }
@@ -211,10 +230,10 @@ window.addEventListener("load", function () {
         });
 
         sessionStorage.setItem("splashShown", "true");
-    }, 3400);
+    }, 4300);
 
     setTimeout(function () {
         splash.style.display = "none";
-    }, 4400);
+    }, 5300);
 });
 </script>
