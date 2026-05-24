@@ -1,0 +1,72 @@
+@page
+@model CompanyProfileModel
+@{
+    ViewData["Title"] = "Company Profile";
+}
+
+<div class="setup-screen">
+    <div class="setup-inner">
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Company Profile</h2>
+        <p class="page-subtitle">Editable company identity and supplier information</p>
+
+        <div class="menu-row setup-grid">
+            <a class="menu-btn equipment-btn" href="#">Logo Upload</a>
+            <a class="menu-btn vehicle-btn" href="#">Name</a>
+            <a class="menu-btn stock-btn" href="#">Slogan</a>
+            <a class="menu-btn staff-btn" href="#">Mission and Vision</a>
+            <a class="menu-btn equipment-btn" href="#">Supplier Details</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.setup-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.setup-inner {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.setup-grid {
+    gap: 24px;
+    row-gap: 24px;
+}
+
+.setup-grid .menu-btn {
+    min-width: 260px;
+}
+</style>
