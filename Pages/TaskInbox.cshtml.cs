@@ -20,9 +20,14 @@ public class TaskInboxModel : PageModel
 
     public string? SuccessMessage { get; set; }
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(string? confirmation)
     {
-        SuccessMessage = TempData["SuccessMessage"] as string;
+        SuccessMessage = confirmation switch
+        {
+            "feedback-submitted" => "Feedback submitted. The task is now marked complete and recorded.",
+            _ => TempData["SuccessMessage"] as string
+        };
+
         await LoadTasksAsync();
     }
 
@@ -34,8 +39,7 @@ public class TaskInboxModel : PageModel
 
         if (task is null)
         {
-            TempData["SuccessMessage"] = "Task was not found.";
-            return RedirectToPage();
+            return RedirectToPage(new { confirmation = "task-not-found" });
         }
 
         var now = DateTime.UtcNow;
