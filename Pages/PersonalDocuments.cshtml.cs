@@ -22,6 +22,9 @@ public class PersonalDocumentsModel : PageModel
     public string? DocumentType { get; set; }
 
     [BindProperty]
+    public string? CertificateName { get; set; }
+
+    [BindProperty]
     public DateTime? ExpiryDate { get; set; }
 
     [BindProperty]
@@ -50,6 +53,12 @@ public class PersonalDocumentsModel : PageModel
             return Page();
         }
 
+        if ((DocumentType is "Certificate" or "Accreditation" or "Professional Registration" or "Training Record") && string.IsNullOrWhiteSpace(CertificateName))
+        {
+            StatusMessage = "Enter the certificate, accreditation, registration, or training name before submitting.";
+            return Page();
+        }
+
         if (PersonalFiles.Count == 0)
         {
             StatusMessage = "Select one or more personal documents before submitting.";
@@ -63,7 +72,8 @@ public class PersonalDocumentsModel : PageModel
             return Page();
         }
 
-        StatusMessage = $"{PersonalFiles.Count} document(s) ready to save against {StaffName}. Database storage will be connected in the production data phase.";
+        var documentName = string.IsNullOrWhiteSpace(CertificateName) ? DocumentType : CertificateName;
+        StatusMessage = $"{PersonalFiles.Count} document(s) ready to save against {StaffName} for {documentName}. Database storage and audit logging will be connected in the production data phase.";
         return Page();
     }
 }
