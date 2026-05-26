@@ -16,18 +16,31 @@
         <h2 class="page-title">Review Staff File Upload</h2>
         <p class="page-subtitle">Files selected: @Model.FileCount</p>
 
-        <div class="review-panel">
-            <div class="review-row">
-                <span class="file-type">PDF / Image / Document</span>
-                <input class="text-input" type="text" placeholder="Assign to staff member" />
-                <input class="text-input" type="text" placeholder="Document type, e.g. CV or certification" />
+        <div class="review-panel" id="staffFileList">
+            <div class="folder-toolbar">
+                <button class="small-action add-folder" type="button" onclick="addFolder()">Add Folder</button>
             </div>
 
-            <div class="review-row">
-                <span class="file-type">Additional file</span>
-                <input class="text-input" type="text" placeholder="Assign to staff member" />
-                <input class="text-input" type="text" placeholder="Document type" />
-            </div>
+            <section class="folder-block">
+                <div class="folder-header">
+                    <input class="folder-name" type="text" value="Staff Documents" />
+                    <button class="small-action remove-folder" type="button" onclick="removeFolder(this)">Remove Folder</button>
+                </div>
+
+                <div class="review-row">
+                    <input class="text-input" type="text" value="Uploaded file 1" aria-label="File name" />
+                    <input class="text-input" type="text" placeholder="Assign to staff member" />
+                    <input class="text-input" type="text" placeholder="Document type, e.g. CV or certification" />
+                    <button class="small-action remove-file" type="button" onclick="removeFile(this)">Remove</button>
+                </div>
+
+                <div class="review-row">
+                    <input class="text-input" type="text" value="Uploaded file 2" aria-label="File name" />
+                    <input class="text-input" type="text" placeholder="Assign to staff member" />
+                    <input class="text-input" type="text" placeholder="Document type" />
+                    <button class="small-action remove-file" type="button" onclick="removeFile(this)">Remove</button>
+                </div>
+            </section>
         </div>
 
         <div class="action-row">
@@ -48,7 +61,7 @@
 
 .preview-inner {
     width: 100%;
-    max-width: 980px;
+    max-width: 1080px;
     margin: 0 auto;
     text-align: center;
     padding: 40px 20px 30px 20px;
@@ -97,25 +110,50 @@
 .review-panel {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 18px;
     padding: 22px;
     border: 1px solid rgba(66, 84, 102, 0.18);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.58);
 }
 
-.review-row {
-    display: grid;
-    grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
-    align-items: center;
+.folder-toolbar {
+    display: flex;
+    justify-content: flex-end;
 }
 
-.file-type {
-    font-size: 13px;
+.folder-block {
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.64);
+}
+
+.folder-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.folder-name {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
     font-weight: 800;
-    color: #425466;
-    text-align: left;
+    color: #2f2f2f;
+    box-sizing: border-box;
+}
+
+.review-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 110px;
+    gap: 14px;
+    align-items: center;
+    margin-top: 12px;
 }
 
 .text-input {
@@ -127,6 +165,27 @@
     font-size: 15px;
     color: #111827;
     box-sizing: border-box;
+}
+
+.small-action {
+    min-width: 110px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.add-folder {
+    background: #1b7894;
+    color: #ffffff;
+}
+
+.remove-folder,
+.remove-file {
+    background: #a43a3a;
+    color: #ffffff;
 }
 
 .action-row {
@@ -142,9 +201,68 @@
     border: none;
 }
 
-@@media (max-width: 820px) {
+@@media (max-width: 880px) {
+    .folder-toolbar,
+    .folder-header,
     .review-row {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .small-action {
+        width: 100%;
     }
 }
 </style>
+
+<script>
+function addFolder() {
+    const list = document.getElementById("staffFileList");
+    const firstFolder = list.querySelector(".folder-block");
+    const newFolder = firstFolder.cloneNode(true);
+
+    newFolder.querySelector(".folder-name").value = "New Folder";
+    newFolder.querySelectorAll(".review-row").forEach(function (row, index) {
+        if (index > 0) {
+            row.remove();
+            return;
+        }
+
+        row.querySelectorAll("input").forEach(function (input, inputIndex) {
+            input.value = inputIndex === 0 ? "Uploaded file" : "";
+        });
+    });
+
+    list.appendChild(newFolder);
+}
+
+function removeFolder(button) {
+    const list = document.getElementById("staffFileList");
+    const folders = list.querySelectorAll(".folder-block");
+
+    if (folders.length === 1) {
+        folders[0].querySelector(".folder-name").value = "Staff Documents";
+        folders[0].querySelectorAll(".review-row input").forEach(function (input) {
+            input.value = "";
+        });
+        return;
+    }
+
+    button.closest(".folder-block").remove();
+}
+
+function removeFile(button) {
+    const folder = button.closest(".folder-block");
+    const rows = folder.querySelectorAll(".review-row");
+
+    if (rows.length === 1) {
+        rows[0].querySelectorAll("input").forEach(function (input) {
+            input.value = "";
+        });
+        return;
+    }
+
+    button.closest(".review-row").remove();
+}
+</script>
