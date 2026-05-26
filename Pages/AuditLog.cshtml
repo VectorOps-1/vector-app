@@ -1,0 +1,202 @@
+@page
+@model AuditLogModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Audit Log";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="audit-screen">
+    <div class="audit-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Audit Log / Activity History</h2>
+        <p class="page-subtitle">Search task flow, feedback, uploads, edits, access changes, and operational actions</p>
+
+        <section class="filter-panel">
+            <input class="text-input" type="text" placeholder="Search staff, task, file, record ID, module, or action" />
+            <select class="text-input">
+                <option>All modules</option>
+                <option>Tasks and Feedback</option>
+                <option>Checklists</option>
+                <option>Vehicles</option>
+                <option>Equipment</option>
+                <option>Stock</option>
+                <option>Staff Files</option>
+                <option>Access Control</option>
+            </select>
+            <input class="text-input" type="date" />
+            <button class="menu-btn equipment-btn filter-btn" type="button">Search Log</button>
+        </section>
+
+        <section class="log-panel">
+            <div class="log-row">
+                <div class="log-time">2026-05-26 09:10</div>
+                <div class="log-type">Task Created</div>
+                <div class="log-detail">Manager assigned Complete Checklist to Staff ID EMS-001. Task-only access enabled.</div>
+                <div class="log-status">Open</div>
+            </div>
+
+            <div class="log-row">
+                <div class="log-time">2026-05-26 09:22</div>
+                <div class="log-type">Task Viewed</div>
+                <div class="log-detail">Staff ID EMS-001 opened assigned checklist task.</div>
+                <div class="log-status">Viewed</div>
+            </div>
+
+            <div class="log-row">
+                <div class="log-time">2026-05-26 09:37</div>
+                <div class="log-type">Feedback Submitted</div>
+                <div class="log-detail">Staff submitted task feedback with uploaded supporting file.</div>
+                <div class="log-status">Review</div>
+            </div>
+
+            <div class="log-row">
+                <div class="log-time">2026-05-26 10:05</div>
+                <div class="log-type">Access Expired</div>
+                <div class="log-detail">Task-specific access expired automatically at configured deadline.</div>
+                <div class="log-status">Closed</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<style>
+.audit-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.audit-inner {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 auto 28px auto;
+    max-width: 820px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.filter-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr) 170px 170px;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    margin-bottom: 22px;
+}
+
+.text-input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 15px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.filter-btn {
+    min-width: 0;
+    border: none;
+}
+
+.log-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+}
+
+.log-row {
+    display: grid;
+    grid-template-columns: 170px 160px minmax(0, 1fr) 100px;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.66);
+}
+
+.log-time,
+.log-type,
+.log-status {
+    font-size: 13px;
+    font-weight: 800;
+    color: #425466;
+}
+
+.log-detail {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2f2f2f;
+}
+
+.log-status {
+    text-align: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(31, 111, 91, 0.1);
+    color: #1f6f5b;
+}
+
+@@media (max-width: 900px) {
+    .filter-panel,
+    .log-row {
+        grid-template-columns: 1fr;
+    }
+
+    .log-status {
+        text-align: left;
+    }
+}
+</style>
