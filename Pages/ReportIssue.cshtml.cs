@@ -21,6 +21,7 @@ public class ReportIssueModel : PageModel
     [BindProperty] public List<IFormFile> EvidenceFiles { get; set; } = new();
 
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public void OnGet(string? module)
     {
@@ -50,6 +51,7 @@ public class ReportIssueModel : PageModel
             return Page();
         }
 
+        ActionSaved = true;
         StatusMessage = $"{Module} issue ready to save. This will later create an issue record, evidence file links, manager visibility, task option, and audit proof.";
         return Page();
     }
