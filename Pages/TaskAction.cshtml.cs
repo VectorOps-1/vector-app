@@ -1,20 +1,11 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using vector_app_local.Data;
 
 namespace vector_app_local.Pages;
 
 public class TaskActionModel : PageModel
 {
-    private readonly VectorDbContext _db;
-
-    [ActivatorUtilitiesConstructor]
-    public TaskActionModel(VectorDbContext db)
-    {
-        _db = db;
-    }
-
     public TaskActionDetails? TaskDetails { get; set; }
 
     public async Task OnGetAsync(int? taskId)
@@ -24,7 +15,9 @@ public class TaskActionModel : PageModel
             return;
         }
 
-        TaskDetails = await _db.TaskItems
+        var db = HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
+
+        TaskDetails = await db.TaskItems
             .Include(t => t.AssignedByUser)
             .Include(t => t.AssignedToUser)
             .Where(t => t.Id == taskId.Value && t.Status == "Open")
