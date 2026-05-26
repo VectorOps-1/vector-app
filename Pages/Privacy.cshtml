@@ -1,8 +1,144 @@
-﻿@page
+@page
 @model PrivacyModel
 @{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="privacy-screen">
+    <div class="privacy-inner">
+        <div class="home-label">Vector Privacy</div>
+        <h1 class="page-title">Privacy Policy</h1>
+        <p class="policy-note">Draft policy for operational review. This should be reviewed by a qualified legal professional before production client use.</p>
+
+        <section class="policy-section">
+            <h2>1. Purpose</h2>
+            <p>Vector is designed to support operational management, resource readiness, task allocation, checklist completion, stock control, staff records, and audit history for client organisations. This privacy policy explains how information may be collected, used, stored, protected, and managed within the Vector platform.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>2. Information We May Process</h2>
+            <p>Vector may process operational and administrative information entered or uploaded by authorised client users, including company profile details, staff records, uploaded files, checklist records, vehicle records, equipment records, stock and medication records, task instructions, task feedback, audit logs, contact details, and system access information.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>3. Sensitive Operational Data</h2>
+            <p>Client accounts may contain sensitive business, staff, compliance, operational, and medical logistics information. Vector should be configured so that each client organisation can access only its own data. Access should be limited by role, permission level, and operational need.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>4. How Information Is Used</h2>
+            <p>Information is used to provide operational workflows, maintain resource records, support inspections and checklists, manage staff documents, assign and track tasks, record feedback, maintain stock and medication accountability, and create searchable audit history for client record keeping.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>5. Access Control</h2>
+            <p>Vector is intended to use role-based access controls. Staff, operational management, and senior management should have different levels of access. Senior management controls setup functions, while operational users should access only the records and tasks they are authorised to use.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>6. Task and Audit Records</h2>
+            <p>Task creation, task access, feedback submissions, file uploads, checklist submissions, record edits, movement events, and access changes may be logged for accountability. These records support operational traceability and should be searchable by authorised users.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>7. File Uploads</h2>
+            <p>Uploaded files may include staff documents, certificates, images, registers, checklists, and supporting operational records. Files should be stored securely, protected from unauthorised access, and associated only with the correct client account, staff member, asset, task, or record.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>8. Data Security</h2>
+            <p>Vector should use appropriate technical safeguards, including secure authentication, encrypted transport, protected database access, encrypted storage where appropriate, audit logging, least-privilege access, regular backups, secure configuration management, and controlled administrator access.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>9. Data Retention</h2>
+            <p>Client data should be retained for as long as required by the client organisation, applicable law, contractual obligations, and operational record-keeping requirements. Clients should be able to request export, correction, archival, or deletion of data where legally and operationally permitted.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>10. Sharing and Disclosure</h2>
+            <p>Client data should not be sold. Data may be shared only with authorised users within the client organisation, approved service providers required to operate the platform, or where required by law, regulation, contract, or legitimate security investigation.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>11. Client Responsibility</h2>
+            <p>Client organisations are responsible for ensuring that uploaded information is lawful, accurate, relevant, and shared with appropriate consent or authority. Clients are also responsible for assigning suitable user permissions and removing access when users no longer require it.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>12. Contact and Requests</h2>
+            <p>Clients should have a clear contact route for privacy, data access, correction, export, deletion, and security concerns. Final contact details will be added before production release.</p>
+        </section>
+    </div>
+</div>
+
+<style>
+.privacy-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.privacy-inner {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 44px 20px 40px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+    text-align: center;
+}
+
+.page-title {
+    margin: 0 0 12px 0;
+    font-size: 32px;
+    font-weight: 800;
+    color: #2f2f2f;
+    text-align: center;
+}
+
+.policy-note {
+    margin: 0 auto 28px auto;
+    max-width: 720px;
+    padding: 12px 16px;
+    border: 1px solid rgba(164, 58, 58, 0.22);
+    border-radius: 8px;
+    background: rgba(164, 58, 58, 0.08);
+    color: #8f2f2f;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.policy-section {
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.policy-section h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #425466;
+}
+
+.policy-section p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #2f2f2f;
+}
+</style>
