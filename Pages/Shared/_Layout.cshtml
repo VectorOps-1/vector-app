@@ -1,3 +1,7 @@
+@{
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    var showPageIndex = !string.Equals(currentPage, "/Index", StringComparison.OrdinalIgnoreCase);
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,6 +41,10 @@
             box-sizing: border-box;
             z-index: 1000;
             border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .top-bar.no-page-index {
+            justify-content: flex-end;
         }
 
         .page-index-wrap {
@@ -112,6 +120,10 @@
                 padding: 12px 16px;
             }
 
+            .top-bar.no-page-index {
+                align-items: flex-end;
+            }
+
             .page-index-wrap {
                 width: 100%;
                 min-width: 0;
@@ -129,67 +141,82 @@
                 gap: 14px;
             }
 
+            .top-bar.no-page-index .top-nav {
+                width: auto;
+            }
+
             .page-shell {
                 padding-top: 124px;
+            }
+
+            .top-bar.no-page-index + .page-shell {
+                padding-top: 70px;
             }
 
             main {
                 min-height: calc(100vh - 124px);
             }
+
+            .top-bar.no-page-index + .page-shell main {
+                min-height: calc(100vh - 70px);
+            }
         }
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <div class="page-index-wrap">
-            <label class="page-index-label" for="pageIndex">Page Index</label>
-            <select id="pageIndex" class="page-index-select" aria-label="Page index">
-                <option value="">Go to page...</option>
+    <header class="top-bar @(showPageIndex ? string.Empty : "no-page-index")">
+        @if (showPageIndex)
+        {
+            <div class="page-index-wrap">
+                <label class="page-index-label" for="pageIndex">Page Index</label>
+                <select id="pageIndex" class="page-index-select" aria-label="Page index">
+                    <option value="">Go to page...</option>
 
-                <option value="/Index" data-access="all">Access Level</option>
-                <option value="/Home" data-access="all">Home</option>
-                <option value="/Privacy" data-access="all">Privacy</option>
+                    <option value="/Index" data-access="all">Access Level</option>
+                    <option value="/Home" data-access="all">Home</option>
+                    <option value="/Privacy" data-access="all">Privacy</option>
 
-                <option value="/CompleteChecklist" data-access="staff,manager,senior">Complete Checklist</option>
-                <option value="/DailyChecklist" data-access="staff,manager,senior">Daily Checklist</option>
-                <option value="/DailyVehicleChecklist" data-access="staff,manager,senior">Daily Vehicle Inspection</option>
-                <option value="/DailyEquipmentChecklist" data-access="staff,manager,senior">Daily Equipment Checklist</option>
-                <option value="/MonthlyChecklist" data-access="staff,manager,senior">Monthly Checklist</option>
-                <option value="/TaskFeedback" data-access="staff,manager,senior">Task Feedback</option>
-                <option value="/PersonalDocuments" data-access="staff,manager,senior">Personal Documents</option>
-                <option value="/ReportIssue?module=general" data-access="staff,manager,senior">Report Issue</option>
+                    <option value="/CompleteChecklist" data-access="staff,manager,senior">Complete Checklist</option>
+                    <option value="/DailyChecklist" data-access="staff,manager,senior">Daily Checklist</option>
+                    <option value="/DailyVehicleChecklist" data-access="staff,manager,senior">Daily Vehicle Inspection</option>
+                    <option value="/DailyEquipmentChecklist" data-access="staff,manager,senior">Daily Equipment Checklist</option>
+                    <option value="/MonthlyChecklist" data-access="staff,manager,senior">Monthly Checklist</option>
+                    <option value="/TaskFeedback" data-access="staff,manager,senior">Task Feedback</option>
+                    <option value="/PersonalDocuments" data-access="staff,manager,senior">Personal Documents</option>
+                    <option value="/ReportIssue?module=general" data-access="staff,manager,senior">Report Issue</option>
 
-                <option value="/Vehicles" data-access="manager,senior">Vehicles</option>
-                <option value="/Equipment" data-access="manager,senior">Equipment</option>
-                <option value="/Stock" data-access="manager,senior">Stock</option>
-                <option value="/Staff" data-access="manager,senior">Staff Records</option>
-                <option value="/Medication" data-access="manager,senior">Medication</option>
-                <option value="/SendTask" data-access="manager,senior">Send Task</option>
-                <option value="/EditChecklist" data-access="manager,senior">Edit Checklist</option>
-                <option value="/AddItem?type=vehicle" data-access="manager,senior">Add Vehicle</option>
-                <option value="/AddItem?type=equipment" data-access="manager,senior">Add Equipment</option>
-                <option value="/AddItem?type=stock" data-access="manager,senior">Add Stock Item</option>
-                <option value="/AddItem?type=medication" data-access="manager,senior">Add Medication</option>
-                <option value="/UploadStaffFiles" data-access="manager,senior">Staff Files / Folders</option>
-                <option value="/StaffRecordsSearch" data-access="manager,senior">Search Staff Records</option>
+                    <option value="/Vehicles" data-access="manager,senior">Vehicles</option>
+                    <option value="/Equipment" data-access="manager,senior">Equipment</option>
+                    <option value="/Stock" data-access="manager,senior">Stock</option>
+                    <option value="/Staff" data-access="manager,senior">Staff Records</option>
+                    <option value="/Medication" data-access="manager,senior">Medication</option>
+                    <option value="/SendTask" data-access="manager,senior">Send Task</option>
+                    <option value="/EditChecklist" data-access="manager,senior">Edit Checklist</option>
+                    <option value="/AddItem?type=vehicle" data-access="manager,senior">Add Vehicle</option>
+                    <option value="/AddItem?type=equipment" data-access="manager,senior">Add Equipment</option>
+                    <option value="/AddItem?type=stock" data-access="manager,senior">Add Stock Item</option>
+                    <option value="/AddItem?type=medication" data-access="manager,senior">Add Medication</option>
+                    <option value="/UploadStaffFiles" data-access="manager,senior">Staff Files / Folders</option>
+                    <option value="/StaffRecordsSearch" data-access="manager,senior">Search Staff Records</option>
 
-                <option value="/MasterSetup" data-access="senior">Master Setup</option>
-                <option value="/CompanyProfile" data-access="senior">Company Profile</option>
-                <option value="/CompanyName" data-access="senior">Company Name</option>
-                <option value="/LogoUpload" data-access="senior">Logo Upload</option>
-                <option value="/SupplierDetails" data-access="senior">Supplier Details</option>
-                <option value="/UploadChecklist" data-access="senior">Upload Existing Checklist</option>
-                <option value="/UploadVehicleRegister" data-access="senior">Upload Vehicle Register</option>
-                <option value="/UploadEquipmentRegister" data-access="senior">Upload Equipment Register</option>
-                <option value="/UploadStockRegister" data-access="senior">Upload Stock Register</option>
-                <option value="/CreateManagerAccess" data-access="senior">Create Manager Access</option>
-                <option value="/CreateOperationalStaffAccess" data-access="senior">Create Staff Access</option>
-                <option value="/TaskCommunicationSetup" data-access="senior">Task Communication Setup</option>
-                <option value="/AuditLog" data-access="senior">Audit Log</option>
-                <option value="/Onboarding" data-access="senior">Onboarding</option>
-                <option value="/CompanyLogin" data-access="senior">Company Login</option>
-            </select>
-        </div>
+                    <option value="/MasterSetup" data-access="senior">Master Setup</option>
+                    <option value="/CompanyProfile" data-access="senior">Company Profile</option>
+                    <option value="/CompanyName" data-access="senior">Company Name</option>
+                    <option value="/LogoUpload" data-access="senior">Logo Upload</option>
+                    <option value="/SupplierDetails" data-access="senior">Supplier Details</option>
+                    <option value="/UploadChecklist" data-access="senior">Upload Existing Checklist</option>
+                    <option value="/UploadVehicleRegister" data-access="senior">Upload Vehicle Register</option>
+                    <option value="/UploadEquipmentRegister" data-access="senior">Upload Equipment Register</option>
+                    <option value="/UploadStockRegister" data-access="senior">Upload Stock Register</option>
+                    <option value="/CreateManagerAccess" data-access="senior">Create Manager Access</option>
+                    <option value="/CreateOperationalStaffAccess" data-access="senior">Create Staff Access</option>
+                    <option value="/TaskCommunicationSetup" data-access="senior">Task Communication Setup</option>
+                    <option value="/AuditLog" data-access="senior">Audit Log</option>
+                    <option value="/Onboarding" data-access="senior">Onboarding</option>
+                    <option value="/CompanyLogin" data-access="senior">Company Login</option>
+                </select>
+            </div>
+        }
 
         <nav class="top-nav">
             <a href="javascript:history.back()">Back</a>
@@ -210,53 +237,56 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <script>
-        (function () {
-            const accessFromUrl = new URLSearchParams(window.location.search).get("access");
-            if (accessFromUrl) {
-                const role = accessFromUrl === "senior-management"
-                    ? "senior"
-                    : accessFromUrl === "staff"
-                        ? "staff"
-                        : "manager";
-                sessionStorage.setItem("vectorAccessRole", role);
-            }
+    @if (showPageIndex)
+    {
+        <script>
+            (function () {
+                const accessFromUrl = new URLSearchParams(window.location.search).get("access");
+                if (accessFromUrl) {
+                    const role = accessFromUrl === "senior-management"
+                        ? "senior"
+                        : accessFromUrl === "staff"
+                            ? "staff"
+                            : "manager";
+                    sessionStorage.setItem("vectorAccessRole", role);
+                }
 
-            const select = document.getElementById("pageIndex");
-            if (!select) {
-                return;
-            }
-
-            const currentRole = sessionStorage.getItem("vectorAccessRole") || "staff";
-            const options = Array.from(select.options);
-
-            options.forEach(function (option) {
-                const access = option.dataset.access;
-                if (!access || access === "all") {
+                const select = document.getElementById("pageIndex");
+                if (!select) {
                     return;
                 }
 
-                const allowedRoles = access.split(",");
-                if (!allowedRoles.includes(currentRole)) {
-                    option.remove();
-                }
-            });
+                const currentRole = sessionStorage.getItem("vectorAccessRole") || "staff";
+                const options = Array.from(select.options);
 
-            const currentPath = window.location.pathname.toLowerCase();
-            Array.from(select.options).forEach(function (option) {
-                const optionPath = (option.value || "").split("?")[0].toLowerCase();
-                if (optionPath && optionPath === currentPath) {
-                    select.value = option.value;
-                }
-            });
+                options.forEach(function (option) {
+                    const access = option.dataset.access;
+                    if (!access || access === "all") {
+                        return;
+                    }
 
-            select.addEventListener("change", function () {
-                if (select.value) {
-                    window.location.href = select.value;
-                }
-            });
-        })();
-    </script>
+                    const allowedRoles = access.split(",");
+                    if (!allowedRoles.includes(currentRole)) {
+                        option.remove();
+                    }
+                });
+
+                const currentPath = window.location.pathname.toLowerCase();
+                Array.from(select.options).forEach(function (option) {
+                    const optionPath = (option.value || "").split("?")[0].toLowerCase();
+                    if (optionPath && optionPath === currentPath) {
+                        select.value = option.value;
+                    }
+                });
+
+                select.addEventListener("change", function () {
+                    if (select.value) {
+                        window.location.href = select.value;
+                    }
+                });
+            })();
+        </script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
