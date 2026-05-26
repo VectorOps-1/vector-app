@@ -17,6 +17,7 @@ public class AddItemModel : PageModel
     [BindProperty] public string? Notes { get; set; }
 
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public string ItemLabel => NormalizedType switch
     {
@@ -69,6 +70,7 @@ public class AddItemModel : PageModel
             return Page();
         }
 
+        ActionSaved = true;
         StatusMessage = $"{ItemLabel} ready to save. This manual add action will later create a database record and audit entry, and can be assigned as a task with limited access.";
         return Page();
     }
