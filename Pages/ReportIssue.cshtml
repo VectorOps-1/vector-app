@@ -23,71 +23,15 @@
 
         <form method="post" enctype="multipart/form-data" class="issue-form">
             <div class="form-grid">
-                <label>
-                    Module
-                    <select asp-for="Module">
-                        <option>General</option>
-                        <option>Vehicle</option>
-                        <option>Equipment</option>
-                        <option>Stock</option>
-                        <option>Medication</option>
-                        <option>Staff</option>
-                        <option>Checklist</option>
-                    </select>
-                </label>
-
-                <label>
-                    Issue type
-                    <select asp-for="IssueType">
-                        <option value="">Select issue type</option>
-                        <option>Damage</option>
-                        <option>Fault / failure</option>
-                        <option>Missing item</option>
-                        <option>Expired item</option>
-                        <option>Low stock</option>
-                        <option>Incorrect allocation</option>
-                        <option>Safety concern</option>
-                        <option>Other</option>
-                    </select>
-                </label>
-
-                <label>
-                    Related asset / item
-                    <input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" />
-                </label>
-
-                <label>
-                    Location
-                    <input asp-for="Location" type="text" placeholder="Base, vehicle, store, department, or scene" />
-                </label>
-
-                <label>
-                    Severity
-                    <select asp-for="Severity">
-                        <option value="">Select severity</option>
-                        <option>Low</option>
-                        <option>Medium</option>
-                        <option>High</option>
-                        <option>Critical</option>
-                    </select>
-                </label>
-
-                <label>
-                    Operational status
-                    <select asp-for="OperationalStatus">
-                        <option value="">Select status</option>
-                        <option>Still operational</option>
-                        <option>Operational with restriction</option>
-                        <option>Out of service</option>
-                        <option>Requires manager review</option>
-                    </select>
-                </label>
+                <label>Module<select asp-for="Module"><option>General</option><option>Vehicle</option><option>Equipment</option><option>Stock</option><option>Medication</option><option>Staff</option><option>Checklist</option></select></label>
+                <label>Issue type<select asp-for="IssueType"><option value="">Select issue type</option><option>Damage</option><option>Fault / failure</option><option>Missing item</option><option>Expired item</option><option>Low stock</option><option>Incorrect allocation</option><option>Safety concern</option><option>Other</option></select></label>
+                <label>Related asset / item<input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" /></label>
+                <label>Location<input asp-for="Location" type="text" placeholder="Base, vehicle, store, department, or scene" /></label>
+                <label>Severity<select asp-for="Severity"><option value="">Select severity</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+                <label>Operational status<select asp-for="OperationalStatus"><option value="">Select status</option><option>Still operational</option><option>Operational with restriction</option><option>Out of service</option><option>Requires manager review</option></select></label>
             </div>
 
-            <label class="notes-field">
-                Issue description
-                <textarea asp-for="Description" rows="5" placeholder="Describe what happened, what is affected, and what action is required"></textarea>
-            </label>
+            <label class="notes-field">Issue description<textarea asp-for="Description" rows="5" placeholder="Describe what happened, what is affected, and what action is required"></textarea></label>
 
             <label class="upload-box" for="EvidenceFiles">
                 <span class="upload-title">Attach Evidence</span>
@@ -126,3 +70,14 @@
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
 @@media (max-width: 700px) { .form-grid, .action-row { grid-template-columns: 1fr; } }
 </style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: "Issue submitted. This will be stored with user, time, evidence, and audit details once the database is connected.",
+            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            delay: 1300
+        });
+    </script>
+}
