@@ -21,7 +21,7 @@
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        <form method="post" enctype="multipart/form-data" class="feedback-form">
+        <form id="taskFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
             <section class="feedback-panel">
                 <div class="section-label">Received Task</div>
                 <div class="task-summary">
@@ -94,3 +94,9 @@
 .submit-btn { width: min(360px, 94%); border: none; }
 @@media (max-width: 700px) { .task-summary, .form-grid { grid-template-columns: 1fr; } }
 </style>
+
+<script>
+    document.getElementById("taskFeedbackForm")?.addEventListener("submit", function () {
+        sessionStorage.setItem("vectorAssignedTaskCompleted", "true");
+    });
+</script>
