@@ -30,12 +30,9 @@ public class TaskFeedbackModel : PageModel
 
     public TaskFeedbackDetails? TaskDetails { get; private set; }
     public string? StatusMessage { get; private set; }
-    public bool FeedbackSaved { get; private set; }
 
     public async Task OnGetAsync()
     {
-        StatusMessage = TempData["StatusMessage"] as string;
-        FeedbackSaved = TempData["FeedbackSaved"] as bool? == true;
         await LoadTaskAsync();
     }
 
@@ -100,8 +97,7 @@ public class TaskFeedbackModel : PageModel
 
         await _db.SaveChangesAsync();
 
-        TempData["SuccessMessage"] = "Feedback submitted. The task is now marked complete and recorded.";
-        return RedirectToPage("/TaskInbox");
+        return RedirectToPage("/TaskInbox", new { confirmation = "feedback-submitted" });
     }
 
     private async Task LoadTaskAsync()
