@@ -168,6 +168,59 @@
             text-align: center;
         }
 
+        .action-confirmation {
+            position: fixed;
+            inset: 0;
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.28);
+            box-sizing: border-box;
+        }
+
+        .action-confirmation.visible {
+            display: flex;
+        }
+
+        .confirmation-card {
+            width: min(420px, 94vw);
+            padding: 28px 24px;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+            text-align: center;
+        }
+
+        .confirmation-mark {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px auto;
+            border-radius: 50%;
+            background: #2f80a8;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            font-weight: 900;
+        }
+
+        .confirmation-title {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 900;
+            color: #1f2937;
+        }
+
+        .confirmation-message {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #52606d;
+        }
+
         @@media (max-width: 780px) {
             .top-bar {
                 height: auto;
@@ -313,9 +366,71 @@
         </a>
     }
 
+    <div id="actionConfirmation" class="action-confirmation" role="status" aria-live="polite" aria-hidden="true">
+        <div class="confirmation-card">
+            <div class="confirmation-mark">✓</div>
+            <h2 class="confirmation-title">Action Confirmed</h2>
+            <p id="confirmationMessage" class="confirmation-message">Your action has been completed.</p>
+        </div>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        window.VectorActionConfirmation = (function () {
+            function getReturnUrl(fallbackUrl) {
+                if (fallbackUrl) {
+                    return fallbackUrl;
+                }
+
+                if (document.referrer) {
+                    try {
+                        const referrer = new URL(document.referrer);
+                        if (referrer.origin === window.location.origin && referrer.pathname !== window.location.pathname) {
+                            return referrer.pathname + referrer.search;
+                        }
+                    } catch { }
+                }
+
+                const role = sessionStorage.getItem("vectorAccessRole");
+                if (role === "staff") {
+                    return "/Home?access=staff";
+                }
+                if (role === "manager") {
+                    return "/Home?access=operational-management";
+                }
+                if (role === "senior") {
+                    return "/Home?access=senior-management";
+                }
+
+                return "/Index";
+            }
+
+            function show(options) {
+                const settings = options || {};
+                const overlay = document.getElementById("actionConfirmation");
+                const message = document.getElementById("confirmationMessage");
+                const redirectUrl = getReturnUrl(settings.redirectUrl);
+
+                if (!overlay || !message) {
+                    window.location.href = redirectUrl;
+                    return;
+                }
+
+                message.textContent = settings.message || "Your action has been completed.";
+                overlay.classList.add("visible");
+                overlay.setAttribute("aria-hidden", "false");
+
+                window.setTimeout(function () {
+                    window.location.href = redirectUrl;
+                }, settings.delay || 1250);
+            }
+
+            return { show: show, getReturnUrl: getReturnUrl };
+        })();
+    </script>
 
     @if (showPageIndex)
     {
