@@ -1,26 +1,41 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class TaskActionModel : PageModel
 {
+    private readonly VectorDbContext _db;
+    private readonly CurrentUserService _currentUser;
+
+    public TaskActionModel(VectorDbContext db, CurrentUserService currentUser)
+    {
+        _db = db;
+        _currentUser = currentUser;
+    }
+
     public TaskActionDetails? TaskDetails { get; set; }
 
-    public async Task OnGetAsync(int? taskId)
+    public async Task<IActionResult> OnGetAsync(int? taskId)
     {
-        if (!taskId.HasValue)
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
         {
-            return;
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
         }
 
-        var db = HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
+        if (!taskId.HasValue)
+        {
+            return Page();
+        }
 
-        TaskDetails = await db.TaskItems
+        TaskDetails = await _db.TaskItems
             .Include(t => t.AssignedByUser)
             .Include(t => t.AssignedToUser)
-            .Where(t => t.Id == taskId.Value && t.Status == "Open")
+            .Where(t => t.Id == taskId.Value && t.AssignedToUserId == currentUser.Id && t.Status == "Open")
             .Select(t => new TaskActionDetails
             {
                 Id = t.Id,
@@ -31,6 +46,13 @@ public class TaskActionModel : PageModel
                 ExpiresAtUtc = t.ExpiresAtUtc
             })
             .FirstOrDefaultAsync();
+
+        if (TaskDetails is null)
+        {
+            return RedirectToPage("/TaskInbox", new { confirmation = "task-not-found" });
+        }
+
+        return Page();
     }
 
     public class TaskActionDetails

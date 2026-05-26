@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class TaskFeedbackModel : PageModel
 {
-    private const int PrototypeCurrentUserId = 1;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp",
@@ -16,10 +16,12 @@ public class TaskFeedbackModel : PageModel
     };
 
     private readonly VectorDbContext _db;
+    private readonly CurrentUserService _currentUser;
 
-    public TaskFeedbackModel(VectorDbContext db)
+    public TaskFeedbackModel(VectorDbContext db, CurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     [BindProperty(SupportsGet = true)] public int? TaskId { get; set; }
@@ -38,6 +40,12 @@ public class TaskFeedbackModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
+        }
+
         await LoadTaskAsync();
 
         if (!TaskId.HasValue || TaskDetails is null)
@@ -65,7 +73,8 @@ public class TaskFeedbackModel : PageModel
             return Page();
         }
 
-        var task = await _db.TaskItems.FirstAsync(t => t.Id == TaskId.Value);
+        var task = await _db.TaskItems
+            .FirstAsync(t => t.Id == TaskId.Value && t.AssignedToUserId == currentUser.Id && t.Status == "Open");
         var now = DateTime.UtcNow;
 
         task.Status = "Completed";
@@ -78,7 +87,7 @@ public class TaskFeedbackModel : PageModel
         _db.TaskEvents.Add(new TaskEvent
         {
             TaskItemId = task.Id,
-            PerformedByUserId = PrototypeCurrentUserId,
+            PerformedByUserId = currentUser.Id,
             EventType = "Completed",
             Notes = $"Outcome: {Outcome}. Related item: {RelatedItem ?? "None"}. Feedback: {FeedbackMessage}.{evidenceSummary}",
             CreatedAtUtc = now
@@ -87,7 +96,7 @@ public class TaskFeedbackModel : PageModel
         _db.AuditLogs.Add(new AuditLog
         {
             CompanyId = task.CompanyId,
-            AppUserId = PrototypeCurrentUserId,
+            AppUserId = currentUser.Id,
             Action = "Task completed",
             EntityType = "TaskItem",
             EntityId = task.Id,
@@ -102,13 +111,14 @@ public class TaskFeedbackModel : PageModel
 
     private async Task LoadTaskAsync()
     {
-        if (!TaskId.HasValue)
+        var currentUserId = _currentUser.CurrentUserId;
+        if (!TaskId.HasValue || !currentUserId.HasValue)
         {
             return;
         }
 
         TaskDetails = await _db.TaskItems
-            .Where(t => t.Id == TaskId.Value && t.AssignedToUserId == PrototypeCurrentUserId && t.Status == "Open")
+            .Where(t => t.Id == TaskId.Value && t.AssignedToUserId == currentUserId.Value && t.Status == "Open")
             .Select(t => new TaskFeedbackDetails
             {
                 Id = t.Id,

@@ -31,6 +31,7 @@
         }
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <div class="signed-in-line">Signed in: @Model.SignedInName (@Model.SignedInRole)</div>
         <div class="view-badge">@viewName</div>
 
         @if (isStaff)
@@ -153,6 +154,13 @@
     font-size: 12px;
     font-weight: 500;
     color: #6b7280;
+}
+
+.signed-in-line {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
 }
 
 .view-badge {

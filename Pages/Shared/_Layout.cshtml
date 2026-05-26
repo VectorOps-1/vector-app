@@ -1,7 +1,12 @@
+@using vector_app_local.Services
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
     var showPageIndex = !string.Equals(currentPage, "/Index", StringComparison.OrdinalIgnoreCase);
     var showTaskNotification = showPageIndex && !string.Equals(currentPage, "/RoleLogin", StringComparison.OrdinalIgnoreCase);
+    var currentAccessView = Context.Session.GetString(CurrentUserService.AccessViewSessionKey);
+    var currentClientRole = string.IsNullOrWhiteSpace(currentAccessView)
+        ? null
+        : CurrentUserService.AccessViewToClientRole(currentAccessView);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -394,15 +399,15 @@
                     } catch { }
                 }
 
-                const role = sessionStorage.getItem("vectorAccessRole");
+                const role = window.VectorCurrentRole || sessionStorage.getItem("vectorAccessRole");
                 if (role === "staff") {
-                    return "/Home?access=staff";
+                    return "/Home";
                 }
                 if (role === "manager") {
-                    return "/Home?access=operational-management";
+                    return "/Home";
                 }
                 if (role === "senior") {
-                    return "/Home?access=senior-management";
+                    return "/Home";
                 }
 
                 return "/Index";
@@ -436,8 +441,13 @@
     {
         <script>
             (function () {
+                const serverRole = @Json.Serialize(currentClientRole);
+                window.VectorCurrentRole = serverRole || null;
+
                 const accessFromUrl = new URLSearchParams(window.location.search).get("access");
-                if (accessFromUrl) {
+                if (serverRole) {
+                    sessionStorage.setItem("vectorAccessRole", serverRole);
+                } else if (accessFromUrl) {
                     const role = accessFromUrl === "senior-management"
                         ? "senior"
                         : accessFromUrl === "staff"
@@ -447,7 +457,7 @@
                 }
 
                 const select = document.getElementById("pageIndex");
-                const currentRole = sessionStorage.getItem("vectorAccessRole");
+                const currentRole = serverRole || sessionStorage.getItem("vectorAccessRole");
 
                 if (select) {
                     const options = Array.from(select.options);
@@ -479,15 +489,6 @@
                     });
                 }
 
-                const taskNotification = document.getElementById("taskNotification");
-                const taskCount = document.getElementById("taskCount");
-                const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]")
-                    .filter(task => task.status !== "completed");
-
-                if (taskNotification && taskCount && currentRole && currentRole !== "senior" && tasks.length > 0) {
-                    taskCount.textContent = String(tasks.length);
-                    taskNotification.classList.add("visible");
-                }
             })();
         </script>
     }

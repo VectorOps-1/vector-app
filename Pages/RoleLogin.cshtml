@@ -12,14 +12,21 @@
         <h2 class="page-title">@Model.RoleTitle</h2>
         <p class="page-subtitle">Enter authorised user details for this access level</p>
 
-        <form class="login-form" method="get" action="/Home">
+        @if (!string.IsNullOrWhiteSpace(Model.LoginError))
+        {
+            <div class="login-error">@Model.LoginError</div>
+        }
+
+        <form class="login-form" method="post">
             <input type="hidden" name="access" value="@Model.AccessView" />
 
-            <label class="field-label" for="email">Email or username</label>
-            <input id="email" class="text-input" type="text" placeholder="user@example.com" autocomplete="username" />
+            <label class="field-label" asp-for="Email">Email or username</label>
+            <input class="text-input" asp-for="Email" type="text" placeholder="user@example.com" autocomplete="username" />
+            <span class="field-error" asp-validation-for="Email"></span>
 
-            <label class="field-label" for="password">Password</label>
-            <input id="password" class="text-input" type="password" placeholder="Password" autocomplete="current-password" />
+            <label class="field-label" asp-for="Password">Password</label>
+            <input class="text-input" asp-for="Password" type="password" placeholder="Password" autocomplete="current-password" />
+            <span class="field-error" asp-validation-for="Password"></span>
 
             <label class="toggle-row">
                 <input type="checkbox" />
@@ -29,7 +36,7 @@
             <button class="menu-btn equipment-btn login-btn" type="submit">Continue</button>
         </form>
 
-        <div class="login-note">Prototype only. Real authentication, MFA, and tenant enforcement will be added with the database/security layer.</div>
+        <div class="login-note">Prototype login uses active seeded users from the database. Password storage, MFA, and tenant enforcement will be added with the production security layer.</div>
     </div>
 </div>
 
@@ -115,6 +122,22 @@
     box-sizing: border-box;
 }
 
+.field-error,
+.login-error {
+    font-size: 13px;
+    font-weight: 800;
+    color: #943939;
+}
+
+.login-error {
+    width: min(520px, 94%);
+    margin: 0 auto 16px auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(148, 57, 57, 0.22);
+    border-radius: 8px;
+    background: rgba(148, 57, 57, 0.07);
+}
+
 .toggle-row {
     display: flex;
     align-items: center;
@@ -149,3 +172,7 @@
     color: #5f6b7a;
 }
 </style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

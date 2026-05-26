@@ -3,17 +3,19 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class TaskInboxModel : PageModel
 {
-    private const int PrototypeCurrentUserId = 1;
     private readonly VectorDbContext _db;
+    private readonly CurrentUserService _currentUser;
 
-    public TaskInboxModel(VectorDbContext db)
+    public TaskInboxModel(VectorDbContext db, CurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     public List<TaskInboxItem> OpenTasks { get; set; } = new();
@@ -25,6 +27,7 @@ public class TaskInboxModel : PageModel
         SuccessMessage = confirmation switch
         {
             "feedback-submitted" => "Feedback submitted. The task is now marked complete and recorded.",
+            "task-not-found" => "That task is no longer open for the signed-in user.",
             _ => TempData["SuccessMessage"] as string
         };
 
@@ -33,9 +36,15 @@ public class TaskInboxModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int taskId)
     {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
+        }
+
         var task = await _db.TaskItems
             .Include(t => t.Company)
-            .FirstOrDefaultAsync(t => t.Id == taskId && t.AssignedToUserId == PrototypeCurrentUserId);
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.AssignedToUserId == currentUser.Id && t.Status == "Open");
 
         if (task is null)
         {
@@ -49,7 +58,7 @@ public class TaskInboxModel : PageModel
         _db.TaskEvents.Add(new TaskEvent
         {
             TaskItemId = task.Id,
-            PerformedByUserId = PrototypeCurrentUserId,
+            PerformedByUserId = currentUser.Id,
             EventType = "Deleted",
             Notes = "Task removed from inbox by assigned user.",
             CreatedAtUtc = now
@@ -58,7 +67,7 @@ public class TaskInboxModel : PageModel
         _db.AuditLogs.Add(new AuditLog
         {
             CompanyId = task.CompanyId,
-            AppUserId = PrototypeCurrentUserId,
+            AppUserId = currentUser.Id,
             Action = "Task deleted",
             EntityType = "TaskItem",
             EntityId = task.Id,
@@ -74,10 +83,17 @@ public class TaskInboxModel : PageModel
 
     private async Task LoadTasksAsync()
     {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            OpenTasks = new List<TaskInboxItem>();
+            return;
+        }
+
         OpenTasks = await _db.TaskItems
             .Include(t => t.AssignedByUser)
             .Include(t => t.AssignedToUser)
-            .Where(t => t.AssignedToUserId == PrototypeCurrentUserId && t.Status == "Open")
+            .Where(t => t.AssignedToUserId == currentUser.Id && t.Status == "Open")
             .OrderByDescending(t => t.CreatedAtUtc)
             .Select(t => new TaskInboxItem
             {

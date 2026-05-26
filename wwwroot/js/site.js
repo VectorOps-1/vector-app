@@ -10,14 +10,7 @@
             return;
         }
 
-        const role = sessionStorage.getItem("vectorAccessRole");
-        if (!role || role === "senior") {
-            return;
-        }
-
-        const userId = role === "manager" ? 2 : 1;
-
-        fetch(`/TaskNotificationCount?userId=${userId}`, { cache: "no-store" })
+        fetch("/TaskNotificationCount", { cache: "no-store" })
             .then(response => response.ok ? response.json() : { count: 0 })
             .then(data => {
                 const count = Number(data.count || 0);
