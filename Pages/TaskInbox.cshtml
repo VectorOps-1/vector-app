@@ -1,0 +1,80 @@
+@page
+@model TaskInboxModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Task Inbox";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="task-inbox-screen">
+    <div class="task-inbox-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Assigned Actions</div>
+        <h2 class="page-title">Task Inbox</h2>
+        <p class="page-subtitle">Select an assigned action to view the instruction, expiry, and task-only access.</p>
+
+        <div id="emptyInbox" class="empty-panel">No open assigned tasks.</div>
+        <div id="taskList" class="task-list" aria-live="polite"></div>
+    </div>
+</div>
+
+<style>
+.task-inbox-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.task-inbox-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(680px, 94%); margin: 0 auto 26px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.task-list { display: grid; gap: 16px; width: min(820px, 94%); margin: 0 auto; text-align: left; }
+.task-card { display: block; padding: 18px 20px; border: 1px solid rgba(47,128,168,.26); border-radius: 8px; background: rgba(255,255,255,.78); text-decoration: none; color: #1f2937; box-shadow: 0 14px 28px rgba(47,128,168,.10); }
+.task-card:hover { color: #1f2937; border-color: rgba(47,128,168,.52); }
+.task-title { margin-bottom: 8px; font-size: 18px; font-weight: 900; }
+.task-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 13px; font-weight: 700; color: #52606d; }
+.task-message { margin-top: 12px; font-size: 14px; font-weight: 700; color: #425466; }
+@@media (max-width: 700px) { .task-meta { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+    (function () {
+        const taskList = document.getElementById("taskList");
+        const emptyInbox = document.getElementById("emptyInbox");
+        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]")
+            .filter(task => task.status !== "completed");
+
+        if (!tasks.length) {
+            emptyInbox.style.display = "block";
+            return;
+        }
+
+        emptyInbox.style.display = "none";
+        taskList.innerHTML = tasks.map(task => `
+            <a class="task-card" href="/TaskAction?taskId=${encodeURIComponent(task.id)}">
+                <div class="task-title">${escapeHtml(task.action || "Assigned action")}</div>
+                <div class="task-meta">
+                    <div>From: ${escapeHtml(task.assignedBy || "Manager")}</div>
+                    <div>Recipient: ${escapeHtml(task.recipient || "Current user")}</div>
+                    <div>Access: Task-only</div>
+                    <div>Expires: ${escapeHtml(formatExpiry(task.expiresAt))}</div>
+                </div>
+                <div class="task-message">${escapeHtml(task.message || "No instruction entered.")}</div>
+            </a>
+        `).join("");
+
+        function formatExpiry(value) {
+            if (!value) return "Manager-selected expiry";
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>'"]/g, function (char) {
+                return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;" })[char];
+            });
+        }
+    })();
+</script>
