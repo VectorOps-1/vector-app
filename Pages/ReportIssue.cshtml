@@ -1,0 +1,128 @@
+@page
+@model ReportIssueModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Report Issue";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="issue-screen">
+    <div class="issue-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Operational Report</div>
+        <h2 class="page-title">Report Issue</h2>
+        <p class="page-subtitle">Create an issue record for management review and follow-up.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" enctype="multipart/form-data" class="issue-form">
+            <div class="form-grid">
+                <label>
+                    Module
+                    <select asp-for="Module">
+                        <option>General</option>
+                        <option>Vehicle</option>
+                        <option>Equipment</option>
+                        <option>Stock</option>
+                        <option>Medication</option>
+                        <option>Staff</option>
+                        <option>Checklist</option>
+                    </select>
+                </label>
+
+                <label>
+                    Issue type
+                    <select asp-for="IssueType">
+                        <option value="">Select issue type</option>
+                        <option>Damage</option>
+                        <option>Fault / failure</option>
+                        <option>Missing item</option>
+                        <option>Expired item</option>
+                        <option>Low stock</option>
+                        <option>Incorrect allocation</option>
+                        <option>Safety concern</option>
+                        <option>Other</option>
+                    </select>
+                </label>
+
+                <label>
+                    Related asset / item
+                    <input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" />
+                </label>
+
+                <label>
+                    Location
+                    <input asp-for="Location" type="text" placeholder="Base, vehicle, store, department, or scene" />
+                </label>
+
+                <label>
+                    Severity
+                    <select asp-for="Severity">
+                        <option value="">Select severity</option>
+                        <option>Low</option>
+                        <option>Medium</option>
+                        <option>High</option>
+                        <option>Critical</option>
+                    </select>
+                </label>
+
+                <label>
+                    Operational status
+                    <select asp-for="OperationalStatus">
+                        <option value="">Select status</option>
+                        <option>Still operational</option>
+                        <option>Operational with restriction</option>
+                        <option>Out of service</option>
+                        <option>Requires manager review</option>
+                    </select>
+                </label>
+            </div>
+
+            <label class="notes-field">
+                Issue description
+                <textarea asp-for="Description" rows="5" placeholder="Describe what happened, what is affected, and what action is required"></textarea>
+            </label>
+
+            <label class="upload-box" for="EvidenceFiles">
+                <span class="upload-title">Attach Evidence</span>
+                <span class="upload-help">Accepted: photos, PDF, Word, Excel, CSV, TXT</span>
+                <input id="EvidenceFiles" asp-for="EvidenceFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.doc,.docx,.xls,.xlsx,.csv,.txt" />
+            </label>
+
+            <div class="action-row">
+                <button class="menu-btn report-btn" type="submit">Submit Issue</button>
+                <a class="menu-btn equipment-btn" href="/SendTask">Send Action</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.issue-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.issue-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(680px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(820px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.issue-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.form-grid { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 800; color: #52606d; }
+.form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.notes-field { width: min(860px, 94%); }
+.notes-field textarea { padding-top: 12px; resize: vertical; }
+.upload-box { width: min(860px, 94%); min-height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; padding: 22px; border: 1px dashed rgba(66,84,102,.42); border-radius: 8px; background: rgba(255,255,255,.58); cursor: pointer; box-sizing: border-box; }
+.upload-title { font-size: 19px; font-weight: 800; color: #2f2f2f; }
+.upload-help { font-size: 14px; font-weight: 600; color: #6b7280; }
+.upload-box input { margin-top: 10px; max-width: 100%; }
+.action-row { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { width: 100%; border: none; text-align: center; }
+@@media (max-width: 700px) { .form-grid, .action-row { grid-template-columns: 1fr; } }
+</style>
