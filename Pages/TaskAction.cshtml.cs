@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using vector_app_local.Data;
 
 namespace vector_app_local.Pages;
@@ -8,6 +9,7 @@ public class TaskActionModel : PageModel
 {
     private readonly VectorDbContext _db;
 
+    [ActivatorUtilitiesConstructor]
     public TaskActionModel(VectorDbContext db)
     {
         _db = db;
