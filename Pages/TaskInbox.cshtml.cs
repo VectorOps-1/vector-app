@@ -71,7 +71,7 @@ public class TaskInboxModel : PageModel
     private async Task LoadTasksAsync()
     {
         OpenTasks = await _db.TaskItems
-            .Include(t => t.AssignedBy)
+            .Include(t => t.AssignedByUser)
             .Include(t => t.AssignedToUser)
             .Where(t => t.AssignedToUserId == PrototypeCurrentUserId && t.Status == "Open")
             .OrderByDescending(t => t.CreatedAtUtc)
@@ -79,7 +79,7 @@ public class TaskInboxModel : PageModel
             {
                 Id = t.Id,
                 ActionType = t.ActionType,
-                AssignedByName = t.AssignedBy == null ? "Manager" : t.AssignedBy.FullName,
+                AssignedByName = t.AssignedByUser == null ? "Manager" : t.AssignedByUser.FullName,
                 AssignedToName = t.AssignedToUser == null ? "Current user" : t.AssignedToUser.FullName,
                 InstructionMessage = t.InstructionMessage,
                 CreatedAtUtc = t.CreatedAtUtc,
