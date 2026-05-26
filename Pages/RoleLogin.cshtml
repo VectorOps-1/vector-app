@@ -1,0 +1,151 @@
+@page
+@model RoleLoginModel
+@{
+    ViewData["Title"] = Model.RoleTitle;
+}
+
+<div class="login-screen">
+    <div class="login-inner">
+        <div class="home-label">Vector Login</div>
+        <img src="/vector-splash.png" class="login-logo" alt="Vector Logo" />
+        <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <h2 class="page-title">@Model.RoleTitle</h2>
+        <p class="page-subtitle">Enter authorised user details for this access level</p>
+
+        <form class="login-form" method="get" action="/Home">
+            <input type="hidden" name="access" value="@Model.AccessView" />
+
+            <label class="field-label" for="email">Email or username</label>
+            <input id="email" class="text-input" type="text" placeholder="user@example.com" autocomplete="username" />
+
+            <label class="field-label" for="password">Password</label>
+            <input id="password" class="text-input" type="password" placeholder="Password" autocomplete="current-password" />
+
+            <label class="toggle-row">
+                <input type="checkbox" />
+                <span>Use multi-factor verification</span>
+            </label>
+
+            <button class="menu-btn equipment-btn login-btn" type="submit">Continue</button>
+        </form>
+
+        <div class="login-note">Prototype only. Real authentication, MFA, and tenant enforcement will be added with the database/security layer.</div>
+    </div>
+</div>
+
+<style>
+.login-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.login-inner {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.login-logo {
+    width: 360px;
+    max-width: 74%;
+    margin: 0 auto 12px auto;
+    display: block;
+    mix-blend-mode: multiply;
+}
+
+.home-context {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 24px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.login-form {
+    width: min(520px, 94%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+}
+
+.field-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.text-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 42px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.toggle-row input {
+    width: 18px;
+    height: 18px;
+}
+
+.login-btn {
+    align-self: center;
+    margin-top: 8px;
+    min-width: 240px;
+    border: none;
+}
+
+.login-note {
+    width: min(560px, 92%);
+    margin: 22px auto 0 auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+    font-weight: 700;
+    color: #5f6b7a;
+}
+</style>
