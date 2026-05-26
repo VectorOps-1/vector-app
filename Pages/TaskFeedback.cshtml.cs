@@ -16,6 +16,7 @@ public class TaskFeedbackModel : PageModel
     [BindProperty] public string? FeedbackMessage { get; set; }
     [BindProperty] public List<IFormFile> EvidenceFiles { get; set; } = new();
     public string? StatusMessage { get; private set; }
+    public bool FeedbackSaved { get; private set; }
 
     public void OnGet() { }
 
@@ -40,7 +41,8 @@ public class TaskFeedbackModel : PageModel
             return Page();
         }
 
-        StatusMessage = "Task feedback ready to save. This will later attach to the assigned task, notify the manager, and create an audit record.";
+        FeedbackSaved = true;
+        StatusMessage = "Task feedback submitted. This will later attach to the assigned task, notify the manager, and create an audit record.";
         return Page();
     }
 }
