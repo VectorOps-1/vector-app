@@ -1,0 +1,285 @@
+@page
+@model ChecklistPreviewModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Preview";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="preview-screen">
+    <div class="preview-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Generated Checklist Preview</div>
+        <h2 class="page-title">Review Checklist Template</h2>
+        <p class="page-subtitle">Source file: @Model.FileName</p>
+
+        <div class="preview-layout">
+            <section class="template-panel">
+                <label class="field-label" for="checklistName">Checklist name</label>
+                <input id="checklistName" class="text-input" type="text" value="Daily Vehicle Checklist" />
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <input class="section-title-input" type="text" value="Vehicle Readiness" />
+                        <button class="small-action" type="button">Edit Section</button>
+                    </div>
+
+                    <label class="check-row">
+                        <input type="checkbox" />
+                        <span>Exterior damage checked</span>
+                    </label>
+
+                    <label class="check-row">
+                        <input type="checkbox" />
+                        <span>Lights and siren checked</span>
+                    </label>
+
+                    <div class="field-group">
+                        <label class="field-label">Odometer reading</label>
+                        <input class="text-input" type="number" placeholder="Enter km" />
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <input class="section-title-input" type="text" value="Equipment Readiness" />
+                        <button class="small-action" type="button">Edit Section</button>
+                    </div>
+
+                    <label class="check-row">
+                        <input type="checkbox" />
+                        <span>Oxygen available and secured</span>
+                    </label>
+
+                    <label class="check-row">
+                        <input type="checkbox" />
+                        <span>Monitor/defibrillator present</span>
+                    </label>
+
+                    <div class="field-group">
+                        <label class="field-label">Notes</label>
+                        <textarea class="text-area" placeholder="Add comments"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="mapping-panel">
+                <div class="mapping-title">Detected structure</div>
+                <div class="mapping-item">Worksheet: Daily Checklist</div>
+                <div class="mapping-item">Sections: 2</div>
+                <div class="mapping-item">Checkbox fields: 4</div>
+                <div class="mapping-item">Number fields: 1</div>
+                <div class="mapping-item">Text fields: 1</div>
+            </aside>
+        </div>
+
+        <div class="action-row">
+            <a class="menu-btn vehicle-btn" href="/UploadChecklist">Upload Different File</a>
+            <button class="menu-btn equipment-btn" type="button">Save Checklist Template</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.preview-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.preview-inner {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.preview-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 24px;
+    align-items: start;
+    text-align: left;
+}
+
+.template-panel,
+.mapping-panel {
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    padding: 22px;
+}
+
+.section-card {
+    margin-top: 20px;
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-title-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid rgba(66, 84, 102, 0.28);
+    padding: 10px 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #2f2f2f;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.text-input,
+.text-area {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.text-area {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.field-group {
+    margin-top: 16px;
+}
+
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2f2f2f;
+}
+
+.check-row input {
+    width: 20px;
+    height: 20px;
+}
+
+.small-action {
+    min-width: 120px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #425466;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mapping-title {
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.mapping-item {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(66, 84, 102, 0.14);
+    font-size: 14px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.action-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+
+.action-row .menu-btn {
+    min-width: 260px;
+    border: none;
+}
+
+@@media (max-width: 860px) {
+    .preview-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .section-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .small-action {
+        width: 100%;
+    }
+}
+</style>
