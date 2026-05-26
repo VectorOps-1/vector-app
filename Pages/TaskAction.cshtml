@@ -6,6 +6,23 @@
     ViewData["Title"] = "Assigned Task";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var task = Model.TaskDetails;
+    var actionUrl = task?.ActionType switch
+    {
+        "Complete Checklist" => "/CompleteChecklist",
+        "Report Issue" => "/ReportIssue?module=general",
+        "Upload Personal Documents" => "/PersonalDocuments",
+        "Add New Vehicle" => "/AddItem?type=vehicle",
+        "Add New Equipment" => "/AddItem?type=equipment",
+        "Add New Stock Item" => "/AddItem?type=stock",
+        "Add Medication" => "/AddItem?type=medication",
+        "Receive Stock" => "/Stock",
+        "Issue / Allocate Stock" => "/Stock",
+        "Batch Number Tracking" => "/Stock",
+        "Expiry / Compliance Check" => "/Stock",
+        _ => "/TaskFeedback"
+    };
+    var separator = actionUrl.Contains('?') ? "&" : "?";
 }
 
 <div class="task-action-screen">
@@ -13,23 +30,35 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Task-Only Access</div>
-        <h2 id="taskTitle" class="page-title">Assigned Task</h2>
-        <p id="taskMessage" class="page-subtitle">Review the instruction before opening the assigned action.</p>
+
+        @if (task is null)
+        {
+            <h2 class="page-title">No Open Task</h2>
+            <p class="page-subtitle">There is no open assigned action available for this task.</p>
+        }
+        else
+        {
+            <h2 class="page-title">@task.ActionType</h2>
+            <p class="page-subtitle">@(string.IsNullOrWhiteSpace(task.InstructionMessage) ? "No instruction entered." : task.InstructionMessage)</p>
+        }
 
         <section class="access-panel">
             <div class="section-label">Access Window</div>
             <div class="access-grid">
                 <div><strong>Access:</strong> This assigned action only</div>
-                <div><strong>Expires:</strong> <span id="taskExpiry">Manager-selected expiry</span></div>
-                <div><strong>Assigned by:</strong> <span id="assignedBy">Manager</span></div>
-                <div><strong>Recipient:</strong> <span id="recipient">Current user</span></div>
+                <div><strong>Expires:</strong> @(task?.ExpiresAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Manager-selected expiry")</div>
+                <div><strong>Assigned by:</strong> @(task?.AssignedByName ?? "Manager")</div>
+                <div><strong>Recipient:</strong> @(task?.AssignedToName ?? "Current user")</div>
             </div>
         </section>
 
-        <div class="action-row">
-            <a id="openAction" class="menu-btn equipment-btn" href="/CompleteChecklist">Open Assigned Action</a>
-            <a id="submitFeedback" class="menu-btn staff-btn" href="/TaskFeedback">Submit Feedback / Confirmation</a>
-        </div>
+        @if (task is not null)
+        {
+            <div class="action-row">
+                <a class="menu-btn equipment-btn" href="@(actionUrl + separator + "taskId=" + task.Id + "&taskAccess=true")">Open Assigned Action</a>
+                <a class="menu-btn staff-btn" href="/TaskFeedback?taskId=@task.Id">Submit Feedback / Confirmation</a>
+            </div>
+        }
 
         <div class="task-note">After completing the assigned action, submit feedback so the task can be closed and recorded.</div>
     </div>
@@ -51,47 +80,3 @@
 .task-note { width: min(680px, 94%); margin: 22px auto 0 auto; padding: 12px 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.58); font-size: 13px; font-weight: 700; color: #52606d; }
 @@media (max-width: 700px) { .access-grid { grid-template-columns: 1fr; } }
 </style>
-
-<script>
-    (function () {
-        const taskId = new URLSearchParams(window.location.search).get("taskId");
-        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]");
-        const task = tasks.find(item => item.id === taskId) || tasks.find(item => item.status !== "completed");
-        const actionMap = {
-            "Complete Checklist": "/CompleteChecklist",
-            "Report Issue": "/ReportIssue?module=general",
-            "Upload Personal Documents": "/PersonalDocuments",
-            "Add New Vehicle": "/AddItem?type=vehicle",
-            "Add New Equipment": "/AddItem?type=equipment",
-            "Add New Stock Item": "/AddItem?type=stock",
-            "Add Medication": "/AddItem?type=medication",
-            "Receive Stock": "/Stock",
-            "Issue / Allocate Stock": "/Stock",
-            "Batch Number Tracking": "/Stock",
-            "Expiry / Compliance Check": "/Stock"
-        };
-
-        if (!task) {
-            document.getElementById("taskTitle").textContent = "No Open Task";
-            document.getElementById("taskMessage").textContent = "There is no open assigned action available in this session.";
-            document.getElementById("openAction").style.display = "none";
-            document.getElementById("submitFeedback").style.display = "none";
-            return;
-        }
-
-        const actionUrl = actionMap[task.action] || "/TaskFeedback";
-        document.getElementById("taskTitle").textContent = task.action || "Assigned Task";
-        document.getElementById("taskMessage").textContent = task.message || "No instruction entered.";
-        document.getElementById("taskExpiry").textContent = formatExpiry(task.expiresAt);
-        document.getElementById("assignedBy").textContent = task.assignedBy || "Manager";
-        document.getElementById("recipient").textContent = task.recipient || "Current user";
-        document.getElementById("openAction").href = `${actionUrl}${actionUrl.includes("?") ? "&" : "?"}taskId=${encodeURIComponent(task.id)}&taskAccess=true`;
-        document.getElementById("submitFeedback").href = `/TaskFeedback?taskId=${encodeURIComponent(task.id)}`;
-
-        function formatExpiry(value) {
-            if (!value) return "Manager-selected expiry";
-            const date = new Date(value);
-            return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-        }
-    })();
-</script>
