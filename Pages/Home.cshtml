@@ -11,6 +11,11 @@
 }
 
 <div class="home-screen ready show">
+    @if (isSeniorManagement)
+    {
+        <a class="senior-company-login" href="/CompanyLogin">Company Login</a>
+    }
+
     <div class="home-inner">
         <div class="home-label">Operations Dashboard</div>
 
@@ -77,11 +82,31 @@
 
 <style>
 .home-screen {
+    position: relative;
     display: flex;
     width: 100%;
     min-height: calc(100vh - 70px);
     justify-content: center;
     align-items: center;
+}
+
+.senior-company-login {
+    position: absolute;
+    top: 22px;
+    left: 28px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #334155;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+}
+
+.senior-company-login:hover {
+    color: #ffffff;
+    opacity: 0.88;
 }
 
 .home-inner {
@@ -173,7 +198,7 @@
 }
 
 .setup-action-row .menu-btn,
-staff-action-row .menu-btn {
+.staff-action-row .menu-btn {
     min-width: 240px;
 }
 
@@ -182,5 +207,17 @@ staff-action-row .menu-btn {
     font-size: 12px;
     font-weight: 500;
     color: #7a8491;
+}
+
+@media (max-width: 700px) {
+    .senior-company-login {
+        position: static;
+        margin: 18px auto 0 auto;
+        display: inline-flex;
+    }
+
+    .home-screen {
+        flex-direction: column;
+    }
 }
 </style>
