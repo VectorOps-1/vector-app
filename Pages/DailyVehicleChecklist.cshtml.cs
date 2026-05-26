@@ -17,6 +17,8 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public string? ChecklistNotes { get; set; }
     public string? StatusMessage { get; private set; }
 
+    public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
+
     public void OnGet() { }
 
     public IActionResult OnPost()
@@ -33,7 +35,7 @@ public class DailyVehicleChecklistModel : PageModel
             return Page();
         }
 
-        StatusMessage = "Vehicle inspection ready to save. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        StatusMessage = "Vehicle inspection ready to save. Continue to equipment checklist for the same vehicle. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
         return Page();
     }
 }
