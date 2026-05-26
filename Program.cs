@@ -5,7 +5,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 builder.Services.AddDbContext<VectorDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("VectorDatabase")));
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("VectorDatabase"));
+    }
+    else
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString("VectorDatabase"));
+    }
+});
 
 var app = builder.Build();
 
