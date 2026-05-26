@@ -1,0 +1,62 @@
+@page
+@model AddItemModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = $"Add {Model.ItemLabel}";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="add-item-screen">
+    <div class="add-item-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Manual Entry</div>
+        <h2 class="page-title">Add @Model.ItemLabel</h2>
+        <p class="page-subtitle">Add one newly acquired item without uploading a full register.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="add-form">
+            <input asp-for="Type" type="hidden" />
+
+            <div class="form-grid">
+                <label>@Model.PrimaryLabel<input asp-for="PrimaryName" type="text" placeholder="@Model.PrimaryPlaceholder" /></label>
+                <label>ID / reference number<input asp-for="ReferenceNumber" type="text" placeholder="Asset ID, staff ID, stock code, or medication code" /></label>
+                <label>Serial / batch number<input asp-for="SerialOrBatch" type="text" placeholder="Serial number, batch number, or file number" /></label>
+                <label>Make / model / type<input asp-for="MakeModelType" type="text" placeholder="Make, model, medication type, or staff role" /></label>
+                <label>Location<input asp-for="Location" type="text" placeholder="Base, store, vehicle, department, or file location" /></label>
+                <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
+                <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>
+                <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+            </div>
+
+            <label class="notes-field">Notes<textarea asp-for="Notes" rows="5" placeholder="Additional details, acquisition note, supplier, or manager instruction"></textarea></label>
+
+            <button class="menu-btn equipment-btn continue-btn" type="submit">Save @Model.ItemLabel</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.add-item-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
+.add-item-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { margin: 0 0 24px 0; font-size: 16px; font-weight: 500; color: #6b7280; }
+.status-message { width: min(720px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.add-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.form-grid { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 700; color: #52606d; }
+.form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.notes-field { width: min(860px, 94%); }
+.notes-field textarea { padding-top: 12px; resize: vertical; }
+.continue-btn { border: none; }
+@@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+</style>
