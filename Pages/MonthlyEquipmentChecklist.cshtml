@@ -1,0 +1,30 @@
+@page
+@model MonthlyEquipmentChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Monthly Equipment Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="checklist-screen">
+    <div class="checklist-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Monthly Checklist</div>
+        <h2 class="page-title">Equipment Checklist</h2>
+        <p class="page-subtitle">Monthly equipment checklist template placeholder. Final fields will come from uploaded client checklist templates.</p>
+        <a class="menu-btn equipment-btn" href="/DailyEquipmentChecklist">Use Current Equipment Checklist Structure</a>
+    </div>
+</div>
+
+<style>
+.checklist-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
+.checklist-inner { width: 100%; max-width: 900px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { width: min(640px, 94%); margin: 0 auto 26px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+</style>
