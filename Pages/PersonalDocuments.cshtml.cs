@@ -40,6 +40,7 @@ public class PersonalDocumentsModel : PageModel
     public List<IFormFile> PersonalFiles { get; set; } = new();
 
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public void OnGet()
     {
@@ -79,6 +80,7 @@ public class PersonalDocumentsModel : PageModel
         }
 
         var documentName = string.IsNullOrWhiteSpace(CertificateName) ? DocumentType : CertificateName;
+        ActionSaved = true;
         StatusMessage = $"{PersonalFiles.Count} document(s) ready to save against {SignedInStaffName} for {documentName}. Database storage and audit logging will be connected in the production data phase.";
         return Page();
     }
