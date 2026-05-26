@@ -1,0 +1,31 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace vector_app_local.Pages;
+
+public class DailyVehicleChecklistModel : PageModel
+{
+    [BindProperty] public string? Callsign { get; set; }
+    [BindProperty] public string? Registration { get; set; }
+    [BindProperty] public int? Kilometres { get; set; }
+    [BindProperty] public string? FuelLevel { get; set; }
+    [BindProperty] public DateTime? NextServiceDate { get; set; }
+    [BindProperty] public string? VehicleStatus { get; set; }
+    [BindProperty] public string? DamageNotes { get; set; }
+    [BindProperty] public string? ChecklistNotes { get; set; }
+    public string? StatusMessage { get; private set; }
+
+    public void OnGet() { }
+
+    public IActionResult OnPost()
+    {
+        if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
+        {
+            StatusMessage = "Enter a callsign or registration before saving.";
+            return Page();
+        }
+
+        StatusMessage = "Vehicle checklist ready to save. Database storage, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        return Page();
+    }
+}
