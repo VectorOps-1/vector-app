@@ -98,16 +98,3 @@
 .submit-btn { width: min(360px, 94%); border: none; }
 @@media (max-width: 700px) { .task-summary, .form-grid { grid-template-columns: 1fr; } }
 </style>
-
-@if (Model.FeedbackSaved)
-{
-    <script>
-        window.addEventListener("DOMContentLoaded", function () {
-            window.VectorActionConfirmation?.show({
-                message: "Feedback submitted. The task is now marked complete and recorded.",
-                redirectUrl: "/TaskInbox",
-                delay: 1400
-            });
-        });
-    </script>
-}
