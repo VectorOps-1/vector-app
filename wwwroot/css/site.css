@@ -40,15 +40,15 @@ body {
     min-height: 58px;
     padding: 16px 28px;
 
-    border-radius: 12px !important;
+    border-radius: 8px !important;
 
     text-decoration: none;
     font-size: 18px;
     font-weight: 700;
 
-    border: 1px solid rgba(15, 23, 42, 0.18) !important;
+    border: 1px solid rgba(15, 23, 42, 0.16) !important;
 
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
 
     transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 
@@ -56,14 +56,14 @@ body {
 }
 
 .menu-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.20) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16) !important;
     filter: brightness(1.03);
 }
 
 .menu-btn:active {
     transform: translateY(1px);
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16) !important;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14) !important;
     filter: brightness(0.96);
 }
 
@@ -80,9 +80,9 @@ body {
     }
 }
 
-/* UNIVERSAL BUTTON COLORS */
-.vehicle-btn { background: #425466; color: #ffffff; }
-.equipment-btn { background: #0F6B8F; color: #ffffff; }
-.stock-btn { background: #7A6A2E; color: #ffffff; }
-.staff-btn { background: #D6A900; color: #111827; }
-.report-btn { background: #A33A3A; color: #ffffff; }
+/* UNIVERSAL CLINICAL BUTTON COLORS */
+.vehicle-btn { background: #334155; color: #ffffff; }
+.equipment-btn { background: #0E5E7A; color: #ffffff; }
+.stock-btn { background: #52606D; color: #ffffff; }
+.staff-btn { background: #1F6F5B; color: #ffffff; }
+.report-btn { background: #8F3A3A; color: #ffffff; }
