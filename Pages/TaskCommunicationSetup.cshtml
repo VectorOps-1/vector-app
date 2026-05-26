@@ -1,0 +1,223 @@
+@page
+@model TaskCommunicationSetupModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Task Communication Setup";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="comm-screen">
+    <div class="comm-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Task Communication Setup</h2>
+        <p class="page-subtitle">Choose how staff receive tasks and how feedback is returned</p>
+
+        <form class="comm-form">
+            <section class="form-panel">
+                <div class="section-label">Task Sending Methods</div>
+                <div class="option-grid">
+                    <label class="option-item"><input type="checkbox" checked /> In-app notification</label>
+                    <label class="option-item"><input type="checkbox" /> Email link</label>
+                    <label class="option-item"><input type="checkbox" /> SMS link</label>
+                    <label class="option-item"><input type="checkbox" /> WhatsApp link</label>
+                    <label class="option-item"><input type="checkbox" /> Push notification / PWA</label>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Feedback Methods</div>
+                <div class="option-grid">
+                    <label class="option-item"><input type="checkbox" checked /> In-app task completion</label>
+                    <label class="option-item"><input type="checkbox" checked /> Staff comment/message</label>
+                    <label class="option-item"><input type="checkbox" /> Upload supporting photo/file</label>
+                    <label class="option-item"><input type="checkbox" /> Manager approval required</label>
+                    <label class="option-item"><input type="checkbox" /> Auto-close after completion</label>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Default Task Access Rules</div>
+                <div class="form-grid">
+                    <label class="toggle-row"><input type="checkbox" checked /> Task-only access</label>
+                    <label class="toggle-row"><input type="checkbox" checked /> Expire access at task deadline</label>
+                    <label class="toggle-row"><input type="checkbox" /> Require staff acknowledgement</label>
+                    <label class="toggle-row"><input type="checkbox" /> Notify manager when viewed</label>
+
+                    <div class="field-group">
+                        <label class="field-label">Default expiry period</label>
+                        <select class="text-input">
+                            <option>Same day</option>
+                            <option>24 hours</option>
+                            <option>48 hours</option>
+                            <option>7 days</option>
+                            <option>Custom per task</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">Fallback contact method</label>
+                        <select class="text-input">
+                            <option>In-app only</option>
+                            <option>Email</option>
+                            <option>SMS</option>
+                            <option>WhatsApp</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <button class="menu-btn equipment-btn" type="button">Save Communication Setup</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.comm-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.comm-inner {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.comm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.form-panel {
+    padding: 22px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    text-align: left;
+}
+
+.section-label {
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.option-grid,
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+}
+
+.option-item,
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.option-item input,
+.toggle-row input {
+    width: 20px;
+    height: 20px;
+}
+
+.field-group {
+    text-align: left;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.text-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.action-row {
+    display: flex;
+    justify-content: center;
+}
+
+.action-row .menu-btn {
+    min-width: 280px;
+    border: none;
+}
+
+@@media (max-width: 780px) {
+    .option-grid,
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
