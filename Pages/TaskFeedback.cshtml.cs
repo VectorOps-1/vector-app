@@ -100,9 +100,8 @@ public class TaskFeedbackModel : PageModel
 
         await _db.SaveChangesAsync();
 
-        TempData["StatusMessage"] = "Feedback submitted and task marked complete.";
-        TempData["FeedbackSaved"] = true;
-        return RedirectToPage(new { taskId = TaskId.Value });
+        TempData["SuccessMessage"] = "Feedback submitted. The task is now marked complete and recorded.";
+        return RedirectToPage("/TaskInbox");
     }
 
     private async Task LoadTaskAsync()
