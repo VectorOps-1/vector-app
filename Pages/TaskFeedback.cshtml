@@ -116,6 +116,11 @@
             const completedTaskId = taskId || task?.id;
             const updatedTasks = tasks.map(item => item.id === completedTaskId ? { ...item, status: "completed" } : item);
             sessionStorage.setItem("vectorAssignedTasks", JSON.stringify(updatedTasks));
+            window.VectorActionConfirmation?.show({
+                message: "Feedback submitted. The task is now marked complete.",
+                redirectUrl: "/TaskInbox",
+                delay: 1300
+            });
         }
 
         function formatExpiry(value) {
