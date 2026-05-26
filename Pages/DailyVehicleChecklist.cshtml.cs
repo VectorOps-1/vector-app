@@ -11,6 +11,8 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public string? FuelLevel { get; set; }
     [BindProperty] public DateTime? NextServiceDate { get; set; }
     [BindProperty] public string? VehicleStatus { get; set; }
+    [BindProperty] public string? DamageType { get; set; }
+    [BindProperty] public string? DamageSeverity { get; set; }
     [BindProperty] public string? DamageNotes { get; set; }
     [BindProperty] public string? ChecklistNotes { get; set; }
     public string? StatusMessage { get; private set; }
@@ -25,7 +27,13 @@ public class DailyVehicleChecklistModel : PageModel
             return Page();
         }
 
-        StatusMessage = "Vehicle checklist ready to save. Database storage, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        if (string.IsNullOrWhiteSpace(VehicleStatus))
+        {
+            StatusMessage = "Select the vehicle condition before saving.";
+            return Page();
+        }
+
+        StatusMessage = "Vehicle inspection ready to save. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
         return Page();
     }
 }
