@@ -1,7 +1,7 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Select Access";
+    ViewData["Title"] = "Company Login";
 }
 
 <script>
@@ -20,22 +20,26 @@
     </div>
 </div>
 
-<div id="mainContent" class="selector-screen">
-    <div class="selector-inner">
-        <div class="home-label">Vector Access</div>
+<div id="mainContent" class="workspace-screen">
+    <div class="workspace-inner">
+        <div class="home-label">Vector Workspace</div>
 
-        <img src="/vector-splash.png" class="selector-logo" alt="Vector Logo" />
+        <img src="/vector-splash.png" class="workspace-logo" alt="Vector Logo" />
 
-        <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <p class="workspace-title">Company Login</p>
+        <p class="workspace-subtitle">Enter the client workspace before selecting user access</p>
 
-        <p class="selector-title">Select access level</p>
+        <form class="workspace-form" method="get" action="/Access">
+            <label class="field-label" for="workspaceCode">Company workspace code</label>
+            <input id="workspaceCode" class="workspace-input" name="workspace" type="text" placeholder="Example: client-ems" autocomplete="organization" />
 
-        <div class="menu-row">
-            <a class="menu-btn staff-btn" href="/Home?access=staff">Staff</a>
-            <a class="menu-btn equipment-btn" href="/Home?access=operational-management">Operational Management</a>
-            <a class="menu-btn vehicle-btn" href="/Home?access=senior-management">Senior Management</a>
-        </div>
+            <label class="field-label" for="companyPassword">Company access password</label>
+            <input id="companyPassword" class="workspace-input" name="companyAccess" type="password" placeholder="Senior management company access" autocomplete="current-password" />
 
+            <button class="menu-btn equipment-btn continue-btn" type="submit">Continue</button>
+        </form>
+
+        <div class="workspace-note">Company selection identifies the workspace. User role access is selected on the next screen.</div>
         <div class="home-footer">Vector v0.1</div>
     </div>
 </div>
@@ -117,7 +121,7 @@ html, body {
     pointer-events: none;
 }
 
-.selector-screen {
+.workspace-screen {
     display: none;
     width: 100%;
     min-height: calc(100vh - 70px);
@@ -125,19 +129,19 @@ html, body {
     transition: opacity 0.7s ease;
 }
 
-.selector-screen.ready {
+.workspace-screen.ready {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.selector-screen.show {
+.workspace-screen.show {
     opacity: 1;
 }
 
-.selector-inner {
+.workspace-inner {
     width: 100%;
-    max-width: 900px;
+    max-width: 760px;
     margin: 0 auto;
     text-align: center;
     padding: 40px 20px 30px 20px;
@@ -153,7 +157,7 @@ html, body {
     color: #5f6b7a;
 }
 
-.selector-logo {
+.workspace-logo {
     width: 420px;
     max-width: 78%;
     margin-bottom: 12px;
@@ -163,18 +167,63 @@ html, body {
     mix-blend-mode: multiply;
 }
 
-.home-context {
-    margin-bottom: 10px;
-    font-size: 12px;
+.workspace-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.workspace-subtitle {
+    margin: 0 0 24px 0;
+    font-size: 16px;
     font-weight: 500;
     color: #6b7280;
 }
 
-.selector-title {
-    margin-top: 0;
-    margin-bottom: 26px;
-    font-size: 24px;
-    color: #2f2f2f;
+.workspace-form {
+    width: min(520px, 94%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+}
+
+.field-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.workspace-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.continue-btn {
+    align-self: center;
+    margin-top: 10px;
+    min-width: 240px;
+    border: none;
+}
+
+.workspace-note {
+    width: min(560px, 92%);
+    margin: 22px auto 0 auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+    font-weight: 700;
+    color: #5f6b7a;
 }
 
 .home-footer {
@@ -188,7 +237,7 @@ html.skip-splash #splash {
     display: none !important;
 }
 
-html.skip-splash .selector-screen {
+html.skip-splash .workspace-screen {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
