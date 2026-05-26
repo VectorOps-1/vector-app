@@ -1,0 +1,67 @@
+@page
+@model DailyVehicleChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Daily Vehicle Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="checklist-form-screen">
+    <div class="checklist-form-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Daily Checklist</div>
+        <h2 class="page-title">Vehicle Checklist</h2>
+        <p class="page-subtitle">Saved checks will link to the signed-in profile and create an audit record.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="checklist-form">
+            <div class="form-grid">
+                <label>Callsign<input asp-for="Callsign" type="text" placeholder="Vehicle callsign" /></label>
+                <label>Registration<input asp-for="Registration" type="text" placeholder="Registration number" /></label>
+                <label>Current kilometres<input asp-for="Kilometres" type="number" min="0" placeholder="Km reading" /></label>
+                <label>Fuel level<select asp-for="FuelLevel"><option value="">Select fuel level</option><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label>
+                <label>Next service date<input asp-for="NextServiceDate" type="date" /></label>
+                <label>Vehicle status<select asp-for="VehicleStatus"><option value="">Select status</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
+            </div>
+
+            <div class="schematic-panel">
+                <div class="schematic-label">Vehicle damage schematic placeholder</div>
+                <div class="vehicle-outline">SIDE / FRONT / REAR OUTLINE</div>
+                <textarea asp-for="DamageNotes" rows="4" placeholder="Marking on schematic will save here once the vehicle outline tool is connected."></textarea>
+            </div>
+
+            <label class="notes-field">Checklist notes<textarea asp-for="ChecklistNotes" rows="4" placeholder="Additional notes"></textarea></label>
+
+            <button class="menu-btn vehicle-btn continue-btn" type="submit">Save Vehicle Checklist</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.checklist-form-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
+.checklist-form-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { margin: 0 0 24px 0; font-size: 15px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(720px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.checklist-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.form-grid { width: min(820px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 700; color: #52606d; }
+.form-grid input, .form-grid select, .notes-field textarea, .schematic-panel textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.notes-field, .schematic-panel { width: min(820px, 94%); }
+.notes-field textarea, .schematic-panel textarea { padding-top: 12px; resize: vertical; }
+.schematic-panel { border: 1px dashed rgba(66,84,102,.34); border-radius: 8px; padding: 18px; background: rgba(255,255,255,.58); box-sizing: border-box; }
+.schematic-label { text-align: left; font-size: 13px; font-weight: 800; color: #52606d; margin-bottom: 12px; }
+.vehicle-outline { min-height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(66,84,102,.18); color: #6b7280; font-weight: 800; margin-bottom: 14px; }
+.continue-btn { border: none; }
+@@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+</style>
