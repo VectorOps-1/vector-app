@@ -1,0 +1,180 @@
+@page
+@model SupplierDetailsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Supplier Details";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="supplier-screen">
+    <div class="supplier-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Company Profile</div>
+        <h2 class="page-title">Supplier Details</h2>
+        <p class="page-subtitle">Supplier contact and inbound stock access details</p>
+
+        <form class="supplier-form">
+            <div class="form-grid">
+                <div class="field-group">
+                    <label class="field-label" for="supplierEmail">Email</label>
+                    <input id="supplierEmail" class="text-input" type="email" placeholder="supplier@example.com" />
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="contactPerson">Contact person name</label>
+                    <input id="contactPerson" class="text-input" type="text" placeholder="Full name" />
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="cellNumber">Cell phone number</label>
+                    <input id="cellNumber" class="text-input" type="tel" placeholder="+974 0000 0000" />
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="location">Location</label>
+                    <input id="location" class="text-input" type="text" placeholder="City, facility, or service area" />
+                </div>
+            </div>
+
+            <div class="form-divider"></div>
+
+            <div class="login-section">
+                <div class="section-label">Chosen login details</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label" for="supplierUsername">Supplier username</label>
+                        <input id="supplierUsername" class="text-input" type="text" placeholder="Supplier login name" />
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" for="temporaryPassword">Temporary password</label>
+                        <input id="temporaryPassword" class="text-input" type="password" placeholder="Set later with authentication" />
+                    </div>
+                </div>
+            </div>
+
+            <button class="menu-btn equipment-btn save-btn" type="button">Save Supplier Details</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.supplier-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.supplier-inner {
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 320px;
+    max-width: 72%;
+    max-height: 180px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.supplier-form {
+    width: 100%;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+}
+
+.field-group {
+    text-align: left;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.text-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.form-divider {
+    width: 100%;
+    height: 1px;
+    margin: 28px 0 22px 0;
+    background: rgba(66, 84, 102, 0.22);
+}
+
+.section-label {
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.save-btn {
+    margin-top: 28px;
+    border: none;
+}
+
+@media (max-width: 720px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
