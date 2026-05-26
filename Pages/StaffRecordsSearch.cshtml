@@ -1,0 +1,233 @@
+@page
+@model StaffRecordsSearchModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Search Staff Records";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="staff-search-screen">
+    <div class="staff-search-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Senior Management</div>
+        <h2 class="page-title">Search Staff Records</h2>
+        <p class="page-subtitle">Search a staff member and view linked checklists, actions, files, folders, and compliance records</p>
+
+        <form class="search-panel" method="get">
+            <input class="search-input" name="searchTerm" value="@Model.SearchTerm" placeholder="Search staff name, ID, role, file, folder, checklist, or action" />
+            <button class="menu-btn equipment-btn search-btn" type="submit">Search</button>
+        </form>
+
+        <div class="profile-layout">
+            <aside class="profile-card">
+                <div class="profile-initials">JS</div>
+                <input class="profile-name" value="Jane Smith" />
+                <input class="profile-field" value="Critical Care Paramedic" />
+                <input class="profile-field" value="Staff ID: EMS-001" />
+                <div class="status-pill">Compliant</div>
+            </aside>
+
+            <section class="record-grid">
+                <div class="record-card">
+                    <div class="record-title">Uploaded Files and Folders</div>
+                    <div class="record-item">Folder: Certifications</div>
+                    <div class="record-item">File: ACLS Certificate.pdf</div>
+                    <div class="record-item">File: CV.docx</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-title">Completed Checklists</div>
+                    <div class="record-item">Daily Vehicle Checklist - A101</div>
+                    <div class="record-item">Equipment Readiness - Monitor</div>
+                    <div class="record-item">Monthly Ambulance Check</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-title">Actions and Tasks</div>
+                    <div class="record-item">Assigned: Upload renewed certification</div>
+                    <div class="record-item">Closed: Reported vehicle damage</div>
+                    <div class="record-item">Pending: Manager review</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-title">Compliance and Accreditation</div>
+                    <div class="record-item">QCHP: Active</div>
+                    <div class="record-item">ACLS: Expires 2027-04-12</div>
+                    <div class="record-item">PHTLS: Expires 2026-11-18</div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<style>
+.staff-search-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.staff-search-inner {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 auto 28px auto;
+    max-width: 780px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.search-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 14px;
+    width: min(860px, 100%);
+    margin: 0 auto 28px auto;
+}
+
+.search-input,
+.profile-name,
+.profile-field {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.search-btn {
+    min-width: 0;
+    border: none;
+}
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    text-align: left;
+}
+
+.profile-card,
+.record-card {
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    padding: 22px;
+}
+
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.profile-initials {
+    width: 76px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #425466;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 800;
+    align-self: center;
+}
+
+.profile-name {
+    font-size: 18px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.status-pill {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(31, 111, 91, 0.12);
+    color: #1f6f5b;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.record-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.record-title {
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.record-item {
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(66, 84, 102, 0.14);
+    font-size: 14px;
+    font-weight: 700;
+    color: #425466;
+}
+
+@@media (max-width: 860px) {
+    .search-panel,
+    .profile-layout,
+    .record-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
