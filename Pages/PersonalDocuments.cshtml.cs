@@ -12,6 +12,12 @@ public class PersonalDocumentsModel : PageModel
         ".xls", ".xlsx", ".csv"
     };
 
+    public string SignedInStaffName { get; private set; } = "Current signed-in staff profile";
+
+    public string SignedInStaffIdentifier { get; private set; } = "Auto-linked when authentication is connected";
+
+    public List<PersonalDocumentRecord> ExistingDocuments { get; private set; } = new();
+
     [BindProperty]
     public string? StaffName { get; set; }
 
@@ -37,15 +43,15 @@ public class PersonalDocumentsModel : PageModel
 
     public void OnGet()
     {
+        LoadSignedInStaffPlaceholder();
     }
 
     public IActionResult OnPost()
     {
-        if (string.IsNullOrWhiteSpace(StaffName))
-        {
-            StatusMessage = "Enter the staff name before submitting.";
-            return Page();
-        }
+        LoadSignedInStaffPlaceholder();
+
+        StaffName = SignedInStaffName;
+        StaffIdentifier = SignedInStaffIdentifier;
 
         if (string.IsNullOrWhiteSpace(DocumentType))
         {
@@ -73,7 +79,28 @@ public class PersonalDocumentsModel : PageModel
         }
 
         var documentName = string.IsNullOrWhiteSpace(CertificateName) ? DocumentType : CertificateName;
-        StatusMessage = $"{PersonalFiles.Count} document(s) ready to save against {StaffName} for {documentName}. Database storage and audit logging will be connected in the production data phase.";
+        StatusMessage = $"{PersonalFiles.Count} document(s) ready to save against {SignedInStaffName} for {documentName}. Database storage and audit logging will be connected in the production data phase.";
         return Page();
     }
+
+    private void LoadSignedInStaffPlaceholder()
+    {
+        SignedInStaffName = User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name)
+            ? User.Identity.Name
+            : "Current signed-in staff profile";
+
+        SignedInStaffIdentifier = "Auto-linked when authentication is connected";
+
+        StaffName = SignedInStaffName;
+        StaffIdentifier = SignedInStaffIdentifier;
+
+        ExistingDocuments = new List<PersonalDocumentRecord>
+        {
+            new("ID / Passport", "Stored against signed-in profile", "View / Edit after database connection"),
+            new("Certificate / Accreditation", "Stored against signed-in profile", "View / Edit after database connection"),
+            new("Medical Fitness", "Stored against signed-in profile", "View / Edit after database connection")
+        };
+    }
 }
+
+public record PersonalDocumentRecord(string Type, string ProfileLink, string Status);
