@@ -111,6 +111,62 @@
             padding-right: 0 !important;
         }
 
+        .task-notification {
+            position: fixed;
+            left: 22px;
+            bottom: 22px;
+            z-index: 1100;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #2f80a8;
+            color: #ffffff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 16px 34px rgba(47, 128, 168, 0.28);
+            transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .task-notification.visible {
+            display: flex;
+        }
+
+        .task-notification:hover {
+            color: #ffffff;
+            background: #276f93;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(47, 128, 168, 0.34);
+        }
+
+        .task-notification svg {
+            width: 26px;
+            height: 26px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .task-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #f2b84b;
+            color: #102a3a;
+            border: 2px solid #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 18px;
+            text-align: center;
+        }
+
         @@media (max-width: 780px) {
             .top-bar {
                 height: auto;
@@ -159,6 +215,13 @@
 
             .top-bar.no-page-index + .page-shell main {
                 min-height: calc(100vh - 70px);
+            }
+
+            .task-notification {
+                left: 16px;
+                bottom: 16px;
+                width: 54px;
+                height: 54px;
             }
         }
     </style>
@@ -233,6 +296,21 @@
         </div>
     </div>
 
+    @if (showPageIndex)
+    {
+        <a id="taskNotification" class="task-notification" href="/TaskFeedback" aria-label="Open assigned tasks and feedback" title="Open assigned tasks and feedback">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 6h11" />
+                <path d="M8 12h11" />
+                <path d="M8 18h11" />
+                <path d="M4 6h.01" />
+                <path d="M4 12h.01" />
+                <path d="M4 18h.01" />
+            </svg>
+            <span class="task-count">1</span>
+        </a>
+    }
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -252,38 +330,42 @@
                 }
 
                 const select = document.getElementById("pageIndex");
-                if (!select) {
-                    return;
+                const currentRole = sessionStorage.getItem("vectorAccessRole") || "staff";
+
+                if (select) {
+                    const options = Array.from(select.options);
+
+                    options.forEach(function (option) {
+                        const access = option.dataset.access;
+                        if (!access || access === "all") {
+                            return;
+                        }
+
+                        const allowedRoles = access.split(",");
+                        if (!allowedRoles.includes(currentRole)) {
+                            option.remove();
+                        }
+                    });
+
+                    const currentPath = window.location.pathname.toLowerCase();
+                    Array.from(select.options).forEach(function (option) {
+                        const optionPath = (option.value || "").split("?")[0].toLowerCase();
+                        if (optionPath && optionPath === currentPath) {
+                            select.value = option.value;
+                        }
+                    });
+
+                    select.addEventListener("change", function () {
+                        if (select.value) {
+                            window.location.href = select.value;
+                        }
+                    });
                 }
 
-                const currentRole = sessionStorage.getItem("vectorAccessRole") || "staff";
-                const options = Array.from(select.options);
-
-                options.forEach(function (option) {
-                    const access = option.dataset.access;
-                    if (!access || access === "all") {
-                        return;
-                    }
-
-                    const allowedRoles = access.split(",");
-                    if (!allowedRoles.includes(currentRole)) {
-                        option.remove();
-                    }
-                });
-
-                const currentPath = window.location.pathname.toLowerCase();
-                Array.from(select.options).forEach(function (option) {
-                    const optionPath = (option.value || "").split("?")[0].toLowerCase();
-                    if (optionPath && optionPath === currentPath) {
-                        select.value = option.value;
-                    }
-                });
-
-                select.addEventListener("change", function () {
-                    if (select.value) {
-                        window.location.href = select.value;
-                    }
-                });
+                const taskNotification = document.getElementById("taskNotification");
+                if (taskNotification && currentRole !== "senior") {
+                    taskNotification.classList.add("visible");
+                }
             })();
         </script>
     }
