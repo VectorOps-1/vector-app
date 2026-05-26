@@ -17,43 +17,56 @@
         <p class="page-subtitle">Supplier contact and inbound stock access details</p>
 
         <form class="supplier-form">
-            <div class="form-grid">
-                <div class="field-group">
-                    <label class="field-label" for="supplierEmail">Email</label>
-                    <input id="supplierEmail" class="text-input" type="email" placeholder="supplier@example.com" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label" for="contactPerson">Contact person name</label>
-                    <input id="contactPerson" class="text-input" type="text" placeholder="Full name" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label" for="cellNumber">Cell phone number</label>
-                    <input id="cellNumber" class="text-input" type="tel" placeholder="+974 0000 0000" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label" for="location">Location</label>
-                    <input id="location" class="text-input" type="text" placeholder="City, facility, or service area" />
-                </div>
+            <div class="supplier-toolbar">
+                <button class="small-action add-supplier" type="button" onclick="addSupplier()">Add Supplier</button>
             </div>
 
-            <div class="form-divider"></div>
-
-            <div class="login-section">
-                <div class="section-label">Chosen login details</div>
-                <div class="form-grid">
-                    <div class="field-group">
-                        <label class="field-label" for="supplierUsername">Supplier username</label>
-                        <input id="supplierUsername" class="text-input" type="text" placeholder="Supplier login name" />
+            <div id="supplierList" class="supplier-list">
+                <section class="supplier-block">
+                    <div class="supplier-block-header">
+                        <div class="section-label">Supplier 1</div>
+                        <button class="small-action remove-supplier" type="button" onclick="removeSupplier(this)">Remove</button>
                     </div>
 
-                    <div class="field-group">
-                        <label class="field-label" for="temporaryPassword">Temporary password</label>
-                        <input id="temporaryPassword" class="text-input" type="password" placeholder="Set later with authentication" />
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label class="field-label">Email</label>
+                            <input class="text-input" type="email" placeholder="supplier@example.com" />
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label">Contact person name</label>
+                            <input class="text-input" type="text" placeholder="Full name" />
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label">Cell phone number</label>
+                            <input class="text-input" type="tel" placeholder="+974 0000 0000" />
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label">Location</label>
+                            <input class="text-input" type="text" placeholder="City, facility, or service area" />
+                        </div>
                     </div>
-                </div>
+
+                    <div class="form-divider"></div>
+
+                    <div class="login-section">
+                        <div class="section-label">Chosen login details</div>
+                        <div class="form-grid">
+                            <div class="field-group">
+                                <label class="field-label">Supplier username</label>
+                                <input class="text-input" type="text" placeholder="Supplier login name" />
+                            </div>
+
+                            <div class="field-group">
+                                <label class="field-label">Temporary password</label>
+                                <input class="text-input" type="password" placeholder="Set later with authentication" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <button class="menu-btn equipment-btn save-btn" type="button">Save Supplier Details</button>
@@ -122,6 +135,53 @@
     width: 100%;
 }
 
+.supplier-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+.supplier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.supplier-block {
+    padding: 22px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.52);
+}
+
+.supplier-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.small-action {
+    min-width: 120px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.add-supplier {
+    background: #1b7894;
+    color: #ffffff;
+}
+
+.remove-supplier {
+    background: #a43a3a;
+    color: #ffffff;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -159,12 +219,15 @@
 }
 
 .section-label {
-    margin-bottom: 16px;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 1.1px;
     text-transform: uppercase;
     color: #5f6b7a;
+}
+
+.login-section .section-label {
+    margin-bottom: 16px;
 }
 
 .save-btn {
@@ -176,5 +239,51 @@
     .form-grid {
         grid-template-columns: 1fr;
     }
+
+    .supplier-toolbar,
+    .supplier-block-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .small-action {
+        width: 100%;
+    }
 }
 </style>
+
+<script>
+function updateSupplierLabels() {
+    document.querySelectorAll(".supplier-block").forEach(function (block, index) {
+        block.querySelector(".supplier-block-header .section-label").textContent = "Supplier " + (index + 1);
+    });
+}
+
+function addSupplier() {
+    const supplierList = document.getElementById("supplierList");
+    const firstSupplier = supplierList.querySelector(".supplier-block");
+    const newSupplier = firstSupplier.cloneNode(true);
+
+    newSupplier.querySelectorAll("input").forEach(function (input) {
+        input.value = "";
+    });
+
+    supplierList.appendChild(newSupplier);
+    updateSupplierLabels();
+}
+
+function removeSupplier(button) {
+    const supplierList = document.getElementById("supplierList");
+    const blocks = supplierList.querySelectorAll(".supplier-block");
+
+    if (blocks.length === 1) {
+        blocks[0].querySelectorAll("input").forEach(function (input) {
+            input.value = "";
+        });
+        return;
+    }
+
+    button.closest(".supplier-block").remove();
+    updateSupplierLabels();
+}
+</script>
