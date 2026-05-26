@@ -1,13 +1,22 @@
 # Vector Security and Tenant Isolation Notes
 
-## Intended Login Flow
+## Intended Login Flows
+
+Normal user flow:
 
 1. Splash screen
-2. Company workspace login
-3. User access/login layer
+2. Access level selection
+3. Role login
 4. Role-based home page
 
-The company workspace login identifies which client workspace or tenant the user is trying to access. It must not be treated as the only security boundary.
+Senior setup / onboarding flow:
+
+1. Company workspace login
+2. Access level selection
+3. Senior Management role login
+4. Master Setup pages
+
+The company workspace login identifies which client workspace or tenant is being configured or accessed. It must not be treated as the only security boundary.
 
 ## Required Security Model
 
