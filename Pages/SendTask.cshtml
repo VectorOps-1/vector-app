@@ -1,0 +1,252 @@
+@page
+@model SendTaskModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Send Task";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="task-screen">
+    <div class="task-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Actions</div>
+        <h2 class="page-title">Send Task</h2>
+        <p class="page-subtitle">Assign one specific action with task-only access and an expiry time</p>
+
+        <form class="task-form">
+            <section class="form-panel">
+                <div class="section-label">Recipient and Task</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label">Staff member / recipient</label>
+                        <input class="text-input" type="text" placeholder="Search or enter staff name" />
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">Task action</label>
+                        <select class="text-input">
+                            <option>Complete Checklist</option>
+                            <option>Report Issue</option>
+                            <option>Upload Personal Documents</option>
+                            <option>Upload Accreditation / Certification</option>
+                            <option>Receive Action From Manager</option>
+                            <option>Search Vehicles</option>
+                            <option>Log Vehicle Inspection</option>
+                            <option>Move / Reallocate Vehicle</option>
+                            <option>Add New Vehicle</option>
+                            <option>Search Equipment</option>
+                            <option>Log Equipment Inspection</option>
+                            <option>Move / Reallocate Equipment</option>
+                            <option>Add New Equipment</option>
+                            <option>Service / Maintenance</option>
+                            <option>Expiry / Compliance Tracking</option>
+                            <option>Search Stock</option>
+                            <option>Add New Stock Item</option>
+                            <option>Receive Stock</option>
+                            <option>Issue / Allocate Stock</option>
+                            <option>Report Stock Issue</option>
+                            <option>Batch Number Tracking</option>
+                            <option>Reorder / Replenishment</option>
+                            <option>Add / Remove Staff Files and Folders</option>
+                            <option>Search Staff Records</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">Task access expires</label>
+                        <input class="text-input" type="datetime-local" />
+                    </div>
+
+                    <label class="toggle-row">
+                        <input type="checkbox" checked />
+                        <span>Restrict access to this task only</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Instruction / Message</div>
+                <textarea class="message-input" placeholder="Enter the specific instruction, reason, or message for this task"></textarea>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Task Access Summary</div>
+                <div class="summary-grid">
+                    <div class="summary-item">Access type: Task-only</div>
+                    <div class="summary-item">Scope: Selected action only</div>
+                    <div class="summary-item">Expiry: Manager-selected date/time</div>
+                    <div class="summary-item">Visibility: Assigned recipient only</div>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <button class="menu-btn equipment-btn" type="button">Send Task</button>
+                <button class="menu-btn vehicle-btn" type="button">Save Draft</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.task-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.task-inner {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.form-panel {
+    padding: 22px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    text-align: left;
+}
+
+.section-label {
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.form-grid,
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+}
+
+.field-group {
+    text-align: left;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.text-input,
+.message-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.message-input {
+    min-height: 140px;
+    resize: vertical;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.toggle-row input {
+    width: 20px;
+    height: 20px;
+}
+
+.summary-item {
+    padding: 12px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    color: #425466;
+}
+
+.action-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.action-row .menu-btn {
+    min-width: 260px;
+    border: none;
+}
+
+@@media (max-width: 780px) {
+    .form-grid,
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
