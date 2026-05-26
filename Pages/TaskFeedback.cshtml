@@ -6,15 +6,16 @@
     ViewData["Title"] = "Task Feedback";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var taskId = Request.Query["taskId"].ToString();
 }
 
 <div class="feedback-screen">
     <div class="feedback-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Staff Task</div>
+        <div class="home-label">Task Confirmation</div>
         <h2 class="page-title">Task Feedback</h2>
-        <p class="page-subtitle">View assigned actions and provide feedback to the manager.</p>
+        <p class="page-subtitle">Confirm the result of the assigned action so the task can be closed and recorded.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -22,14 +23,17 @@
         }
 
         <form id="taskFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
+            <input id="taskId" type="hidden" value="@taskId" />
+
             <section class="feedback-panel">
                 <div class="section-label">Received Task</div>
                 <div class="task-summary">
-                    <div><strong>Task:</strong> Assigned task placeholder</div>
+                    <div><strong>Task:</strong> <span id="feedbackTaskAction">Assigned task placeholder</span></div>
                     <div><strong>Access:</strong> Task-only</div>
                     <div><strong>Status:</strong> Awaiting feedback</div>
-                    <div><strong>Expiry:</strong> Manager-selected expiry</div>
+                    <div><strong>Expiry:</strong> <span id="feedbackTaskExpiry">Manager-selected expiry</span></div>
                 </div>
+                <div id="feedbackTaskMessage" class="task-message"></div>
             </section>
 
             <section class="feedback-panel">
@@ -82,6 +86,7 @@
 .feedback-panel { width: min(820px, 94%); padding: 20px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); box-sizing: border-box; text-align: left; }
 .section-label { margin-bottom: 14px; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
 .task-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; color: #425466; font-weight: 700; }
+.task-message { margin-top: 12px; font-size: 14px; font-weight: 700; color: #52606d; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
 .form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
@@ -96,7 +101,27 @@
 </style>
 
 <script>
-    document.getElementById("taskFeedbackForm")?.addEventListener("submit", function () {
-        sessionStorage.setItem("vectorAssignedTaskCompleted", "true");
-    });
+    (function () {
+        const taskId = document.getElementById("taskId")?.value;
+        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]");
+        const task = tasks.find(item => item.id === taskId) || tasks.find(item => item.status !== "completed");
+
+        if (task) {
+            document.getElementById("feedbackTaskAction").textContent = task.action || "Assigned task";
+            document.getElementById("feedbackTaskExpiry").textContent = formatExpiry(task.expiresAt);
+            document.getElementById("feedbackTaskMessage").textContent = task.message || "No instruction entered.";
+        }
+
+        if (@Json.Serialize(Model.FeedbackSaved)) {
+            const completedTaskId = taskId || task?.id;
+            const updatedTasks = tasks.map(item => item.id === completedTaskId ? { ...item, status: "completed" } : item);
+            sessionStorage.setItem("vectorAssignedTasks", JSON.stringify(updatedTasks));
+        }
+
+        function formatExpiry(value) {
+            if (!value) return "Manager-selected expiry";
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+        }
+    })();
 </script>
