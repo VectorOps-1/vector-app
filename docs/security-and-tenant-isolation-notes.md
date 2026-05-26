@@ -11,10 +11,15 @@ Normal user flow:
 
 Senior setup / onboarding flow:
 
-1. Company workspace login
-2. Access level selection
-3. Senior Management role login
-4. Master Setup pages
+1. Company onboarding link at `/onboarding`
+2. Company workspace login
+3. Access level selection
+4. Senior Management role login
+5. Master Setup pages
+
+Preferred production URL pattern:
+
+`https://app.yourdomain.com/onboarding`
 
 The company workspace login identifies which client workspace or tenant is being configured or accessed. It must not be treated as the only security boundary.
 
