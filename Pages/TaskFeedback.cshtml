@@ -6,7 +6,6 @@
     ViewData["Title"] = "Task Feedback";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
-    var taskId = Request.Query["taskId"].ToString();
 }
 
 <div class="feedback-screen">
@@ -23,17 +22,17 @@
         }
 
         <form id="taskFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
-            <input id="taskId" type="hidden" value="@taskId" />
+            <input asp-for="TaskId" type="hidden" />
 
             <section class="feedback-panel">
                 <div class="section-label">Received Task</div>
                 <div class="task-summary">
-                    <div><strong>Task:</strong> <span id="feedbackTaskAction">Assigned task placeholder</span></div>
+                    <div><strong>Task:</strong> @(Model.TaskDetails?.ActionType ?? "No open task")</div>
                     <div><strong>Access:</strong> Task-only</div>
                     <div><strong>Status:</strong> Awaiting feedback</div>
-                    <div><strong>Expiry:</strong> <span id="feedbackTaskExpiry">Manager-selected expiry</span></div>
+                    <div><strong>Expiry:</strong> @(Model.TaskDetails?.ExpiresAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Manager-selected expiry")</div>
                 </div>
-                <div id="feedbackTaskMessage" class="task-message"></div>
+                <div class="task-message">@(Model.TaskDetails?.InstructionMessage ?? "No instruction entered.")</div>
             </section>
 
             <section class="feedback-panel">
@@ -100,33 +99,15 @@
 @@media (max-width: 700px) { .task-summary, .form-grid { grid-template-columns: 1fr; } }
 </style>
 
-<script>
-    (function () {
-        const taskId = document.getElementById("taskId")?.value;
-        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]");
-        const task = tasks.find(item => item.id === taskId) || tasks.find(item => item.status !== "completed");
-
-        if (task) {
-            document.getElementById("feedbackTaskAction").textContent = task.action || "Assigned task";
-            document.getElementById("feedbackTaskExpiry").textContent = formatExpiry(task.expiresAt);
-            document.getElementById("feedbackTaskMessage").textContent = task.message || "No instruction entered.";
-        }
-
-        if (@Json.Serialize(Model.FeedbackSaved)) {
-            const completedTaskId = taskId || task?.id;
-            const updatedTasks = tasks.map(item => item.id === completedTaskId ? { ...item, status: "completed" } : item);
-            sessionStorage.setItem("vectorAssignedTasks", JSON.stringify(updatedTasks));
+@if (Model.FeedbackSaved)
+{
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
             window.VectorActionConfirmation?.show({
-                message: "Feedback submitted. The task is now marked complete.",
+                message: "Feedback submitted. The task is now marked complete and recorded.",
                 redirectUrl: "/TaskInbox",
-                delay: 1300
+                delay: 1400
             });
-        }
-
-        function formatExpiry(value) {
-            if (!value) return "Manager-selected expiry";
-            const date = new Date(value);
-            return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-        }
-    })();
-</script>
+        });
+    </script>
+}
