@@ -14,7 +14,13 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operational Staff Actions</div>
         <h2 class="page-title">Upload Personal Documents</h2>
-        <p class="page-subtitle">Upload personal files, certificates, and accreditation linked to your staff profile</p>
+        <p class="page-subtitle">Upload personal files, certificates, and accreditation linked to your signed-in staff profile</p>
+
+        <div class="profile-link-panel">
+            <span>Linked profile</span>
+            <strong>@Model.SignedInStaffName</strong>
+            <small>@Model.SignedInStaffIdentifier</small>
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -25,12 +31,12 @@
             <div class="form-grid">
                 <label>
                     Staff name
-                    <input asp-for="StaffName" type="text" placeholder="Enter your name" autocomplete="name" />
+                    <input asp-for="StaffName" type="text" readonly />
                 </label>
 
                 <label>
                     Staff ID / employee number
-                    <input asp-for="StaffIdentifier" type="text" placeholder="Optional" />
+                    <input asp-for="StaffIdentifier" type="text" readonly />
                 </label>
 
                 <label>
@@ -83,6 +89,21 @@
 
             <button class="menu-btn staff-btn continue-btn" type="submit">Submit Personal Documents</button>
         </form>
+
+        <div class="document-divider"></div>
+        <div class="home-label">View / Edit Own Documents</div>
+        <div class="document-list">
+            @foreach (var document in Model.ExistingDocuments)
+            {
+                <div class="document-row">
+                    <div>
+                        <strong>@document.Type</strong>
+                        <span>@document.ProfileLink</span>
+                    </div>
+                    <a href="#">@document.Status</a>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
@@ -137,10 +158,34 @@
 }
 
 .page-subtitle {
-    margin: 0 0 28px 0;
+    margin: 0 0 22px 0;
     font-size: 16px;
     font-weight: 500;
     color: #6b7280;
+}
+
+.profile-link-panel {
+    width: min(720px, 94%);
+    margin: 0 auto 22px auto;
+    padding: 14px 18px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.62);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.profile-link-panel span,
+.profile-link-panel small {
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.profile-link-panel strong {
+    color: #2f2f2f;
+    font-size: 18px;
 }
 
 .status-message {
@@ -191,6 +236,11 @@
     background: #ffffff;
     color: #1f2937;
     box-sizing: border-box;
+}
+
+.form-grid input[readonly] {
+    background: #eef2f7;
+    color: #52606d;
 }
 
 .notes-field {
@@ -257,9 +307,60 @@
     border: none;
 }
 
+.document-divider {
+    width: min(720px, 94%);
+    height: 1px;
+    margin: 34px auto 18px auto;
+    background: rgba(66, 84, 102, 0.24);
+}
+
+.document-list {
+    width: min(720px, 94%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.document-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.62);
+    text-align: left;
+}
+
+.document-row div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.document-row span {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.document-row a {
+    color: #0E5E7A;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
 @@media (max-width: 700px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .document-row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>
