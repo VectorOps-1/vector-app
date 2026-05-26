@@ -1,0 +1,151 @@
+@page
+@model EditChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="editor-screen">
+    <div class="editor-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Action</div>
+        <h2 class="page-title">Edit Checklist</h2>
+        <p class="page-subtitle">Select a checklist, edit fields and dropdown options, then approve and publish.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="editor-form">
+            <section class="editor-section">
+                <div class="section-heading">Select Checklist</div>
+                <div class="form-grid">
+                    <label>
+                        Currently used checklist
+                        <select asp-for="ChecklistName">
+                            <option value="">Select checklist</option>
+                            <option>Daily Vehicle Inspection</option>
+                            <option>Daily Equipment Checklist</option>
+                            <option>Monthly Vehicle Checklist</option>
+                            <option>Monthly Equipment Checklist</option>
+                            <option>Custom Uploaded Checklist</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Checklist status
+                        <select asp-for="ChecklistStatus">
+                            <option>Draft</option>
+                            <option>Under Review</option>
+                            <option>Approved</option>
+                            <option>Published</option>
+                            <option>Archived</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="editor-section">
+                <div class="section-heading">Fields</div>
+                <div class="field-list">
+                    @foreach (var field in Model.ExampleFields)
+                    {
+                        <div class="field-row">
+                            <input value="@field.Label" aria-label="Field label" />
+                            <select aria-label="Field type">
+                                <option selected>@field.Type</option>
+                                <option>Text</option>
+                                <option>Number</option>
+                                <option>Date</option>
+                                <option>Dropdown</option>
+                                <option>Checkbox</option>
+                                <option>Photo Upload</option>
+                                <option>Schematic Markup</option>
+                            </select>
+                            <button type="button">Remove</button>
+                        </div>
+                    }
+                </div>
+                <button class="small-action" type="button">Add Field</button>
+            </section>
+
+            <section class="editor-section">
+                <div class="section-heading">Dropdown Options</div>
+                <div class="form-grid">
+                    <label>
+                        Dropdown field
+                        <select asp-for="DropdownField">
+                            <option>Fuel level</option>
+                            <option>Vehicle condition</option>
+                            <option>Damage type</option>
+                            <option>Damage severity</option>
+                            <option>Equipment status</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Options
+                        <textarea asp-for="DropdownOptions" rows="5" placeholder="One option per line"></textarea>
+                    </label>
+                </div>
+                <button class="small-action" type="button">Add / Update Dropdown Options</button>
+            </section>
+
+            <section class="editor-section">
+                <div class="section-heading">Publish Controls</div>
+                <div class="form-grid">
+                    <label>
+                        Applies to
+                        <select asp-for="AppliesTo">
+                            <option>All staff</option>
+                            <option>Operational managers</option>
+                            <option>Specific base</option>
+                            <option>Specific vehicle type</option>
+                            <option>Specific equipment type</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Publish note
+                        <textarea asp-for="PublishNote" rows="5" placeholder="Reason for edit, approval note, or version note"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <button class="menu-btn vehicle-btn" type="submit" name="ActionType" value="save-draft">Save Draft</button>
+                <button class="menu-btn equipment-btn" type="submit" name="ActionType" value="approve-publish">Approve and Publish</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.editor-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.editor-inner { width: 100%; max-width: 1040px; margin: 0 auto; text-align: center; padding: 40px 20px 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(720px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(820px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.editor-form { display: flex; flex-direction: column; gap: 18px; }
+.editor-section { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.section-heading { margin-bottom: 14px; font-size: 14px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #425466; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
+.form-grid input, .form-grid select, .form-grid textarea, .field-row input, .field-row select { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.form-grid textarea { padding-top: 12px; resize: vertical; }
+.field-list { display: flex; flex-direction: column; gap: 10px; }
+.field-row { display: grid; grid-template-columns: 1.2fr .9fr auto; gap: 10px; align-items: center; }
+.field-row button, .small-action { min-height: 42px; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: #ffffff; color: #334155; font-weight: 800; padding: 0 14px; }
+.small-action { margin-top: 12px; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { width: 100%; border: none; }
+@@media (max-width: 760px) { .form-grid, .field-row, .action-row { grid-template-columns: 1fr; } }
+</style>
