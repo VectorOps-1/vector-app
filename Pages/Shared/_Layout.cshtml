@@ -1,6 +1,7 @@
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
     var showPageIndex = !string.Equals(currentPage, "/Index", StringComparison.OrdinalIgnoreCase);
+    var showTaskNotification = showPageIndex && !string.Equals(currentPage, "/RoleLogin", StringComparison.OrdinalIgnoreCase);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -239,6 +240,7 @@
                     <option value="/Home" data-access="all">Home</option>
                     <option value="/Privacy" data-access="all">Privacy</option>
 
+                    <option value="/TaskInbox" data-access="staff,manager,senior">Task Inbox</option>
                     <option value="/CompleteChecklist" data-access="staff,manager,senior">Complete Checklist</option>
                     <option value="/DailyChecklist" data-access="staff,manager,senior">Daily Checklist</option>
                     <option value="/DailyVehicleChecklist" data-access="staff,manager,senior">Daily Vehicle Inspection</option>
@@ -296,9 +298,9 @@
         </div>
     </div>
 
-    @if (showPageIndex)
+    @if (showTaskNotification)
     {
-        <a id="taskNotification" class="task-notification" href="/TaskFeedback" aria-label="Open assigned tasks and feedback" title="Open assigned tasks and feedback">
+        <a id="taskNotification" class="task-notification" href="/TaskInbox" aria-label="Open assigned tasks" title="Open assigned tasks">
             <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M8 6h11" />
                 <path d="M8 12h11" />
@@ -307,7 +309,7 @@
                 <path d="M4 12h.01" />
                 <path d="M4 18h.01" />
             </svg>
-            <span class="task-count">1</span>
+            <span id="taskCount" class="task-count"></span>
         </a>
     }
 
@@ -330,7 +332,7 @@
                 }
 
                 const select = document.getElementById("pageIndex");
-                const currentRole = sessionStorage.getItem("vectorAccessRole") || "staff";
+                const currentRole = sessionStorage.getItem("vectorAccessRole");
 
                 if (select) {
                     const options = Array.from(select.options);
@@ -342,7 +344,7 @@
                         }
 
                         const allowedRoles = access.split(",");
-                        if (!allowedRoles.includes(currentRole)) {
+                        if (!currentRole || !allowedRoles.includes(currentRole)) {
                             option.remove();
                         }
                     });
@@ -363,9 +365,12 @@
                 }
 
                 const taskNotification = document.getElementById("taskNotification");
-                const taskCompleted = sessionStorage.getItem("vectorAssignedTaskCompleted") === "true";
+                const taskCount = document.getElementById("taskCount");
+                const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]")
+                    .filter(task => task.status !== "completed");
 
-                if (taskNotification && currentRole !== "senior" && !taskCompleted) {
+                if (taskNotification && taskCount && currentRole && currentRole !== "senior" && tasks.length > 0) {
+                    taskCount.textContent = String(tasks.length);
                     taskNotification.classList.add("visible");
                 }
             })();
