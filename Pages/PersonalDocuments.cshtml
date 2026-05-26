@@ -14,7 +14,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operational Staff Actions</div>
         <h2 class="page-title">Upload Personal Documents</h2>
-        <p class="page-subtitle">Upload personal files linked to your staff profile</p>
+        <p class="page-subtitle">Upload personal files, certificates, and accreditation linked to your staff profile</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -40,9 +40,18 @@
                         <option>ID / Passport</option>
                         <option>Driver's License</option>
                         <option>Medical Fitness</option>
+                        <option>Certificate</option>
+                        <option>Accreditation</option>
+                        <option>Professional Registration</option>
+                        <option>Training Record</option>
                         <option>Employment Document</option>
                         <option>Other Personal Document</option>
                     </select>
+                </label>
+
+                <label>
+                    Certificate / accreditation name
+                    <input asp-for="CertificateName" type="text" placeholder="Manual name, if applicable" />
                 </label>
 
                 <label>
@@ -66,8 +75,10 @@
                 <span>ID / passport</span>
                 <span>Driver's license</span>
                 <span>Medical fitness</span>
+                <span>Certificates</span>
+                <span>Accreditation</span>
+                <span>Training records</span>
                 <span>Employment files</span>
-                <span>Other documents</span>
             </div>
 
             <button class="menu-btn staff-btn continue-btn" type="submit">Submit Personal Documents</button>
