@@ -363,7 +363,9 @@
                 }
 
                 const taskNotification = document.getElementById("taskNotification");
-                if (taskNotification && currentRole !== "senior") {
+                const taskCompleted = sessionStorage.getItem("vectorAssignedTaskCompleted") === "true";
+
+                if (taskNotification && currentRole !== "senior" && !taskCompleted) {
                     taskNotification.classList.add("visible");
                 }
             })();
