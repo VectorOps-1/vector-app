@@ -16,18 +16,23 @@
         <h2 class="page-title">Send Task</h2>
         <p class="page-subtitle">Assign one specific action with task-only access and an expiry time</p>
 
-        <form id="sendTaskForm" class="task-form">
+        <form id="sendTaskForm" class="task-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
             <section class="form-panel">
                 <div class="section-label">Recipient and Task</div>
                 <div class="form-grid">
                     <div class="field-group">
-                        <label class="field-label" for="taskRecipient">Staff member / recipient</label>
-                        <input id="taskRecipient" class="text-input" type="text" placeholder="Search or enter staff name" />
+                        <label class="field-label" asp-for="AssignedToUserId">Staff member / recipient</label>
+                        <select class="text-input" asp-for="AssignedToUserId" asp-items="Model.Recipients">
+                            <option value="">Select recipient</option>
+                        </select>
+                        <span class="field-error" asp-validation-for="AssignedToUserId"></span>
                     </div>
 
                     <div class="field-group">
-                        <label class="field-label" for="taskAction">Task action</label>
-                        <select id="taskAction" class="text-input">
+                        <label class="field-label" asp-for="ActionType">Task action</label>
+                        <select class="text-input" asp-for="ActionType">
                             <option>Complete Checklist</option>
                             <option>Report Issue</option>
                             <option>Upload Personal Documents</option>
@@ -40,15 +45,16 @@
                             <option>Batch Number Tracking</option>
                             <option>Expiry / Compliance Check</option>
                         </select>
+                        <span class="field-error" asp-validation-for="ActionType"></span>
                     </div>
 
                     <div class="field-group">
-                        <label class="field-label" for="taskExpiry">Task access expires</label>
-                        <input id="taskExpiry" class="text-input" type="datetime-local" />
+                        <label class="field-label" asp-for="ExpiresAtLocal">Task access expires</label>
+                        <input class="text-input" asp-for="ExpiresAtLocal" type="datetime-local" />
                     </div>
 
                     <label class="toggle-row">
-                        <input type="checkbox" checked />
+                        <input type="checkbox" checked disabled />
                         <span>Restrict access to this task only</span>
                     </label>
                 </div>
@@ -56,7 +62,7 @@
 
             <section class="form-panel">
                 <div class="section-label">Instruction / Message</div>
-                <textarea id="taskMessage" class="message-input" placeholder="Enter the specific instruction, reason, or message for this task"></textarea>
+                <textarea class="message-input" asp-for="InstructionMessage" placeholder="Enter the specific instruction, reason, or message for this task"></textarea>
             </section>
 
             <section class="form-panel">
@@ -70,8 +76,8 @@
             </section>
 
             <div class="action-row">
-                <button class="menu-btn equipment-btn" type="submit">Send Task</button>
-                <button id="saveDraftButton" class="menu-btn vehicle-btn" type="button">Save Draft</button>
+                <button class="menu-btn equipment-btn" type="submit" name="submitAction" value="send">Send Task</button>
+                <button class="menu-btn vehicle-btn" type="submit" name="submitAction" value="draft">Save Draft</button>
             </div>
         </form>
     </div>
@@ -218,6 +224,13 @@
     color: #425466;
 }
 
+.validation-summary,
+.field-error {
+    color: #9f3030;
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .action-row {
     display: flex;
     justify-content: center;
@@ -238,40 +251,15 @@
 }
 </style>
 
-<script>
-    document.getElementById("sendTaskForm")?.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        const recipient = document.getElementById("taskRecipient").value.trim() || "Assigned user";
-        const action = document.getElementById("taskAction").value;
-        const expiresAt = document.getElementById("taskExpiry").value;
-        const message = document.getElementById("taskMessage").value.trim();
-        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]");
-
-        tasks.push({
-            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-            recipient,
-            action,
-            expiresAt,
-            message,
-            assignedBy: "Manager",
-            status: "open",
-            createdAt: new Date().toISOString()
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            window.VectorActionConfirmation?.show({
+                message: @Json.Serialize(Model.SuccessMessage),
+                redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+                delay: 1300
+            });
         });
-
-        sessionStorage.setItem("vectorAssignedTasks", JSON.stringify(tasks));
-        window.VectorActionConfirmation?.show({
-            message: "Task sent. The assigned user will see it in their task inbox.",
-            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
-            delay: 1300
-        });
-    });
-
-    document.getElementById("saveDraftButton")?.addEventListener("click", function () {
-        window.VectorActionConfirmation?.show({
-            message: "Draft saved for later completion.",
-            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
-            delay: 1300
-        });
-    });
-</script>
+    </script>
+}
