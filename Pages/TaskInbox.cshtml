@@ -30,40 +30,83 @@
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(680px, 94%); margin: 0 auto 26px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.task-list { display: grid; gap: 16px; width: min(820px, 94%); margin: 0 auto; text-align: left; }
+.task-list { display: grid; gap: 16px; width: min(860px, 94%); margin: 0 auto; text-align: left; }
+.task-row { display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 12px; align-items: stretch; }
 .task-card { display: block; padding: 18px 20px; border: 1px solid rgba(47,128,168,.26); border-radius: 8px; background: rgba(255,255,255,.78); text-decoration: none; color: #1f2937; box-shadow: 0 14px 28px rgba(47,128,168,.10); }
 .task-card:hover { color: #1f2937; border-color: rgba(47,128,168,.52); }
+.task-delete { width: 52px; min-height: 52px; border: 1px solid rgba(148, 57, 57, 0.22); border-radius: 8px; background: rgba(255,255,255,.78); color: #943939; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 14px 28px rgba(148,57,57,.08); }
+.task-delete:hover { background: rgba(148,57,57,.08); border-color: rgba(148,57,57,.42); }
+.task-delete svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
 .task-title { margin-bottom: 8px; font-size: 18px; font-weight: 900; }
 .task-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 13px; font-weight: 700; color: #52606d; }
 .task-message { margin-top: 12px; font-size: 14px; font-weight: 700; color: #425466; }
-@@media (max-width: 700px) { .task-meta { grid-template-columns: 1fr; } }
+@@media (max-width: 700px) { .task-row { grid-template-columns: minmax(0, 1fr) 48px; } .task-meta { grid-template-columns: 1fr; } }
 </style>
 
 <script>
     (function () {
         const taskList = document.getElementById("taskList");
         const emptyInbox = document.getElementById("emptyInbox");
-        const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]")
-            .filter(task => task.status !== "completed");
 
-        if (!tasks.length) {
-            emptyInbox.style.display = "block";
-            return;
+        renderTasks();
+
+        function renderTasks() {
+            const tasks = getOpenTasks();
+
+            if (!tasks.length) {
+                emptyInbox.style.display = "block";
+                taskList.innerHTML = "";
+                return;
+            }
+
+            emptyInbox.style.display = "none";
+            taskList.innerHTML = tasks.map(task => `
+                <div class="task-row" data-task-id="${escapeHtml(task.id)}">
+                    <a class="task-card" href="/TaskAction?taskId=${encodeURIComponent(task.id)}">
+                        <div class="task-title">${escapeHtml(task.action || "Assigned action")}</div>
+                        <div class="task-meta">
+                            <div>From: ${escapeHtml(task.assignedBy || "Manager")}</div>
+                            <div>Recipient: ${escapeHtml(task.recipient || "Current user")}</div>
+                            <div>Access: Task-only</div>
+                            <div>Expires: ${escapeHtml(formatExpiry(task.expiresAt))}</div>
+                        </div>
+                        <div class="task-message">${escapeHtml(task.message || "No instruction entered.")}</div>
+                    </a>
+                    <button class="task-delete" type="button" aria-label="Delete task" title="Delete task" data-delete-task-id="${escapeHtml(task.id)}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v5" />
+                            <path d="M14 11v5" />
+                        </svg>
+                    </button>
+                </div>
+            `).join("");
+
+            taskList.querySelectorAll("[data-delete-task-id]").forEach(button => {
+                button.addEventListener("click", function () {
+                    deleteTask(button.dataset.deleteTaskId);
+                });
+            });
         }
 
-        emptyInbox.style.display = "none";
-        taskList.innerHTML = tasks.map(task => `
-            <a class="task-card" href="/TaskAction?taskId=${encodeURIComponent(task.id)}">
-                <div class="task-title">${escapeHtml(task.action || "Assigned action")}</div>
-                <div class="task-meta">
-                    <div>From: ${escapeHtml(task.assignedBy || "Manager")}</div>
-                    <div>Recipient: ${escapeHtml(task.recipient || "Current user")}</div>
-                    <div>Access: Task-only</div>
-                    <div>Expires: ${escapeHtml(formatExpiry(task.expiresAt))}</div>
-                </div>
-                <div class="task-message">${escapeHtml(task.message || "No instruction entered.")}</div>
-            </a>
-        `).join("");
+        function deleteTask(taskId) {
+            const tasks = JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]");
+            const updatedTasks = tasks.map(task => task.id === taskId ? { ...task, status: "deleted" } : task);
+            sessionStorage.setItem("vectorAssignedTasks", JSON.stringify(updatedTasks));
+            renderTasks();
+            window.VectorActionConfirmation?.show({
+                message: "Task removed from inbox.",
+                redirectUrl: "/TaskInbox",
+                delay: 900
+            });
+        }
+
+        function getOpenTasks() {
+            return JSON.parse(sessionStorage.getItem("vectorAssignedTasks") || "[]")
+                .filter(task => task.status !== "completed" && task.status !== "deleted");
+        }
 
         function formatExpiry(value) {
             if (!value) return "Manager-selected expiry";
