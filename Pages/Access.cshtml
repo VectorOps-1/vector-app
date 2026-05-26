@@ -1,0 +1,85 @@
+@page
+@model AccessModel
+@{
+    ViewData["Title"] = "Select Access";
+}
+
+<div class="selector-screen ready show">
+    <div class="selector-inner">
+        <div class="home-label">Vector Access</div>
+
+        <img src="/vector-splash.png" class="selector-logo" alt="Vector Logo" />
+
+        <div class="home-context">Workspace: @Model.Workspace</div>
+        <div class="home-context">Client: @ViewData["ClientName"]</div>
+
+        <p class="selector-title">Select access level</p>
+
+        <div class="menu-row">
+            <a class="menu-btn staff-btn" href="/Home?access=staff">Staff</a>
+            <a class="menu-btn equipment-btn" href="/Home?access=operational-management">Operational Management</a>
+            <a class="menu-btn vehicle-btn" href="/Home?access=senior-management">Senior Management</a>
+        </div>
+
+        <div class="home-footer">Vector v0.1</div>
+    </div>
+</div>
+
+<style>
+.selector-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.selector-inner {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.selector-logo {
+    width: 420px;
+    max-width: 78%;
+    margin-bottom: 12px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    mix-blend-mode: multiply;
+}
+
+.home-context {
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.selector-title {
+    margin-top: 10px;
+    margin-bottom: 26px;
+    font-size: 24px;
+    color: #2f2f2f;
+}
+
+.home-footer {
+    margin-top: 34px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #7a8491;
+}
+</style>
