@@ -72,9 +72,40 @@
                 </div>
             </section>
 
-            <section class="inspection-section schematic-section">
+            <div class="previous-shift-panel">
+                <button id="sameAsPreviousShiftButton"
+                        class="same-shift-button"
+                        type="button"
+                        data-default-allowed="@Model.AllowSameAsPreviousShift.ToString().ToLowerInvariant()">
+                    Same as previous shift
+                </button>
+                <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the operational checks, schematic, damage, and notes are unchanged.</p>
+            </div>
+
+            <section class="inspection-section">
                 <div class="section-heading">
                     <span>2</span>
+                    <div>
+                        <h3>Operational Checks</h3>
+                        <p>Complete these fields fresh unless Same as previous shift is selected.</p>
+                    </div>
+                </div>
+
+                <div class="operational-grid">
+                    <label>Current kilometres<input asp-for="Kilometres" id="kilometresInput" type="number" min="0" placeholder="Enter current odometer reading" inputmode="numeric" /></label>
+                    <label>Fuel level<select asp-for="FuelLevel" id="fuelLevelInput"><option value="">Select fuel level</option><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label>
+                    <label>Vehicle condition<select asp-for="VehicleStatus" id="vehicleStatusInput"><option value="">Select condition</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
+                    <label>Lights<select asp-for="LightsStatus" id="lightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
+                    <label>Sirens<select asp-for="SirenStatus" id="sirenStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
+                    <label>Warning lights<select asp-for="WarningLightsStatus" id="warningLightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
+                    <label>Tyres<select asp-for="TyresStatus" id="tyresStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
+                    <label>Ops radio connectivity<select asp-for="OpsRadioStatus" id="opsRadioStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
+                </div>
+            </section>
+
+            <section class="inspection-section schematic-section">
+                <div class="section-heading">
+                    <span>3</span>
                     <div>
                         <h3>Vehicle Schematic</h3>
                         <p>Mark damage against the correct vehicle view.</p>
@@ -104,43 +135,12 @@
                     <p id="schematicName" class="schematic-note">Select a registration to load the published vehicle schematic.</p>
                 </div>
 
-                <div class="previous-shift-panel">
-                    <button id="sameAsPreviousShiftButton"
-                            class="same-shift-button"
-                            type="button"
-                            data-default-allowed="@Model.AllowSameAsPreviousShift.ToString().ToLowerInvariant()">
-                        Same as previous shift
-                    </button>
-                    <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the schematic, damage, and notes are unchanged.</p>
-                </div>
-
                 <div class="damage-grid">
                     <label>Damage type<select asp-for="DamageType" id="damageTypeInput"><option value="">Select damage type</option><option>Dent</option><option>Scratch</option><option>Crack</option><option>Missing item</option><option>Fluid leak</option><option>Other</option></select></label>
                     <label>Damage severity<select asp-for="DamageSeverity" id="damageSeverityInput"><option value="">Select severity</option><option>Minor</option><option>Moderate</option><option>Severe</option></select></label>
                 </div>
 
                 <label class="notes-field">Damage notes<textarea asp-for="DamageNotes" id="damageNotesInput" rows="4" placeholder="Describe location and details of visible damage"></textarea></label>
-            </section>
-
-            <section class="inspection-section">
-                <div class="section-heading">
-                    <span>3</span>
-                    <div>
-                        <h3>Operational Checks</h3>
-                        <p>Complete these fields fresh unless Same as previous shift is selected.</p>
-                    </div>
-                </div>
-
-                <div class="operational-grid">
-                    <label>Current kilometres<input asp-for="Kilometres" id="kilometresInput" type="number" min="0" placeholder="Enter current odometer reading" inputmode="numeric" /></label>
-                    <label>Fuel level<select asp-for="FuelLevel" id="fuelLevelInput"><option value="">Select fuel level</option><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label>
-                    <label>Vehicle condition<select asp-for="VehicleStatus" id="vehicleStatusInput"><option value="">Select condition</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
-                    <label>Lights<select asp-for="LightsStatus" id="lightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Sirens<select asp-for="SirenStatus" id="sirenStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Warning lights<select asp-for="WarningLightsStatus" id="warningLightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Tyres<select asp-for="TyresStatus" id="tyresStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Ops radio connectivity<select asp-for="OpsRadioStatus" id="opsRadioStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                </div>
             </section>
 
             <section class="inspection-section">
@@ -207,7 +207,7 @@
 .vehicle-schematic[data-schematic="rapid-response"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 56px; }
 .vehicle-schematic[data-schematic="rapid-response"] .rear-window { left: 38%; width: 18%; }
 .vehicle-schematic[data-schematic="rapid-response"] .front-window { right: 25%; width: 12%; }
-.previous-shift-panel { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
+.previous-shift-panel { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
 .same-shift-button { min-height: 44px; border: 1px solid rgba(14, 94, 122, 0.28); border-radius: 8px; background: #ffffff; color: #0E5E7A; font-size: 14px; font-weight: 900; }
 .same-shift-button:hover:not(:disabled) { background: rgba(14, 94, 122, 0.08); }
 .same-shift-button:disabled { cursor: not-allowed; opacity: 0.56; color: #64748b; border-color: rgba(100, 116, 139, 0.26); }
