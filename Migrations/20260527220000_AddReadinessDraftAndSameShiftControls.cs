@@ -139,44 +139,52 @@ public partial class AddReadinessDraftAndSameShiftControls : Migration
             table: "DailyVehicleEquipmentChecks",
             column: "CopiedFromDailyVehicleEquipmentCheckId");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId",
-            table: "DailyVehicleReadinessReports",
-            column: "VehicleSameAsPreviousSourceReportId",
-            principalTable: "DailyVehicleReadinessReports",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+        // SQLite cannot add foreign keys to existing tables. Keep the indexed
+        // provenance columns for dev SQLite, and enforce the constraints on SQL Server.
+        if (migrationBuilder.ActiveProvider != "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            migrationBuilder.AddForeignKey(
+                name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId",
+                table: "DailyVehicleReadinessReports",
+                column: "VehicleSameAsPreviousSourceReportId",
+                principalTable: "DailyVehicleReadinessReports",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Restrict);
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId",
-            table: "DailyVehicleReadinessReports",
-            column: "EquipmentSameAsPreviousSourceReportId",
-            principalTable: "DailyVehicleReadinessReports",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+            migrationBuilder.AddForeignKey(
+                name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId",
+                table: "DailyVehicleReadinessReports",
+                column: "EquipmentSameAsPreviousSourceReportId",
+                principalTable: "DailyVehicleReadinessReports",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Restrict);
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_DailyVehicleEquipmentChecks_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId",
-            table: "DailyVehicleEquipmentChecks",
-            column: "CopiedFromDailyVehicleEquipmentCheckId",
-            principalTable: "DailyVehicleEquipmentChecks",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+            migrationBuilder.AddForeignKey(
+                name: "FK_DailyVehicleEquipmentChecks_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId",
+                table: "DailyVehicleEquipmentChecks",
+                column: "CopiedFromDailyVehicleEquipmentCheckId",
+                principalTable: "DailyVehicleEquipmentChecks",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Restrict);
+        }
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropForeignKey(
-            name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId",
-            table: "DailyVehicleReadinessReports");
+        if (migrationBuilder.ActiveProvider != "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            migrationBuilder.DropForeignKey(
+                name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId",
+                table: "DailyVehicleReadinessReports");
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId",
-            table: "DailyVehicleReadinessReports");
+            migrationBuilder.DropForeignKey(
+                name: "FK_DailyVehicleReadinessReports_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId",
+                table: "DailyVehicleReadinessReports");
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_DailyVehicleEquipmentChecks_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId",
-            table: "DailyVehicleEquipmentChecks");
+            migrationBuilder.DropForeignKey(
+                name: "FK_DailyVehicleEquipmentChecks_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId",
+                table: "DailyVehicleEquipmentChecks");
+        }
 
         migrationBuilder.DropIndex(
             name: "IX_DailyVehicleReadinessReports_CompanyId_WorkflowStatus_DraftExpiresAtUtc",
