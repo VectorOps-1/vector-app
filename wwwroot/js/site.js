@@ -111,7 +111,18 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("click", function (event) {
-            const moveCard = event.target.closest("a.module-card");
+            const moveTrigger = event.target.closest("[data-move-asset]");
+            if (moveTrigger) {
+                const assetType = String(moveTrigger.dataset.moveAsset || "").trim().toLowerCase();
+                const allowedAssetTypes = ["vehicle", "equipment", "stock", "medication"];
+                if (allowedAssetTypes.includes(assetType)) {
+                    event.preventDefault();
+                    window.location.href = "/MoveAsset?asset=" + encodeURIComponent(assetType);
+                    return;
+                }
+            }
+
+            const moveCard = event.target.closest("a.module-card, a.category-action, a.workflow-action");
             if (!moveCard) {
                 return;
             }
