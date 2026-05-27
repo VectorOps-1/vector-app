@@ -13,7 +13,7 @@ public class EditChecklistModel : PageModel
         _currentUser = currentUser;
     }
 
-    [BindProperty] public string? ChecklistName { get; set; }
+    [BindProperty] public string? ChecklistName { get; set; } = "Daily Vehicle Inspection";
     [BindProperty] public string ChecklistStatus { get; set; } = "Draft";
     [BindProperty] public string? DropdownField { get; set; }
     [BindProperty] public string? DropdownOptions { get; set; }
@@ -26,19 +26,19 @@ public class EditChecklistModel : PageModel
     public bool IsSeniorChecklistPublisher { get; private set; }
     public string ChecklistAuthorityNote { get; private set; } = "Senior management publishes live checklist versions. Operational managers can draft assigned changes.";
 
-    public List<ChecklistFieldExample> ExampleFields { get; private set; } = new();
+    public List<ChecklistSectionEditor> VehicleChecklistSections { get; private set; } = new();
 
     public async Task OnGetAsync()
     {
         await LoadCurrentAuthorityAsync();
-        LoadExampleFields();
+        LoadVehicleChecklistLayout();
         DropdownOptions = "Full\n3/4\n1/2\n1/4\nEmpty";
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         await LoadCurrentAuthorityAsync();
-        LoadExampleFields();
+        LoadVehicleChecklistLayout();
 
         if (string.IsNullOrWhiteSpace(ChecklistName))
         {
@@ -54,7 +54,7 @@ public class EditChecklistModel : PageModel
 
         StatusMessage = ActionType == "approve-publish"
             ? $"{ChecklistName} ready to approve and publish. Same as previous shift is {(AllowSameAsPreviousShift ? "enabled" : "disabled")} for this checklist. This will later create a new published version and audit record."
-            : $"{ChecklistName} draft changes ready to save. This will later save editable fields, dropdown options, reuse rules, schematic source rules, and version history.";
+            : $"{ChecklistName} draft layout changes ready to save. This will later save section order, field rules, dropdown options, reuse rules, schematic source rules, and version history.";
 
         return Page();
     }
@@ -65,25 +65,81 @@ public class EditChecklistModel : PageModel
         IsSeniorChecklistPublisher = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
     }
 
-    private void LoadExampleFields()
+    private void LoadVehicleChecklistLayout()
     {
-        ExampleFields = new List<ChecklistFieldExample>
+        VehicleChecklistSections = new List<ChecklistSectionEditor>
         {
-            new("Registration-driven vehicle lookup", "Dropdown"),
-            new("Vehicle / callsign", "Text"),
-            new("Current kilometres", "Number"),
-            new("Fuel level", "Dropdown"),
-            new("Vehicle condition", "Dropdown"),
-            new("Lights", "Dropdown"),
-            new("Sirens", "Dropdown"),
-            new("Warning lights", "Dropdown"),
-            new("Tyres", "Dropdown"),
-            new("Ops radio connectivity", "Dropdown"),
-            new("Vehicle schematic from master setup", "Schematic Markup"),
-            new("Same as previous shift", "Permissioned Action"),
-            new("Inspection notes", "Text")
+            new(
+                "Vehicle Details",
+                "Select the vehicle and capture readiness values.",
+                ChecklistSectionKind.Fields,
+                new List<ChecklistFieldEditor>
+                {
+                    new("Registration number", "Dropdown", true, true, true, "Vehicle register"),
+                    new("Vehicle / callsign", "Text", true, true, true, "Auto-filled"),
+                    new("Vehicle type", "Text", true, true, true, "Auto-filled"),
+                    new("Next service date", "Date", false, true, true, "Auto-filled")
+                }),
+            new(
+                "Same as previous shift",
+                "Optional reuse control shown below vehicle details.",
+                ChecklistSectionKind.Action,
+                new List<ChecklistFieldEditor>()),
+            new(
+                "Operational Checks",
+                "Complete these fields fresh unless Same as previous shift is selected.",
+                ChecklistSectionKind.Fields,
+                new List<ChecklistFieldEditor>
+                {
+                    new("Current kilometres", "Number", true, true, false, "Fresh entry"),
+                    new("Fuel level", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Vehicle condition", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Lights", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Sirens", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Warning lights", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Tyres", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Ops radio connectivity", "Dropdown", true, true, false, "Fresh entry")
+                }),
+            new(
+                "Vehicle Schematic",
+                "Mark damage against the schematic linked to the selected registration.",
+                ChecklistSectionKind.Schematic,
+                new List<ChecklistFieldEditor>
+                {
+                    new("Vehicle schematic", "Schematic Markup", true, false, true, "Registration schematic"),
+                    new("Damage type", "Dropdown", false, true, false, "Fresh entry"),
+                    new("Damage severity", "Dropdown", false, true, false, "Fresh entry"),
+                    new("Damage notes", "Text", false, true, false, "Fresh entry")
+                }),
+            new(
+                "Notes / Issue",
+                "Record anything that requires follow-up.",
+                ChecklistSectionKind.Fields,
+                new List<ChecklistFieldEditor>
+                {
+                    new("Inspection notes", "Text", false, true, false, "Fresh entry")
+                })
         };
     }
 }
 
-public record ChecklistFieldExample(string Label, string Type);
+public enum ChecklistSectionKind
+{
+    Fields,
+    Action,
+    Schematic
+}
+
+public record ChecklistSectionEditor(
+    string Title,
+    string HelperText,
+    ChecklistSectionKind Kind,
+    IReadOnlyList<ChecklistFieldEditor> Fields);
+
+public record ChecklistFieldEditor(
+    string Label,
+    string Type,
+    bool IsRequired,
+    bool IsEditable,
+    bool IsSystemLinked,
+    string Source);
