@@ -66,3 +66,14 @@
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
 @@media (max-width: 700px) { .form-grid, .action-row { grid-template-columns: 1fr; } }
 </style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: "Equipment checklist saved.",
+            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            delay: 1300
+        });
+    </script>
+}

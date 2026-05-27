@@ -19,6 +19,7 @@ public class LogoUploadModel : PageModel
 
     public string? ExistingLogoPath { get; private set; }
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public void OnGet()
     {
@@ -57,6 +58,7 @@ public class LogoUploadModel : PageModel
         await LogoFile.CopyToAsync(stream);
 
         StatusMessage = "Logo saved.";
+        ActionSaved = true;
         ExistingLogoPath = $"/uploads/company/{fileName}?v={DateTime.UtcNow.Ticks}";
         return Page();
     }

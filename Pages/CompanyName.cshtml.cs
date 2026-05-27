@@ -17,6 +17,7 @@ public class CompanyNameModel : PageModel
     public string CompanyName { get; set; } = string.Empty;
 
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public void OnGet()
     {
@@ -34,6 +35,7 @@ public class CompanyNameModel : PageModel
 
         CompanyBranding.SaveCompanyName(_environment, CompanyName);
         StatusMessage = "Company name saved.";
+        ActionSaved = true;
         CompanyName = CompanyBranding.GetCompanyName(_environment);
         return Page();
     }

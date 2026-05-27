@@ -119,3 +119,14 @@
     border: none;
 }
 </style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: "Company logo saved.",
+            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            delay: 1300
+        });
+    </script>
+}

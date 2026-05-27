@@ -21,6 +21,18 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/vector_app_local.styles.css" asp-append-version="true" />
 
+    <script>
+        window.VectorPendingConfirmations = window.VectorPendingConfirmations || [];
+        window.VectorActionConfirmation = window.VectorActionConfirmation || {
+            show: function (options) {
+                window.VectorPendingConfirmations.push(options || {});
+            },
+            getReturnUrl: function (fallbackUrl) {
+                return fallbackUrl || null;
+            }
+        };
+    </script>
+
     <style>
         html, body {
             margin: 0;
@@ -388,6 +400,8 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
+        const vectorQueuedConfirmations = window.VectorPendingConfirmations || [];
+
         window.VectorActionConfirmation = (function () {
             function getReturnUrl(fallbackUrl) {
                 if (fallbackUrl) {
@@ -439,6 +453,26 @@
 
             return { show: show, getReturnUrl: getReturnUrl };
         })();
+
+        vectorQueuedConfirmations.forEach(function (options) {
+            window.VectorActionConfirmation.show(options);
+        });
+        window.VectorPendingConfirmations = [];
+
+        document.addEventListener("click", function (event) {
+            const trigger = event.target.closest("[data-action-confirmation]");
+            if (!trigger) {
+                return;
+            }
+
+            event.preventDefault();
+
+            window.VectorActionConfirmation?.show({
+                message: trigger.dataset.confirmationMessage || "Action saved.",
+                redirectUrl: trigger.dataset.confirmationRedirectUrl || window.VectorActionConfirmation.getReturnUrl(),
+                delay: Number(trigger.dataset.confirmationDelay || 1300)
+            });
+        });
     </script>
 
     @if (showPageIndex)

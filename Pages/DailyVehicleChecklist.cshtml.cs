@@ -25,6 +25,7 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public string? ChecklistNotes { get; set; }
     [BindProperty] public bool SameAsPreviousShift { get; set; }
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
     public bool AllowSameAsPreviousShift { get; private set; } = true;
     public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Checklist";
     public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Inspection";
@@ -152,6 +153,7 @@ public class DailyVehicleChecklistModel : PageModel
         }
 
         StatusMessage = "Vehicle inspection ready to save. Continue to equipment checklist for the same vehicle. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        ActionSaved = true;
         return Page();
     }
 

@@ -405,3 +405,14 @@
         applyVehicle(registrationSelect.selectedOptions[0], false);
     })();
 </script>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize($"{Model.InspectionTitle} saved."),
+            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            delay: 1300
+        });
+    </script>
+}

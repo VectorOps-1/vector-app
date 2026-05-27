@@ -15,6 +15,7 @@ public class DailyEquipmentChecklistModel : PageModel
     [BindProperty] public string? EquipmentStatus { get; set; }
     [BindProperty] public string? ChecklistNotes { get; set; }
     public string? StatusMessage { get; private set; }
+    public bool ActionSaved { get; private set; }
 
     public string LinkedVehicleLabel => string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration)
         ? "No vehicle selected"
@@ -38,6 +39,7 @@ public class DailyEquipmentChecklistModel : PageModel
         }
 
         StatusMessage = $"Equipment checklist ready to save against linked vehicle: {LinkedVehicleLabel}. Database storage, daily inspection session linkage, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        ActionSaved = true;
         return Page();
     }
 }
