@@ -41,6 +41,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ReportIssue"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
+        ["/VehicleRegister"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
         ["/MoveAsset"] = ManagementAccess,
         ["/Stock"] = ManagementAccess,

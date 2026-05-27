@@ -1,0 +1,118 @@
+@page
+@model VehicleRegisterModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Vehicle Register";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="vehicle-register-screen">
+    <div class="vehicle-register-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Vehicle Register</div>
+        <h2 class="page-title">Search Vehicles</h2>
+        <p class="page-subtitle">Find vehicles by registration, callsign, type, status, schematic, location, movement history, or readiness status.</p>
+
+        <form class="toolbar" method="get">
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search registration, callsign, type, status, location, or notes" />
+            <select class="filter-input" asp-for="StatusFilter">
+                <option value="">Any status</option>
+                <option>Active</option>
+                <option>Operational</option>
+                <option>Operational with notes</option>
+                <option>In storage</option>
+                <option>Assigned</option>
+                <option>Out of service</option>
+                <option>Inactive</option>
+            </select>
+            <select class="filter-input" asp-for="OperationalAreaId" asp-items="Model.OperationalAreaOptions">
+                <option value="">Any base / area</option>
+            </select>
+            <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/VehicleRegister">All</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=vehicle">Add Vehicle</a>
+        </form>
+
+        @if (!Model.Vehicles.Any())
+        {
+            <div class="empty-panel">No vehicle records found.</div>
+        }
+        else
+        {
+            <div class="result-count">@Model.Vehicles.Count vehicle@(Model.Vehicles.Count == 1 ? string.Empty : "s") found</div>
+
+            <div class="register-table" role="table" aria-label="Vehicle register">
+                <div class="register-header" role="row">
+                    <div role="columnheader">Vehicle</div>
+                    <div role="columnheader">Location</div>
+                    <div role="columnheader">Service / Readiness</div>
+                    <div role="columnheader">Movement</div>
+                    <div role="columnheader">Status</div>
+                    <div role="columnheader">Actions</div>
+                </div>
+
+                @foreach (var vehicle in Model.Vehicles)
+                {
+                    <div class="register-row" role="row">
+                        <div class="vehicle-identity" role="cell">
+                            <strong>@vehicle.RegistrationNumber / @vehicle.Callsign</strong>
+                            <span>@vehicle.VehicleType@(string.IsNullOrWhiteSpace(vehicle.QualificationLevel) ? string.Empty : $" / {vehicle.QualificationLevel}")</span>
+                            <span>@(vehicle.SchematicType ?? "No schematic assigned")</span>
+                        </div>
+                        <div role="cell">@(vehicle.CurrentLocation ?? "Unallocated")</div>
+                        <div class="stacked-cell" role="cell">
+                            <strong>Service: @(vehicle.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
+                            <span>Last check: @(vehicle.LastReadinessAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not recorded")</span>
+                            <span>@(vehicle.LastReadinessStatus ?? "No readiness status")</span>
+                        </div>
+                        <div class="stacked-cell" role="cell">
+                            <strong>@(vehicle.LastMovedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No movement")</strong>
+                            <span>@(vehicle.LastMovedByName ?? "No user")</span>
+                            <span>@vehicle.AssignedEquipmentCount assigned equipment item@(vehicle.AssignedEquipmentCount == 1 ? string.Empty : "s")</span>
+                        </div>
+                        <div role="cell"><span class="status-pill">@vehicle.Status</span></div>
+                        <div class="row-actions" role="cell">
+                            <a href="/DailyVehicleChecklist?registration=@Uri.EscapeDataString(vehicle.RegistrationNumber)&callsign=@Uri.EscapeDataString(vehicle.Callsign)">Check</a>
+                            <a href="/MoveAsset?asset=vehicle&assetId=@vehicle.Id">Move</a>
+                            <a href="/ReportIssue?module=vehicle">Issue</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.vehicle-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.vehicle-register-inner { width: 100%; max-width: 1240px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(860px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.toolbar { width: min(1180px, 100%); margin: 0 auto 18px auto; display: grid; grid-template-columns: minmax(240px, 1fr) 170px 210px 120px 90px 130px; gap: 12px; }
+.search-input, .filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.toolbar-btn { min-width: 0; border: none; }
+.result-count { width: min(1180px, 100%); margin: 0 auto 10px auto; text-align: left; color: #52606d; font-size: 13px; font-weight: 900; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(150px, .8fr) minmax(200px, 1fr) minmax(190px, 1fr) 100px minmax(160px, .8fr); gap: 14px; align-items: center; padding: 14px 16px; }
+.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
+.vehicle-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
+.vehicle-identity strong, .stacked-cell strong { color: #1f2937; font-size: 15px; }
+.vehicle-identity span, .stacked-cell span { color: #6b7280; font-size: 13px; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
+.row-actions a:hover { color: #0f5165; background: #eef3f8; }
+@@media (max-width: 1050px) {
+    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
+    .register-header { display: none; }
+    .register-row { gap: 8px; }
+}
+</style>

@@ -22,7 +22,7 @@ public class MoveAssetModel : PageModel
     [BindProperty(SupportsGet = true)] public string AssetType { get; set; } = AssetTypes.Vehicle;
     [BindProperty(SupportsGet = true)] public int? TaskId { get; set; }
     [BindProperty(SupportsGet = true)] public bool TaskAccess { get; set; }
-    [BindProperty] public int AssetId { get; set; }
+    [BindProperty(SupportsGet = true)] public int AssetId { get; set; }
     [BindProperty] public int ToOperationalAreaId { get; set; }
     [BindProperty] public string? LocationDetail { get; set; }
     [BindProperty] public int? QuantityMoved { get; set; }
