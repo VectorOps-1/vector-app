@@ -22,6 +22,14 @@ public static class DevelopmentDatabase
         await SeedPrototypeDataAsync(db);
     }
 
+    public static async Task RepairSqliteDevelopmentSchemaAsync(VectorDbContext db)
+    {
+        if (db.Database.IsSqlite())
+        {
+            await EnsureSqliteDevelopmentSchemaAsync(db);
+        }
+    }
+
     private static async Task InitialiseSqliteAsync(VectorDbContext db)
     {
         if (await HasSqliteTableAsync(db, "Companies"))

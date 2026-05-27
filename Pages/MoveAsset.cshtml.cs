@@ -52,6 +52,8 @@ public class MoveAssetModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
+        await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(_db);
+
         if (TaskId.HasValue)
         {
             await ApplyTaskReferenceAsync(currentUser);
@@ -69,6 +71,8 @@ public class MoveAssetModel : PageModel
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
+
+        await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(_db);
 
         var destination = await _db.OperationalAreas
             .FirstOrDefaultAsync(area =>
@@ -562,16 +566,24 @@ public class MoveAssetModel : PageModel
     {
         var medicationItems = await _db.MedicationItems
             .AsNoTracking()
-            .Include(medication => medication.CurrentOperationalArea)
             .Where(medication => medication.CompanyId == companyId && medication.Status != "Deleted")
             .OrderBy(medication => medication.Name)
+            .Select(medication => new
+            {
+                medication.Id,
+                medication.Name,
+                medication.BatchNumber,
+                medication.Quantity,
+                medication.StorageLocation,
+                CurrentOperationalAreaName = medication.CurrentOperationalArea == null ? null : medication.CurrentOperationalArea.Name
+            })
             .ToListAsync();
 
         return medicationItems
             .Select(medication => new SelectListItem
             {
                 Value = medication.Id.ToString(),
-                Text = medication.Name + (medication.BatchNumber == null ? string.Empty : " / Batch " + medication.BatchNumber) + " / Qty " + (medication.Quantity.HasValue ? medication.Quantity.Value.ToString() : "n/a") + " - " + (medication.CurrentOperationalArea != null ? medication.CurrentOperationalArea.Name : (medication.StorageLocation ?? "Unallocated"))
+                Text = medication.Name + (medication.BatchNumber == null ? string.Empty : " / Batch " + medication.BatchNumber) + " / Qty " + (medication.Quantity.HasValue ? medication.Quantity.Value.ToString() : "n/a") + " - " + (medication.CurrentOperationalAreaName ?? medication.StorageLocation ?? "Unallocated")
             })
             .ToList();
     }
