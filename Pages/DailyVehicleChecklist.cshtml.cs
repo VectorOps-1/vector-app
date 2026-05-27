@@ -8,12 +8,16 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty(SupportsGet = true)] public string Frequency { get; set; } = "daily";
     [BindProperty] public string? Callsign { get; set; }
     [BindProperty] public string? Registration { get; set; }
-    [BindProperty] public string? FleetNumber { get; set; }
     [BindProperty] public string? VehicleType { get; set; }
     [BindProperty] public int? Kilometres { get; set; }
     [BindProperty] public string? FuelLevel { get; set; }
     [BindProperty] public DateTime? NextServiceDate { get; set; }
     [BindProperty] public string? VehicleStatus { get; set; }
+    [BindProperty] public string? LightsStatus { get; set; }
+    [BindProperty] public string? SirenStatus { get; set; }
+    [BindProperty] public string? WarningLightsStatus { get; set; }
+    [BindProperty] public string? TyresStatus { get; set; }
+    [BindProperty] public string? OpsRadioStatus { get; set; }
     [BindProperty] public string? DamageType { get; set; }
     [BindProperty] public string? DamageSeverity { get; set; }
     [BindProperty] public string? DamageNotes { get; set; }
@@ -29,13 +33,18 @@ public class DailyVehicleChecklistModel : PageModel
         new(
             "AMB-101",
             "Medic 1",
-            "EMS-001",
             "Ambulance",
             "Box-body ambulance schematic",
             "ambulance",
-            68420,
             "2026-06-30",
+            68420,
+            "3/4",
             "Operational",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
             "Scratch",
             "Minor",
             "Light scratch on left rear locker door. No change reported on previous shift.",
@@ -43,13 +52,18 @@ public class DailyVehicleChecklistModel : PageModel
         new(
             "AMB-102",
             "Medic 2",
-            "EMS-002",
             "Ambulance",
             "Box-body ambulance schematic",
             "ambulance",
-            72210,
             "2026-07-14",
+            72210,
+            "1/2",
             "Operational with notes",
+            "Pass",
+            "Pass",
+            "Issue",
+            "Pass",
+            "Pass",
             "Dent",
             "Moderate",
             "Existing dent on right front bumper. Manager already notified.",
@@ -57,13 +71,18 @@ public class DailyVehicleChecklistModel : PageModel
         new(
             "RSP-201",
             "Response 1",
-            "EMS-011",
             "Rapid Response",
             "Rapid-response SUV schematic",
             "rapid-response",
-            41890,
             "2026-08-05",
+            41890,
+            "Full",
             "Operational",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
             "",
             "",
             "No exterior damage recorded on previous shift.",
@@ -105,13 +124,18 @@ public class DailyVehicleChecklistModel : PageModel
     public sealed record VehicleRegisterOption(
         string Registration,
         string Callsign,
-        string FleetNumber,
         string VehicleType,
         string SchematicName,
         string SchematicKey,
-        int Kilometres,
         string NextServiceDate,
-        string VehicleStatus,
+        int PreviousKilometres,
+        string PreviousFuelLevel,
+        string PreviousVehicleStatus,
+        string PreviousLightsStatus,
+        string PreviousSirenStatus,
+        string PreviousWarningLightsStatus,
+        string PreviousTyresStatus,
+        string PreviousOpsRadioStatus,
         string PreviousDamageType,
         string PreviousDamageSeverity,
         string PreviousDamageNotes,

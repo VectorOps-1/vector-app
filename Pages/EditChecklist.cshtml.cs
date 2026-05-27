@@ -74,6 +74,11 @@ public class EditChecklistModel : PageModel
             new("Current kilometres", "Number"),
             new("Fuel level", "Dropdown"),
             new("Vehicle condition", "Dropdown"),
+            new("Lights", "Dropdown"),
+            new("Sirens", "Dropdown"),
+            new("Warning lights", "Dropdown"),
+            new("Tyres", "Dropdown"),
+            new("Ops radio connectivity", "Dropdown"),
             new("Vehicle schematic from master setup", "Schematic Markup"),
             new("Same as previous shift", "Permissioned Action"),
             new("Inspection notes", "Text")
