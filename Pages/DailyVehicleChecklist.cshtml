@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Daily Vehicle Inspection";
+    ViewData["Title"] = Model.InspectionTitle;
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -13,8 +13,8 @@
         <header class="inspection-header">
             <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
             <div class="client-line">Client: @companyName</div>
-            <div class="home-label">Daily Checklist</div>
-            <h2 class="page-title">Daily Vehicle Inspection</h2>
+            <div class="home-label">@Model.FrequencyLabel</div>
+            <h2 class="page-title">@Model.InspectionTitle</h2>
             <p class="page-subtitle">Saved inspections will link to the signed-in profile and create an audit record.</p>
         </header>
 
@@ -24,6 +24,7 @@
         }
 
         <form method="post" class="inspection-form">
+            <input asp-for="Frequency" type="hidden" />
             <input asp-for="SameAsPreviousShift" id="sameAsPreviousShiftInput" type="hidden" />
 
             <section class="inspection-section">

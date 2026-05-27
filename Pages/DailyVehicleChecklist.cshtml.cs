@@ -5,6 +5,7 @@ namespace vector_app_local.Pages;
 
 public class DailyVehicleChecklistModel : PageModel
 {
+    [BindProperty(SupportsGet = true)] public string Frequency { get; set; } = "daily";
     [BindProperty] public string? Callsign { get; set; }
     [BindProperty] public string? Registration { get; set; }
     [BindProperty] public string? FleetNumber { get; set; }
@@ -20,6 +21,8 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public bool SameAsPreviousShift { get; set; }
     public string? StatusMessage { get; private set; }
     public bool AllowSameAsPreviousShift { get; private set; } = true;
+    public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Checklist";
+    public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Inspection";
 
     public IReadOnlyList<VehicleRegisterOption> VehicleRegisterOptions { get; } =
     [
@@ -69,10 +72,15 @@ public class DailyVehicleChecklistModel : PageModel
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
 
-    public void OnGet() { }
+    public void OnGet()
+    {
+        Frequency = NormalizeFrequency(Frequency);
+    }
 
     public IActionResult OnPost()
     {
+        Frequency = NormalizeFrequency(Frequency);
+
         if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
         {
             StatusMessage = "Enter a callsign or registration before saving.";
@@ -87,6 +95,11 @@ public class DailyVehicleChecklistModel : PageModel
 
         StatusMessage = "Vehicle inspection ready to save. Continue to equipment checklist for the same vehicle. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
         return Page();
+    }
+
+    private static string NormalizeFrequency(string? frequency)
+    {
+        return string.Equals(frequency, "monthly", StringComparison.OrdinalIgnoreCase) ? "monthly" : "daily";
     }
 
     public sealed record VehicleRegisterOption(
