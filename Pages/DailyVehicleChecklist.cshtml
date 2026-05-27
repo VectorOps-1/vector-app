@@ -121,7 +121,7 @@
                 </div>
 
                 <div class="schematic-workspace">
-                    <div id="vehicleSchematic" class="vehicle-schematic" data-schematic="ambulance" aria-label="Vehicle outline placeholder">
+                    <div id="vehicleSchematic" class="vehicle-schematic" data-schematic="operational-ambulance" aria-label="Vehicle outline placeholder">
                         <div class="schematic-roof"></div>
                         <div class="schematic-body"></div>
                         <div class="schematic-cab"></div>
@@ -202,11 +202,21 @@
 .marker-one { left: 42%; bottom: 104px; }
 .marker-two { right: 28%; bottom: 88px; }
 .schematic-note { margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-weight: 700; text-align: center; }
-.vehicle-schematic[data-schematic="rapid-response"] .schematic-body { left: 16%; right: 14%; bottom: 72px; height: 54px; border-radius: 34px 34px 18px 18px; }
-.vehicle-schematic[data-schematic="rapid-response"] .schematic-roof { left: 34%; right: 31%; bottom: 126px; height: 38px; border-radius: 24px 24px 0 0; }
-.vehicle-schematic[data-schematic="rapid-response"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 56px; }
-.vehicle-schematic[data-schematic="rapid-response"] .rear-window { left: 38%; width: 18%; }
-.vehicle-schematic[data-schematic="rapid-response"] .front-window { right: 25%; width: 12%; }
+.vehicle-schematic[data-schematic="ift-ambulance"] .schematic-roof { left: 27%; right: 30%; height: 38px; }
+.vehicle-schematic[data-schematic="icu-ambulance"] .schematic-body { left: 7%; right: 6%; height: 82px; }
+.vehicle-schematic[data-schematic="icu-ambulance"] .schematic-roof { left: 18%; right: 20%; height: 50px; }
+.vehicle-schematic[data-schematic="response-pickup"] .schematic-body { left: 16%; right: 14%; bottom: 72px; height: 54px; border-radius: 34px 34px 18px 18px; }
+.vehicle-schematic[data-schematic="response-pickup"] .schematic-roof { left: 34%; right: 31%; bottom: 126px; height: 38px; border-radius: 24px 24px 0 0; }
+.vehicle-schematic[data-schematic="response-pickup"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 56px; }
+.vehicle-schematic[data-schematic="response-pickup"] .rear-window { left: 38%; width: 18%; }
+.vehicle-schematic[data-schematic="response-pickup"] .front-window { right: 25%; width: 12%; }
+.vehicle-schematic[data-schematic="response-sedan"] .schematic-body { left: 16%; right: 14%; bottom: 76px; height: 48px; border-radius: 34px 34px 18px 18px; }
+.vehicle-schematic[data-schematic="response-sedan"] .schematic-roof { left: 33%; right: 30%; bottom: 124px; height: 36px; border-radius: 24px 24px 0 0; }
+.vehicle-schematic[data-schematic="response-sedan"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 54px; }
+.vehicle-schematic[data-schematic="response-sedan"] .rear-window { left: 37%; width: 18%; }
+.vehicle-schematic[data-schematic="response-sedan"] .front-window { right: 25%; width: 12%; }
+.vehicle-schematic[data-schematic="rescue-vehicle"] .schematic-body { left: 8%; right: 8%; height: 86px; border-radius: 12px; }
+.vehicle-schematic[data-schematic="rescue-vehicle"] .schematic-roof { left: 14%; right: 16%; height: 48px; border-radius: 8px 8px 0 0; }
 .previous-shift-panel { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
 .same-shift-button { min-height: 44px; border: 1px solid rgba(14, 94, 122, 0.28); border-radius: 8px; background: #ffffff; color: #0E5E7A; font-size: 14px; font-weight: 900; }
 .same-shift-button:hover:not(:disabled) { background: rgba(14, 94, 122, 0.08); }
@@ -323,7 +333,7 @@
 
             sameAsPreviousShiftButton.disabled = !isAllowed;
             sameAsPreviousShiftStatus.textContent = isAllowed
-                ? "Fresh inspection is the default. Use this only when the schematic, damage, and notes are unchanged."
+                ? "Fresh inspection is the default. Use this only when the operational checks, schematic, damage, and notes are unchanged."
                 : "Same as previous shift is disabled by senior management.";
         }
 
@@ -355,7 +365,7 @@
 
             previousShiftPanel?.classList.add("applied");
             if (sameAsPreviousShiftStatus) {
-                sameAsPreviousShiftStatus.textContent = "Previous shift schematic, damage, and notes have been applied. Edit any field if something changed.";
+                sameAsPreviousShiftStatus.textContent = "Previous shift operational checks, schematic, damage, and notes have been applied. Edit any field if something changed.";
             }
         }
 

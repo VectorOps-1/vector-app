@@ -56,6 +56,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/SupplierDetails"] = SeniorAccess,
         ["/UploadChecklist"] = SeniorAccess,
         ["/UploadVehicleRegister"] = SeniorAccess,
+        ["/VehicleSchematicLibrary"] = SeniorAccess,
         ["/UploadEquipmentRegister"] = SeniorAccess,
         ["/UploadStockRegister"] = SeniorAccess,
         ["/CreateManagerAccess"] = SeniorAccess,

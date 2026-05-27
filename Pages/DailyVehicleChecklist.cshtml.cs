@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
@@ -34,8 +35,8 @@ public class DailyVehicleChecklistModel : PageModel
             "AMB-101",
             "Medic 1",
             "Ambulance",
-            "Box-body ambulance schematic",
-            "ambulance",
+            SchematicName("operational-ambulance"),
+            "operational-ambulance",
             "2026-06-30",
             68420,
             "3/4",
@@ -53,8 +54,8 @@ public class DailyVehicleChecklistModel : PageModel
             "AMB-102",
             "Medic 2",
             "Ambulance",
-            "Box-body ambulance schematic",
-            "ambulance",
+            SchematicName("ift-ambulance"),
+            "ift-ambulance",
             "2026-07-14",
             72210,
             "1/2",
@@ -69,11 +70,30 @@ public class DailyVehicleChecklistModel : PageModel
             "Existing dent on right front bumper. Manager already notified.",
             "Previous shift completed with vehicle operational with notes."),
         new(
+            "ICU-301",
+            "ICU 1",
+            "ICU Ambulance",
+            SchematicName("icu-ambulance"),
+            "icu-ambulance",
+            "2026-07-30",
+            55380,
+            "Full",
+            "Operational",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "",
+            "",
+            "No exterior damage recorded on previous shift.",
+            "Previous shift reported ICU vehicle ready for duty."),
+        new(
             "RSP-201",
             "Response 1",
-            "Rapid Response",
-            "Rapid-response SUV schematic",
-            "rapid-response",
+            "Response Pickup",
+            SchematicName("response-pickup"),
+            "response-pickup",
             "2026-08-05",
             41890,
             "Full",
@@ -86,7 +106,26 @@ public class DailyVehicleChecklistModel : PageModel
             "",
             "",
             "No exterior damage recorded on previous shift.",
-            "Previous shift reported no defects.")
+            "Previous shift reported no defects."),
+        new(
+            "RSP-202",
+            "Response 2",
+            "Response Sedan",
+            SchematicName("response-sedan"),
+            "response-sedan",
+            "2026-08-22",
+            36710,
+            "3/4",
+            "Operational",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Pass",
+            "Scratch",
+            "Minor",
+            "Small scratch on rear bumper.",
+            "Previous shift reported sedan response vehicle ready.")
     ];
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
@@ -119,6 +158,11 @@ public class DailyVehicleChecklistModel : PageModel
     private static string NormalizeFrequency(string? frequency)
     {
         return string.Equals(frequency, "monthly", StringComparison.OrdinalIgnoreCase) ? "monthly" : "daily";
+    }
+
+    private static string SchematicName(string key)
+    {
+        return VehicleSchematicLibrary.Require(key).DisplayName;
     }
 
     public sealed record VehicleRegisterOption(
