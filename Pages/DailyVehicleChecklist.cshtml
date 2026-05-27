@@ -24,6 +24,8 @@
         }
 
         <form method="post" class="inspection-form">
+            <input asp-for="SameAsPreviousShift" id="sameAsPreviousShiftInput" type="hidden" />
+
             <section class="inspection-section">
                 <div class="section-heading">
                     <span>1</span>
@@ -44,9 +46,15 @@
                                         data-callsign="@vehicle.Callsign"
                                         data-fleet="@vehicle.FleetNumber"
                                         data-type="@vehicle.VehicleType"
+                                        data-schematic-name="@vehicle.SchematicName"
+                                        data-schematic-key="@vehicle.SchematicKey"
                                         data-kilometres="@vehicle.Kilometres"
                                         data-next-service="@vehicle.NextServiceDate"
-                                        data-status="@vehicle.VehicleStatus">
+                                        data-status="@vehicle.VehicleStatus"
+                                        data-previous-damage-type="@vehicle.PreviousDamageType"
+                                        data-previous-damage-severity="@vehicle.PreviousDamageSeverity"
+                                        data-previous-damage-notes="@vehicle.PreviousDamageNotes"
+                                        data-previous-checklist-notes="@vehicle.PreviousChecklistNotes">
                                     @vehicle.Registration - @vehicle.Callsign
                                 </option>
                             }
@@ -80,7 +88,7 @@
                 </div>
 
                 <div class="schematic-workspace">
-                    <div class="vehicle-schematic" aria-label="Vehicle outline placeholder">
+                    <div id="vehicleSchematic" class="vehicle-schematic" data-schematic="ambulance" aria-label="Vehicle outline placeholder">
                         <div class="schematic-roof"></div>
                         <div class="schematic-body"></div>
                         <div class="schematic-cab"></div>
@@ -91,15 +99,25 @@
                         <div class="damage-marker marker-one"></div>
                         <div class="damage-marker marker-two"></div>
                     </div>
-                    <p class="schematic-note">Drawing and tap-to-mark will be connected to this area in the next build step.</p>
+                    <p id="schematicName" class="schematic-note">Select a registration to load the published vehicle schematic.</p>
+                </div>
+
+                <div class="previous-shift-panel">
+                    <button id="sameAsPreviousShiftButton"
+                            class="same-shift-button"
+                            type="button"
+                            data-default-allowed="@Model.AllowSameAsPreviousShift.ToString().ToLowerInvariant()">
+                        Same as previous shift
+                    </button>
+                    <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the schematic, damage, and notes are unchanged.</p>
                 </div>
 
                 <div class="damage-grid">
-                    <label>Damage type<select asp-for="DamageType"><option value="">Select damage type</option><option>Dent</option><option>Scratch</option><option>Crack</option><option>Missing item</option><option>Fluid leak</option><option>Other</option></select></label>
-                    <label>Damage severity<select asp-for="DamageSeverity"><option value="">Select severity</option><option>Minor</option><option>Moderate</option><option>Severe</option></select></label>
+                    <label>Damage type<select asp-for="DamageType" id="damageTypeInput"><option value="">Select damage type</option><option>Dent</option><option>Scratch</option><option>Crack</option><option>Missing item</option><option>Fluid leak</option><option>Other</option></select></label>
+                    <label>Damage severity<select asp-for="DamageSeverity" id="damageSeverityInput"><option value="">Select severity</option><option>Minor</option><option>Moderate</option><option>Severe</option></select></label>
                 </div>
 
-                <label class="notes-field">Damage notes<textarea asp-for="DamageNotes" rows="4" placeholder="Describe location and details of visible damage"></textarea></label>
+                <label class="notes-field">Damage notes<textarea asp-for="DamageNotes" id="damageNotesInput" rows="4" placeholder="Describe location and details of visible damage"></textarea></label>
             </section>
 
             <section class="inspection-section">
@@ -111,7 +129,7 @@
                     </div>
                 </div>
 
-                <label class="notes-field wide-notes">Inspection notes<textarea asp-for="ChecklistNotes" rows="5" placeholder="Additional notes, issues, or action required"></textarea></label>
+                <label class="notes-field wide-notes">Inspection notes<textarea asp-for="ChecklistNotes" id="checklistNotesInput" rows="5" placeholder="Additional notes, issues, or action required"></textarea></label>
             </section>
 
             <div class="save-bar two-actions">
@@ -161,11 +179,22 @@
 .marker-one { left: 42%; bottom: 104px; }
 .marker-two { right: 28%; bottom: 88px; }
 .schematic-note { margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-weight: 700; text-align: center; }
+.vehicle-schematic[data-schematic="rapid-response"] .schematic-body { left: 16%; right: 14%; bottom: 72px; height: 54px; border-radius: 34px 34px 18px 18px; }
+.vehicle-schematic[data-schematic="rapid-response"] .schematic-roof { left: 34%; right: 31%; bottom: 126px; height: 38px; border-radius: 24px 24px 0 0; }
+.vehicle-schematic[data-schematic="rapid-response"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 56px; }
+.vehicle-schematic[data-schematic="rapid-response"] .rear-window { left: 38%; width: 18%; }
+.vehicle-schematic[data-schematic="rapid-response"] .front-window { right: 25%; width: 12%; }
+.previous-shift-panel { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
+.same-shift-button { min-height: 44px; border: 1px solid rgba(14, 94, 122, 0.28); border-radius: 8px; background: #ffffff; color: #0E5E7A; font-size: 14px; font-weight: 900; }
+.same-shift-button:hover:not(:disabled) { background: rgba(14, 94, 122, 0.08); }
+.same-shift-button:disabled { cursor: not-allowed; opacity: 0.56; color: #64748b; border-color: rgba(100, 116, 139, 0.26); }
+.previous-shift-panel p { margin: 0; color: #52606d; font-size: 13px; font-weight: 700; text-align: left; }
+.previous-shift-panel.applied { border-color: rgba(31, 111, 91, 0.36); background: rgba(31, 111, 91, 0.07); }
 .damage-grid { margin-bottom: 14px; }
 .save-bar { position: sticky; bottom: 0; z-index: 10; padding: 14px 0 0 0; background: linear-gradient(180deg, rgba(244, 247, 251, 0), #F4F7FB 42%); }
 .two-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .save-btn { width: 100%; border: none; text-align: center; }
-@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .vehicle-register-grid, .damage-grid, .two-actions { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .vehicle-schematic { height: 210px; } .inspection-section { padding: 14px; } }
+@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .vehicle-register-grid, .damage-grid, .two-actions, .previous-shift-panel { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .vehicle-schematic { height: 210px; } .inspection-section { padding: 14px; } }
 </style>
 
 <script>
@@ -177,6 +206,17 @@
         const kilometresInput = document.getElementById("kilometresInput");
         const nextServiceDateInput = document.getElementById("nextServiceDateInput");
         const vehicleStatusInput = document.getElementById("vehicleStatusInput");
+        const vehicleSchematic = document.getElementById("vehicleSchematic");
+        const schematicName = document.getElementById("schematicName");
+        const sameAsPreviousShiftButton = document.getElementById("sameAsPreviousShiftButton");
+        const sameAsPreviousShiftStatus = document.getElementById("sameAsPreviousShiftStatus");
+        const sameAsPreviousShiftInput = document.getElementById("sameAsPreviousShiftInput");
+        const previousShiftPanel = sameAsPreviousShiftButton?.closest(".previous-shift-panel");
+        const damageTypeInput = document.getElementById("damageTypeInput");
+        const damageSeverityInput = document.getElementById("damageSeverityInput");
+        const damageNotesInput = document.getElementById("damageNotesInput");
+        const checklistNotesInput = document.getElementById("checklistNotesInput");
+        const sameShiftSettingKey = "vectorAllowSameAsPreviousShift";
 
         function setValue(input, value, force) {
             if (!input || !value) {
@@ -199,6 +239,78 @@
             setValue(kilometresInput, option.dataset.kilometres, force);
             setValue(nextServiceDateInput, option.dataset.nextService, force);
             setValue(vehicleStatusInput, option.dataset.status, force);
+            if (vehicleSchematic && option.dataset.schematicKey) {
+                vehicleSchematic.dataset.schematic = option.dataset.schematicKey;
+            }
+            if (schematicName && option.dataset.schematicName) {
+                schematicName.textContent = "Loaded schematic: " + option.dataset.schematicName;
+            }
+        }
+
+        function clearPreviousShiftSelection() {
+            if (sameAsPreviousShiftInput) {
+                sameAsPreviousShiftInput.value = "false";
+            }
+
+            previousShiftPanel?.classList.remove("applied");
+        }
+
+        function clearInspectionCarryForwardFields() {
+            [damageTypeInput, damageSeverityInput, damageNotesInput, checklistNotesInput].forEach(function (input) {
+                if (input) {
+                    input.value = "";
+                }
+            });
+        }
+
+        function markManualInspectionChange() {
+            if (!previousShiftPanel?.classList.contains("applied")) {
+                return;
+            }
+
+            clearPreviousShiftSelection();
+            if (sameAsPreviousShiftStatus && !sameAsPreviousShiftButton?.disabled) {
+                sameAsPreviousShiftStatus.textContent = "Manual change recorded. This inspection is no longer marked as same as previous shift.";
+            }
+        }
+
+        function configurePreviousShiftButton() {
+            if (!sameAsPreviousShiftButton || !sameAsPreviousShiftStatus) {
+                return;
+            }
+
+            const storedSetting = localStorage.getItem(sameShiftSettingKey);
+            const defaultAllowed = sameAsPreviousShiftButton.dataset.defaultAllowed === "true";
+            const isAllowed = storedSetting === null ? defaultAllowed : storedSetting === "true";
+
+            sameAsPreviousShiftButton.disabled = !isAllowed;
+            sameAsPreviousShiftStatus.textContent = isAllowed
+                ? "Fresh inspection is the default. Use this only when the schematic, damage, and notes are unchanged."
+                : "Same as previous shift is disabled by senior management.";
+        }
+
+        function applyPreviousShift() {
+            const option = registrationSelect?.selectedOptions[0];
+            if (!option || !option.value) {
+                if (sameAsPreviousShiftStatus) {
+                    sameAsPreviousShiftStatus.textContent = "Select a registration before using Same as previous shift.";
+                }
+                return;
+            }
+
+            setValue(damageTypeInput, option.dataset.previousDamageType, true);
+            setValue(damageSeverityInput, option.dataset.previousDamageSeverity, true);
+            setValue(damageNotesInput, option.dataset.previousDamageNotes, true);
+            setValue(checklistNotesInput, option.dataset.previousChecklistNotes, true);
+
+            if (sameAsPreviousShiftInput) {
+                sameAsPreviousShiftInput.value = "true";
+            }
+
+            previousShiftPanel?.classList.add("applied");
+            if (sameAsPreviousShiftStatus) {
+                sameAsPreviousShiftStatus.textContent = "Previous shift schematic, damage, and notes have been applied. Edit any field if something changed.";
+            }
         }
 
         if (!registrationSelect) {
@@ -207,8 +319,20 @@
 
         registrationSelect.addEventListener("change", function () {
             applyVehicle(registrationSelect.selectedOptions[0], true);
+            clearPreviousShiftSelection();
+            clearInspectionCarryForwardFields();
+            if (sameAsPreviousShiftStatus && !sameAsPreviousShiftButton?.disabled) {
+                sameAsPreviousShiftStatus.textContent = "Fresh inspection started for this registration.";
+            }
         });
 
+        sameAsPreviousShiftButton?.addEventListener("click", applyPreviousShift);
+        [damageTypeInput, damageSeverityInput, damageNotesInput, checklistNotesInput].forEach(function (input) {
+            input?.addEventListener("change", markManualInspectionChange);
+            input?.addEventListener("input", markManualInspectionChange);
+        });
+
+        configurePreviousShiftButton();
         applyVehicle(registrationSelect.selectedOptions[0], false);
     })();
 </script>

@@ -17,13 +17,54 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public string? DamageSeverity { get; set; }
     [BindProperty] public string? DamageNotes { get; set; }
     [BindProperty] public string? ChecklistNotes { get; set; }
+    [BindProperty] public bool SameAsPreviousShift { get; set; }
     public string? StatusMessage { get; private set; }
+    public bool AllowSameAsPreviousShift { get; private set; } = true;
 
     public IReadOnlyList<VehicleRegisterOption> VehicleRegisterOptions { get; } =
     [
-        new("AMB-101", "Medic 1", "EMS-001", "Ambulance", 68420, "2026-06-30", "Operational"),
-        new("AMB-102", "Medic 2", "EMS-002", "Ambulance", 72210, "2026-07-14", "Operational with notes"),
-        new("RSP-201", "Response 1", "EMS-011", "Rapid Response", 41890, "2026-08-05", "Operational")
+        new(
+            "AMB-101",
+            "Medic 1",
+            "EMS-001",
+            "Ambulance",
+            "Box-body ambulance schematic",
+            "ambulance",
+            68420,
+            "2026-06-30",
+            "Operational",
+            "Scratch",
+            "Minor",
+            "Light scratch on left rear locker door. No change reported on previous shift.",
+            "Previous shift reported no operational defects. Vehicle remained ready for duty."),
+        new(
+            "AMB-102",
+            "Medic 2",
+            "EMS-002",
+            "Ambulance",
+            "Box-body ambulance schematic",
+            "ambulance",
+            72210,
+            "2026-07-14",
+            "Operational with notes",
+            "Dent",
+            "Moderate",
+            "Existing dent on right front bumper. Manager already notified.",
+            "Previous shift completed with vehicle operational with notes."),
+        new(
+            "RSP-201",
+            "Response 1",
+            "EMS-011",
+            "Rapid Response",
+            "Rapid-response SUV schematic",
+            "rapid-response",
+            41890,
+            "2026-08-05",
+            "Operational",
+            "",
+            "",
+            "No exterior damage recorded on previous shift.",
+            "Previous shift reported no defects.")
     ];
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
@@ -53,7 +94,13 @@ public class DailyVehicleChecklistModel : PageModel
         string Callsign,
         string FleetNumber,
         string VehicleType,
+        string SchematicName,
+        string SchematicKey,
         int Kilometres,
         string NextServiceDate,
-        string VehicleStatus);
+        string VehicleStatus,
+        string PreviousDamageType,
+        string PreviousDamageSeverity,
+        string PreviousDamageNotes,
+        string PreviousChecklistNotes);
 }
