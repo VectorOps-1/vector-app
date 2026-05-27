@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.EntityFrameworkCore;
+using vector_app_local.Data;
 
 namespace vector_app_local.Services;
 
@@ -75,6 +77,12 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/CompanyLogin"] = SeniorAccess
     };
 
+    private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/AddItem",
+        "/Stock"
+    };
+
     public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
     {
         return Task.CompletedTask;
@@ -93,12 +101,102 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         var userId = session.GetInt32(CurrentUserService.UserIdSessionKey);
         var accessView = session.GetString(CurrentUserService.AccessViewSessionKey);
 
-        if (!userId.HasValue || string.IsNullOrWhiteSpace(accessView) || !allowedAccessViews.Contains(accessView))
+        if (!userId.HasValue || string.IsNullOrWhiteSpace(accessView))
         {
             context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
             return;
         }
 
-        await next();
+        if (allowedAccessViews.Contains(accessView))
+        {
+            await next();
+            return;
+        }
+
+        if (string.Equals(accessView, CurrentUserService.StaffAccess, StringComparison.OrdinalIgnoreCase)
+            && await HasValidTaskAccessAsync(context, pagePath, userId.Value))
+        {
+            await next();
+            return;
+        }
+
+        context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
+    }
+
+    private static async Task<bool> HasValidTaskAccessAsync(PageHandlerExecutingContext context, string pagePath, int currentUserId)
+    {
+        if (!TaskAccessibleManagementPages.Contains(pagePath))
+        {
+            return false;
+        }
+
+        var request = context.HttpContext.Request;
+        if (!QueryEquals(request.Query, "taskAccess", "true"))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(request.Query["taskId"], out var taskId))
+        {
+            return false;
+        }
+
+        var db = context.HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
+        var task = await db.TaskItems
+            .AsNoTracking()
+            .Where(taskItem =>
+                taskItem.Id == taskId
+                && taskItem.AssignedToUserId == currentUserId
+                && taskItem.Status == "Open")
+            .Select(taskItem => new
+            {
+                taskItem.ActionType,
+                taskItem.ExpiresAtUtc
+            })
+            .FirstOrDefaultAsync();
+
+        if (task is null)
+        {
+            return false;
+        }
+
+        if (task.ExpiresAtUtc.HasValue && task.ExpiresAtUtc.Value < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        return TaskAllowsPage(task.ActionType, pagePath, request.Query);
+    }
+
+    private static bool TaskAllowsPage(string actionType, string pagePath, IQueryCollection query)
+    {
+        return actionType switch
+        {
+            "Add New Vehicle" => IsAddItemRequest(pagePath, query, "vehicle"),
+            "Add New Equipment" => IsAddItemRequest(pagePath, query, "equipment"),
+            "Add New Stock Item" => IsAddItemRequest(pagePath, query, "stock"),
+            "Add Medication" => IsAddItemRequest(pagePath, query, "medication"),
+            "Receive Stock" => IsStockRequest(pagePath),
+            "Issue / Allocate Stock" => IsStockRequest(pagePath),
+            "Batch Number Tracking" => IsStockRequest(pagePath),
+            "Expiry / Compliance Check" => IsStockRequest(pagePath),
+            _ => false
+        };
+    }
+
+    private static bool IsAddItemRequest(string pagePath, IQueryCollection query, string itemType)
+    {
+        return string.Equals(pagePath, "/AddItem", StringComparison.OrdinalIgnoreCase)
+            && QueryEquals(query, "type", itemType);
+    }
+
+    private static bool IsStockRequest(string pagePath)
+    {
+        return string.Equals(pagePath, "/Stock", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool QueryEquals(IQueryCollection query, string key, string expectedValue)
+    {
+        return string.Equals(query[key].ToString(), expectedValue, StringComparison.OrdinalIgnoreCase);
     }
 }

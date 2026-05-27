@@ -58,23 +58,37 @@ public class AddItemModel : PageModel
         _ => "Equipment name"
     };
 
-    private string NormalizedType => Type?.Trim().ToLowerInvariant() switch
+    private string NormalizedType => NormalizeItemType(Type);
+
+    private static string NormalizeItemType(string? type)
     {
-        "vehicle" => "vehicle",
-        "stock" => "stock",
-        "staff" => "staff",
-        "medication" => "medication",
-        _ => "equipment"
-    };
+        return type?.Trim().ToLowerInvariant() switch
+        {
+            "vehicle" => "vehicle",
+            "stock" => "stock",
+            "staff" => "staff",
+            "medication" => "medication",
+            _ => "equipment"
+        };
+    }
+
+    private string RequestType => NormalizeItemType(Request.Query["type"].ToString());
+
+    private bool HasRequestType => !string.IsNullOrWhiteSpace(Request.Query["type"].ToString());
+
+    private void ApplyRequestType()
+    {
+        Type = HasRequestType ? RequestType : NormalizedType;
+    }
 
     public void OnGet()
     {
-        Type = NormalizedType;
+        ApplyRequestType();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        Type = NormalizedType;
+        ApplyRequestType();
 
         if (string.IsNullOrWhiteSpace(PrimaryName))
         {
