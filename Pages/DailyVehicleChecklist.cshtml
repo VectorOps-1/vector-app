@@ -33,13 +33,32 @@
                     </div>
                 </div>
 
-                <div class="form-grid">
-                    <label>Vehicle / callsign<input asp-for="Callsign" type="text" placeholder="Callsign or fleet number" /></label>
-                    <label>Registration<input asp-for="Registration" type="text" placeholder="Registration number" /></label>
-                    <label>Current kilometres<input asp-for="Kilometres" type="number" min="0" placeholder="Km reading" inputmode="numeric" /></label>
+                <div class="vehicle-register-grid">
+                    <label class="registration-field">
+                        Registration number
+                        <select asp-for="Registration" id="registrationSelect">
+                            <option value="">Select registration</option>
+                            @foreach (var vehicle in Model.VehicleRegisterOptions)
+                            {
+                                <option value="@vehicle.Registration"
+                                        data-callsign="@vehicle.Callsign"
+                                        data-fleet="@vehicle.FleetNumber"
+                                        data-type="@vehicle.VehicleType"
+                                        data-kilometres="@vehicle.Kilometres"
+                                        data-next-service="@vehicle.NextServiceDate"
+                                        data-status="@vehicle.VehicleStatus">
+                                    @vehicle.Registration - @vehicle.Callsign
+                                </option>
+                            }
+                        </select>
+                    </label>
+                    <label>Vehicle / callsign<input asp-for="Callsign" id="callsignInput" type="text" placeholder="Assigned callsign" /></label>
+                    <label>Fleet / asset ID<input asp-for="FleetNumber" id="fleetNumberInput" type="text" placeholder="Fleet or asset number" /></label>
+                    <label>Vehicle type<input asp-for="VehicleType" id="vehicleTypeInput" type="text" placeholder="Vehicle type" /></label>
+                    <label>Current kilometres<input asp-for="Kilometres" id="kilometresInput" type="number" min="0" placeholder="Confirm odometer reading" inputmode="numeric" /></label>
                     <label>Fuel level<select asp-for="FuelLevel"><option value="">Select fuel level</option><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label>
-                    <label>Next service date<input asp-for="NextServiceDate" type="date" /></label>
-                    <label>Vehicle condition<select asp-for="VehicleStatus"><option value="">Select condition</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
+                    <label>Next service date<input asp-for="NextServiceDate" id="nextServiceDateInput" type="date" /></label>
+                    <label>Vehicle condition<select asp-for="VehicleStatus" id="vehicleStatusInput"><option value="">Select condition</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
                 </div>
             </section>
 
@@ -119,9 +138,10 @@
 .section-heading span { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #334155; color: #ffffff; font-size: 13px; font-weight: 800; flex: 0 0 auto; }
 .section-heading h3 { margin: 0 0 4px 0; font-size: 18px; font-weight: 800; color: #1f2937; }
 .section-heading p { margin: 0; font-size: 13px; font-weight: 600; color: #6b7280; }
-.form-grid, .damage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.form-grid label, .damage-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 800; color: #52606d; }
-.form-grid input, .form-grid select, .damage-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #ffffff; color: #1f2937; box-sizing: border-box; }
+.vehicle-register-grid, .damage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.registration-field { grid-column: 1 / -1; }
+.vehicle-register-grid label, .damage-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 800; color: #52606d; }
+.vehicle-register-grid input, .vehicle-register-grid select, .damage-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #ffffff; color: #1f2937; box-sizing: border-box; }
 .notes-field textarea { padding-top: 12px; resize: vertical; }
 .schematic-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .schematic-tab { min-height: 38px; border: 1px solid rgba(66, 84, 102, 0.18); border-radius: 8px; background: #ffffff; color: #334155; font-size: 13px; font-weight: 800; }
@@ -145,5 +165,50 @@
 .save-bar { position: sticky; bottom: 0; z-index: 10; padding: 14px 0 0 0; background: linear-gradient(180deg, rgba(244, 247, 251, 0), #F4F7FB 42%); }
 .two-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .save-btn { width: 100%; border: none; text-align: center; }
-@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .form-grid, .damage-grid, .two-actions { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .vehicle-schematic { height: 210px; } .inspection-section { padding: 14px; } }
+@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .vehicle-register-grid, .damage-grid, .two-actions { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .vehicle-schematic { height: 210px; } .inspection-section { padding: 14px; } }
 </style>
+
+<script>
+    (function () {
+        const registrationSelect = document.getElementById("registrationSelect");
+        const callsignInput = document.getElementById("callsignInput");
+        const fleetNumberInput = document.getElementById("fleetNumberInput");
+        const vehicleTypeInput = document.getElementById("vehicleTypeInput");
+        const kilometresInput = document.getElementById("kilometresInput");
+        const nextServiceDateInput = document.getElementById("nextServiceDateInput");
+        const vehicleStatusInput = document.getElementById("vehicleStatusInput");
+
+        function setValue(input, value, force) {
+            if (!input || !value) {
+                return;
+            }
+
+            if (force || !input.value) {
+                input.value = value;
+            }
+        }
+
+        function applyVehicle(option, force) {
+            if (!option || !option.value) {
+                return;
+            }
+
+            setValue(callsignInput, option.dataset.callsign, force);
+            setValue(fleetNumberInput, option.dataset.fleet, force);
+            setValue(vehicleTypeInput, option.dataset.type, force);
+            setValue(kilometresInput, option.dataset.kilometres, force);
+            setValue(nextServiceDateInput, option.dataset.nextService, force);
+            setValue(vehicleStatusInput, option.dataset.status, force);
+        }
+
+        if (!registrationSelect) {
+            return;
+        }
+
+        registrationSelect.addEventListener("change", function () {
+            applyVehicle(registrationSelect.selectedOptions[0], true);
+        });
+
+        applyVehicle(registrationSelect.selectedOptions[0], false);
+    })();
+</script>
