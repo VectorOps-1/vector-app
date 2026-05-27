@@ -1,0 +1,104 @@
+@page
+@model EquipmentRegisterModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Equipment Register";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="equipment-register-screen">
+    <div class="equipment-register-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Equipment Register</div>
+        <h2 class="page-title">All Equipment</h2>
+        <p class="page-subtitle">Search every equipment item by name, serial number, status, location, vehicle allocation, service date, or movement.</p>
+
+        <form class="toolbar" method="get">
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, serial, model, location, vehicle, movement, or status" />
+            <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/EquipmentRegister">All</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=equipment">Add Equipment</a>
+            <a class="menu-btn report-btn toolbar-btn" href="/ReportIssue?module=equipment">Report Issue</a>
+        </form>
+
+        @if (!Model.EquipmentItems.Any())
+        {
+            <div class="empty-panel">No equipment records found.</div>
+        }
+        else
+        {
+            <div class="register-table" role="table" aria-label="Equipment register">
+                <div class="register-header" role="row">
+                    <div role="columnheader">Equipment</div>
+                    <div role="columnheader">Serial / ID</div>
+                    <div role="columnheader">Location</div>
+                    <div role="columnheader">Vehicle Allocation</div>
+                    <div role="columnheader">Service</div>
+                    <div role="columnheader">Movement</div>
+                    <div role="columnheader">Status</div>
+                    <div role="columnheader">Actions</div>
+                </div>
+
+                @foreach (var item in Model.EquipmentItems)
+                {
+                    <div class="register-row" role="row">
+                        <div class="equipment-identity" role="cell">
+                            <strong>@item.Name</strong>
+                            <span>@(item.EquipmentType ?? "Type not set")</span>
+                            <span>@(item.Model ?? "Model not set")</span>
+                        </div>
+                        <div role="cell">@(item.SerialOrAssetId ?? "Not set")</div>
+                        <div role="cell">@(item.CurrentLocation ?? "Unallocated")</div>
+                        <div role="cell">@(item.AssignedVehicle ?? "No vehicle allocation")</div>
+                        <div class="stacked-cell" role="cell">
+                            <strong>@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
+                            <span>@(item.BatteryRequired ? "Battery check required" : "No battery check flag")</span>
+                        </div>
+                        <div class="stacked-cell" role="cell">
+                            <strong>@(item.LastMovedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No movement")</strong>
+                            <span>@(item.LastMovedByName ?? "No user")</span>
+                        </div>
+                        <div role="cell"><span class="status-pill">@item.Status</span></div>
+                        <div class="row-actions" role="cell">
+                            <a href="/MoveAsset?asset=equipment&assetId=@item.Id">Move</a>
+                            <a href="/ReportIssue?module=equipment">Issue</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.equipment-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.equipment-register-inner { width: 100%; max-width: 1240px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(860px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.toolbar { width: min(1180px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 160px 140px; gap: 12px; }
+.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.toolbar-btn { min-width: 0; border: none; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(120px, .7fr) minmax(150px, .8fr) minmax(150px, .8fr) minmax(150px, .8fr) minmax(170px, .9fr) 100px 110px; gap: 12px; align-items: center; padding: 14px 16px; }
+.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
+.equipment-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
+.equipment-identity strong, .stacked-cell strong { color: #1f2937; font-size: 15px; }
+.equipment-identity span, .stacked-cell span { color: #6b7280; font-size: 13px; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
+.row-actions a:hover { color: #0f5165; background: #eef3f8; }
+@@media (max-width: 1050px) {
+    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
+    .register-header { display: none; }
+    .register-row { gap: 8px; }
+}
+</style>
