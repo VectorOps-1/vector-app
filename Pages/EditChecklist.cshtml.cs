@@ -6,6 +6,8 @@ namespace vector_app_local.Pages;
 
 public class EditChecklistModel : PageModel
 {
+    private const string DailyVehicleChecklistName = "Daily Vehicle Inspection";
+    private const string MonthlyVehicleChecklistName = "Monthly Vehicle Checklist";
     private readonly CurrentUserService _currentUser;
 
     public EditChecklistModel(CurrentUserService currentUser)
@@ -13,7 +15,7 @@ public class EditChecklistModel : PageModel
         _currentUser = currentUser;
     }
 
-    [BindProperty] public string? ChecklistName { get; set; } = "Daily Vehicle Inspection";
+    [BindProperty] public string? ChecklistName { get; set; } = DailyVehicleChecklistName;
     [BindProperty] public string ChecklistStatus { get; set; } = "Draft";
     [BindProperty] public string? DropdownField { get; set; }
     [BindProperty] public string? DropdownOptions { get; set; }
@@ -25,12 +27,16 @@ public class EditChecklistModel : PageModel
     public string? StatusMessage { get; private set; }
     public bool IsSeniorChecklistPublisher { get; private set; }
     public string ChecklistAuthorityNote { get; private set; } = "Senior management publishes live checklist versions. Operational managers can draft assigned changes.";
+    public string LayoutBuilderSummary => IsVehicleChecklistName(ChecklistName)
+        ? $"{ChecklistName} uses the shared vehicle inspection layout builder."
+        : "Select a daily or monthly vehicle checklist to edit the vehicle inspection layout.";
 
     public List<ChecklistSectionEditor> VehicleChecklistSections { get; private set; } = new();
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(string? checklist)
     {
         await LoadCurrentAuthorityAsync();
+        ChecklistName = ResolveChecklistName(checklist, ChecklistName);
         LoadVehicleChecklistLayout();
         DropdownOptions = "Full\n3/4\n1/2\n1/4\nEmpty";
     }
@@ -63,6 +69,28 @@ public class EditChecklistModel : PageModel
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
         IsSeniorChecklistPublisher = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
+    }
+
+    private static string ResolveChecklistName(string? checklist, string? fallback)
+    {
+        if (string.IsNullOrWhiteSpace(checklist))
+        {
+            return string.IsNullOrWhiteSpace(fallback) ? DailyVehicleChecklistName : fallback;
+        }
+
+        var normalized = checklist.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "daily-vehicle" or "daily vehicle" or "daily vehicle checklist" or "daily vehicle inspection" => DailyVehicleChecklistName,
+            "monthly-vehicle" or "monthly vehicle" or "monthly vehicle checklist" or "monthly vehicle inspection" => MonthlyVehicleChecklistName,
+            _ => checklist
+        };
+    }
+
+    private static bool IsVehicleChecklistName(string? checklistName)
+    {
+        return string.Equals(checklistName, DailyVehicleChecklistName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(checklistName, MonthlyVehicleChecklistName, StringComparison.OrdinalIgnoreCase);
     }
 
     private void LoadVehicleChecklistLayout()
