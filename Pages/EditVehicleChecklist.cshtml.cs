@@ -24,7 +24,8 @@ public class EditVehicleChecklistModel : PageModel
     [BindProperty] public string? ActionType { get; set; }
     [BindProperty] public bool AllowSameAsPreviousShift { get; set; } = true;
 
-    public string? StatusMessage { get; private set; }
+    [TempData]
+    public string? StatusMessage { get; set; }
     public bool IsSeniorChecklistPublisher { get; private set; }
     public string ChecklistAuthorityNote { get; private set; } = "Senior management publishes live checklist versions. Operational managers can draft assigned changes.";
     public string LayoutBuilderSummary => IsVehicleChecklistName(ChecklistName)
@@ -59,10 +60,10 @@ public class EditVehicleChecklistModel : PageModel
         }
 
         StatusMessage = ActionType == "approve-publish"
-            ? $"{ChecklistName} ready to approve and publish. Same as previous shift is {(AllowSameAsPreviousShift ? "enabled" : "disabled")} for this checklist. This will later create a new published version and audit record."
-            : $"{ChecklistName} draft layout changes ready to save. This will later save section order, field rules, dropdown options, reuse rules, schematic source rules, and version history.";
+            ? $"{ChecklistName} approved for publishing. Same as previous shift is {(AllowSameAsPreviousShift ? "enabled" : "disabled")} for this checklist."
+            : $"{ChecklistName} draft saved. Layout, section order, field rules, dropdown options, reuse rules, and schematic source rules are ready for review.";
 
-        return Page();
+        return RedirectToPage("/EditChecklist");
     }
 
     private async Task LoadCurrentAuthorityAsync()
