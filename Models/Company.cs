@@ -18,6 +18,9 @@ public class Company
     [MaxLength(260)]
     public string? LogoStoragePath { get; set; }
 
+    public bool AllowSameAsPreviousVehicleInspection { get; set; } = true;
+    public bool AllowSameAsPreviousEquipmentCheck { get; set; } = true;
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAtUtc { get; set; }
 

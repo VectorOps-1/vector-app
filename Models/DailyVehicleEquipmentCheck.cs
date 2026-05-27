@@ -44,6 +44,13 @@ public class DailyVehicleEquipmentCheck
     [MaxLength(80)]
     public string ReadinessImpact { get; set; } = "None";
 
+    public bool SameAsPreviousShiftUsed { get; set; }
+
+    public int? CopiedFromDailyVehicleEquipmentCheckId { get; set; }
+    public DailyVehicleEquipmentCheck? CopiedFromDailyVehicleEquipmentCheck { get; set; }
+
+    public DateTime? SameAsPreviousAppliedAtUtc { get; set; }
+
     [MaxLength(1200)]
     public string? Notes { get; set; }
 

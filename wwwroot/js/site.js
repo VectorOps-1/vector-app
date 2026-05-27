@@ -2,6 +2,113 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 (function () {
+    window.VectorShiftDrafts = window.VectorShiftDrafts || {
+        bindForm: function (form, options) {
+            const settings = options || {};
+            const storageKey = "vectorShiftDraft:" + (settings.key || window.location.pathname);
+            const ttlMilliseconds = Number(settings.ttlMilliseconds || 12 * 60 * 60 * 1000);
+            const statusElement = settings.statusElement || null;
+            const fields = Array.from(form?.querySelectorAll("input[name], select[name], textarea[name]") || []);
+            let saveTimer = null;
+
+            if (!form || fields.length === 0) {
+                return;
+            }
+
+            function readDraft() {
+                try {
+                    const rawDraft = localStorage.getItem(storageKey);
+                    return rawDraft ? JSON.parse(rawDraft) : null;
+                } catch {
+                    return null;
+                }
+            }
+
+            function writeStatus(message) {
+                if (statusElement) {
+                    statusElement.textContent = message;
+                }
+            }
+
+            function captureField(field) {
+                if (field.type === "checkbox" || field.type === "radio") {
+                    return field.checked;
+                }
+
+                return field.value;
+            }
+
+            function restoreField(field, value) {
+                if (value === undefined || value === null) {
+                    return;
+                }
+
+                if (field.type === "checkbox" || field.type === "radio") {
+                    field.checked = Boolean(value);
+                    return;
+                }
+
+                field.value = String(value);
+            }
+
+            function saveDraft() {
+                const existingDraft = readDraft();
+                const now = Date.now();
+                const expiresAt = existingDraft?.expiresAt && existingDraft.expiresAt > now
+                    ? existingDraft.expiresAt
+                    : now + ttlMilliseconds;
+                const values = {};
+
+                fields.forEach(function (field) {
+                    values[field.name] = captureField(field);
+                });
+
+                localStorage.setItem(storageKey, JSON.stringify({
+                    expiresAt: expiresAt,
+                    savedAt: now,
+                    values: values
+                }));
+
+                writeStatus("Progress saved locally for this shift.");
+            }
+
+            function scheduleSave() {
+                window.clearTimeout(saveTimer);
+                saveTimer = window.setTimeout(saveDraft, 250);
+            }
+
+            const draft = readDraft();
+            if (draft?.expiresAt && draft.expiresAt > Date.now() && draft.values) {
+                fields.forEach(function (field) {
+                    restoreField(field, draft.values[field.name]);
+                });
+                writeStatus("Draft restored. Progress is kept locally until the shift expires.");
+                if (typeof settings.onAfterRestore === "function") {
+                    settings.onAfterRestore();
+                }
+            } else if (draft) {
+                localStorage.removeItem(storageKey);
+                writeStatus("Previous draft expired. Fresh check started.");
+            } else {
+                writeStatus("Progress saves locally for 12 hours during this shift.");
+            }
+
+            fields.forEach(function (field) {
+                field.addEventListener("input", scheduleSave);
+                field.addEventListener("change", scheduleSave);
+            });
+
+            window.addEventListener("beforeunload", saveDraft);
+        }
+    };
+
+    (window.VectorPendingShiftDraftBindings || []).forEach(function (bindDraft) {
+        if (typeof bindDraft === "function") {
+            bindDraft();
+        }
+    });
+    window.VectorPendingShiftDraftBindings = [];
+
     document.addEventListener("DOMContentLoaded", function () {
         const taskNotification = document.getElementById("taskNotification");
         const taskCount = document.getElementById("taskCount");

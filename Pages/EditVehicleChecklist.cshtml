@@ -94,15 +94,25 @@
                                         Button label
                                         <input value="Same as previous shift" />
                                     </label>
-                                    <p>Permissioned action block shown directly under Vehicle Details.</p>
+                                    <p>Senior management controls vehicle carry-forward and equipment carry-forward separately.</p>
                                 </div>
-                                <label class="toggle-row">
-                                    <input asp-for="AllowSameAsPreviousShift"
-                                           id="allowSameAsPreviousShiftToggle"
-                                           type="checkbox"
-                                           disabled="@(!Model.IsSeniorChecklistPublisher)" />
-                                    <span>Allow this button on vehicle inspections</span>
-                                </label>
+                                <div class="same-shift-toggle-group">
+                                    <label class="toggle-row">
+                                        <input asp-for="AllowSameAsPreviousVehicleInspection"
+                                               id="allowSameAsPreviousVehicleInspectionToggle"
+                                               type="checkbox"
+                                               disabled="@(!Model.IsSeniorChecklistPublisher)" />
+                                        <span>Allow for vehicle inspection</span>
+                                    </label>
+
+                                    <label class="toggle-row">
+                                        <input asp-for="AllowSameAsPreviousEquipmentCheck"
+                                               id="allowSameAsPreviousEquipmentCheckToggle"
+                                               type="checkbox"
+                                               disabled="@(!Model.IsSeniorChecklistPublisher)" />
+                                        <span>Allow for equipment checks</span>
+                                    </label>
+                                </div>
                             </div>
                         }
                         else
@@ -261,6 +271,7 @@
 .inline-add { margin-top: 12px; }
 .previous-shift-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .8fr); gap: 14px; align-items: center; padding: 12px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(255,255,255,.82); }
 .previous-shift-editor p { margin: 8px 0 0 0; color: #6b7280; font-size: 13px; font-weight: 700; }
+.same-shift-toggle-group { display: flex; flex-direction: column; gap: 10px; }
 .toggle-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px !important; color: #425466; }
 .toggle-row input { width: 18px; min-height: 18px; }
 .publish-note { margin-top: 14px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; }
@@ -272,8 +283,11 @@
 
 <script>
     (function () {
-        const toggle = document.getElementById("allowSameAsPreviousShiftToggle");
-        const sameShiftSettingKey = "vectorAllowSameAsPreviousShift";
+        const vehicleToggle = document.getElementById("allowSameAsPreviousVehicleInspectionToggle");
+        const equipmentToggle = document.getElementById("allowSameAsPreviousEquipmentCheckToggle");
+        const legacySameShiftSettingKey = "vectorAllowSameAsPreviousShift";
+        const vehicleSameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
+        const equipmentSameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
         const layoutBuilder = document.querySelector(".layout-builder");
 
         function renumberSections() {
@@ -359,11 +373,21 @@
             grid.appendChild(createField());
         }
 
-        if (toggle && !toggle.disabled) {
-            localStorage.setItem(sameShiftSettingKey, String(toggle.checked));
+        if (vehicleToggle && !vehicleToggle.disabled) {
+            localStorage.setItem(vehicleSameShiftSettingKey, String(vehicleToggle.checked));
+            localStorage.setItem(legacySameShiftSettingKey, String(vehicleToggle.checked));
 
-            toggle.addEventListener("change", function () {
-                localStorage.setItem(sameShiftSettingKey, String(toggle.checked));
+            vehicleToggle.addEventListener("change", function () {
+                localStorage.setItem(vehicleSameShiftSettingKey, String(vehicleToggle.checked));
+                localStorage.setItem(legacySameShiftSettingKey, String(vehicleToggle.checked));
+            });
+        }
+
+        if (equipmentToggle && !equipmentToggle.disabled) {
+            localStorage.setItem(equipmentSameShiftSettingKey, String(equipmentToggle.checked));
+
+            equipmentToggle.addEventListener("change", function () {
+                localStorage.setItem(equipmentSameShiftSettingKey, String(equipmentToggle.checked));
             });
         }
 

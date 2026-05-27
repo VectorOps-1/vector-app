@@ -25,17 +25,36 @@
     <form method="post" class="checklist-form">
         <input asp-for="Callsign" type="hidden" />
         <input asp-for="Registration" type="hidden" />
+        <input asp-for="SameAsPreviousEquipmentCheck" id="sameAsPreviousEquipmentInput" type="hidden" />
+        <div id="equipmentDraftStatus" class="draft-status" aria-live="polite"></div>
 
-        <div class="form-grid">
-            <label>Asset ID<input asp-for="AssetId" type="text" placeholder="Equipment ID" /></label>
-            <label>Serial number<input asp-for="SerialNumber" type="text" placeholder="S/N" /></label>
-            <label>Equipment name<input asp-for="EquipmentName" type="text" placeholder="Name/type" /></label>
-            <label>Assigned location<input asp-for="AssignedLocation" type="text" placeholder="Base / vehicle / store" /></label>
-            <label>Battery state<select asp-for="BatteryState"><option value="">Select battery state</option><option>Full</option><option>Acceptable</option><option>Low</option><option>Not applicable</option></select></label>
-            <label>Status<select asp-for="EquipmentStatus"><option value="">Select status</option><option>Operational</option><option>Operational with notes</option><option>Faulty</option><option>Missing</option></select></label>
+        <div class="previous-shift-panel">
+            <button id="sameAsPreviousEquipmentButton"
+                    class="same-shift-button"
+                    type="button"
+                    data-default-allowed="@Model.AllowSameAsPreviousEquipmentCheck.ToString().ToLowerInvariant()"
+                    data-previous-asset-id="@Model.PreviousAssetId"
+                    data-previous-serial-number="@Model.PreviousSerialNumber"
+                    data-previous-equipment-name="@Model.PreviousEquipmentName"
+                    data-previous-assigned-location="@Model.PreviousAssignedLocation"
+                    data-previous-battery-state="@Model.PreviousBatteryState"
+                    data-previous-equipment-status="@Model.PreviousEquipmentStatus"
+                    data-previous-checklist-notes="@Model.PreviousChecklistNotes">
+                Same as previous shift
+            </button>
+            <p id="sameAsPreviousEquipmentStatus">Fresh equipment check is the default. Use this only when the equipment carried on this vehicle is unchanged.</p>
         </div>
 
-        <label class="notes-field">Issues / notes<textarea asp-for="ChecklistNotes" rows="5" placeholder="Record faults, missing items, damage, or readiness notes"></textarea></label>
+        <div class="form-grid">
+            <label>Asset ID<input asp-for="AssetId" id="assetIdInput" type="text" placeholder="Equipment ID" /></label>
+            <label>Serial number<input asp-for="SerialNumber" id="serialNumberInput" type="text" placeholder="S/N" /></label>
+            <label>Equipment name<input asp-for="EquipmentName" id="equipmentNameInput" type="text" placeholder="Name/type" /></label>
+            <label>Assigned location<input asp-for="AssignedLocation" id="assignedLocationInput" type="text" placeholder="Base / vehicle / store" /></label>
+            <label>Battery state<select asp-for="BatteryState" id="batteryStateInput"><option value="">Select battery state</option><option>Full</option><option>Acceptable</option><option>Low</option><option>Not applicable</option></select></label>
+            <label>Status<select asp-for="EquipmentStatus" id="equipmentStatusInput"><option value="">Select status</option><option>Operational</option><option>Operational with notes</option><option>Faulty</option><option>Missing</option></select></label>
+        </div>
+
+        <label class="notes-field">Issues / notes<textarea asp-for="ChecklistNotes" id="checklistNotesInput" rows="5" placeholder="Record faults, missing items, damage, or readiness notes"></textarea></label>
 
         <div class="action-row">
             <a class="menu-btn vehicle-btn" href="@Model.VehicleChecklistUrl">Back: Vehicle Inspection</a>
@@ -57,6 +76,13 @@
 .linked-vehicle-panel strong { color: #1f2937; font-size: 18px; }
 .status-message { width: min(720px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
 .checklist-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.draft-status { width: min(820px, 94%); margin: -8px auto -4px auto; color: #64748b; font-size: 12px; font-weight: 800; text-align: center; }
+.previous-shift-panel { width: min(820px, 94%); display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); box-sizing: border-box; }
+.same-shift-button { min-height: 44px; border: 1px solid rgba(14,94,122,.28); border-radius: 8px; background: #ffffff; color: #0E5E7A; font-size: 14px; font-weight: 900; }
+.same-shift-button:hover:not(:disabled) { background: rgba(14,94,122,.08); }
+.same-shift-button:disabled { cursor: not-allowed; opacity: .56; color: #64748b; border-color: rgba(100,116,139,.26); }
+.previous-shift-panel p { margin: 0; color: #52606d; font-size: 13px; font-weight: 700; text-align: left; }
+.previous-shift-panel.applied { border-color: rgba(31,111,91,.36); background: rgba(31,111,91,.07); }
 .form-grid { width: min(820px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 700; color: #52606d; }
 .form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
@@ -64,8 +90,88 @@
 .notes-field textarea { padding-top: 12px; resize: vertical; }
 .action-row { width: min(820px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
-@@media (max-width: 700px) { .form-grid, .action-row { grid-template-columns: 1fr; } }
+@@media (max-width: 700px) { .form-grid, .action-row, .previous-shift-panel { grid-template-columns: 1fr; } }
 </style>
+
+<script>
+    (function () {
+        const button = document.getElementById("sameAsPreviousEquipmentButton");
+        const status = document.getElementById("sameAsPreviousEquipmentStatus");
+        const hiddenInput = document.getElementById("sameAsPreviousEquipmentInput");
+        const panel = button?.closest(".previous-shift-panel");
+        const sameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
+        const fields = [
+            ["assetIdInput", "previousAssetId"],
+            ["serialNumberInput", "previousSerialNumber"],
+            ["equipmentNameInput", "previousEquipmentName"],
+            ["assignedLocationInput", "previousAssignedLocation"],
+            ["batteryStateInput", "previousBatteryState"],
+            ["equipmentStatusInput", "previousEquipmentStatus"],
+            ["checklistNotesInput", "previousChecklistNotes"]
+        ];
+
+        if (!button || !status) {
+            return;
+        }
+
+        const storedSetting = localStorage.getItem(sameShiftSettingKey);
+        const defaultAllowed = button.dataset.defaultAllowed === "true";
+        const isAllowed = storedSetting === null ? defaultAllowed : storedSetting === "true";
+
+        button.disabled = !isAllowed;
+        status.textContent = isAllowed
+            ? "Fresh equipment check is the default. Use this only when the equipment carried on this vehicle is unchanged."
+            : "Same as previous shift for equipment is disabled by senior management.";
+
+        button.addEventListener("click", function () {
+            fields.forEach(function ([elementId, dataKey]) {
+                const element = document.getElementById(elementId);
+                if (element && button.dataset[dataKey]) {
+                    element.value = button.dataset[dataKey];
+                }
+            });
+
+            if (hiddenInput) {
+                hiddenInput.value = "true";
+            }
+
+            panel?.classList.add("applied");
+            status.textContent = "Previous shift equipment values have been applied. Edit any field if something changed.";
+        });
+
+        fields.forEach(function ([elementId]) {
+            const element = document.getElementById(elementId);
+            function markManualEquipmentChange() {
+                if (!panel?.classList.contains("applied")) {
+                    return;
+                }
+
+                if (hiddenInput) {
+                    hiddenInput.value = "false";
+                }
+                panel.classList.remove("applied");
+                status.textContent = "Manual change recorded. This equipment check is no longer marked as same as previous shift.";
+            }
+
+            element?.addEventListener("input", markManualEquipmentChange);
+            element?.addEventListener("change", markManualEquipmentChange);
+        });
+
+        const bindEquipmentDraft = function () {
+            window.VectorShiftDrafts?.bindForm(document.querySelector(".checklist-form"), {
+                key: "daily-equipment-readiness:" + window.location.search,
+                statusElement: document.getElementById("equipmentDraftStatus")
+            });
+        };
+
+        if (window.VectorShiftDrafts) {
+            bindEquipmentDraft();
+        } else {
+            window.VectorPendingShiftDraftBindings = window.VectorPendingShiftDraftBindings || [];
+            window.VectorPendingShiftDraftBindings.push(bindEquipmentDraft);
+        }
+    })();
+</script>
 
 @if (Model.ActionSaved)
 {

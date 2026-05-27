@@ -181,6 +181,9 @@ public class VectorDbContext : DbContext
             .HasIndex(report => new { report.CompanyId, report.ReadinessStatus, report.InspectionDateUtc });
 
         modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasIndex(report => new { report.CompanyId, report.WorkflowStatus, report.DraftExpiresAtUtc });
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
             .HasOne(report => report.Company)
             .WithMany(company => company.DailyVehicleReadinessReports)
             .HasForeignKey(report => report.CompanyId)
@@ -196,6 +199,18 @@ public class VectorDbContext : DbContext
             .HasOne(report => report.PerformedByUser)
             .WithMany(user => user.PerformedVehicleReadinessReports)
             .HasForeignKey(report => report.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.VehicleSameAsPreviousSourceReport)
+            .WithMany()
+            .HasForeignKey(report => report.VehicleSameAsPreviousSourceReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.EquipmentSameAsPreviousSourceReport)
+            .WithMany()
+            .HasForeignKey(report => report.EquipmentSameAsPreviousSourceReportId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<DailyVehicleEquipmentCheck>()
@@ -223,6 +238,12 @@ public class VectorDbContext : DbContext
             .HasOne(check => check.EquipmentItem)
             .WithMany(equipment => equipment.DailyEquipmentChecks)
             .HasForeignKey(check => check.EquipmentItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.CopiedFromDailyVehicleEquipmentCheck)
+            .WithMany()
+            .HasForeignKey(check => check.CopiedFromDailyVehicleEquipmentCheckId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AuditLog>()

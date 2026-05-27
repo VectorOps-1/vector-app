@@ -20,6 +20,17 @@ public class DailyVehicleReadinessReport
     [MaxLength(80)]
     public string? ShiftName { get; set; }
 
+    public DateTime? ShiftStartedAtUtc { get; set; }
+    public DateTime? ShiftEndsAtUtc { get; set; }
+    public DateTime? DraftExpiresAtUtc { get; set; }
+    public DateTime? LastSavedAtUtc { get; set; }
+
+    [MaxLength(80)]
+    public string WorkflowStatus { get; set; } = "Draft";
+
+    [MaxLength(80)]
+    public string? LastSavedSection { get; set; }
+
     [MaxLength(120)]
     public string VehicleRegistrationNumber { get; set; } = string.Empty;
 
@@ -38,6 +49,23 @@ public class DailyVehicleReadinessReport
     public DateTime? VehicleNextServiceDateAtCheck { get; set; }
 
     public bool SameAsPreviousShiftUsed { get; set; }
+    public bool VehicleSameAsPreviousShiftUsed { get; set; }
+    public bool EquipmentSameAsPreviousShiftUsed { get; set; }
+
+    public int? VehicleSameAsPreviousSourceReportId { get; set; }
+    public DailyVehicleReadinessReport? VehicleSameAsPreviousSourceReport { get; set; }
+
+    public int? EquipmentSameAsPreviousSourceReportId { get; set; }
+    public DailyVehicleReadinessReport? EquipmentSameAsPreviousSourceReport { get; set; }
+
+    public DateTime? VehicleSameAsPreviousAppliedAtUtc { get; set; }
+    public DateTime? EquipmentSameAsPreviousAppliedAtUtc { get; set; }
+
+    [MaxLength(1200)]
+    public string? VehicleSameAsPreviousCopiedSummary { get; set; }
+
+    [MaxLength(1200)]
+    public string? EquipmentSameAsPreviousCopiedSummary { get; set; }
 
     [MaxLength(80)]
     public string? LightsStatus { get; set; }

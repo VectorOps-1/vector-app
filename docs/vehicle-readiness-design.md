@@ -15,6 +15,8 @@ The core Vector workflow is a daily readiness decision for a specific vehicle. T
 
 Managers must be able to complete the same vehicle checks themselves. The report is always recorded against the signed-in user who performed it.
 
+Checks must be resumable during the shift. Starting a check creates a draft readiness report. Section saves update that draft, and the draft remains available until the shift ends or the configured draft expiry is reached, normally 12 hours.
+
 ## Equipment On A Vehicle
 
 Each expected item can carry:
@@ -100,3 +102,10 @@ The current backend model includes:
 - `DailyVehicleEquipmentChecks`
 
 Daily readiness reports store snapshots of key vehicle and equipment details at the time of the check. This protects historical records when a vehicle callsign, schematic, service date, or equipment setup changes later.
+
+Same-as-previous-shift support is split into two management-controlled permissions:
+
+- Vehicle inspection carry-forward
+- Equipment check carry-forward
+
+Reports record which carry-forward option was used, when it was applied, which previous report it came from, and a summary of the copied data. Equipment rows can also link back to the previous equipment check row they were copied from.

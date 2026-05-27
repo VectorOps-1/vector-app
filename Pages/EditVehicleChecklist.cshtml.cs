@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using vector_app_local.Data;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
@@ -8,10 +10,12 @@ public class EditVehicleChecklistModel : PageModel
 {
     private const string DailyVehicleChecklistName = "Daily Vehicle Inspection";
     private const string MonthlyVehicleChecklistName = "Monthly Vehicle Checklist";
+    private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
 
-    public EditVehicleChecklistModel(CurrentUserService currentUser)
+    public EditVehicleChecklistModel(VectorDbContext db, CurrentUserService currentUser)
     {
+        _db = db;
         _currentUser = currentUser;
     }
 
@@ -22,7 +26,8 @@ public class EditVehicleChecklistModel : PageModel
     [BindProperty] public string? AppliesTo { get; set; }
     [BindProperty] public string? PublishNote { get; set; }
     [BindProperty] public string? ActionType { get; set; }
-    [BindProperty] public bool AllowSameAsPreviousShift { get; set; } = true;
+    [BindProperty] public bool AllowSameAsPreviousVehicleInspection { get; set; } = true;
+    [BindProperty] public bool AllowSameAsPreviousEquipmentCheck { get; set; } = true;
 
     [TempData]
     public string? StatusMessage { get; set; }
@@ -36,7 +41,7 @@ public class EditVehicleChecklistModel : PageModel
 
     public async Task OnGetAsync(string? checklist)
     {
-        await LoadCurrentAuthorityAsync();
+        await LoadCurrentAuthorityAsync(loadPublishedSettings: true);
         ChecklistName = ResolveChecklistName(checklist, ChecklistName);
         LoadVehicleChecklistLayout();
         DropdownOptions = "Full\n3/4\n1/2\n1/4\nEmpty";
@@ -44,7 +49,7 @@ public class EditVehicleChecklistModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await LoadCurrentAuthorityAsync();
+        var currentUser = await LoadCurrentAuthorityAsync(loadPublishedSettings: false);
         LoadVehicleChecklistLayout();
 
         if (string.IsNullOrWhiteSpace(ChecklistName))
@@ -59,17 +64,50 @@ public class EditVehicleChecklistModel : PageModel
             return Page();
         }
 
+        if (ActionType == "approve-publish" && currentUser is not null)
+        {
+            var company = await _db.Companies.FirstOrDefaultAsync(item => item.Id == currentUser.CompanyId);
+            if (company is not null)
+            {
+                company.AllowSameAsPreviousVehicleInspection = AllowSameAsPreviousVehicleInspection;
+                company.AllowSameAsPreviousEquipmentCheck = AllowSameAsPreviousEquipmentCheck;
+                company.UpdatedAtUtc = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+        }
+
         StatusMessage = ActionType == "approve-publish"
-            ? $"{ChecklistName} approved for publishing. Same as previous shift is {(AllowSameAsPreviousShift ? "enabled" : "disabled")} for this checklist."
+            ? $"{ChecklistName} approved for publishing. Same as previous shift: vehicle inspection {(AllowSameAsPreviousVehicleInspection ? "enabled" : "disabled")}; equipment checks {(AllowSameAsPreviousEquipmentCheck ? "enabled" : "disabled")}."
             : $"{ChecklistName} draft saved. Layout, section order, field rules, dropdown options, reuse rules, and schematic source rules are ready for review.";
 
         return RedirectToPage("/EditChecklist");
     }
 
-    private async Task LoadCurrentAuthorityAsync()
+    private async Task<vector_app_local.Models.AppUser?> LoadCurrentAuthorityAsync(bool loadPublishedSettings)
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
         IsSeniorChecklistPublisher = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
+
+        if (loadPublishedSettings && currentUser is not null)
+        {
+            var settings = await _db.Companies
+                .AsNoTracking()
+                .Where(company => company.Id == currentUser.CompanyId)
+                .Select(company => new
+                {
+                    company.AllowSameAsPreviousVehicleInspection,
+                    company.AllowSameAsPreviousEquipmentCheck
+                })
+                .FirstOrDefaultAsync();
+
+            if (settings is not null)
+            {
+                AllowSameAsPreviousVehicleInspection = settings.AllowSameAsPreviousVehicleInspection;
+                AllowSameAsPreviousEquipmentCheck = settings.AllowSameAsPreviousEquipmentCheck;
+            }
+        }
+
+        return currentUser;
     }
 
     private static string ResolveChecklistName(string? checklist, string? fallback)
@@ -111,7 +149,7 @@ public class EditVehicleChecklistModel : PageModel
                 }),
             new(
                 "Same as previous shift",
-                "Optional reuse control shown below vehicle details.",
+                "Optional reuse controls shown below vehicle details and in the equipment section.",
                 ChecklistSectionKind.Action,
                 new List<ChecklistFieldEditor>()),
             new(

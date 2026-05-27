@@ -1,11 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using vector_app_local.Data;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class DailyVehicleChecklistModel : PageModel
 {
+    private readonly VectorDbContext _db;
+    private readonly CurrentUserService _currentUser;
+
+    public DailyVehicleChecklistModel(VectorDbContext db, CurrentUserService currentUser)
+    {
+        _db = db;
+        _currentUser = currentUser;
+    }
+
     [BindProperty(SupportsGet = true)] public string Frequency { get; set; } = "daily";
     [BindProperty] public string? Callsign { get; set; }
     [BindProperty] public string? Registration { get; set; }
@@ -26,7 +37,7 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public bool SameAsPreviousShift { get; set; }
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
-    public bool AllowSameAsPreviousShift { get; private set; } = true;
+    public bool AllowSameAsPreviousVehicleInspection { get; private set; } = true;
     public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Checklist";
     public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Inspection";
 
@@ -131,13 +142,15 @@ public class DailyVehicleChecklistModel : PageModel
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
+        await LoadSameAsPreviousSettingAsync();
         Frequency = NormalizeFrequency(Frequency);
     }
 
-    public IActionResult OnPost()
+    public async Task<IActionResult> OnPostAsync()
     {
+        await LoadSameAsPreviousSettingAsync();
         Frequency = NormalizeFrequency(Frequency);
 
         if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
@@ -155,6 +168,27 @@ public class DailyVehicleChecklistModel : PageModel
         StatusMessage = "Vehicle inspection ready to save. Continue to equipment checklist for the same vehicle. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
         ActionSaved = true;
         return Page();
+    }
+
+    private async Task LoadSameAsPreviousSettingAsync()
+    {
+        var companyId = _currentUser.CurrentUserId.HasValue
+            ? (await _currentUser.GetCurrentUserAsync())?.CompanyId
+            : null;
+
+        if (!companyId.HasValue)
+        {
+            AllowSameAsPreviousVehicleInspection = true;
+            return;
+        }
+
+        var setting = await _db.Companies
+            .AsNoTracking()
+            .Where(company => company.Id == companyId.Value)
+            .Select(company => company.AllowSameAsPreviousVehicleInspection)
+            .FirstOrDefaultAsync();
+
+        AllowSameAsPreviousVehicleInspection = setting;
     }
 
     private static string NormalizeFrequency(string? frequency)
