@@ -1,0 +1,147 @@
+@page
+@model UploadMedicationRegisterModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Upload Medication Register";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="upload-screen">
+    <div class="upload-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Upload Medication Register</h2>
+        <p class="page-subtitle">Upload an Excel medication register to generate editable Vector medication records</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            <label class="upload-box" for="medicationRegisterFile">
+                <span class="upload-title">Select Medication Register</span>
+                <span class="upload-help">Accepted now: .xlsx or .xls</span>
+                <input id="medicationRegisterFile" asp-for="MedicationRegisterFile" type="file" accept=".xlsx,.xls" />
+            </label>
+
+            <button class="menu-btn stock-btn continue-btn" type="submit">Generate Medication Register Preview</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.upload-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: center;
+}
+
+.upload-inner {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 320px;
+    max-width: 72%;
+    max-height: 180px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.page-subtitle {
+    margin: 0 0 28px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.status-message {
+    width: min(560px, 92%);
+    margin: 0 auto 20px auto;
+    padding: 12px 16px;
+    border: 1px solid rgba(164, 58, 58, 0.22);
+    border-radius: 8px;
+    background: rgba(164, 58, 58, 0.08);
+    color: #8f2f2f;
+    font-weight: 700;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+}
+
+.upload-box {
+    width: min(620px, 94%);
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 26px;
+    border: 1px dashed rgba(66, 84, 102, 0.42);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.58);
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.upload-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #2f2f2f;
+}
+
+.upload-help {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.upload-box input {
+    margin-top: 10px;
+    max-width: 100%;
+}
+
+.continue-btn {
+    border: none;
+}
+</style>
