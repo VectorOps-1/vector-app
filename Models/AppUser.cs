@@ -27,5 +27,9 @@ public class AppUser
     public ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskEvent> TaskEvents { get; set; } = new List<TaskEvent>();
+    public ICollection<IssueReport> ReportedIssueReports { get; set; } = new List<IssueReport>();
+    public ICollection<IssueReport> AssignedIssueReports { get; set; } = new List<IssueReport>();
+    public ICollection<IssueReport> ResolvedIssueReports { get; set; } = new List<IssueReport>();
+    public ICollection<IssueReportEvent> IssueReportEvents { get; set; } = new List<IssueReportEvent>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

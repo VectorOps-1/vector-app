@@ -132,6 +132,8 @@
             <div class="workflow-grid">
                 <a class="workflow-action" href="/SendTask">Send Task</a>
                 <a class="workflow-action" href="/TaskInbox">Task Inbox</a>
+                <a class="workflow-action" href="/IssueInbox">Issue Inbox</a>
+                <a class="workflow-action" href="/IssueReports">Issue Pool</a>
                 <a class="workflow-action" href="/CompleteChecklist">Complete Checklist</a>
                 <a class="workflow-action" href="/TaskFeedback">Task Feedback</a>
                 <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
@@ -384,7 +386,7 @@
     width: min(940px, 100%);
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
     gap: 12px;
 }
 

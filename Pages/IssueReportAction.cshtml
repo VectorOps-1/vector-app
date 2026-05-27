@@ -1,0 +1,127 @@
+@page
+@model IssueReportActionModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Issue Report Action";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var issue = Model.Issue;
+}
+
+<div class="issue-action-screen">
+    <div class="issue-action-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Issue Follow-Up</div>
+
+        @if (issue is null)
+        {
+            <h2 class="page-title">No Open Issue</h2>
+            <p class="page-subtitle">This issue is no longer open or available to your management view.</p>
+        }
+        else
+        {
+            <h2 class="page-title">@issue.Module - @issue.IssueType</h2>
+            <p class="page-subtitle">Resolve the issue by recording the action taken.</p>
+
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="status-message">@Model.StatusMessage</div>
+            }
+
+            <section class="issue-panel">
+                <div class="section-label">Issue Details</div>
+                <div class="detail-grid">
+                    <div><strong>Reported by:</strong> @issue.ReportedByName</div>
+                    <div><strong>Assigned to:</strong> @issue.AssignedToName</div>
+                    <div><strong>Severity:</strong> @(issue.Severity ?? "Not set")</div>
+                    <div><strong>Status:</strong> @(issue.OperationalStatus ?? "Not set")</div>
+                    <div><strong>Related:</strong> @(issue.RelatedItem ?? "Not set")</div>
+                    <div><strong>Location:</strong> @(issue.Location ?? "Not set")</div>
+                    <div><strong>Notification:</strong> @issue.NotificationMethod</div>
+                    <div><strong>Created:</strong> @issue.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                </div>
+                <div class="issue-description">@issue.Description</div>
+                @if (!string.IsNullOrWhiteSpace(issue.EvidenceFileNames))
+                {
+                    <div class="issue-evidence"><strong>Evidence listed:</strong> @issue.EvidenceFileNames</div>
+                }
+            </section>
+
+            @if (Model.CanResolve)
+            {
+                <form method="post" class="resolve-form">
+                    <input asp-for="IssueId" type="hidden" />
+                    <input asp-for="Pool" type="hidden" />
+
+                    <section class="issue-panel">
+                        <div class="section-label">Resolution</div>
+                        <label>
+                            Outcome
+                            <select asp-for="ResolutionOutcome">
+                                <option value="">Select outcome</option>
+                                <option>Resolved</option>
+                                <option>Resolved with restriction</option>
+                                <option>Escalated</option>
+                                <option>Unable to resolve</option>
+                            </select>
+                        </label>
+
+                        <label class="notes-field">
+                            Action taken
+                            <textarea asp-for="ActionTaken" rows="5" placeholder="Record exactly what was done, by whom, and any follow-up required"></textarea>
+                        </label>
+                    </section>
+
+                    <button class="menu-btn staff-btn submit-btn" type="submit">Mark Issue Resolved</button>
+                </form>
+            }
+            else
+            {
+                <div class="empty-panel">This issue is assigned to another manager. You can view it from the pool, but only the assigned manager or senior management can close it.</div>
+            }
+
+            @if (Model.Events.Any())
+            {
+                <section class="issue-panel">
+                    <div class="section-label">Issue History</div>
+                    <div class="event-list">
+                        @foreach (var item in Model.Events)
+                        {
+                            <div class="event-row">
+                                <strong>@item.EventType</strong> by @item.PerformedByName on @item.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                <span>@item.Notes</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        }
+    </div>
+</div>
+
+<style>
+.issue-action-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.issue-action-inner { width: 100%; max-width: 940px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(700px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message, .empty-panel { width: min(820px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 800; }
+.issue-panel { width: min(820px, 94%); margin: 0 auto 22px auto; padding: 20px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); box-sizing: border-box; text-align: left; }
+.section-label { margin-bottom: 14px; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; color: #425466; font-size: 14px; font-weight: 700; }
+.issue-description, .issue-evidence { margin-top: 14px; color: #425466; font-size: 14px; font-weight: 700; }
+.resolve-form { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.issue-panel label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
+.issue-panel select, .issue-panel textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.notes-field { margin-top: 16px; }
+.issue-panel textarea { padding-top: 12px; resize: vertical; }
+.submit-btn { width: min(360px, 94%); border: none; }
+.event-list { display: grid; gap: 12px; }
+.event-row { padding: 12px 14px; border-radius: 8px; background: #f8fafc; color: #425466; font-size: 13px; font-weight: 700; }
+.event-row span { display: block; margin-top: 4px; }
+@@media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+</style>

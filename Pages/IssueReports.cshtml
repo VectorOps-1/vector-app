@@ -1,0 +1,65 @@
+@page
+@model IssueReportsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Pending Issue Reports";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="issue-list-screen">
+    <div class="issue-list-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Pool</div>
+        <h2 class="page-title">Pending Issue Reports</h2>
+        <p class="page-subtitle">All open issue reports for management visibility and follow-up.</p>
+
+        <div class="list-actions">
+            <a class="menu-btn staff-btn" href="/IssueInbox">My Issue Inbox</a>
+        </div>
+
+        @if (!Model.PendingIssues.Any())
+        {
+            <div class="empty-panel">No pending issue reports.</div>
+        }
+        else
+        {
+            <div class="issue-list">
+                @foreach (var issue in Model.PendingIssues)
+                {
+                    <a class="issue-card" href="/IssueReportAction?issueId=@issue.Id&pool=true">
+                        <div class="issue-title">@issue.Module - @issue.IssueType</div>
+                        <div class="issue-meta">
+                            <div>Assigned to: @issue.AssignedToName</div>
+                            <div>Reported by: @issue.ReportedByName</div>
+                            <div>Severity: @(issue.Severity ?? "Not set")</div>
+                            <div>Related: @(issue.RelatedItem ?? "Not set")</div>
+                            <div>Created: @issue.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.issue-list-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.issue-list-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(680px, 94%); margin: 0 auto 20px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.list-actions { width: min(860px, 94%); margin: 0 auto 20px auto; display: flex; justify-content: center; }
+.list-actions .menu-btn { min-width: 260px; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.issue-list { display: grid; gap: 16px; width: min(860px, 94%); margin: 0 auto; text-align: left; }
+.issue-card { display: block; padding: 18px 20px; border: 1px solid rgba(47,128,168,.26); border-radius: 8px; background: rgba(255,255,255,.78); text-decoration: none; color: #1f2937; box-shadow: 0 14px 28px rgba(47,128,168,.10); }
+.issue-card:hover { color: #1f2937; border-color: rgba(47,128,168,.52); }
+.issue-title { margin-bottom: 8px; font-size: 18px; font-weight: 900; }
+.issue-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 13px; font-weight: 700; color: #52606d; }
+@@media (max-width: 700px) { .issue-meta { grid-template-columns: 1fr; } }
+</style>

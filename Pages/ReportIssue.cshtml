@@ -14,7 +14,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operational Report</div>
         <h2 class="page-title">Report Issue</h2>
-        <p class="page-subtitle">Create an issue record for management review and follow-up.</p>
+        <p class="page-subtitle">Create an issue record, assign it to a manager, and keep the response loop inside Vector.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -23,6 +23,37 @@
 
         <form method="post" enctype="multipart/form-data" class="issue-form">
             <div class="form-grid">
+                <label>
+                    Manager level
+                    <select asp-for="ManagerLevel" id="managerLevelSelect">
+                        <option value="">Select manager level</option>
+                        <option>Operational Management</option>
+                        <option>Senior Management</option>
+                        <option>Company Owner</option>
+                    </select>
+                </label>
+
+                <label>
+                    Individual recipient
+                    <select asp-for="AssignedToUserId" id="assignedToUserSelect">
+                        <option value="">Select individual</option>
+                        @foreach (var manager in Model.ManagerRecipients)
+                        {
+                            <option value="@manager.Id" data-manager-level="@manager.ManagerLevel">@manager.FullName (@manager.Email)</option>
+                        }
+                    </select>
+                </label>
+
+                <label>
+                    Notification method
+                    <select asp-for="NotificationMethod">
+                        <option value="">Select method</option>
+                        <option>In-app notification</option>
+                        <option>Email alert</option>
+                        <option>Text/SMS alert</option>
+                    </select>
+                </label>
+
                 <label>Module<select asp-for="Module"><option>General</option><option>Vehicle</option><option>Equipment</option><option>Stock</option><option>Medication</option><option>Staff</option><option>Checklist</option></select></label>
                 <label>Issue type<select asp-for="IssueType"><option value="">Select issue type</option><option>Damage</option><option>Fault / failure</option><option>Missing item</option><option>Expired item</option><option>Low stock</option><option>Incorrect allocation</option><option>Safety concern</option><option>Other</option></select></label>
                 <label>Related asset / item<input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" /></label>
@@ -41,7 +72,6 @@
 
             <div class="action-row">
                 <button class="menu-btn report-btn" type="submit">Submit Issue</button>
-                <a class="menu-btn equipment-btn" href="/SendTask">Send Action</a>
             </div>
         </form>
     </div>
@@ -66,16 +96,55 @@
 .upload-title { font-size: 19px; font-weight: 800; color: #2f2f2f; }
 .upload-help { font-size: 14px; font-weight: 600; color: #6b7280; }
 .upload-box input { margin-top: 10px; max-width: 100%; }
-.action-row { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row { width: min(420px, 94%); display: grid; grid-template-columns: 1fr; gap: 12px; }
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
 @@media (max-width: 700px) { .form-grid, .action-row { grid-template-columns: 1fr; } }
 </style>
+
+<script>
+    (function () {
+        const levelSelect = document.getElementById("managerLevelSelect");
+        const recipientSelect = document.getElementById("assignedToUserSelect");
+
+        if (!levelSelect || !recipientSelect) {
+            return;
+        }
+
+        function filterRecipients() {
+            const selectedLevel = levelSelect.value;
+            let selectedStillVisible = recipientSelect.value === "";
+
+            Array.from(recipientSelect.options).forEach(function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    option.disabled = false;
+                    return;
+                }
+
+                const matchesLevel = option.dataset.managerLevel === selectedLevel;
+                option.hidden = !matchesLevel;
+                option.disabled = !matchesLevel;
+
+                if (matchesLevel && option.value === recipientSelect.value) {
+                    selectedStillVisible = true;
+                }
+            });
+
+            if (!selectedStillVisible) {
+                recipientSelect.value = "";
+            }
+        }
+
+        levelSelect.addEventListener("change", filterRecipients);
+        filterRecipients();
+    })();
+</script>
 
 @if (Model.ActionSaved)
 {
     <script>
         window.VectorActionConfirmation?.show({
-            message: "Issue submitted. This will be stored with user, time, evidence, and audit details once the database is connected.",
+            message: @Json.Serialize(Model.StatusMessage ?? "Issue submitted."),
             redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
             delay: 1300
         });

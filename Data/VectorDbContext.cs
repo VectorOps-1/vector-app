@@ -14,6 +14,8 @@ public class VectorDbContext : DbContext
     public DbSet<AppRole> AppRoles => Set<AppRole>();
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
+    public DbSet<IssueReport> IssueReports => Set<IssueReport>();
+    public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
@@ -73,6 +75,42 @@ public class VectorDbContext : DbContext
             .HasOne(taskEvent => taskEvent.PerformedByUser)
             .WithMany(user => user.TaskEvents)
             .HasForeignKey(taskEvent => taskEvent.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReport>()
+            .HasOne(issue => issue.Company)
+            .WithMany(company => company.IssueReports)
+            .HasForeignKey(issue => issue.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReport>()
+            .HasOne(issue => issue.ReportedByUser)
+            .WithMany(user => user.ReportedIssueReports)
+            .HasForeignKey(issue => issue.ReportedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReport>()
+            .HasOne(issue => issue.AssignedToUser)
+            .WithMany(user => user.AssignedIssueReports)
+            .HasForeignKey(issue => issue.AssignedToUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReport>()
+            .HasOne(issue => issue.ResolvedByUser)
+            .WithMany(user => user.ResolvedIssueReports)
+            .HasForeignKey(issue => issue.ResolvedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReportEvent>()
+            .HasOne(issueEvent => issueEvent.IssueReport)
+            .WithMany(issue => issue.Events)
+            .HasForeignKey(issueEvent => issueEvent.IssueReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IssueReportEvent>()
+            .HasOne(issueEvent => issueEvent.PerformedByUser)
+            .WithMany(user => user.IssueReportEvents)
+            .HasForeignKey(issueEvent => issueEvent.PerformedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AuditLog>()
