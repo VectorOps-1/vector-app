@@ -1,0 +1,5 @@
+App_Data/uploads/
+vector-dev.db*
+bin/
+obj/Debug/
+*.log

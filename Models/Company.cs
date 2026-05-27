@@ -12,6 +12,9 @@ public class Company
     [MaxLength(80)]
     public string Status { get; set; } = "Active";
 
+    [MaxLength(40)]
+    public string SubscriptionTier { get; set; } = SubscriptionTiers.Base;
+
     [MaxLength(260)]
     public string? LogoStoragePath { get; set; }
 
