@@ -1,0 +1,90 @@
+@page
+@model StaffRegisterModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Staff Register";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="staff-register-screen">
+    <div class="staff-register-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Staff Register</div>
+        <h2 class="page-title">All Staff</h2>
+        <p class="page-subtitle">Management overview of active staff, managers, roles, and staff record access.</p>
+
+        <form class="toolbar" method="get">
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, email, or role" />
+            <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/StaffFiles">Files & Folders</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=staff">Add Staff</a>
+        </form>
+
+        @if (!Model.StaffMembers.Any())
+        {
+            <div class="empty-panel">No staff records found.</div>
+        }
+        else
+        {
+            <div class="register-table" role="table" aria-label="Staff register">
+                <div class="register-header" role="row">
+                    <div role="columnheader">Staff Member</div>
+                    <div role="columnheader">Role</div>
+                    <div role="columnheader">Status</div>
+                    <div role="columnheader">Last Login</div>
+                    <div role="columnheader">Actions</div>
+                </div>
+
+                @foreach (var staff in Model.StaffMembers)
+                {
+                    <div class="register-row" role="row">
+                        <div class="staff-identity" role="cell">
+                            <strong>@staff.FullName</strong>
+                            <span>@staff.Email</span>
+                        </div>
+                        <div role="cell">@staff.RoleName</div>
+                        <div role="cell"><span class="status-pill">@staff.Status</span></div>
+                        <div role="cell">@(staff.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not recorded")</div>
+                        <div class="row-actions" role="cell">
+                            <a href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(staff.FullName)">Records</a>
+                            <a href="/StaffFiles?staffUserId=@staff.Id">Files</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.staff-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.staff-register-inner { width: 100%; max-width: 1160px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.toolbar { width: min(1020px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 150px); gap: 12px; }
+.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.toolbar-btn { min-width: 0; border: none; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.register-table { width: min(1020px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(160px, .8fr) 110px 150px minmax(150px, .7fr); gap: 14px; align-items: center; padding: 14px 16px; }
+.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
+.staff-identity { display: flex; flex-direction: column; gap: 4px; }
+.staff-identity strong { color: #1f2937; font-size: 15px; }
+.staff-identity span { color: #6b7280; font-size: 13px; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
+.row-actions a:hover { color: #0f5165; background: #eef3f8; }
+@@media (max-width: 920px) {
+    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
+    .register-header { display: none; }
+    .register-row { gap: 8px; }
+}
+</style>

@@ -1,0 +1,109 @@
+@page
+@model StaffFilesModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Staff Files and Folders";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var selectedStaff = Model.SelectedStaff;
+    var folderNames = new[] { "Certifications", "Clinical Governance", "Employment", "Compliance", "Personal Documents" };
+}
+
+<div class="staff-files-screen">
+    <div class="staff-files-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Staff Files</div>
+        <h2 class="page-title">Staff Files & Folders</h2>
+        <p class="page-subtitle">Management access point for staff document folders and staff-linked records.</p>
+
+        <div class="top-actions">
+            <a class="menu-btn equipment-btn" href="/StaffRegister">Staff Register</a>
+            <a class="menu-btn staff-btn" href="/UploadStaffFiles">Upload Staff Files</a>
+        </div>
+
+        <div class="files-layout">
+            <aside class="staff-list">
+                <div class="section-label">Staff</div>
+                @foreach (var staff in Model.StaffMembers)
+                {
+                    <a class="staff-list-item @(selectedStaff?.Id == staff.Id ? "selected" : string.Empty)" href="/StaffFiles?staffUserId=@staff.Id">
+                        <strong>@staff.FullName</strong>
+                        <span>@staff.RoleName</span>
+                    </a>
+                }
+            </aside>
+
+            <section class="folder-panel">
+                @if (selectedStaff is null)
+                {
+                    <div class="section-label">All Staff File Areas</div>
+                    <div class="folder-grid">
+                        @foreach (var staff in Model.StaffMembers)
+                        {
+                            <a class="folder-card" href="/StaffFiles?staffUserId=@staff.Id">
+                                <strong>@staff.FullName</strong>
+                                <span>@staff.RoleName</span>
+                                <small>@staff.Email</small>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="selected-heading">
+                        <div>
+                            <div class="section-label">Selected Staff</div>
+                            <h3>@selectedStaff.FullName</h3>
+                            <span>@selectedStaff.RoleName - @selectedStaff.Status</span>
+                        </div>
+                        <a class="small-link" href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(selectedStaff.FullName)">Open Records</a>
+                    </div>
+
+                    <div class="folder-grid">
+                        @foreach (var folderName in folderNames)
+                        {
+                            <div class="folder-card">
+                                <strong>@folderName</strong>
+                                <span>No linked files</span>
+                                <small>Ready for upload and review</small>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+</div>
+
+<style>
+.staff-files-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.staff-files-inner { width: 100%; max-width: 1180px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.top-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+.top-actions .menu-btn { min-width: 220px; }
+.files-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; width: min(1040px, 100%); margin: 0 auto; text-align: left; }
+.staff-list, .folder-panel { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.7); padding: 18px; }
+.section-label { margin-bottom: 14px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.staff-list { display: flex; flex-direction: column; gap: 10px; }
+.staff-list-item, .folder-card { border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; color: #425466; text-decoration: none; }
+.staff-list-item { display: flex; flex-direction: column; gap: 4px; padding: 12px; }
+.staff-list-item strong, .folder-card strong { color: #1f2937; }
+.staff-list-item span, .folder-card span, .folder-card small, .selected-heading span { color: #6b7280; font-size: 13px; font-weight: 700; }
+.staff-list-item.selected { border-color: rgba(47,128,168,.52); background: rgba(47,128,168,.08); }
+.folder-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.folder-card { min-height: 118px; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 16px; }
+.selected-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.selected-heading h3 { margin: 0 0 4px 0; font-size: 22px; font-weight: 900; color: #1f2937; }
+.small-link { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 13px; font-weight: 900; text-decoration: none; white-space: nowrap; }
+.small-link:hover { color: #0f5165; background: #eef3f8; }
+@@media (max-width: 900px) {
+    .files-layout, .folder-grid { grid-template-columns: 1fr; }
+    .selected-heading { flex-direction: column; }
+}
+</style>

@@ -6,6 +6,8 @@
     ViewData["Title"] = "Staff";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var currentAccessView = HttpContext.Session.GetString(CurrentUserService.AccessViewSessionKey);
+    var isSeniorManagement = currentAccessView == CurrentUserService.SeniorManagementAccess;
 }
 
 <div class="module-screen">
@@ -14,11 +16,46 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Staff</h2>
-        <p class="page-subtitle">Staff files, folders, and searchable staff records</p>
+        <p class="page-subtitle">Staff register, files, folders, records, access, and management actions</p>
 
-        <div class="menu-row module-grid">
-            <a class="menu-btn staff-btn" href="/UploadStaffFiles">Add / Remove Staff Files and Folders</a>
-            <a class="menu-btn equipment-btn" href="/StaffRecordsSearch">Search Staff Records</a>
+        <div class="module-grid">
+            <a class="module-card primary" href="/StaffRegister">
+                <strong>Staff Register</strong>
+                <span>All staff, roles, status, and record access</span>
+            </a>
+
+            <a class="module-card" href="/StaffFiles">
+                <strong>Files & Folders</strong>
+                <span>Open staff document folders across the service</span>
+            </a>
+
+            <a class="module-card" href="/StaffRecordsSearch">
+                <strong>Search Staff Records</strong>
+                <span>Find a staff member and view linked record areas</span>
+            </a>
+
+            <a class="module-card" href="/UploadStaffFiles">
+                <strong>Upload Staff Files</strong>
+                <span>Add documents, certificates, CVs, and supporting files</span>
+            </a>
+
+            <a class="module-card" href="/AddItem?type=staff">
+                <strong>Add Staff Profile</strong>
+                <span>Create a manual staff profile record</span>
+            </a>
+
+            @if (isSeniorManagement)
+            {
+                <a class="module-card" href="/CreateOperationalStaffAccess">
+                    <strong>Create Staff Access</strong>
+                    <span>Issue operational staff access</span>
+                </a>
+
+                <a class="module-card" href="/CreateManagerAccess">
+                    <strong>Create Manager Access</strong>
+                    <span>Issue management access</span>
+                </a>
+            }
         </div>
     </div>
 </div>
@@ -34,7 +71,7 @@
 
 .module-inner {
     width: 100%;
-    max-width: 900px;
+    max-width: 1040px;
     margin: 0 auto;
     text-align: center;
     padding: 40px 20px 30px 20px;
@@ -81,11 +118,51 @@
 }
 
 .module-grid {
-    gap: 24px;
-    row-gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    text-align: left;
 }
 
-.module-grid .menu-btn {
-    min-width: 300px;
+.module-card {
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #425466;
+    text-decoration: none;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.module-card:hover {
+    color: #1f2937;
+    border-color: rgba(47, 128, 168, 0.44);
+}
+
+.module-card strong {
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.module-card span {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.module-card.primary {
+    border-top: 6px solid #207A63;
+}
+
+@@media (max-width: 760px) {
+    .module-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
