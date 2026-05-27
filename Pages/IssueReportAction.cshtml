@@ -17,13 +17,13 @@
 
         @if (issue is null)
         {
-            <h2 class="page-title">No Open Issue</h2>
-            <p class="page-subtitle">This issue is no longer open or available to your management view.</p>
+            <h2 class="page-title">Issue Not Found</h2>
+            <p class="page-subtitle">This issue is not available to your management view.</p>
         }
         else
         {
             <h2 class="page-title">@issue.Module - @issue.IssueType</h2>
-            <p class="page-subtitle">Resolve the issue by recording the action taken.</p>
+            <p class="page-subtitle">@(issue.Status == "Open" ? "Resolve the issue by recording the action taken." : "This issue has been resolved and is shown for management review.")</p>
 
             @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
             {
@@ -33,10 +33,11 @@
             <section class="issue-panel">
                 <div class="section-label">Issue Details</div>
                 <div class="detail-grid">
+                    <div><strong>Issue status:</strong> @issue.Status</div>
                     <div><strong>Reported by:</strong> @issue.ReportedByName</div>
                     <div><strong>Assigned to:</strong> @issue.AssignedToName</div>
                     <div><strong>Severity:</strong> @(issue.Severity ?? "Not set")</div>
-                    <div><strong>Status:</strong> @(issue.OperationalStatus ?? "Not set")</div>
+                    <div><strong>Operational status:</strong> @(issue.OperationalStatus ?? "Not set")</div>
                     <div><strong>Related:</strong> @(issue.RelatedItem ?? "Not set")</div>
                     <div><strong>Location:</strong> @(issue.Location ?? "Not set")</div>
                     <div><strong>Notification:</strong> @issue.NotificationMethod</div>
@@ -48,6 +49,18 @@
                     <div class="issue-evidence"><strong>Evidence listed:</strong> @issue.EvidenceFileNames</div>
                 }
             </section>
+
+            @if (issue.Status != "Open")
+            {
+                <section class="issue-panel">
+                    <div class="section-label">Recorded Resolution</div>
+                    <div class="detail-grid">
+                        <div><strong>Outcome:</strong> @(issue.ResolutionOutcome ?? "Recorded")</div>
+                        <div><strong>Resolved:</strong> @(issue.ResolvedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Recorded")</div>
+                    </div>
+                    <div class="issue-description">@(issue.ActionTaken ?? "No action note recorded.")</div>
+                </section>
+            }
 
             @if (Model.CanResolve)
             {
@@ -79,7 +92,7 @@
             }
             else
             {
-                <div class="empty-panel">This issue is assigned to another manager. You can view it from the pool, but only the assigned manager or senior management can close it.</div>
+                <div class="empty-panel">@(issue.Status == "Open" ? "This issue is assigned to another manager. You can view it from the pool, but only the assigned manager or senior management can close it." : "This issue is closed. Senior management can still review it from the issue reports overview.")</div>
             }
 
             @if (Model.Events.Any())

@@ -121,7 +121,7 @@ public class IssueReportActionModel : PageModel
             .Include(report => report.AssignedToUser)
             .Include(report => report.Events)
                 .ThenInclude(issueEvent => issueEvent.PerformedByUser)
-            .Where(report => report.Id == IssueId.Value && report.CompanyId == currentUser.CompanyId && report.Status == "Open")
+            .Where(report => report.Id == IssueId.Value && report.CompanyId == currentUser.CompanyId)
             .FirstOrDefaultAsync();
 
         if (issue is null)
@@ -129,10 +129,11 @@ public class IssueReportActionModel : PageModel
             return;
         }
 
-        CanResolve = issue.AssignedToUserId == currentUser.Id || isSenior;
+        CanResolve = issue.Status == "Open" && (issue.AssignedToUserId == currentUser.Id || isSenior);
         Issue = new IssueActionDetails
         {
             Id = issue.Id,
+            Status = issue.Status,
             Module = issue.Module,
             IssueType = issue.IssueType,
             RelatedItem = issue.RelatedItem,
@@ -144,7 +145,10 @@ public class IssueReportActionModel : PageModel
             EvidenceFileNames = issue.EvidenceFileNames,
             ReportedByName = issue.ReportedByUser?.FullName ?? "Reporter",
             AssignedToName = issue.AssignedToUser?.FullName ?? "Manager",
-            CreatedAtUtc = issue.CreatedAtUtc
+            CreatedAtUtc = issue.CreatedAtUtc,
+            ResolvedAtUtc = issue.ResolvedAtUtc,
+            ResolutionOutcome = issue.ResolutionOutcome,
+            ActionTaken = issue.ActionTaken
         };
         Events = issue.Events
             .OrderByDescending(issueEvent => issueEvent.CreatedAtUtc)
@@ -161,6 +165,7 @@ public class IssueReportActionModel : PageModel
     public class IssueActionDetails
     {
         public int Id { get; set; }
+        public string Status { get; set; } = string.Empty;
         public string Module { get; set; } = string.Empty;
         public string IssueType { get; set; } = string.Empty;
         public string? RelatedItem { get; set; }
@@ -173,6 +178,9 @@ public class IssueReportActionModel : PageModel
         public string ReportedByName { get; set; } = string.Empty;
         public string AssignedToName { get; set; } = string.Empty;
         public DateTime CreatedAtUtc { get; set; }
+        public DateTime? ResolvedAtUtc { get; set; }
+        public string? ResolutionOutcome { get; set; }
+        public string? ActionTaken { get; set; }
     }
 
     public class IssueEventDetails

@@ -3,9 +3,14 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Pending Issue Reports";
+    ViewData["Title"] = Model.IsSeniorOverview ? "Issue Reports Overview" : "Pending Issue Reports";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var pageTitle = Model.IsSeniorOverview ? "Issue Reports Overview" : "Pending Issue Reports";
+    var pageSubtitle = Model.IsSeniorOverview
+        ? "All reported issues for senior management oversight, including who each issue was sent to."
+        : "All open issue reports for management visibility and follow-up.";
+    var emptyMessage = Model.IsSeniorOverview ? "No issue reports recorded." : "No pending issue reports.";
 }
 
 <div class="issue-list-screen">
@@ -13,30 +18,36 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Pool</div>
-        <h2 class="page-title">Pending Issue Reports</h2>
-        <p class="page-subtitle">All open issue reports for management visibility and follow-up.</p>
+        <h2 class="page-title">@pageTitle</h2>
+        <p class="page-subtitle">@pageSubtitle</p>
 
         <div class="list-actions">
             <a class="menu-btn staff-btn" href="/IssueInbox">My Issue Inbox</a>
         </div>
 
-        @if (!Model.PendingIssues.Any())
+        @if (!Model.IssueReports.Any())
         {
-            <div class="empty-panel">No pending issue reports.</div>
+            <div class="empty-panel">@emptyMessage</div>
         }
         else
         {
             <div class="issue-list">
-                @foreach (var issue in Model.PendingIssues)
+                @foreach (var issue in Model.IssueReports)
                 {
                     <a class="issue-card" href="/IssueReportAction?issueId=@issue.Id&pool=true">
                         <div class="issue-title">@issue.Module - @issue.IssueType</div>
                         <div class="issue-meta">
+                            <div>Status: @issue.Status</div>
                             <div>Assigned to: @issue.AssignedToName</div>
                             <div>Reported by: @issue.ReportedByName</div>
                             <div>Severity: @(issue.Severity ?? "Not set")</div>
                             <div>Related: @(issue.RelatedItem ?? "Not set")</div>
                             <div>Created: @issue.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                            @if (issue.ResolvedAtUtc.HasValue)
+                            {
+                                <div>Resolved: @issue.ResolvedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                                <div>Outcome: @(issue.ResolutionOutcome ?? "Recorded")</div>
+                            }
                         </div>
                     </a>
                 }
