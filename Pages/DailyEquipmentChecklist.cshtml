@@ -159,7 +159,7 @@
 
         const bindEquipmentDraft = function () {
             window.VectorShiftDrafts?.bindForm(document.querySelector(".checklist-form"), {
-                key: "daily-equipment-readiness:" + window.location.search,
+                key: @Json.Serialize(Model.DraftStorageKey),
                 statusElement: document.getElementById("equipmentDraftStatus")
             });
         };
@@ -176,9 +176,12 @@
 @if (Model.ActionSaved)
 {
     <script>
-        window.VectorActionConfirmation?.show({
+        window.VectorDraftKeysToClear = window.VectorDraftKeysToClear || [];
+        window.VectorDraftKeysToClear.push(@Json.Serialize(Model.DraftStorageKey));
+        window.VectorPendingConfirmations = window.VectorPendingConfirmations || [];
+        window.VectorPendingConfirmations.push({
             message: "Equipment checklist saved.",
-            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            redirectUrl: @Json.Serialize(Model.FreshChecklistUrl),
             delay: 1300
         });
     </script>

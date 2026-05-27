@@ -3,6 +3,19 @@
 
 (function () {
     window.VectorShiftDrafts = window.VectorShiftDrafts || {
+        activeDrafts: {},
+        clear: function (key) {
+            const storageKey = String(key || "").startsWith("vectorShiftDraft:")
+                ? String(key || "")
+                : "vectorShiftDraft:" + String(key || "");
+
+            if (this.activeDrafts[storageKey]) {
+                this.activeDrafts[storageKey].clear();
+                return;
+            }
+
+            localStorage.removeItem(storageKey);
+        },
         bindForm: function (form, options) {
             const settings = options || {};
             const storageKey = "vectorShiftDraft:" + (settings.key || window.location.pathname);
@@ -10,10 +23,20 @@
             const statusElement = settings.statusElement || null;
             const fields = Array.from(form?.querySelectorAll("input[name], select[name], textarea[name]") || []);
             let saveTimer = null;
+            let disabled = false;
 
             if (!form || fields.length === 0) {
                 return;
             }
+
+            this.activeDrafts[storageKey] = {
+                clear: function () {
+                    disabled = true;
+                    window.clearTimeout(saveTimer);
+                    localStorage.removeItem(storageKey);
+                    writeStatus("Saved. A fresh check will open next.");
+                }
+            };
 
             function readDraft() {
                 try {
@@ -52,6 +75,10 @@
             }
 
             function saveDraft() {
+                if (disabled) {
+                    return;
+                }
+
                 const existingDraft = readDraft();
                 const now = Date.now();
                 const expiresAt = existingDraft?.expiresAt && existingDraft.expiresAt > now
@@ -108,6 +135,11 @@
         }
     });
     window.VectorPendingShiftDraftBindings = [];
+
+    (window.VectorDraftKeysToClear || []).forEach(function (key) {
+        window.VectorShiftDrafts.clear(key);
+    });
+    window.VectorDraftKeysToClear = [];
 
     document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("click", function (event) {

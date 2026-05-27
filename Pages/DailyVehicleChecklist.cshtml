@@ -408,7 +408,7 @@
         applyVehicle(registrationSelect.selectedOptions[0], false);
         const bindVehicleDraft = function () {
             window.VectorShiftDrafts?.bindForm(document.querySelector(".inspection-form"), {
-                key: "daily-vehicle-readiness",
+                key: @Json.Serialize(Model.DraftStorageKey),
                 statusElement: document.getElementById("vehicleDraftStatus"),
                 onAfterRestore: function () {
                     applyVehicle(registrationSelect.selectedOptions[0], false);
@@ -428,9 +428,12 @@
 @if (Model.ActionSaved)
 {
     <script>
-        window.VectorActionConfirmation?.show({
+        window.VectorDraftKeysToClear = window.VectorDraftKeysToClear || [];
+        window.VectorDraftKeysToClear.push(@Json.Serialize(Model.DraftStorageKey));
+        window.VectorPendingConfirmations = window.VectorPendingConfirmations || [];
+        window.VectorPendingConfirmations.push({
             message: @Json.Serialize($"{Model.InspectionTitle} saved."),
-            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            redirectUrl: @Json.Serialize(Model.FreshChecklistUrl),
             delay: 1300
         });
     </script>

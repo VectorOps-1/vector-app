@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
+using vector_app_local.Models;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
@@ -18,8 +19,8 @@ public class DailyVehicleChecklistModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)] public string Frequency { get; set; } = "daily";
-    [BindProperty] public string? Callsign { get; set; }
-    [BindProperty] public string? Registration { get; set; }
+    [BindProperty(SupportsGet = true)] public string? Callsign { get; set; }
+    [BindProperty(SupportsGet = true)] public string? Registration { get; set; }
     [BindProperty] public string? VehicleType { get; set; }
     [BindProperty] public int? Kilometres { get; set; }
     [BindProperty] public string? FuelLevel { get; set; }
@@ -38,6 +39,8 @@ public class DailyVehicleChecklistModel : PageModel
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public bool AllowSameAsPreviousVehicleInspection { get; private set; } = true;
+    public string DraftStorageKey { get; private set; } = "daily-vehicle-readiness:anonymous";
+    public string FreshChecklistUrl => $"/DailyVehicleChecklist?frequency={Uri.EscapeDataString(Frequency)}";
     public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Readiness";
     public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Readiness";
 
@@ -142,16 +145,31 @@ public class DailyVehicleChecklistModel : PageModel
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
-        await LoadSameAsPreviousSettingAsync();
         Frequency = NormalizeFrequency(Frequency);
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
+        }
+
+        ApplyUserDraftContext(currentUser);
+        await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await LoadSameAsPreviousSettingAsync();
         Frequency = NormalizeFrequency(Frequency);
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
+        }
+
+        ApplyUserDraftContext(currentUser);
+        await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
 
         if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
         {
@@ -165,30 +183,170 @@ public class DailyVehicleChecklistModel : PageModel
             return Page();
         }
 
-        StatusMessage = "Vehicle readiness details saved for this step. Continue to the vehicle-carried equipment section for the same registration.";
+        var report = await SaveVehicleReadinessAsync(currentUser);
+        StatusMessage = $"{InspectionTitle} saved for {report.VehicleRegistrationNumber}. A fresh check is ready.";
         ActionSaved = true;
         return Page();
     }
 
-    private async Task LoadSameAsPreviousSettingAsync()
+    private void ApplyUserDraftContext(AppUser currentUser)
     {
-        var companyId = _currentUser.CurrentUserId.HasValue
-            ? (await _currentUser.GetCurrentUserAsync())?.CompanyId
-            : null;
+        var accessView = CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView);
+        DraftStorageKey = $"daily-vehicle-readiness:user-{currentUser.Id}:access-{accessView}:frequency-{Frequency}";
+    }
 
-        if (!companyId.HasValue)
-        {
-            AllowSameAsPreviousVehicleInspection = true;
-            return;
-        }
-
+    private async Task LoadSameAsPreviousSettingAsync(int companyId)
+    {
         var setting = await _db.Companies
             .AsNoTracking()
-            .Where(company => company.Id == companyId.Value)
+            .Where(company => company.Id == companyId)
             .Select(company => company.AllowSameAsPreviousVehicleInspection)
             .FirstOrDefaultAsync();
 
         AllowSameAsPreviousVehicleInspection = setting;
+    }
+
+    private async Task<DailyVehicleReadinessReport> SaveVehicleReadinessAsync(AppUser currentUser)
+    {
+        var now = DateTime.UtcNow;
+        var vehicle = await EnsureVehicleAsync(currentUser.CompanyId, now);
+        var selectedVehicle = VehicleRegisterOptions.FirstOrDefault(option =>
+            string.Equals(option.Registration, Registration, StringComparison.OrdinalIgnoreCase));
+
+        var report = new DailyVehicleReadinessReport
+        {
+            CompanyId = currentUser.CompanyId,
+            VehicleId = vehicle.Id,
+            PerformedByUserId = currentUser.Id,
+            InspectionDateUtc = now,
+            ShiftStartedAtUtc = now,
+            ShiftEndsAtUtc = now.AddHours(12),
+            LastSavedAtUtc = now,
+            WorkflowStatus = "Saved",
+            LastSavedSection = "Vehicle",
+            VehicleRegistrationNumber = vehicle.RegistrationNumber,
+            CallsignAtCheck = NormalizeOptional(Callsign) ?? vehicle.Callsign,
+            VehicleTypeAtCheck = NormalizeOptional(VehicleType) ?? vehicle.VehicleType,
+            SchematicTypeAtCheck = selectedVehicle?.SchematicKey ?? vehicle.SchematicType,
+            VehicleNextServiceDateAtCheck = NextServiceDate ?? vehicle.NextServiceDate,
+            SameAsPreviousShiftUsed = SameAsPreviousShift,
+            VehicleSameAsPreviousShiftUsed = SameAsPreviousShift,
+            VehicleSameAsPreviousAppliedAtUtc = SameAsPreviousShift ? now : null,
+            LightsStatus = NormalizeOptional(LightsStatus),
+            SirensStatus = NormalizeOptional(SirenStatus),
+            WarningLightsStatus = NormalizeOptional(WarningLightsStatus),
+            TyresStatus = NormalizeOptional(TyresStatus),
+            RadioConnectivityStatus = NormalizeOptional(OpsRadioStatus),
+            OperationalNotes = BuildOperationalNotes(),
+            DamageNotes = NormalizeOptional(DamageNotes),
+            SchematicNotes = BuildSchematicNotes(),
+            GeneralNotes = NormalizeOptional(ChecklistNotes),
+            ReadinessStatus = NormalizeOptional(VehicleStatus) ?? "Pending",
+            CriticalIssueCount = CountCriticalIssues(),
+            WarningIssueCount = CountWarningIssues(),
+            CreatedAtUtc = now,
+            SubmittedAtUtc = now
+        };
+
+        _db.DailyVehicleReadinessReports.Add(report);
+        await _db.SaveChangesAsync();
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = currentUser.CompanyId,
+            AppUserId = currentUser.Id,
+            Action = "Vehicle readiness saved",
+            EntityType = "DailyVehicleReadinessReport",
+            EntityId = report.Id,
+            Details = $"{currentUser.FullName} saved {InspectionTitle} for {report.VehicleRegistrationNumber} from {CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView)} access.",
+            CreatedAtUtc = now
+        });
+
+        await _db.SaveChangesAsync();
+        return report;
+    }
+
+    private async Task<Vehicle> EnsureVehicleAsync(int companyId, DateTime now)
+    {
+        var selectedVehicle = VehicleRegisterOptions.FirstOrDefault(option =>
+            string.Equals(option.Registration, Registration, StringComparison.OrdinalIgnoreCase));
+        var registration = NormalizeOptional(Registration)
+            ?? NormalizeOptional(Callsign)
+            ?? $"UNREGISTERED-{now:yyyyMMddHHmmss}";
+
+        var vehicle = await _db.Vehicles.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.RegistrationNumber == registration);
+
+        if (vehicle is not null)
+        {
+            return vehicle;
+        }
+
+        vehicle = new Vehicle
+        {
+            CompanyId = companyId,
+            RegistrationNumber = registration,
+            Callsign = NormalizeOptional(Callsign) ?? selectedVehicle?.Callsign ?? registration,
+            VehicleType = NormalizeOptional(VehicleType) ?? selectedVehicle?.VehicleType ?? "Vehicle",
+            SchematicType = selectedVehicle?.SchematicKey,
+            NextServiceDate = NextServiceDate,
+            Status = "Active",
+            CreatedAtUtc = now
+        };
+
+        _db.Vehicles.Add(vehicle);
+        await _db.SaveChangesAsync();
+        return vehicle;
+    }
+
+    private string? BuildOperationalNotes()
+    {
+        var values = new List<string>();
+        if (Kilometres.HasValue)
+        {
+            values.Add($"Kilometres: {Kilometres.Value}");
+        }
+        if (!string.IsNullOrWhiteSpace(FuelLevel))
+        {
+            values.Add($"Fuel: {FuelLevel.Trim()}");
+        }
+
+        return values.Count == 0 ? null : string.Join("; ", values);
+    }
+
+    private string? BuildSchematicNotes()
+    {
+        var values = new List<string>();
+        if (!string.IsNullOrWhiteSpace(DamageType))
+        {
+            values.Add($"Damage type: {DamageType.Trim()}");
+        }
+        if (!string.IsNullOrWhiteSpace(DamageSeverity))
+        {
+            values.Add($"Severity: {DamageSeverity.Trim()}");
+        }
+
+        return values.Count == 0 ? null : string.Join("; ", values);
+    }
+
+    private int CountCriticalIssues()
+    {
+        return new[] { VehicleStatus, LightsStatus, SirenStatus, WarningLightsStatus, TyresStatus, OpsRadioStatus }
+            .Count(value => string.Equals(value, "Fail", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "Out of service", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private int CountWarningIssues()
+    {
+        return new[] { VehicleStatus, LightsStatus, SirenStatus, WarningLightsStatus, TyresStatus, OpsRadioStatus }
+            .Count(value => string.Equals(value, "Issue", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "Operational with notes", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private static string NormalizeFrequency(string? frequency)

@@ -241,6 +241,25 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "CurrentLocationDetail", """ALTER TABLE "EquipmentItems" ADD "CurrentLocationDetail" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "LastMovedByUserId", """ALTER TABLE "EquipmentItems" ADD "LastMovedByUserId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "LastMovedAtUtc", """ALTER TABLE "EquipmentItems" ADD "LastMovedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousVehicleInspection", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousVehicleInspection" INTEGER NOT NULL DEFAULT 1;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousEquipmentCheck", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousEquipmentCheck" INTEGER NOT NULL DEFAULT 1;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "ShiftStartedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "ShiftStartedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "ShiftEndsAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "ShiftEndsAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "DraftExpiresAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "DraftExpiresAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "LastSavedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "LastSavedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "WorkflowStatus", """ALTER TABLE "DailyVehicleReadinessReports" ADD "WorkflowStatus" TEXT NOT NULL DEFAULT 'Draft';""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "LastSavedSection", """ALTER TABLE "DailyVehicleReadinessReports" ADD "LastSavedSection" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "VehicleSameAsPreviousShiftUsed", """ALTER TABLE "DailyVehicleReadinessReports" ADD "VehicleSameAsPreviousShiftUsed" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "EquipmentSameAsPreviousShiftUsed", """ALTER TABLE "DailyVehicleReadinessReports" ADD "EquipmentSameAsPreviousShiftUsed" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "VehicleSameAsPreviousSourceReportId", """ALTER TABLE "DailyVehicleReadinessReports" ADD "VehicleSameAsPreviousSourceReportId" INTEGER NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "EquipmentSameAsPreviousSourceReportId", """ALTER TABLE "DailyVehicleReadinessReports" ADD "EquipmentSameAsPreviousSourceReportId" INTEGER NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "VehicleSameAsPreviousAppliedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "VehicleSameAsPreviousAppliedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "EquipmentSameAsPreviousAppliedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "EquipmentSameAsPreviousAppliedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "VehicleSameAsPreviousCopiedSummary", """ALTER TABLE "DailyVehicleReadinessReports" ADD "VehicleSameAsPreviousCopiedSummary" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "EquipmentSameAsPreviousCopiedSummary", """ALTER TABLE "DailyVehicleReadinessReports" ADD "EquipmentSameAsPreviousCopiedSummary" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousShiftUsed", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousShiftUsed" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "CopiedFromDailyVehicleEquipmentCheckId", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "CopiedFromDailyVehicleEquipmentCheckId" INTEGER NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousAppliedAtUtc", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousAppliedAtUtc" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedByUserId", """ALTER TABLE "MedicationItems" ADD "LastAllocatedByUserId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedAtUtc", """ALTER TABLE "MedicationItems" ADD "LastAllocatedAtUtc" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocationLocation", """ALTER TABLE "MedicationItems" ADD "LastAllocationLocation" TEXT NULL;""");
@@ -261,6 +280,10 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_CompanyId_Status_CreatedAtUtc" ON "StockOrders" ("CompanyId", "Status", "CreatedAtUtc");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_RegisterEntryAuthorisedUserId" ON "StockOrders" ("RegisterEntryAuthorisedUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_RequestedByUserId" ON "StockOrders" ("RequestedByUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleReadinessReports_CompanyId_WorkflowStatus_DraftExpiresAtUtc" ON "DailyVehicleReadinessReports" ("CompanyId", "WorkflowStatus", "DraftExpiresAtUtc");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId" ON "DailyVehicleReadinessReports" ("VehicleSameAsPreviousSourceReportId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId" ON "DailyVehicleReadinessReports" ("EquipmentSameAsPreviousSourceReportId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId" ON "DailyVehicleEquipmentChecks" ("CopiedFromDailyVehicleEquipmentCheckId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_OperationalAreas_CompanyId_Name" ON "OperationalAreas" ("CompanyId", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetMovements_CompanyId_AssetType_AssetId_CreatedAtUtc" ON "AssetMovements" ("CompanyId", "AssetType", "AssetId", "CreatedAtUtc");""");
     }
