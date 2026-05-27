@@ -16,6 +16,7 @@ public class VectorDbContext : DbContext
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
     public DbSet<IssueReport> IssueReports => Set<IssueReport>();
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
+    public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
@@ -111,6 +112,18 @@ public class VectorDbContext : DbContext
             .HasOne(issueEvent => issueEvent.PerformedByUser)
             .WithMany(user => user.IssueReportEvents)
             .HasForeignKey(issueEvent => issueEvent.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MedicationItem>()
+            .HasOne(medication => medication.Company)
+            .WithMany(company => company.MedicationItems)
+            .HasForeignKey(medication => medication.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MedicationItem>()
+            .HasOne(medication => medication.CreatedByUser)
+            .WithMany(user => user.CreatedMedicationItems)
+            .HasForeignKey(medication => medication.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AuditLog>()

@@ -21,5 +21,6 @@ public class Company
     public ICollection<AppUser> Users { get; set; } = new List<AppUser>();
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
+    public ICollection<MedicationItem> MedicationItems { get; set; } = new List<MedicationItem>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

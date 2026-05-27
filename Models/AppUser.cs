@@ -31,5 +31,6 @@ public class AppUser
     public ICollection<IssueReport> AssignedIssueReports { get; set; } = new List<IssueReport>();
     public ICollection<IssueReport> ResolvedIssueReports { get; set; } = new List<IssueReport>();
     public ICollection<IssueReportEvent> IssueReportEvents { get; set; } = new List<IssueReportEvent>();
+    public ICollection<MedicationItem> CreatedMedicationItems { get; set; } = new List<MedicationItem>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

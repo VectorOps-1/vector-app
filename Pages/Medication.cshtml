@@ -14,19 +14,28 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Medication</h2>
-        <p class="page-subtitle">Medication storage, stock levels, dispensing, batch tracking, and expiry control</p>
+        <p class="page-subtitle">Medication register, stock levels, dispensing, batch tracking, expiry, and issue control</p>
 
-        <div class="menu-row module-grid">
-            <a class="menu-btn equipment-btn" href="#">Search Medication</a>
-            <a class="menu-btn report-btn" href="#">Controlled Medication</a>
-            <a class="menu-btn stock-btn" href="#">Non-Controlled Medication</a>
-            <a class="menu-btn vehicle-btn" href="/AddItem?type=medication">Add Medication</a>
-            <a class="menu-btn equipment-btn" href="#">Edit Stock Levels</a>
-            <a class="menu-btn staff-btn" href="#">Dispense to Crew / Base</a>
-            <a class="menu-btn stock-btn" href="#">Batch Number Tracking</a>
-            <a class="menu-btn vehicle-btn" href="#">Expiry Date Tracking</a>
-            <a class="menu-btn report-btn" href="/ReportIssue?module=medication">Report Medication Issue</a>
-            <a class="menu-btn report-btn" href="#">Send Action</a>
+        <div class="module-grid">
+            <a class="module-card primary" href="/MedicationRegister">
+                <strong>Medication Register</strong>
+                <span>All medication, batch, quantity, expiry, and location records</span>
+            </a>
+
+            <a class="module-card" href="/AddItem?type=medication">
+                <strong>Add Medication</strong>
+                <span>Add one medication item into the register</span>
+            </a>
+
+            <a class="module-card" href="/ReportIssue?module=medication">
+                <strong>Medication Issue</strong>
+                <span>Report missing, expired, damaged, or stock-related medication issues</span>
+            </a>
+
+            <a class="module-card" href="/SendTask">
+                <strong>Assign Medication Task</strong>
+                <span>Send medication stock, batch, or expiry actions to a user</span>
+            </a>
         </div>
 
         <section class="medication-panel">
@@ -142,12 +151,46 @@
 }
 
 .module-grid {
-    gap: 24px;
-    row-gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    text-align: left;
 }
 
-.module-grid .menu-btn {
-    min-width: 260px;
+.module-card {
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #425466;
+    text-decoration: none;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.module-card:hover {
+    color: #1f2937;
+    border-color: rgba(155, 59, 59, 0.34);
+}
+
+.module-card strong {
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.module-card span {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.module-card.primary {
+    border-top: 6px solid #9B3B3B;
 }
 
 .medication-panel {
@@ -198,6 +241,7 @@
 }
 
 @@media (max-width: 780px) {
+    .module-grid,
     .form-grid {
         grid-template-columns: 1fr;
     }

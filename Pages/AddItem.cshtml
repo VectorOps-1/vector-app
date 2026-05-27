@@ -65,7 +65,7 @@
 {
     <script>
         window.VectorActionConfirmation?.show({
-            message: "@Model.ItemLabel saved. This action will be stored with user, time, and audit details once the database is connected.",
+            message: @Json.Serialize(Model.StatusMessage ?? $"{Model.ItemLabel} saved."),
             redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
             delay: 1300
         });

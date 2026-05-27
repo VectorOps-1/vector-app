@@ -1,10 +1,15 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using vector_app_local.Data;
 
 #nullable disable
 
 namespace vector_app_local.Migrations;
 
+[DbContext(typeof(VectorDbContext))]
+[Migration("20260527190000_AddIssueReports")]
 public partial class AddIssueReports : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
