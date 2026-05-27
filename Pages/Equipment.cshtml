@@ -16,14 +16,41 @@
         <h2 class="page-title">Equipment</h2>
         <p class="page-subtitle">Equipment readiness, movement, servicing, and issue workflows</p>
 
-        <div class="menu-row module-grid">
-            <a class="menu-btn equipment-btn" href="#">Search Equipment</a>
-            <a class="menu-btn vehicle-btn" href="#">Log Inspection</a>
-            <a class="menu-btn report-btn" href="/ReportIssue?module=equipment">Report Issue</a>
-            <a class="menu-btn stock-btn" href="#">Move / Reallocate</a>
-            <a class="menu-btn staff-btn" href="/AddItem?type=equipment">Add New Equipment</a>
-            <a class="menu-btn equipment-btn" href="#">Service / Maintenance</a>
-            <a class="menu-btn vehicle-btn" href="#">Expiry / Compliance Tracking</a>
+        <div class="module-grid">
+            <a class="module-card primary" href="#">
+                <strong>Search Equipment</strong>
+                <span>Find equipment by name, serial number, status, location, or allocation</span>
+            </a>
+
+            <a class="module-card" href="/DailyEquipmentChecklist">
+                <strong>Log Inspection</strong>
+                <span>Open the active equipment inspection checklist</span>
+            </a>
+
+            <a class="module-card" href="/AddItem?type=equipment">
+                <strong>Add New Equipment</strong>
+                <span>Add one equipment item into the register</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Move / Reallocate</strong>
+                <span>Update equipment location, vehicle allocation, or base assignment</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Service / Maintenance</strong>
+                <span>Record servicing, repairs, maintenance dates, and status changes</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Expiry / Compliance Tracking</strong>
+                <span>Review expiry, calibration, and compliance status</span>
+            </a>
+
+            <a class="module-card danger" href="/ReportIssue?module=equipment">
+                <strong>Report Issue</strong>
+                <span>Report faults, missing items, damaged equipment, or readiness problems</span>
+            </a>
         </div>
     </div>
 </div>

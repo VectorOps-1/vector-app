@@ -1,35 +1,46 @@
 @page
 @model VehiclesModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Vehicles";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
 
-<div class="container text-center">
-    <h2>Vehicles</h2>
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Operations Module</div>
+        <h2 class="page-title">Vehicles</h2>
+        <p class="page-subtitle">Vehicle register, inspections, movement, maintenance, and issue workflows</p>
 
-    <br />
+        <div class="module-grid">
+            <a class="module-card primary" href="#">
+                <strong>Search Vehicles</strong>
+                <span>Find a vehicle by registration, callsign, status, or location</span>
+            </a>
 
-<div class="menu-row">
+            <a class="module-card" href="/DailyVehicleChecklist">
+                <strong>Log Inspection</strong>
+                <span>Open the active vehicle inspection checklist</span>
+            </a>
 
-    <a class="menu-btn equipment-btn" href="#">
-        Search Vehicles
-    </a>
+            <a class="module-card" href="/AddItem?type=vehicle">
+                <strong>Add New Vehicle</strong>
+                <span>Add a vehicle record for registration and callsign setup</span>
+            </a>
 
-    <a class="menu-btn vehicle-btn" href="#">
-        Log Inspection
-    </a>
+            <a class="module-card" href="#">
+                <strong>Move / Reallocate</strong>
+                <span>Update vehicle assignment, base, or operational allocation</span>
+            </a>
 
-    <a class="menu-btn report-btn" href="/ReportIssue?module=vehicle">
-        Report Issue
-    </a>
-
-    <a class="menu-btn stock-btn" href="#">
-        Move / Reallocate
-    </a>
-
-    <a class="menu-btn staff-btn" href="/AddItem?type=vehicle">
-        Add New Vehicle
-    </a>
-
-</div>
+            <a class="module-card danger" href="/ReportIssue?module=vehicle">
+                <strong>Report Issue</strong>
+                <span>Report damage, faults, missing equipment, or operational concerns</span>
+            </a>
+        </div>
+    </div>
 </div>

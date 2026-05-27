@@ -24,13 +24,13 @@
 
         @if (isStaff)
         {
-            <p class="home-subtitle">Staff Actions</p>
+            <div class="management-section-label">Staff Actions</div>
 
-            <div class="menu-row home-menu-row staff-action-row">
-                <a class="menu-btn equipment-btn" href="/CompleteChecklist">Complete Checklist</a>
-                <a class="menu-btn staff-btn" href="/PersonalDocuments">Upload Personal Documents</a>
-                <a class="menu-btn report-btn" href="/ReportIssue?module=general">Report Issue</a>
-                <a class="menu-btn stock-btn" href="/TaskFeedback">Task Feedback</a>
+            <div class="workflow-grid staff-workflow-grid">
+                <a class="workflow-action" href="/CompleteChecklist">Complete Checklist</a>
+                <a class="workflow-action" href="/PersonalDocuments">Upload Personal Documents</a>
+                <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
+                <a class="workflow-action" href="/TaskFeedback">Task Feedback</a>
             </div>
         }
         else

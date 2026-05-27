@@ -16,15 +16,46 @@
         <h2 class="page-title">Stock</h2>
         <p class="page-subtitle">Stock control, batch tracking, expiry management, and replenishment workflows</p>
 
-        <div class="menu-row module-grid">
-            <a class="menu-btn equipment-btn" href="#">Search Stock</a>
-            <a class="menu-btn vehicle-btn" href="/AddItem?type=stock">Add New Stock Item</a>
-            <a class="menu-btn stock-btn" href="#">Receive Stock</a>
-            <a class="menu-btn staff-btn" href="#">Issue / Allocate Stock</a>
-            <a class="menu-btn report-btn" href="/ReportIssue?module=stock">Report Stock Issue</a>
-            <a class="menu-btn equipment-btn" href="#">Expiry Tracking</a>
-            <a class="menu-btn vehicle-btn" href="#">Batch Number Tracking</a>
-            <a class="menu-btn stock-btn" href="#">Reorder / Replenishment</a>
+        <div class="module-grid">
+            <a class="module-card primary" href="#">
+                <strong>Search Stock</strong>
+                <span>Find stock by item name, location, batch, quantity, or status</span>
+            </a>
+
+            <a class="module-card" href="/AddItem?type=stock">
+                <strong>Add New Stock Item</strong>
+                <span>Add one stock item into the register</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Receive Stock</strong>
+                <span>Record stock received from suppliers or internal transfers</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Issue / Allocate Stock</strong>
+                <span>Allocate stock to a base, vehicle, crew, kit, or staff member</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Expiry Tracking</strong>
+                <span>Review stock nearing expiry and manage replacement actions</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Batch Number Tracking</strong>
+                <span>Track items by batch number for accountability and recalls</span>
+            </a>
+
+            <a class="module-card" href="#">
+                <strong>Reorder / Replenishment</strong>
+                <span>Review replenishment needs and stock level actions</span>
+            </a>
+
+            <a class="module-card danger" href="/ReportIssue?module=stock">
+                <strong>Report Stock Issue</strong>
+                <span>Report shortages, damaged stock, expired items, or control problems</span>
+            </a>
         </div>
     </div>
 </div>
