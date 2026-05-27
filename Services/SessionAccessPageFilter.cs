@@ -45,6 +45,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/Medication"] = ManagementAccess,
         ["/SendTask"] = ManagementAccess,
         ["/EditChecklist"] = ManagementAccess,
+        ["/EditVehicleChecklist"] = ManagementAccess,
+        ["/EditEquipmentChecklist"] = ManagementAccess,
         ["/AddItem"] = ManagementAccess,
         ["/UploadStaffFiles"] = ManagementAccess,
         ["/StaffRecordsSearch"] = ManagementAccess,

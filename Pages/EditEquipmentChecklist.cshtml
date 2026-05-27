@@ -1,0 +1,45 @@
+@page
+@model EditEquipmentChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Equipment Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="placeholder-screen">
+    <div class="placeholder-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Action</div>
+        <h2 class="page-title">Edit Equipment Checklist</h2>
+        <p class="page-subtitle">Equipment checklist editing will be built separately from the vehicle checklist builder.</p>
+
+        <div class="placeholder-panel">
+            <strong>Separate checklist type</strong>
+            <p>This keeps vehicle-specific controls, registration lookup, schematic markup, and same-as-previous shift behavior out of equipment checklist setup.</p>
+        </div>
+
+        <div class="action-row">
+            <a class="menu-btn vehicle-btn" href="/EditChecklist">Back to Checklist Type</a>
+            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle">Edit Vehicle Checklist</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.placeholder-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
+.placeholder-inner { width: 100%; max-width: 820px; margin: 0 auto; text-align: center; padding: 40px 20px 50px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(680px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.placeholder-panel { margin: 0 auto 24px auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); text-align: left; }
+.placeholder-panel strong { display: block; margin-bottom: 8px; color: #1f2937; font-size: 18px; font-weight: 900; }
+.placeholder-panel p { margin: 0; color: #52606d; font-size: 14px; font-weight: 700; line-height: 1.45; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { width: 100%; }
+@@media (max-width: 700px) { .action-row { grid-template-columns: 1fr; } }
+</style>

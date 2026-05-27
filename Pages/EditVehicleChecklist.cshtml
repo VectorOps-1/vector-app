@@ -1,0 +1,438 @@
+@page
+@model EditVehicleChecklistModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Vehicle Checklist";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="editor-screen">
+    <div class="editor-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Action</div>
+        <h2 class="page-title">Edit Vehicle Checklist</h2>
+        <p class="page-subtitle">Edit the checklist from the same structure staff use in the live vehicle inspection.</p>
+        <div class="authority-note">@Model.ChecklistAuthorityNote</div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="editor-form">
+            <section class="editor-section setup-section">
+                <div class="section-heading">Checklist Version</div>
+                <div class="form-grid">
+                    <label>
+                        Currently used checklist
+                        <select asp-for="ChecklistName">
+                            <option>Daily Vehicle Inspection</option>
+                            <option>Monthly Vehicle Checklist</option>
+                            <option>Daily Equipment Checklist</option>
+                            <option>Monthly Equipment Checklist</option>
+                            <option>Custom Uploaded Checklist</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Checklist status
+                        <select asp-for="ChecklistStatus">
+                            <option>Draft</option>
+                            <option>Under Review</option>
+                            <option>Approved</option>
+                            <option>Published</option>
+                            <option>Archived</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="layout-builder">
+                <div class="builder-toolbar">
+                    <div>
+                        <div class="section-heading">Live Layout Builder</div>
+                        <p>@Model.LayoutBuilderSummary Staff-facing order: vehicle details, previous shift control, operational checks, schematic, notes.</p>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button class="small-action" type="button" data-action="add-section">Add Section</button>
+                        <button class="small-action" type="button" data-action="add-heading">Add Heading</button>
+                        <button class="small-action" type="button" data-action="add-field">Add Field</button>
+                    </div>
+                </div>
+
+                @for (var sectionIndex = 0; sectionIndex < Model.VehicleChecklistSections.Count; sectionIndex++)
+                {
+                    var checklistSection = Model.VehicleChecklistSections[sectionIndex];
+                    <article class="checklist-section-editor">
+                        <div class="visual-section-heading">
+                            <span>@(sectionIndex + 1)</span>
+                            <div class="section-title-editor">
+                                <label>
+                                    Section heading
+                                    <input value="@checklistSection.Title" aria-label="@checklistSection.Title heading" />
+                                </label>
+                                <label>
+                                    Staff helper text
+                                    <input value="@checklistSection.HelperText" aria-label="@checklistSection.Title helper text" />
+                                </label>
+                            </div>
+                            <div class="section-controls" aria-label="@checklistSection.Title controls">
+                                <button type="button" data-action="move-section-up">Move Up</button>
+                                <button type="button" data-action="move-section-down">Move Down</button>
+                                <button type="button" data-action="remove-section">Remove</button>
+                            </div>
+                        </div>
+
+                        @if (checklistSection.Kind == ChecklistSectionKind.Action)
+                        {
+                            <div class="previous-shift-editor">
+                                <div>
+                                    <label>
+                                        Button label
+                                        <input value="Same as previous shift" />
+                                    </label>
+                                    <p>Permissioned action block shown directly under Vehicle Details.</p>
+                                </div>
+                                <label class="toggle-row">
+                                    <input asp-for="AllowSameAsPreviousShift"
+                                           id="allowSameAsPreviousShiftToggle"
+                                           type="checkbox"
+                                           disabled="@(!Model.IsSeniorChecklistPublisher)" />
+                                    <span>Allow this button on vehicle inspections</span>
+                                </label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="field-grid @(checklistSection.Kind == ChecklistSectionKind.Schematic ? "schematic-field-grid" : string.Empty)">
+                                @foreach (var field in checklistSection.Fields)
+                                {
+                                    <div class="builder-field @(field.IsSystemLinked ? "system-linked" : string.Empty)">
+                                        <div class="field-toolbar">
+                                            <span>@field.Source</span>
+                                            <div>
+                                                <button type="button" data-action="move-field-up">Up</button>
+                                                <button type="button" data-action="move-field-down">Down</button>
+                                                <button type="button" data-action="remove-field">Remove</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="field-editor-grid">
+                                            <label>
+                                                Field label
+                                                <input value="@field.Label" aria-label="@field.Label label" />
+                                            </label>
+                                            <label>
+                                                Input type
+                                                <select aria-label="@field.Label type">
+                                                    <option selected>@field.Type</option>
+                                                    <option>Text</option>
+                                                    <option>Number</option>
+                                                    <option>Date</option>
+                                                    <option>Dropdown</option>
+                                                    <option>Checkbox</option>
+                                                    <option>Photo Upload</option>
+                                                    <option>Schematic Markup</option>
+                                                    <option>Permissioned Action</option>
+                                                </select>
+                                            </label>
+                                        </div>
+
+                                        <div class="field-rule-row">
+                                            <label><input type="checkbox" checked="@field.IsRequired" /> Required</label>
+                                            <label><input type="checkbox" checked="@field.IsEditable" /> Editable</label>
+                                            @if (field.IsSystemLinked)
+                                            {
+                                                <span>Linked to registration</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to @checklistSection.Title</button>
+                        }
+                    </article>
+                }
+            </section>
+
+            <section class="editor-section">
+                <div class="section-heading">Dropdown Options</div>
+                <div class="form-grid">
+                    <label>
+                        Dropdown field
+                        <select asp-for="DropdownField">
+                            <option>Fuel level</option>
+                            <option>Vehicle condition</option>
+                            <option>Lights</option>
+                            <option>Sirens</option>
+                            <option>Warning lights</option>
+                            <option>Tyres</option>
+                            <option>Ops radio connectivity</option>
+                            <option>Damage type</option>
+                            <option>Damage severity</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Options
+                        <textarea asp-for="DropdownOptions" rows="5" placeholder="One option per line"></textarea>
+                    </label>
+                </div>
+                <button class="small-action" type="button">Add / Update Dropdown Options</button>
+            </section>
+
+            <section class="editor-section">
+                <div class="section-heading">Publish Controls</div>
+                <div class="form-grid">
+                    <label>
+                        Applies to
+                        <select asp-for="AppliesTo">
+                            <option>All staff</option>
+                            <option>Operational managers</option>
+                            <option>Specific base</option>
+                            <option>Specific vehicle category</option>
+                            <option>Specific vehicle registration</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Publish note
+                        <textarea asp-for="PublishNote" rows="5" placeholder="Reason for edit, approval note, or version note"></textarea>
+                    </label>
+                </div>
+
+                <div class="publish-note">
+                    @(Model.IsSeniorChecklistPublisher
+                        ? "Senior management can approve this layout for live use."
+                        : "Operational management can draft this layout for senior review.")
+                </div>
+            </section>
+
+            <div class="action-row">
+                <button class="menu-btn vehicle-btn" type="submit" name="ActionType" value="save-draft">Save Draft</button>
+                <button class="menu-btn equipment-btn" type="submit" name="ActionType" value="approve-publish" disabled="@(!Model.IsSeniorChecklistPublisher)">Approve and Publish</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.editor-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.editor-inner { width: 100%; max-width: 1180px; margin: 0 auto; text-align: center; padding: 40px 20px 60px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.authority-note { width: min(780px, 94%); margin: -8px auto 22px auto; padding: 10px 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); color: #425466; font-size: 13px; font-weight: 800; }
+.status-message { width: min(840px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.editor-form { display: flex; flex-direction: column; gap: 18px; }
+.editor-section, .layout-builder { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.section-heading { margin-bottom: 6px; font-size: 14px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #425466; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label, .section-title-editor label, .field-editor-grid label, .previous-shift-editor label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
+.form-grid input, .form-grid select, .form-grid textarea, .section-title-editor input, .field-editor-grid input, .field-editor-grid select, .previous-shift-editor input { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 14px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.form-grid textarea { padding-top: 12px; resize: vertical; }
+.builder-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.builder-toolbar p { margin: 0; color: #6b7280; font-size: 13px; font-weight: 700; }
+.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.small-action, .field-toolbar button, .section-controls button { min-height: 40px; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: #ffffff; color: #334155; font-weight: 800; padding: 0 12px; }
+.checklist-section-editor { margin-top: 14px; padding: 16px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; }
+.visual-section-heading { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; margin-bottom: 14px; }
+.visual-section-heading > span { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #334155; color: #ffffff; font-size: 14px; font-weight: 900; }
+.section-title-editor { display: grid; grid-template-columns: .8fr 1.2fr; gap: 12px; }
+.section-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.schematic-field-grid { grid-template-columns: minmax(0, 1fr); }
+.builder-field { padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
+.builder-field.system-linked { border-color: rgba(14,94,122,.26); background: rgba(14,94,122,.04); }
+.field-toolbar { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; }
+.field-toolbar span { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+.field-toolbar div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.field-toolbar button { min-height: 32px; padding: 0 9px; font-size: 12px; }
+.field-editor-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 10px; }
+.field-rule-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 10px; color: #52606d; font-size: 13px; font-weight: 800; }
+.field-rule-row label { display: inline-flex; align-items: center; gap: 6px; }
+.field-rule-row span { color: #0E5E7A; }
+.inline-add { margin-top: 12px; }
+.previous-shift-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .8fr); gap: 14px; align-items: center; padding: 12px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(255,255,255,.82); }
+.previous-shift-editor p { margin: 8px 0 0 0; color: #6b7280; font-size: 13px; font-weight: 700; }
+.toggle-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px !important; color: #425466; }
+.toggle-row input { width: 18px; min-height: 18px; }
+.publish-note { margin-top: 14px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; position: sticky; bottom: 0; padding-top: 14px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 44%); }
+.action-row .menu-btn { width: 100%; border: none; }
+.action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
+@@media (max-width: 860px) { .form-grid, .builder-toolbar, .visual-section-heading, .section-title-editor, .field-grid, .field-editor-grid, .previous-shift-editor, .action-row { grid-template-columns: 1fr; } .toolbar-actions, .section-controls { justify-content: flex-start; } }
+</style>
+
+<script>
+    (function () {
+        const toggle = document.getElementById("allowSameAsPreviousShiftToggle");
+        const sameShiftSettingKey = "vectorAllowSameAsPreviousShift";
+        const layoutBuilder = document.querySelector(".layout-builder");
+
+        function renumberSections() {
+            document.querySelectorAll(".checklist-section-editor").forEach(function (section, index) {
+                const number = section.querySelector(".visual-section-heading > span");
+                if (number) {
+                    number.textContent = String(index + 1);
+                }
+            });
+        }
+
+        function createField() {
+            const field = document.createElement("div");
+            field.className = "builder-field";
+            field.innerHTML = `
+                <div class="field-toolbar">
+                    <span>Draft field</span>
+                    <div>
+                        <button type="button" data-action="move-field-up">Up</button>
+                        <button type="button" data-action="move-field-down">Down</button>
+                        <button type="button" data-action="remove-field">Remove</button>
+                    </div>
+                </div>
+                <div class="field-editor-grid">
+                    <label>
+                        Field label
+                        <input value="New field" aria-label="New field label" />
+                    </label>
+                    <label>
+                        Input type
+                        <select aria-label="New field type">
+                            <option selected>Text</option>
+                            <option>Number</option>
+                            <option>Date</option>
+                            <option>Dropdown</option>
+                            <option>Checkbox</option>
+                            <option>Photo Upload</option>
+                            <option>Schematic Markup</option>
+                            <option>Permissioned Action</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="field-rule-row">
+                    <label><input type="checkbox" /> Required</label>
+                    <label><input type="checkbox" checked /> Editable</label>
+                </div>`;
+            return field;
+        }
+
+        function createSection(title, helperText) {
+            const section = document.createElement("article");
+            section.className = "checklist-section-editor";
+            section.innerHTML = `
+                <div class="visual-section-heading">
+                    <span></span>
+                    <div class="section-title-editor">
+                        <label>
+                            Section heading
+                            <input value="${title}" aria-label="${title} heading" />
+                        </label>
+                        <label>
+                            Staff helper text
+                            <input value="${helperText}" aria-label="${title} helper text" />
+                        </label>
+                    </div>
+                    <div class="section-controls" aria-label="${title} controls">
+                        <button type="button" data-action="move-section-up">Move Up</button>
+                        <button type="button" data-action="move-section-down">Move Down</button>
+                        <button type="button" data-action="remove-section">Remove</button>
+                    </div>
+                </div>
+                <div class="field-grid"></div>
+                <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to ${title}</button>`;
+            return section;
+        }
+
+        function addFieldToSection(section) {
+            const grid = section?.querySelector(".field-grid");
+            if (!grid) {
+                return;
+            }
+
+            grid.appendChild(createField());
+        }
+
+        if (toggle && !toggle.disabled) {
+            localStorage.setItem(sameShiftSettingKey, String(toggle.checked));
+
+            toggle.addEventListener("change", function () {
+                localStorage.setItem(sameShiftSettingKey, String(toggle.checked));
+            });
+        }
+
+        layoutBuilder?.addEventListener("click", function (event) {
+            const button = event.target.closest("button[data-action]");
+            if (!button) {
+                return;
+            }
+
+            const action = button.dataset.action;
+            const section = button.closest(".checklist-section-editor");
+            const field = button.closest(".builder-field");
+
+            if (action === "add-section" || action === "add-heading") {
+                const newSection = createSection(
+                    action === "add-section" ? "New Section" : "New Heading",
+                    action === "add-section" ? "Describe what staff should complete here." : "Use this to separate checklist content."
+                );
+                layoutBuilder.appendChild(newSection);
+                if (action === "add-section") {
+                    addFieldToSection(newSection);
+                }
+                renumberSections();
+                return;
+            }
+
+            if (action === "add-field") {
+                const sections = layoutBuilder.querySelectorAll(".checklist-section-editor .field-grid");
+                const targetGrid = sections[sections.length - 1];
+                targetGrid?.appendChild(createField());
+                return;
+            }
+
+            if (action === "add-field-to-section") {
+                addFieldToSection(section);
+                return;
+            }
+
+            if (action === "remove-section") {
+                section?.remove();
+                renumberSections();
+                return;
+            }
+
+            if (action === "move-section-up" && section?.previousElementSibling?.classList.contains("checklist-section-editor")) {
+                section.parentNode.insertBefore(section, section.previousElementSibling);
+                renumberSections();
+                return;
+            }
+
+            if (action === "move-section-down" && section?.nextElementSibling?.classList.contains("checklist-section-editor")) {
+                section.parentNode.insertBefore(section.nextElementSibling, section);
+                renumberSections();
+                return;
+            }
+
+            if (action === "remove-field") {
+                field?.remove();
+                return;
+            }
+
+            if (action === "move-field-up" && field?.previousElementSibling?.classList.contains("builder-field")) {
+                field.parentNode.insertBefore(field, field.previousElementSibling);
+                return;
+            }
+
+            if (action === "move-field-down" && field?.nextElementSibling?.classList.contains("builder-field")) {
+                field.parentNode.insertBefore(field.nextElementSibling, field);
+            }
+        });
+    })();
+</script>
