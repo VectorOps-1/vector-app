@@ -107,6 +107,92 @@ public static class DevelopmentDatabase
     private static async Task EnsureSqliteDevelopmentSchemaAsync(VectorDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "MedicationItems" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_MedicationItems" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL,
+                "CreatedByUserId" INTEGER NOT NULL,
+                "LastAllocatedByUserId" INTEGER NULL,
+                "Name" TEXT NOT NULL,
+                "MedicationCode" TEXT NULL,
+                "MedicationType" TEXT NULL,
+                "Schedule" TEXT NULL,
+                "BatchNumber" TEXT NULL,
+                "StorageLocation" TEXT NULL,
+                "CurrentOperationalAreaId" INTEGER NULL,
+                "Status" TEXT NOT NULL,
+                "Quantity" INTEGER NULL,
+                "ExpiryDate" TEXT NULL,
+                "LastAllocationLocation" TEXT NULL,
+                "LastAllocatedAtUtc" TEXT NULL,
+                "Notes" TEXT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "StockItems" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_StockItems" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL,
+                "CreatedByUserId" INTEGER NOT NULL,
+                "LastMovedByUserId" INTEGER NULL,
+                "ItemName" TEXT NOT NULL,
+                "ItemType" TEXT NULL,
+                "BatchNumber" TEXT NULL,
+                "Quantity" INTEGER NOT NULL,
+                "Location" TEXT NULL,
+                "CurrentOperationalAreaId" INTEGER NULL,
+                "Status" TEXT NOT NULL,
+                "LastMovementType" TEXT NULL,
+                "LastMovementAtUtc" TEXT NULL,
+                "Notes" TEXT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "StockOrders" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_StockOrders" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL,
+                "RequestedByUserId" INTEGER NOT NULL,
+                "ApprovedBySeniorUserId" INTEGER NULL,
+                "RegisterEntryAuthorisedUserId" INTEGER NULL,
+                "SupplierName" TEXT NOT NULL,
+                "SupplierEmail" TEXT NOT NULL,
+                "DeliveryAddress" TEXT NULL,
+                "DeliveryInstructions" TEXT NULL,
+                "OrderNotes" TEXT NULL,
+                "Status" TEXT NOT NULL,
+                "EmailSubject" TEXT NOT NULL,
+                "EmailBody" TEXT NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "ApprovedAtUtc" TEXT NULL,
+                "EmailSentAtUtc" TEXT NULL,
+                "SupplierConfirmedAtUtc" TEXT NULL,
+                "RegisterEnteredAtUtc" TEXT NULL,
+                "AllocatedAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "StockOrderLines" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_StockOrderLines" PRIMARY KEY AUTOINCREMENT,
+                "StockOrderId" INTEGER NOT NULL,
+                "ItemName" TEXT NOT NULL,
+                "ItemType" TEXT NULL,
+                "QuantityRequested" INTEGER NOT NULL,
+                "QuantityConfirmed" INTEGER NULL,
+                "BatchNumber" TEXT NULL,
+                "ExpiryDate" TEXT NULL,
+                "RegisterLocation" TEXT NULL,
+                "QuantityAllocated" INTEGER NULL,
+                "AllocationLocation" TEXT NULL,
+                "Notes" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "OperationalAreas" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_OperationalAreas" PRIMARY KEY AUTOINCREMENT,
                 "CompanyId" INTEGER NOT NULL,
@@ -147,9 +233,26 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "CurrentLocationDetail", """ALTER TABLE "EquipmentItems" ADD "CurrentLocationDetail" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "LastMovedByUserId", """ALTER TABLE "EquipmentItems" ADD "LastMovedByUserId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "LastMovedAtUtc", """ALTER TABLE "EquipmentItems" ADD "LastMovedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedByUserId", """ALTER TABLE "MedicationItems" ADD "LastAllocatedByUserId" INTEGER NULL;""");
+        await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedAtUtc", """ALTER TABLE "MedicationItems" ADD "LastAllocatedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocationLocation", """ALTER TABLE "MedicationItems" ADD "LastAllocationLocation" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "MedicationItems", "Schedule", """ALTER TABLE "MedicationItems" ADD "Schedule" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "StockItems", "CurrentOperationalAreaId", """ALTER TABLE "StockItems" ADD "CurrentOperationalAreaId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "CurrentOperationalAreaId", """ALTER TABLE "MedicationItems" ADD "CurrentOperationalAreaId" INTEGER NULL;""");
 
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_MedicationItems_CompanyId" ON "MedicationItems" ("CompanyId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_MedicationItems_CreatedByUserId" ON "MedicationItems" ("CreatedByUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_MedicationItems_LastAllocatedByUserId" ON "MedicationItems" ("LastAllocatedByUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_MedicationItems_CurrentOperationalAreaId" ON "MedicationItems" ("CurrentOperationalAreaId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockItems_CompanyId_ItemName_BatchNumber_Location" ON "StockItems" ("CompanyId", "ItemName", "BatchNumber", "Location");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockItems_CreatedByUserId" ON "StockItems" ("CreatedByUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockItems_LastMovedByUserId" ON "StockItems" ("LastMovedByUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockItems_CurrentOperationalAreaId" ON "StockItems" ("CurrentOperationalAreaId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrderLines_StockOrderId" ON "StockOrderLines" ("StockOrderId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_ApprovedBySeniorUserId" ON "StockOrders" ("ApprovedBySeniorUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_CompanyId_Status_CreatedAtUtc" ON "StockOrders" ("CompanyId", "Status", "CreatedAtUtc");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_RegisterEntryAuthorisedUserId" ON "StockOrders" ("RegisterEntryAuthorisedUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_StockOrders_RequestedByUserId" ON "StockOrders" ("RequestedByUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_OperationalAreas_CompanyId_Name" ON "OperationalAreas" ("CompanyId", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetMovements_CompanyId_AssetType_AssetId_CreatedAtUtc" ON "AssetMovements" ("CompanyId", "AssetType", "AssetId", "CreatedAtUtc");""");
     }
