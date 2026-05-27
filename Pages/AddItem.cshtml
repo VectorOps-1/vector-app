@@ -26,9 +26,13 @@
 
             <div class="form-grid">
                 <label>@Model.PrimaryLabel<input asp-for="PrimaryName" type="text" placeholder="@Model.PrimaryPlaceholder" /></label>
-                <label>ID / reference number<input asp-for="ReferenceNumber" type="text" placeholder="Asset ID, staff ID, stock code, or medication code" /></label>
+                <label>@Model.ReferenceLabel<input asp-for="ReferenceNumber" type="text" placeholder="Asset ID, staff ID, stock code, or medication code" /></label>
                 <label>Serial / batch number<input asp-for="SerialOrBatch" type="text" placeholder="Serial number, batch number, or file number" /></label>
-                <label>Make / model / type<input asp-for="MakeModelType" type="text" placeholder="Make, model, medication type, or staff role" /></label>
+                <label>@Model.TypeLabel<input asp-for="MakeModelType" type="text" placeholder="Make, model, medication type, stock size, or staff role" /></label>
+                @if (Model.ShowMedicationSchedule)
+                {
+                    <label>Schedule<input asp-for="Schedule" type="text" placeholder="Medication schedule" /></label>
+                }
                 <label>Location<input asp-for="Location" type="text" placeholder="Base, store, vehicle, department, or file location" /></label>
                 <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
                 <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>

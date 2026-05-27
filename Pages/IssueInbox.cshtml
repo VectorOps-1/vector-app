@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Issue Inbox";
+    ViewData["Title"] = "My Assigned Issues";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -13,11 +13,11 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Assigned Issue Reports</div>
-        <h2 class="page-title">Issue Inbox</h2>
+        <h2 class="page-title">My Assigned Issues</h2>
         <p class="page-subtitle">Open issue reports assigned directly to you for action and closure.</p>
 
         <div class="list-actions">
-            <a class="menu-btn equipment-btn" href="/IssueReports">View Management Pool</a>
+            <a class="menu-btn equipment-btn" href="/IssueReports">View All Open Issues</a>
         </div>
 
         @if (!Model.OpenIssues.Any())

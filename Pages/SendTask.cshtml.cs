@@ -23,7 +23,7 @@ public class SendTaskModel : PageModel
     public int AssignedToUserId { get; set; }
 
     [BindProperty]
-    public string ActionType { get; set; } = "Complete Checklist";
+    public string ActionType { get; set; } = "Daily Vehicle Readiness";
 
     [BindProperty]
     public DateTime? ExpiresAtLocal { get; set; }

@@ -1,0 +1,146 @@
+@page
+@model OperationalAreasModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Operational Areas";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Operational Areas / Bases</h2>
+        <p class="page-subtitle">Create the selectable bases, stores, stations, and operating areas used for asset movement.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form class="setup-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            <section class="form-panel">
+                <div class="section-label">Create Destination</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label" asp-for="Name">Area / base name</label>
+                        <input class="text-input" asp-for="Name" placeholder="Main Base, East Operations, Main Store" />
+                        <span class="field-error" asp-validation-for="Name"></span>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="AreaType">Type</label>
+                        <select class="text-input" asp-for="AreaType">
+                            <option>Base</option>
+                            <option>Operations Area</option>
+                            <option>Station</option>
+                            <option>Store</option>
+                            <option>Workshop</option>
+                            <option>Hospital Standby Point</option>
+                            <option>Event Site</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="Status">Status</label>
+                        <select class="text-input" asp-for="Status">
+                            <option>Active</option>
+                            <option>Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="Address">Address / location detail</label>
+                        <input class="text-input" asp-for="Address" placeholder="Optional address or description" />
+                    </div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label class="field-label" asp-for="Notes">Notes</label>
+                    <textarea class="message-input" asp-for="Notes" placeholder="Optional setup notes, access rules, storage notes, or operating area context"></textarea>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <button class="menu-btn equipment-btn" type="submit">Save Area / Base</button>
+            </div>
+        </form>
+
+        <section class="list-panel">
+            <div class="section-label">Current Allocation Destinations</div>
+            @if (Model.Areas.Count == 0)
+            {
+                <div class="empty-state">No operational areas have been created yet.</div>
+            }
+            else
+            {
+                <div class="area-grid">
+                    @foreach (var area in Model.Areas)
+                    {
+                        <article class="area-card">
+                            <div>
+                                <strong>@area.Name</strong>
+                                <span>@area.AreaType</span>
+                            </div>
+                            <div class="area-meta">@area.Status</div>
+                            @if (!string.IsNullOrWhiteSpace(area.Address))
+                            {
+                                <p>@area.Address</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(area.Notes))
+                            {
+                                <p>@area.Notes</p>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<style>
+.module-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.module-inner { width: 100%; max-width: 1100px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { margin: 0 auto 28px auto; max-width: 760px; font-size: 16px; font-weight: 500; color: #6b7280; }
+.setup-form { display: flex; flex-direction: column; gap: 22px; }
+.form-panel, .list-panel { padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.section-label { margin-bottom: 16px; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #5f6b7a; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+.field-group { text-align: left; margin-top: 16px; }
+.field-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #425466; }
+.text-input, .message-input { width: 100%; padding: 14px 16px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #fff; font-size: 16px; color: #111827; box-sizing: border-box; }
+.message-input { min-height: 110px; resize: vertical; }
+.action-row { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+.action-row .menu-btn { min-width: 260px; border: none; }
+.status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.validation-summary, .field-error { color: #9f3030; font-size: 13px; font-weight: 700; }
+.list-panel { margin-top: 28px; }
+.area-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.area-card { min-height: 112px; padding: 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; box-sizing: border-box; }
+.area-card strong { display: block; color: #102a3a; font-size: 18px; font-weight: 900; }
+.area-card span, .area-meta, .area-card p { color: #52606d; font-size: 13px; font-weight: 700; }
+.area-meta { margin-top: 8px; color: #0E5E7A; }
+.area-card p { margin: 8px 0 0 0; line-height: 1.4; }
+.empty-state { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; color: #52606d; font-weight: 700; }
+@@media (max-width: 780px) { .form-grid, .area-grid { grid-template-columns: 1fr; } }
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Operational area saved."),
+            redirectUrl: "/OperationalAreas",
+            delay: 1300
+        });
+    </script>
+}

@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Edit Vehicle Checklist";
+    ViewData["Title"] = "Daily Readiness Checklist Setup";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -13,8 +13,8 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Action</div>
-        <h2 class="page-title">Edit Vehicle Checklist</h2>
-        <p class="page-subtitle">Edit the checklist from the same structure staff use in the live vehicle inspection.</p>
+        <h2 class="page-title">Daily Readiness Checklist Setup</h2>
+        <p class="page-subtitle">Edit the checklist from the same structure crews use in the live vehicle readiness flow.</p>
         <div class="authority-note">@Model.ChecklistAuthorityNote</div>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -29,11 +29,9 @@
                     <label>
                         Currently used checklist
                         <select asp-for="ChecklistName">
-                            <option>Daily Vehicle Inspection</option>
+                            <option>Daily Vehicle Readiness</option>
                             <option>Monthly Vehicle Checklist</option>
-                            <option>Daily Equipment Checklist</option>
-                            <option>Monthly Equipment Checklist</option>
-                            <option>Custom Uploaded Checklist</option>
+                            <option>Custom Uploaded Vehicle Checklist</option>
                         </select>
                     </label>
 

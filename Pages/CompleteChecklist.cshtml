@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Complete Checklist";
+    ViewData["Title"] = "Operational Checklists";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -12,18 +12,18 @@
     <div class="checklist-select-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Staff Action</div>
-        <h2 class="page-title">Complete Checklist</h2>
+        <div class="home-label">Operational Work</div>
+        <h2 class="page-title">Operational Checklists</h2>
 
         <div class="module-grid checklist-frequency-row">
-            <a class="module-card primary" href="/DailyChecklist">
-                <strong>Daily</strong>
-                <span>Open daily operational checklist options</span>
+            <a class="module-card primary" href="/DailyVehicleChecklist">
+                <strong>Daily Vehicle Readiness</strong>
+                <span>Vehicle details, operational checks, schematic notes, and carried equipment in one report</span>
             </a>
 
             <a class="module-card" href="/MonthlyChecklist">
-                <strong>Monthly</strong>
-                <span>Open monthly inspection checklist options</span>
+                <strong>Monthly Inspections</strong>
+                <span>Open lower-frequency vehicle and equipment inspection options</span>
             </a>
         </div>
     </div>

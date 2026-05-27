@@ -14,11 +14,12 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Medication Register</div>
         <h2 class="page-title">All Medication</h2>
-        <p class="page-subtitle">Medication overview for stock level, batch, expiry, storage location, and issue follow-up.</p>
+        <p class="page-subtitle">Search every medication by name, schedule, quantity, batch number, location, last allocation, and expiry.</p>
 
         <form class="toolbar" method="get">
-            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, code, type, batch, or location" />
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, schedule, batch, location, allocation, or person" />
             <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/MedicationRegister">All</a>
             <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=medication">Add Medication</a>
             <a class="menu-btn report-btn toolbar-btn" href="/ReportIssue?module=medication">Report Issue</a>
         </form>
@@ -31,12 +32,13 @@
         {
             <div class="register-table" role="table" aria-label="Medication register">
                 <div class="register-header" role="row">
-                    <div role="columnheader">Medication</div>
-                    <div role="columnheader">Batch / Code</div>
-                    <div role="columnheader">Qty</div>
-                    <div role="columnheader">Expiry</div>
+                    <div role="columnheader">Name</div>
+                    <div role="columnheader">Schedule</div>
+                    <div role="columnheader">Quantity</div>
+                    <div role="columnheader">Batch Number</div>
                     <div role="columnheader">Location</div>
-                    <div role="columnheader">Status</div>
+                    <div role="columnheader">Last Allocation</div>
+                    <div role="columnheader">Expiry Date</div>
                 </div>
 
                 @foreach (var item in Model.MedicationItems)
@@ -46,14 +48,16 @@
                             <strong>@item.Name</strong>
                             <span>@(item.MedicationType ?? "Type not set")</span>
                         </div>
-                        <div role="cell">
-                            <strong>@(item.BatchNumber ?? "No batch")</strong>
-                            <span>@(item.MedicationCode ?? "No code")</span>
-                        </div>
+                        <div role="cell">@(item.Schedule ?? "Not set")</div>
                         <div role="cell">@(item.Quantity?.ToString() ?? "Not set")</div>
-                        <div role="cell">@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not set")</div>
+                        <div role="cell">@(item.BatchNumber ?? "No batch")</div>
                         <div role="cell">@(item.StorageLocation ?? "Not set")</div>
-                        <div role="cell"><span class="status-pill">@item.Status</span></div>
+                        <div role="cell">
+                            <strong>@(item.LastAllocationLocation ?? "No allocation recorded")</strong>
+                            <span>@(item.LastAllocatedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No date")</span>
+                            <span>@(item.LastAllocatedByName ?? "No user")</span>
+                        </div>
+                        <div role="cell">@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not set")</div>
                     </div>
                 }
             </div>
@@ -69,17 +73,17 @@
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
-.toolbar { width: min(1060px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 150px); gap: 12px; }
+.toolbar { width: min(1120px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 150px 140px; gap: 12px; }
 .search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.register-table { width: min(1060px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(150px, .8fr) 80px 120px minmax(150px, .8fr) 110px; gap: 14px; align-items: center; padding: 14px 16px; }
+.register-table { width: min(1120px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(190px, 1.2fr) 90px 90px minmax(130px, .8fr) minmax(140px, .8fr) minmax(200px, 1fr) 120px; gap: 14px; align-items: center; padding: 14px 16px; }
 .register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
 .register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
-.med-identity, .register-row [role="cell"]:nth-child(2) { display: flex; flex-direction: column; gap: 4px; }
-.med-identity strong, .register-row [role="cell"]:nth-child(2) strong { color: #1f2937; font-size: 15px; }
-.med-identity span, .register-row [role="cell"]:nth-child(2) span { color: #6b7280; font-size: 13px; }
+.med-identity, .register-row [role="cell"]:nth-child(6) { display: flex; flex-direction: column; gap: 4px; }
+.med-identity strong, .register-row [role="cell"]:nth-child(6) strong { color: #1f2937; font-size: 15px; }
+.med-identity span, .register-row [role="cell"]:nth-child(6) span { color: #6b7280; font-size: 13px; }
 .status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
 @@media (max-width: 960px) {
     .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }

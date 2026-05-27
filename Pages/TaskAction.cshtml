@@ -9,6 +9,7 @@
     var task = Model.TaskDetails;
     var actionUrl = task?.ActionType switch
     {
+        "Daily Vehicle Readiness" => "/DailyVehicleChecklist",
         "Complete Checklist" => "/CompleteChecklist",
         "Report Issue" => "/ReportIssue?module=general",
         "Upload Personal Documents" => "/PersonalDocuments",
@@ -16,6 +17,10 @@
         "Add New Equipment" => "/AddItem?type=equipment",
         "Add New Stock Item" => "/AddItem?type=stock",
         "Add Medication" => "/AddItem?type=medication",
+        "Move / Reallocate Vehicle" => "/MoveAsset?asset=vehicle",
+        "Move / Reallocate Equipment" => "/MoveAsset?asset=equipment",
+        "Move / Reallocate Stock" => "/MoveAsset?asset=stock",
+        "Move / Reallocate Medication" => "/MoveAsset?asset=medication",
         "Receive Stock" => "/Stock",
         "Issue / Allocate Stock" => "/Stock",
         "Batch Number Tracking" => "/Stock",

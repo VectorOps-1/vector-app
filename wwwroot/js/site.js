@@ -110,6 +110,33 @@
     window.VectorPendingShiftDraftBindings = [];
 
     document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("click", function (event) {
+            const moveCard = event.target.closest("a.module-card");
+            if (!moveCard) {
+                return;
+            }
+
+            const label = (moveCard.textContent || "").toLowerCase();
+            const href = moveCard.getAttribute("href") || "";
+            if (!label.includes("move / reallocate")) {
+                return;
+            }
+
+            const path = window.location.pathname.toLowerCase();
+            const fallbackRoutes = {
+                "/vehicles": "/MoveAsset?asset=vehicle",
+                "/equipment": "/MoveAsset?asset=equipment",
+                "/stock": "/MoveAsset?asset=stock",
+                "/medication": "/MoveAsset?asset=medication"
+            };
+            const fallbackRoute = fallbackRoutes[path];
+
+            if (fallbackRoute && (href === "#" || href.endsWith("#"))) {
+                event.preventDefault();
+                window.location.href = fallbackRoute;
+            }
+        });
+
         const taskNotification = document.getElementById("taskNotification");
         const taskCount = document.getElementById("taskCount");
 

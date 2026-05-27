@@ -3,26 +3,26 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = Model.IsSeniorOverview ? "Issue Reports Overview" : "Pending Issue Reports";
+    ViewData["Title"] = Model.IsSeniorOverview ? "All Issue Reports" : "All Open Issues";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
-    var pageTitle = Model.IsSeniorOverview ? "Issue Reports Overview" : "Pending Issue Reports";
+    var pageTitle = Model.IsSeniorOverview ? "All Issue Reports" : "All Open Issues";
     var pageSubtitle = Model.IsSeniorOverview
         ? "All reported issues for senior management oversight, including who each issue was sent to."
         : "All open issue reports for management visibility and follow-up.";
-    var emptyMessage = Model.IsSeniorOverview ? "No issue reports recorded." : "No pending issue reports.";
+    var emptyMessage = Model.IsSeniorOverview ? "No issue reports recorded." : "No open issue reports.";
 }
 
 <div class="issue-list-screen">
     <div class="issue-list-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Management Pool</div>
+        <div class="home-label">Management Oversight</div>
         <h2 class="page-title">@pageTitle</h2>
         <p class="page-subtitle">@pageSubtitle</p>
 
         <div class="list-actions">
-            <a class="menu-btn staff-btn" href="/IssueInbox">My Issue Inbox</a>
+            <a class="menu-btn staff-btn" href="/IssueInbox">My Assigned Issues</a>
         </div>
 
         @if (!Model.IssueReports.Any())

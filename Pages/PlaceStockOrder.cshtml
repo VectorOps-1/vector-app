@@ -1,0 +1,105 @@
+@page
+@model PlaceStockOrderModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Place Stock Order";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="stock-order-screen">
+    <div class="stock-order-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Stock Control</div>
+        <h2 class="page-title">Place Stock Order</h2>
+        <p class="page-subtitle">Create a supplier-ready order request. Operational manager requests are routed for senior approval first.</p>
+
+        <form method="post" class="stock-order-form">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <section class="form-panel">
+                <div class="section-label">Supplier</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label" asp-for="SupplierName">Supplier</label>
+                        <input class="text-input" asp-for="SupplierName" placeholder="Supplier name" />
+                        <span class="field-error" asp-validation-for="SupplierName"></span>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="SupplierEmail">Supplier email</label>
+                        <input class="text-input" asp-for="SupplierEmail" type="email" placeholder="supplier@example.com" />
+                        <span class="field-error" asp-validation-for="SupplierEmail"></span>
+                    </div>
+
+                    <div class="field-group full-row">
+                        <label class="field-label" asp-for="DeliveryAddress">Delivery address</label>
+                        <input class="text-input" asp-for="DeliveryAddress" placeholder="Base, station, head office, or delivery address" />
+                    </div>
+
+                    <div class="field-group full-row">
+                        <label class="field-label" asp-for="DeliveryInstructions">Delivery instructions</label>
+                        <textarea class="message-input compact" asp-for="DeliveryInstructions" placeholder="Delivery window, contact person, access instructions, or special handling"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Order Lines</div>
+                <div class="line-grid line-heading">
+                    <div>Item</div>
+                    <div>Type / size</div>
+                    <div>Quantity</div>
+                    <div>Notes</div>
+                </div>
+
+                @for (var index = 0; index < Model.Lines.Count; index++)
+                {
+                    <div class="line-grid">
+                        <input class="text-input" asp-for="Lines[index].ItemName" placeholder="Syringe, ET tube, needle..." />
+                        <input class="text-input" asp-for="Lines[index].ItemType" placeholder="10 ml, 7.5, 18G..." />
+                        <input class="text-input" asp-for="Lines[index].QuantityRequested" type="number" min="0" placeholder="0" />
+                        <input class="text-input" asp-for="Lines[index].Notes" placeholder="Optional" />
+                    </div>
+                }
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Order Notes</div>
+                <textarea class="message-input" asp-for="OrderNotes" placeholder="Internal notes or supplier instructions"></textarea>
+            </section>
+
+            <div class="action-row">
+                <a class="menu-btn vehicle-btn" href="/StockOrders">Back To Orders</a>
+                <button class="menu-btn equipment-btn" type="submit">Save Stock Order</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.stock-order-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.stock-order-inner { width: 100%; max-width: 1080px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.stock-order-form { display: flex; flex-direction: column; gap: 18px; }
+.form-panel { padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.section-label { margin-bottom: 16px; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+.full-row { grid-column: 1 / -1; }
+.field-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #425466; }
+.text-input, .message-input { width: 100%; padding: 13px 14px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #ffffff; color: #111827; font-size: 15px; box-sizing: border-box; }
+.message-input { min-height: 120px; resize: vertical; }
+.message-input.compact { min-height: 84px; }
+.line-grid { display: grid; grid-template-columns: 1.4fr 1fr 120px 1.2fr; gap: 10px; margin-bottom: 10px; }
+.line-heading { margin-bottom: 8px; color: #52606d; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .6px; }
+.validation-summary, .field-error { color: #9f3030; font-size: 13px; font-weight: 800; }
+.action-row { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.action-row .menu-btn { min-width: 240px; border: none; }
+@@media (max-width: 850px) { .form-grid, .line-grid { grid-template-columns: 1fr; } }
+</style>

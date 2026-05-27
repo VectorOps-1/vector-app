@@ -1,0 +1,91 @@
+@page
+@model StockRegisterModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Stock Register";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="stock-register-screen">
+    <div class="stock-register-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Stock Register</div>
+        <h2 class="page-title">All Stock</h2>
+        <p class="page-subtitle">Search every stock item by item name, quantity, batch number, location, or last movement.</p>
+
+        <form class="toolbar" method="get">
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search item, batch, location, movement, or person" />
+            <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/StockRegister">All</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=stock">Add Stock</a>
+            <a class="menu-btn report-btn toolbar-btn" href="/ReportIssue?module=stock">Report Issue</a>
+        </form>
+
+        @if (!Model.StockItems.Any())
+        {
+            <div class="empty-panel">No stock records found.</div>
+        }
+        else
+        {
+            <div class="register-table" role="table" aria-label="Stock register">
+                <div class="register-header" role="row">
+                    <div role="columnheader">Item Name</div>
+                    <div role="columnheader">Quantity</div>
+                    <div role="columnheader">Batch Number</div>
+                    <div role="columnheader">Location</div>
+                    <div role="columnheader">Last Allocation / Movement</div>
+                    <div role="columnheader">Status</div>
+                </div>
+
+                @foreach (var item in Model.StockItems)
+                {
+                    <div class="register-row" role="row">
+                        <div class="stock-identity" role="cell">
+                            <strong>@item.ItemName</strong>
+                            <span>@(item.ItemType ?? "Type not set")</span>
+                        </div>
+                        <div role="cell">@item.Quantity</div>
+                        <div role="cell">@(item.BatchNumber ?? "No batch")</div>
+                        <div role="cell">@(item.Location ?? "Not set")</div>
+                        <div role="cell">
+                            <strong>@(item.LastMovementType ?? "No movement recorded")</strong>
+                            <span>@(item.LastMovementAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No date")</span>
+                            <span>@(item.LastMovedByName ?? "No user")</span>
+                        </div>
+                        <div role="cell"><span class="status-pill">@item.Status</span></div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.stock-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.stock-register-inner { width: 100%; max-width: 1220px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.toolbar { width: min(1120px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 140px 140px; gap: 12px; }
+.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.toolbar-btn { min-width: 0; border: none; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.register-table { width: min(1120px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) 90px minmax(130px, .8fr) minmax(150px, .8fr) minmax(210px, 1fr) 100px; gap: 14px; align-items: center; padding: 14px 16px; }
+.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
+.stock-identity, .register-row [role="cell"]:nth-child(5) { display: flex; flex-direction: column; gap: 4px; }
+.stock-identity strong, .register-row [role="cell"]:nth-child(5) strong { color: #1f2937; font-size: 15px; }
+.stock-identity span, .register-row [role="cell"]:nth-child(5) span { color: #6b7280; font-size: 13px; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+@@media (max-width: 980px) {
+    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
+    .register-header { display: none; }
+    .register-row { gap: 8px; }
+}
+</style>

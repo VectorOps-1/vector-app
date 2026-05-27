@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Edit Checklist";
+    ViewData["Title"] = "Checklist Builder";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -13,8 +13,8 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Action</div>
-        <h2 class="page-title">Edit Checklist</h2>
-        <p class="page-subtitle">Choose which checklist type to edit.</p>
+        <h2 class="page-title">Checklist Builder</h2>
+        <p class="page-subtitle">Choose the operational checklist area to build or review.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -24,14 +24,14 @@
         <div class="type-grid">
             <a class="type-card vehicle-card" href="/EditVehicleChecklist?checklist=daily-vehicle">
                 <span>Vehicle</span>
-                <strong>Vehicle Checklists</strong>
-                <p>Daily and monthly vehicle inspection layouts, operational checks, schematic section, and same-as-previous controls.</p>
+                <strong>Daily Vehicle Readiness</strong>
+                <p>Vehicle details, operational checks, schematic section, carried equipment controls, and same-as-previous rules.</p>
             </a>
 
             <a class="type-card equipment-card" href="/EditEquipmentChecklist">
                 <span>Equipment</span>
-                <strong>Equipment Checklists</strong>
-                <p>Equipment checklist editing is separate from vehicle checklist editing and will use its own layout builder.</p>
+                <strong>Standalone Equipment</strong>
+                <p>Non-vehicle equipment checks, servicing, maintenance, and compliance templates.</p>
             </a>
         </div>
     </div>

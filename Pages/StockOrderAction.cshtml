@@ -1,0 +1,211 @@
+@page
+@model StockOrderActionModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Stock Order Action";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var order = Model.Order;
+    var mailto = order is null
+        ? "#"
+        : $"mailto:{order.SupplierEmail}?subject={Uri.EscapeDataString(order.EmailSubject)}&body={Uri.EscapeDataString(order.EmailBody)}";
+}
+
+<div class="order-action-screen">
+    <div class="order-action-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Stock Control</div>
+
+        @if (order is null)
+        {
+            <h2 class="page-title">Order Not Found</h2>
+            <p class="page-subtitle">The selected stock order could not be loaded.</p>
+        }
+        else
+        {
+            <h2 class="page-title">Stock Order #@order.Id</h2>
+            <p class="page-subtitle">@order.SupplierName - @order.Status</p>
+
+            <section class="summary-panel">
+                <div class="summary-grid">
+                    <div><strong>Supplier:</strong> @order.SupplierName</div>
+                    <div><strong>Email:</strong> @order.SupplierEmail</div>
+                    <div><strong>Requested by:</strong> @order.RequestedByName</div>
+                    <div><strong>Approved by:</strong> @(order.ApprovedByName ?? "Not approved yet")</div>
+                    <div><strong>Register entry:</strong> @(order.RegisterEntryAuthorisedName ?? "Senior management only")</div>
+                    <div><strong>Created:</strong> @order.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Supplier Email Request</div>
+                <textarea class="message-input" readonly>@order.EmailBody</textarea>
+                <div class="button-row">
+                    <a class="menu-btn equipment-btn" href="@mailto">Open Email Draft</a>
+                    <form method="post" asp-page-handler="MarkEmailSent" asp-route-orderId="@order.Id">
+                        <button class="menu-btn vehicle-btn" type="submit">Mark Supplier Email Sent</button>
+                    </form>
+                </div>
+            </section>
+
+            @if (Model.IsSeniorManager)
+            {
+                <section class="form-panel">
+                    <div class="section-label">Senior Approval</div>
+                    <p class="helper-text">Approve operational manager requests before they are sent to the supplier.</p>
+                    <div class="button-row">
+                        <form method="post" asp-page-handler="Approve" asp-route-orderId="@order.Id">
+                            <button class="menu-btn equipment-btn" type="submit">Approve Order</button>
+                        </form>
+                    </div>
+                </section>
+            }
+
+            <section class="form-panel">
+                <div class="section-label">Supplier Confirmation</div>
+                <p class="helper-text">Record confirmed quantity, batch number, and expiry date once the supplier responds.</p>
+                <form method="post" asp-page-handler="ConfirmSupplier" asp-route-orderId="@order.Id">
+                    <div class="line-grid line-heading">
+                        <div>Item</div>
+                        <div>Confirmed</div>
+                        <div>Batch number</div>
+                        <div>Expiry date</div>
+                    </div>
+
+                    @for (var index = 0; index < order.Lines.Count; index++)
+                    {
+                        var line = order.Lines[index];
+                        <div class="line-grid">
+                            <div class="readonly-cell">
+                                <strong>@line.ItemName</strong>
+                                <span>@(line.ItemType ?? "No type") - Requested: @line.QuantityRequested</span>
+                            </div>
+                            <input asp-for="LineUpdates[index].LineId" type="hidden" />
+                            <input class="text-input" asp-for="LineUpdates[index].QuantityConfirmed" type="number" min="0" />
+                            <input class="text-input" asp-for="LineUpdates[index].BatchNumber" placeholder="Batch number" />
+                            <input class="text-input" asp-for="LineUpdates[index].ExpiryDate" type="date" />
+                        </div>
+                    }
+
+                    <div class="button-row">
+                        <button class="menu-btn equipment-btn" type="submit">Save Supplier Confirmation</button>
+                    </div>
+                </form>
+            </section>
+
+            @if (Model.IsSeniorManager)
+            {
+                <section class="form-panel">
+                    <div class="section-label">Register Entry Permission</div>
+                    <p class="helper-text">Senior management can enter the stock themselves or authorise one operational manager.</p>
+                    <form method="post" asp-page-handler="AuthoriseRegister" asp-route-orderId="@order.Id">
+                        <div class="form-grid">
+                            <label>
+                                Operational manager
+                                <select class="text-input" asp-for="AuthorisedUserId" asp-items="Model.OperationalManagers">
+                                    <option value="">Senior management will enter stock</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="button-row">
+                            <button class="menu-btn equipment-btn" type="submit">Save Register Permission</button>
+                        </div>
+                    </form>
+                </section>
+            }
+
+            <section class="form-panel">
+                <div class="section-label">Enter Stock Into Register</div>
+                <p class="helper-text">Only senior management or the authorised operational manager should complete this step.</p>
+                <form method="post" asp-page-handler="EnterRegister" asp-route-orderId="@order.Id">
+                    <div class="line-grid register-grid line-heading">
+                        <div>Item / batch</div>
+                        <div>Register location</div>
+                    </div>
+                    @for (var index = 0; index < order.Lines.Count; index++)
+                    {
+                        var line = order.Lines[index];
+                        <div class="line-grid register-grid">
+                            <div class="readonly-cell">
+                                <strong>@line.ItemName</strong>
+                                <span>Batch: @(line.BatchNumber ?? "Not confirmed") | Expiry: @(line.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not confirmed")</span>
+                            </div>
+                            <input asp-for="LineUpdates[index].LineId" type="hidden" />
+                            <input class="text-input" asp-for="LineUpdates[index].RegisterLocation" placeholder="Main store, base, shelf, etc." />
+                        </div>
+                    }
+                    <div class="button-row">
+                        <button class="menu-btn equipment-btn" type="submit" disabled="@(!Model.CanEnterRegister)">Enter Into Register</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Allocate Stock</div>
+                <p class="helper-text">Allocate by item, batch, quantity, and destination after the stock has been physically moved.</p>
+                <form method="post" asp-page-handler="Allocate" asp-route-orderId="@order.Id">
+                    <div class="line-grid allocation-grid line-heading">
+                        <div>Item / batch</div>
+                        <div>Quantity</div>
+                        <div>Allocation location</div>
+                    </div>
+                    @for (var index = 0; index < order.Lines.Count; index++)
+                    {
+                        var line = order.Lines[index];
+                        <div class="line-grid allocation-grid">
+                            <div class="readonly-cell">
+                                <strong>@line.ItemName</strong>
+                                <span>Confirmed: @(line.QuantityConfirmed?.ToString() ?? "Not confirmed") | Batch: @(line.BatchNumber ?? "Not confirmed")</span>
+                            </div>
+                            <input asp-for="LineUpdates[index].LineId" type="hidden" />
+                            <input class="text-input" asp-for="LineUpdates[index].QuantityAllocated" type="number" min="0" />
+                            <input class="text-input" asp-for="LineUpdates[index].AllocationLocation" placeholder="Vehicle, base, kit, store room" />
+                        </div>
+                    }
+                    <div class="button-row">
+                        <button class="menu-btn equipment-btn" type="submit">Save Allocation</button>
+                    </div>
+                </form>
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+.order-action-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.order-action-inner { width: 100%; max-width: 1080px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.summary-panel, .form-panel { margin-bottom: 18px; padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.70); text-align: left; }
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; font-size: 14px; font-weight: 700; color: #425466; }
+.section-label { margin-bottom: 12px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.helper-text { margin: 0 0 14px 0; color: #64748b; font-size: 14px; font-weight: 700; }
+.message-input, .text-input, select.text-input { width: 100%; padding: 13px 14px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #ffffff; color: #111827; font-size: 15px; box-sizing: border-box; }
+.message-input { min-height: 190px; resize: vertical; }
+.button-row { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+.button-row .menu-btn { min-width: 230px; border: none; }
+.line-grid { display: grid; grid-template-columns: 1.3fr 150px 1fr 170px; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+.register-grid { grid-template-columns: 1.4fr 1fr; }
+.allocation-grid { grid-template-columns: 1.4fr 150px 1fr; }
+.line-heading { color: #52606d; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .6px; align-items: center; }
+.readonly-cell { min-height: 48px; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 10px 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; color: #1f2937; box-sizing: border-box; }
+.readonly-cell strong { font-size: 14px; font-weight: 900; }
+.readonly-cell span { font-size: 12px; font-weight: 700; color: #64748b; }
+.form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@@media (max-width: 850px) { .summary-grid, .line-grid, .register-grid, .allocation-grid { grid-template-columns: 1fr; } .button-row { justify-content: stretch; } .button-row .menu-btn { width: 100%; } }
+</style>
+
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.SuccessMessage),
+            delay: 1300
+        });
+    </script>
+}

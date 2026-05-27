@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Task Inbox";
+    ViewData["Title"] = "My Tasks";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -13,7 +13,7 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Assigned Actions</div>
-        <h2 class="page-title">Task Inbox</h2>
+        <h2 class="page-title">My Tasks</h2>
         <p class="page-subtitle">Select an assigned action to view the instruction, expiry, and task-only access.</p>
 
         @if (!Model.OpenTasks.Any())

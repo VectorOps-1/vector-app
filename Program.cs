@@ -37,7 +37,7 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<VectorDbContext>();
-    db.Database.Migrate();
+    await DevelopmentDatabase.InitialiseAsync(db);
 }
 
 if (!app.Environment.IsDevelopment())

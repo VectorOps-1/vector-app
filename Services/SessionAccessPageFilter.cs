@@ -42,7 +42,15 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         ["/Vehicles"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
+        ["/MoveAsset"] = ManagementAccess,
         ["/Stock"] = ManagementAccess,
+        ["/StockRegister"] = ManagementAccess,
+        ["/StockOrders"] = ManagementAccess,
+        ["/PlaceStockOrder"] = ManagementAccess,
+        ["/StockOrderAction"] = ManagementAccess,
+        ["/SupplierConfirmations"] = ManagementAccess,
+        ["/EnterStockRegister"] = ManagementAccess,
+        ["/AllocateStock"] = ManagementAccess,
         ["/Staff"] = ManagementAccess,
         ["/StaffRegister"] = ManagementAccess,
         ["/StaffFiles"] = ManagementAccess,
@@ -60,6 +68,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/StaffRecordsSearch"] = ManagementAccess,
 
         ["/MasterSetup"] = SeniorAccess,
+        ["/OperationalAreas"] = SeniorAccess,
         ["/CompanyProfile"] = SeniorAccess,
         ["/CompanyName"] = SeniorAccess,
         ["/LogoUpload"] = SeniorAccess,
@@ -80,7 +89,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
     {
         "/AddItem",
-        "/Stock"
+        "/Stock",
+        "/MoveAsset"
     };
 
     public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
@@ -176,6 +186,10 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "Add New Equipment" => IsAddItemRequest(pagePath, query, "equipment"),
             "Add New Stock Item" => IsAddItemRequest(pagePath, query, "stock"),
             "Add Medication" => IsAddItemRequest(pagePath, query, "medication"),
+            "Move / Reallocate Vehicle" => IsMoveAssetRequest(pagePath, query, "vehicle"),
+            "Move / Reallocate Equipment" => IsMoveAssetRequest(pagePath, query, "equipment"),
+            "Move / Reallocate Stock" => IsMoveAssetRequest(pagePath, query, "stock"),
+            "Move / Reallocate Medication" => IsMoveAssetRequest(pagePath, query, "medication"),
             "Receive Stock" => IsStockRequest(pagePath),
             "Issue / Allocate Stock" => IsStockRequest(pagePath),
             "Batch Number Tracking" => IsStockRequest(pagePath),
@@ -193,6 +207,12 @@ public class SessionAccessPageFilter : IAsyncPageFilter
     private static bool IsStockRequest(string pagePath)
     {
         return string.Equals(pagePath, "/Stock", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMoveAssetRequest(string pagePath, IQueryCollection query, string assetType)
+    {
+        return string.Equals(pagePath, "/MoveAsset", StringComparison.OrdinalIgnoreCase)
+            && QueryEquals(query, "asset", assetType);
     }
 
     private static bool QueryEquals(IQueryCollection query, string key, string expectedValue)

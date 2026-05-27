@@ -3,7 +3,7 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Daily Equipment Checklist";
+    ViewData["Title"] = "Daily Readiness Equipment Section";
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
 }
@@ -11,8 +11,8 @@
 <div class="checklist-form-screen"><div class="checklist-form-inner">
     <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
     <div class="client-line">Client: @companyName</div>
-    <div class="home-label">Daily Checklist</div>
-    <h2 class="page-title">Equipment Checklist</h2>
+    <div class="home-label">Daily Vehicle Readiness</div>
+    <h2 class="page-title">Equipment Section</h2>
     <p class="page-subtitle">Saved equipment checks link to the same vehicle inspection session.</p>
 
     <div class="linked-vehicle-panel">
@@ -42,7 +42,7 @@
                     data-previous-checklist-notes="@Model.PreviousChecklistNotes">
                 Same as previous shift
             </button>
-            <p id="sameAsPreviousEquipmentStatus">Fresh equipment check is the default. Use this only when the equipment carried on this vehicle is unchanged.</p>
+            <p id="sameAsPreviousEquipmentStatus">Fresh equipment checks are the default. Use this only when the equipment carried on this vehicle is unchanged.</p>
         </div>
 
         <div class="form-grid">
@@ -57,8 +57,8 @@
         <label class="notes-field">Issues / notes<textarea asp-for="ChecklistNotes" id="checklistNotesInput" rows="5" placeholder="Record faults, missing items, damage, or readiness notes"></textarea></label>
 
         <div class="action-row">
-            <a class="menu-btn vehicle-btn" href="@Model.VehicleChecklistUrl">Back: Vehicle Inspection</a>
-            <button class="menu-btn equipment-btn continue-btn" type="submit">Save Equipment Checklist</button>
+            <a class="menu-btn vehicle-btn" href="@Model.VehicleChecklistUrl">Back: Vehicle Section</a>
+            <button class="menu-btn equipment-btn continue-btn" type="submit">Save Equipment Section</button>
         </div>
     </form>
 </div></div>

@@ -38,8 +38,8 @@ public class DailyVehicleChecklistModel : PageModel
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public bool AllowSameAsPreviousVehicleInspection { get; private set; } = true;
-    public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Checklist";
-    public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Inspection";
+    public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Readiness";
+    public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Readiness";
 
     public IReadOnlyList<VehicleRegisterOption> VehicleRegisterOptions { get; } =
     [
@@ -165,7 +165,7 @@ public class DailyVehicleChecklistModel : PageModel
             return Page();
         }
 
-        StatusMessage = "Vehicle inspection ready to save. Continue to equipment checklist for the same vehicle. Database storage, schematic damage marks, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+        StatusMessage = "Vehicle readiness details saved for this step. Continue to the vehicle-carried equipment section for the same registration.";
         ActionSaved = true;
         return Page();
     }

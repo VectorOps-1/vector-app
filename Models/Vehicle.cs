@@ -29,6 +29,17 @@ public class Vehicle
     [MaxLength(80)]
     public string Status { get; set; } = "Active";
 
+    public int? CurrentOperationalAreaId { get; set; }
+    public OperationalArea? CurrentOperationalArea { get; set; }
+
+    [MaxLength(260)]
+    public string? CurrentLocationDetail { get; set; }
+
+    public int? LastMovedByUserId { get; set; }
+    public AppUser? LastMovedByUser { get; set; }
+
+    public DateTime? LastMovedAtUtc { get; set; }
+
     [MaxLength(1200)]
     public string? Notes { get; set; }
 

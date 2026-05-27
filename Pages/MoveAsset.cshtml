@@ -1,0 +1,190 @@
+@page
+@model MoveAssetModel
+@using vector_app_local.Models
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var returnUrl = $"/MoveAsset?asset={Model.AssetType}";
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Asset Movement</div>
+        <h2 class="page-title">@Model.PageTitle</h2>
+        <p class="page-subtitle">Move assets between the bases and operational areas created in Master Setup.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <nav class="asset-tabs" aria-label="Asset type">
+            <a class="asset-tab @(Model.AssetType == AssetTypes.Vehicle ? "active" : string.Empty)" href="/MoveAsset?asset=vehicle">Vehicles</a>
+            <a class="asset-tab @(Model.AssetType == AssetTypes.Equipment ? "active" : string.Empty)" href="/MoveAsset?asset=equipment">Equipment</a>
+            <a class="asset-tab @(Model.AssetType == AssetTypes.Stock ? "active" : string.Empty)" href="/MoveAsset?asset=stock">Stock</a>
+            <a class="asset-tab @(Model.AssetType == AssetTypes.Medication ? "active" : string.Empty)" href="/MoveAsset?asset=medication">Medication</a>
+        </nav>
+
+        <form class="move-form" method="post">
+            <input asp-for="AssetType" type="hidden" />
+            <input asp-for="TaskId" type="hidden" />
+            <input asp-for="TaskAccess" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            @if (Model.OperationalAreaOptions.Count == 0)
+            {
+                <section class="form-panel warning-panel">
+                    <div class="section-label">Setup Required</div>
+                    <p>Create at least one active base or operational area before assets can be moved.</p>
+                    <a class="menu-btn equipment-btn" href="/OperationalAreas">Open Operational Areas</a>
+                </section>
+            }
+            else
+            {
+                <section class="form-panel">
+                    <div class="section-label">@Model.AssetDisplayName Movement</div>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label class="field-label" asp-for="AssetId">@Model.AssetDisplayName to move</label>
+                            <select class="text-input" asp-for="AssetId" asp-items="Model.AssetOptions">
+                                <option value="">Select @Model.AssetDisplayName.ToLowerInvariant()</option>
+                            </select>
+                            <span class="field-error" asp-validation-for="AssetId"></span>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" asp-for="ToOperationalAreaId">Move to</label>
+                            <select class="text-input" asp-for="ToOperationalAreaId" asp-items="Model.OperationalAreaOptions">
+                                <option value="">Select destination</option>
+                            </select>
+                            <span class="field-error" asp-validation-for="ToOperationalAreaId"></span>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" asp-for="LocationDetail">Specific bay / vehicle / shelf</label>
+                            <input class="text-input" asp-for="LocationDetail" placeholder="Optional exact location inside the destination" />
+                        </div>
+
+                        @if (Model.IsQuantityAsset)
+                        {
+                            <div class="field-group">
+                                <label class="field-label" asp-for="QuantityMoved">Quantity moved</label>
+                                <input class="text-input" asp-for="QuantityMoved" type="number" min="0" placeholder="Optional quantity" />
+                                <span class="field-error" asp-validation-for="QuantityMoved"></span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="MovementReason">Reason / instruction</label>
+                        <textarea class="message-input" asp-for="MovementReason" placeholder="Reason for move, instruction, authorisation note, or operational context"></textarea>
+                    </div>
+                </section>
+
+                @if (!Model.TaskAccess)
+                {
+                    <section class="form-panel">
+                        <div class="section-label">Send As Task</div>
+                        <div class="form-grid">
+                            <div class="field-group">
+                                <label class="field-label" asp-for="AssignedToUserId">Assigned person</label>
+                                <select class="text-input" asp-for="AssignedToUserId" asp-items="Model.Recipients">
+                                    <option value="">Select recipient only if sending task</option>
+                                </select>
+                                <span class="field-error" asp-validation-for="AssignedToUserId"></span>
+                            </div>
+
+                            <div class="field-group">
+                                <label class="field-label" asp-for="ExpiresAtLocal">Task access expires</label>
+                                <input class="text-input" asp-for="ExpiresAtLocal" type="datetime-local" />
+                            </div>
+                        </div>
+                    </section>
+                }
+
+                <div class="action-row">
+                    <button class="menu-btn equipment-btn" type="submit" name="submitAction" value="save">Save Movement</button>
+                    @if (!Model.TaskAccess)
+                    {
+                        <button class="menu-btn vehicle-btn" type="submit" name="submitAction" value="send-task">Send Movement Task</button>
+                    }
+                </div>
+            }
+        </form>
+
+        <section class="list-panel">
+            <div class="section-label">Recent @Model.AssetDisplayName Movements</div>
+            @if (Model.RecentMovements.Count == 0)
+            {
+                <div class="empty-state">No movement history recorded for this asset type yet.</div>
+            }
+            else
+            {
+                <div class="movement-list">
+                    @foreach (var movement in Model.RecentMovements)
+                    {
+                        <article class="movement-row">
+                            <div>
+                                <strong>@movement.AssetLabel</strong>
+                                <span>@(movement.FromLocation ?? "Unallocated") → @(movement.ToLocation ?? "Not set")</span>
+                            </div>
+                            <div>
+                                <strong>@movement.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong>
+                                <span>@(movement.MovedByName ?? "Unknown user")@(movement.QuantityMoved.HasValue ? $" / Qty {movement.QuantityMoved.Value}" : string.Empty)</span>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<style>
+.module-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.module-inner { width: 100%; max-width: 1100px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { margin: 0 auto 24px auto; max-width: 760px; font-size: 16px; font-weight: 500; color: #6b7280; }
+.asset-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 22px 0; }
+.asset-tab { min-height: 48px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: rgba(255,255,255,.72); color: #102a3a; font-size: 15px; font-weight: 900; text-decoration: none; }
+.asset-tab.active { background: #0E5E7A; color: #fff; border-color: #0E5E7A; }
+.move-form { display: flex; flex-direction: column; gap: 22px; }
+.form-panel, .list-panel { padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.warning-panel p { margin: 0 0 16px 0; color: #52606d; font-weight: 700; }
+.section-label { margin-bottom: 16px; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #5f6b7a; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+.field-group { text-align: left; margin-top: 16px; }
+.field-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #425466; }
+.text-input, .message-input { width: 100%; padding: 14px 16px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #fff; font-size: 16px; color: #111827; box-sizing: border-box; }
+.message-input { min-height: 120px; resize: vertical; }
+.action-row { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+.action-row .menu-btn { min-width: 260px; border: none; }
+.status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.validation-summary, .field-error { color: #9f3030; font-size: 13px; font-weight: 700; }
+.list-panel { margin-top: 28px; }
+.movement-list { display: flex; flex-direction: column; gap: 10px; }
+.movement-row { display: grid; grid-template-columns: 1.4fr .8fr; gap: 14px; padding: 14px 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; }
+.movement-row strong { display: block; color: #102a3a; font-size: 15px; font-weight: 900; }
+.movement-row span { display: block; margin-top: 4px; color: #52606d; font-size: 13px; font-weight: 700; }
+.empty-state { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; color: #52606d; font-weight: 700; }
+@@media (max-width: 780px) { .asset-tabs, .form-grid, .movement-row { grid-template-columns: 1fr; } }
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Movement saved."),
+            redirectUrl: @Json.Serialize(returnUrl),
+            delay: 1300
+        });
+    </script>
+}

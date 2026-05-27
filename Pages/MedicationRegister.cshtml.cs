@@ -31,6 +31,7 @@ public class MedicationRegisterModel : PageModel
 
         var query = _db.MedicationItems
             .Include(item => item.CreatedByUser)
+            .Include(item => item.LastAllocatedByUser)
             .Where(item => item.CompanyId == currentUser.CompanyId);
 
         if (!string.IsNullOrWhiteSpace(SearchTerm))
@@ -40,8 +41,11 @@ public class MedicationRegisterModel : PageModel
                 item.Name.Contains(search)
                 || (item.MedicationCode != null && item.MedicationCode.Contains(search))
                 || (item.MedicationType != null && item.MedicationType.Contains(search))
+                || (item.Schedule != null && item.Schedule.Contains(search))
                 || (item.BatchNumber != null && item.BatchNumber.Contains(search))
-                || (item.StorageLocation != null && item.StorageLocation.Contains(search)));
+                || (item.StorageLocation != null && item.StorageLocation.Contains(search))
+                || (item.LastAllocationLocation != null && item.LastAllocationLocation.Contains(search))
+                || (item.LastAllocatedByUser != null && item.LastAllocatedByUser.FullName.Contains(search)));
         }
 
         MedicationItems = await query
@@ -53,11 +57,15 @@ public class MedicationRegisterModel : PageModel
                 Name = item.Name,
                 MedicationCode = item.MedicationCode,
                 MedicationType = item.MedicationType,
+                Schedule = item.Schedule,
                 BatchNumber = item.BatchNumber,
                 StorageLocation = item.StorageLocation,
                 Status = item.Status,
                 Quantity = item.Quantity,
                 ExpiryDate = item.ExpiryDate,
+                LastAllocationLocation = item.LastAllocationLocation,
+                LastAllocatedAtUtc = item.LastAllocatedAtUtc,
+                LastAllocatedByName = item.LastAllocatedByUser == null ? null : item.LastAllocatedByUser.FullName,
                 CreatedByName = item.CreatedByUser == null ? "Manager" : item.CreatedByUser.FullName,
                 CreatedAtUtc = item.CreatedAtUtc
             })
@@ -72,11 +80,15 @@ public class MedicationRegisterModel : PageModel
         public string Name { get; set; } = string.Empty;
         public string? MedicationCode { get; set; }
         public string? MedicationType { get; set; }
+        public string? Schedule { get; set; }
         public string? BatchNumber { get; set; }
         public string? StorageLocation { get; set; }
         public string Status { get; set; } = string.Empty;
         public int? Quantity { get; set; }
         public DateTime? ExpiryDate { get; set; }
+        public string? LastAllocationLocation { get; set; }
+        public DateTime? LastAllocatedAtUtc { get; set; }
+        public string? LastAllocatedByName { get; set; }
         public string CreatedByName { get; set; } = string.Empty;
         public DateTime CreatedAtUtc { get; set; }
     }

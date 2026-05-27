@@ -22,21 +22,27 @@
         <div class="signed-in-line">Signed in: @Model.SignedInName (@Model.SignedInRole)</div>
         <div class="view-badge">@viewName</div>
 
-        @if (isStaff)
-        {
-            <div class="management-section-label">Staff Actions</div>
+        <section class="dashboard-section">
+            <div class="management-section-label">Operational Work</div>
 
-            <div class="workflow-grid staff-workflow-grid">
-                <a class="workflow-action" href="/CompleteChecklist">Complete Checklist</a>
-                <a class="workflow-action" href="/PersonalDocuments">Upload Personal Documents</a>
-                <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
+            <div class="workflow-grid">
+                <a class="workflow-action primary-action" href="/DailyVehicleChecklist">Daily Vehicle Readiness</a>
+                <a class="workflow-action" href="/TaskInbox">My Tasks</a>
+                @if (!isStaff)
+                {
+                    <a class="workflow-action" href="/IssueInbox">My Assigned Issues</a>
+                }
+                <a class="workflow-action" href="/PersonalDocuments">My Documents</a>
                 <a class="workflow-action" href="/TaskFeedback">Task Feedback</a>
+                <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
             </div>
-        }
-        else
+        </section>
+
+        @if (!isStaff)
         {
-            <div class="management-dashboard">
-                <div class="management-section-label">Operational Areas</div>
+            <div class="section-divider"></div>
+            <section class="management-dashboard dashboard-section">
+                <div class="management-section-label">Management Oversight</div>
 
                 <div class="management-category-grid">
                     <section class="category-card category-vehicles">
@@ -45,15 +51,8 @@
                             <span class="category-index">01</span>
                         </div>
                         <div class="category-actions">
-                            <a class="category-action primary" href="/Vehicles">Vehicle Module</a>
-                            <a class="category-action" href="/AddItem?type=vehicle">Add Vehicle</a>
-                            <a class="category-action" href="/EditVehicleChecklist?checklist=daily-vehicle">Vehicle Checklist Setup</a>
-                            @if (isSeniorManagement)
-                            {
-                                <a class="category-action" href="/UploadVehicleRegister">Vehicle Register</a>
-                                <a class="category-action" href="/VehicleSchematicLibrary">Schematic Library</a>
-                            }
-                            <a class="category-action danger" href="/ReportIssue?module=vehicle">Vehicle Issue</a>
+                            <a class="category-action primary" href="/Vehicles">Open Vehicles</a>
+                            <a class="category-action" href="/MoveAsset?asset=vehicle">Move / Reallocate</a>
                         </div>
                     </section>
 
@@ -63,14 +62,8 @@
                             <span class="category-index">02</span>
                         </div>
                         <div class="category-actions">
-                            <a class="category-action primary" href="/Equipment">Equipment Module</a>
-                            <a class="category-action" href="/AddItem?type=equipment">Add Equipment</a>
-                            <a class="category-action" href="/EditEquipmentChecklist">Equipment Checklist Setup</a>
-                            @if (isSeniorManagement)
-                            {
-                                <a class="category-action" href="/UploadEquipmentRegister">Equipment Register</a>
-                            }
-                            <a class="category-action danger" href="/ReportIssue?module=equipment">Equipment Issue</a>
+                            <a class="category-action primary" href="/Equipment">Open Equipment</a>
+                            <a class="category-action" href="/MoveAsset?asset=equipment">Move / Reallocate</a>
                         </div>
                     </section>
 
@@ -79,19 +72,8 @@
                             <h2>Staff</h2>
                             <span class="category-index">03</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/Staff">Staff Module</a>
-                            <a class="category-action" href="/StaffRegister">Staff Register</a>
-                            <a class="category-action" href="/StaffFiles">Files & Folders</a>
-                            <a class="category-action" href="/StaffRecordsSearch">Staff Records</a>
-                            <a class="category-action" href="/PersonalDocuments">Personal Documents</a>
-                            <a class="category-action" href="/AddItem?type=staff">Add Staff Profile</a>
-                            @if (isSeniorManagement)
-                            {
-                                <a class="category-action" href="/CreateOperationalStaffAccess">Create Staff Access</a>
-                                <a class="category-action" href="/CreateManagerAccess">Create Manager Access</a>
-                            }
-                            <a class="category-action danger" href="/ReportIssue?module=staff">Staff Issue</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Staff">Open Staff</a>
                         </div>
                     </section>
 
@@ -101,14 +83,8 @@
                             <span class="category-index">04</span>
                         </div>
                         <div class="category-actions">
-                            <a class="category-action primary" href="/Stock">Stock Module</a>
-                            <a class="category-action" href="/AddItem?type=stock">Add Stock Item</a>
-                            @if (isSeniorManagement)
-                            {
-                                <a class="category-action" href="/UploadStockRegister">Stock Register</a>
-                            }
-                            <a class="category-action" href="/SendTask">Assign Stock Task</a>
-                            <a class="category-action danger" href="/ReportIssue?module=stock">Stock Issue</a>
+                            <a class="category-action primary" href="/Stock">Open Stock</a>
+                            <a class="category-action" href="/MoveAsset?asset=stock">Move / Reallocate</a>
                         </div>
                     </section>
 
@@ -118,41 +94,41 @@
                             <span class="category-index">05</span>
                         </div>
                         <div class="category-actions">
-                            <a class="category-action primary" href="/Medication">Medication Module</a>
-                            <a class="category-action" href="/MedicationRegister">Medication Register</a>
-                            <a class="category-action" href="/AddItem?type=medication">Add Medication</a>
-                            <a class="category-action" href="/SendTask">Assign Medication Task</a>
-                            <a class="category-action danger" href="/ReportIssue?module=medication">Medication Issue</a>
+                            <a class="category-action primary" href="/Medication">Open Medication</a>
+                            <a class="category-action" href="/MoveAsset?asset=medication">Move / Reallocate</a>
+                        </div>
+                    </section>
+
+                    <section class="category-card category-workflow">
+                        <div class="category-heading">
+                            <h2>Tasks & Issues</h2>
+                            <span class="category-index">06</span>
+                        </div>
+                        <div class="category-actions">
+                            <a class="category-action primary" href="/SendTask">Send Task</a>
+                            <a class="category-action" href="/IssueReports">All Open Issues</a>
                         </div>
                     </section>
                 </div>
-            </div>
-
-            <div class="section-divider"></div>
-            <div class="management-section-label">Daily Workflow</div>
-
-            <div class="workflow-grid">
-                <a class="workflow-action" href="/SendTask">Send Task</a>
-                <a class="workflow-action" href="/TaskInbox">Task Inbox</a>
-                <a class="workflow-action" href="/IssueInbox">Issue Inbox</a>
-                <a class="workflow-action" href="/IssueReports">Issue Pool</a>
-                <a class="workflow-action" href="/CompleteChecklist">Complete Checklist</a>
-                <a class="workflow-action" href="/TaskFeedback">Task Feedback</a>
-                <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
-            </div>
+            </section>
 
             @if (isSeniorManagement)
             {
                 <div class="section-divider compact-divider"></div>
-                <div class="management-section-label">Company Setup</div>
+                <section class="dashboard-section">
+                    <div class="management-section-label">System Setup</div>
 
-                <div class="workflow-grid">
-                    <a class="workflow-action" href="/MasterSetup">Master Setup</a>
-                    <a class="workflow-action" href="/CompanyProfile">Company Profile</a>
-                    <a class="workflow-action" href="/TaskCommunicationSetup">Task Communication</a>
-                    <a class="workflow-action" href="/AuditLog">Audit Log</a>
-                    <a class="workflow-action" href="/CompanyLogin">Company Login</a>
-                </div>
+                    <div class="workflow-grid">
+                        <a class="workflow-action" href="/MasterSetup">Master Setup</a>
+                        <a class="workflow-action" href="/OperationalAreas">Operational Areas</a>
+                        <a class="workflow-action" href="/EditChecklist">Checklist Builder</a>
+                        <a class="workflow-action" href="/CompanyProfile">Company Profile</a>
+                        <a class="workflow-action" href="/VehicleSchematicLibrary">Schematic Library</a>
+                        <a class="workflow-action" href="/CreateManagerAccess">Access Setup</a>
+                        <a class="workflow-action" href="/TaskCommunicationSetup">Task Communication</a>
+                        <a class="workflow-action" href="/AuditLog">Audit Log</a>
+                    </div>
+                </section>
             }
         }
 
@@ -270,6 +246,10 @@
     margin-top: 8px;
 }
 
+.dashboard-section {
+    width: 100%;
+}
+
 .management-section-label {
     margin-bottom: 16px;
     font-size: 12px;
@@ -317,6 +297,10 @@
     border-top-color: #9B3B3B;
 }
 
+.category-workflow {
+    border-top-color: #4B5563;
+}
+
 .category-heading {
     display: flex;
     align-items: baseline;
@@ -343,6 +327,10 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+
+.category-actions.single-action {
+    grid-template-columns: 1fr;
 }
 
 .category-action,
@@ -372,6 +360,12 @@
 }
 
 .category-action.primary {
+    background: #126C84;
+    border-color: #126C84;
+    color: #ffffff;
+}
+
+.workflow-action.primary-action {
     background: #126C84;
     border-color: #126C84;
     color: #ffffff;

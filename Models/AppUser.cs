@@ -32,6 +32,12 @@ public class AppUser
     public ICollection<IssueReport> ResolvedIssueReports { get; set; } = new List<IssueReport>();
     public ICollection<IssueReportEvent> IssueReportEvents { get; set; } = new List<IssueReportEvent>();
     public ICollection<MedicationItem> CreatedMedicationItems { get; set; } = new List<MedicationItem>();
+    public ICollection<MedicationItem> LastAllocatedMedicationItems { get; set; } = new List<MedicationItem>();
+    public ICollection<StockItem> CreatedStockItems { get; set; } = new List<StockItem>();
+    public ICollection<StockItem> LastMovedStockItems { get; set; } = new List<StockItem>();
+    public ICollection<Vehicle> LastMovedVehicles { get; set; } = new List<Vehicle>();
+    public ICollection<EquipmentItem> LastMovedEquipmentItems { get; set; } = new List<EquipmentItem>();
+    public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
     public ICollection<DailyVehicleReadinessReport> PerformedVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

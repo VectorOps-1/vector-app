@@ -16,7 +16,12 @@ public class VectorDbContext : DbContext
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
     public DbSet<IssueReport> IssueReports => Set<IssueReport>();
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
+    public DbSet<OperationalArea> OperationalAreas => Set<OperationalArea>();
+    public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
     public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
+    public DbSet<StockItem> StockItems => Set<StockItem>();
+    public DbSet<StockOrder> StockOrders => Set<StockOrder>();
+    public DbSet<StockOrderLine> StockOrderLines => Set<StockOrderLine>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<EquipmentItem> EquipmentItems => Set<EquipmentItem>();
     public DbSet<VehicleEquipmentAssignment> VehicleEquipmentAssignments => Set<VehicleEquipmentAssignment>();
@@ -119,6 +124,49 @@ public class VectorDbContext : DbContext
             .HasForeignKey(issueEvent => issueEvent.PerformedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<OperationalArea>()
+            .HasIndex(area => new { area.CompanyId, area.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<OperationalArea>()
+            .HasOne(area => area.Company)
+            .WithMany(company => company.OperationalAreas)
+            .HasForeignKey(area => area.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasIndex(movement => new { movement.CompanyId, movement.AssetType, movement.AssetId, movement.CreatedAtUtc });
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasOne(movement => movement.Company)
+            .WithMany(company => company.AssetMovements)
+            .HasForeignKey(movement => movement.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasOne(movement => movement.FromOperationalArea)
+            .WithMany(area => area.SourceMovements)
+            .HasForeignKey(movement => movement.FromOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasOne(movement => movement.ToOperationalArea)
+            .WithMany(area => area.DestinationMovements)
+            .HasForeignKey(movement => movement.ToOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasOne(movement => movement.MovedByUser)
+            .WithMany(user => user.AssetMovements)
+            .HasForeignKey(movement => movement.MovedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetMovement>()
+            .HasOne(movement => movement.TaskItem)
+            .WithMany()
+            .HasForeignKey(movement => movement.TaskItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<MedicationItem>()
             .HasOne(medication => medication.Company)
             .WithMany(company => company.MedicationItems)
@@ -131,6 +179,78 @@ public class VectorDbContext : DbContext
             .HasForeignKey(medication => medication.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<MedicationItem>()
+            .HasOne(medication => medication.LastAllocatedByUser)
+            .WithMany(user => user.LastAllocatedMedicationItems)
+            .HasForeignKey(medication => medication.LastAllocatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MedicationItem>()
+            .HasOne(medication => medication.CurrentOperationalArea)
+            .WithMany()
+            .HasForeignKey(medication => medication.CurrentOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockItem>()
+            .HasIndex(stock => new { stock.CompanyId, stock.ItemName, stock.BatchNumber, stock.Location });
+
+        modelBuilder.Entity<StockItem>()
+            .HasOne(stock => stock.Company)
+            .WithMany(company => company.StockItems)
+            .HasForeignKey(stock => stock.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockItem>()
+            .HasOne(stock => stock.CreatedByUser)
+            .WithMany(user => user.CreatedStockItems)
+            .HasForeignKey(stock => stock.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockItem>()
+            .HasOne(stock => stock.LastMovedByUser)
+            .WithMany(user => user.LastMovedStockItems)
+            .HasForeignKey(stock => stock.LastMovedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockItem>()
+            .HasOne(stock => stock.CurrentOperationalArea)
+            .WithMany()
+            .HasForeignKey(stock => stock.CurrentOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockOrder>()
+            .HasIndex(order => new { order.CompanyId, order.Status, order.CreatedAtUtc });
+
+        modelBuilder.Entity<StockOrder>()
+            .HasOne(order => order.Company)
+            .WithMany(company => company.StockOrders)
+            .HasForeignKey(order => order.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockOrder>()
+            .HasOne(order => order.RequestedByUser)
+            .WithMany()
+            .HasForeignKey(order => order.RequestedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockOrder>()
+            .HasOne(order => order.ApprovedBySeniorUser)
+            .WithMany()
+            .HasForeignKey(order => order.ApprovedBySeniorUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockOrder>()
+            .HasOne(order => order.RegisterEntryAuthorisedUser)
+            .WithMany()
+            .HasForeignKey(order => order.RegisterEntryAuthorisedUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockOrderLine>()
+            .HasOne(line => line.StockOrder)
+            .WithMany(order => order.Lines)
+            .HasForeignKey(line => line.StockOrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Vehicle>()
             .HasIndex(vehicle => new { vehicle.CompanyId, vehicle.RegistrationNumber })
             .IsUnique();
@@ -141,6 +261,18 @@ public class VectorDbContext : DbContext
             .HasForeignKey(vehicle => vehicle.CompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Vehicle>()
+            .HasOne(vehicle => vehicle.CurrentOperationalArea)
+            .WithMany()
+            .HasForeignKey(vehicle => vehicle.CurrentOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Vehicle>()
+            .HasOne(vehicle => vehicle.LastMovedByUser)
+            .WithMany(user => user.LastMovedVehicles)
+            .HasForeignKey(vehicle => vehicle.LastMovedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<EquipmentItem>()
             .HasIndex(equipment => new { equipment.CompanyId, equipment.SerialOrAssetId });
 
@@ -148,6 +280,18 @@ public class VectorDbContext : DbContext
             .HasOne(equipment => equipment.Company)
             .WithMany(company => company.EquipmentItems)
             .HasForeignKey(equipment => equipment.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<EquipmentItem>()
+            .HasOne(equipment => equipment.CurrentOperationalArea)
+            .WithMany()
+            .HasForeignKey(equipment => equipment.CurrentOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<EquipmentItem>()
+            .HasOne(equipment => equipment.LastMovedByUser)
+            .WithMany(user => user.LastMovedEquipmentItems)
+            .HasForeignKey(equipment => equipment.LastMovedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<VehicleEquipmentAssignment>()

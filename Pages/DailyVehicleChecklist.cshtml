@@ -15,7 +15,7 @@
             <div class="client-line">Client: @companyName</div>
             <div class="home-label">@Model.FrequencyLabel</div>
             <h2 class="page-title">@Model.InspectionTitle</h2>
-            <p class="page-subtitle">Saved inspections will link to the signed-in profile and create an audit record.</p>
+            <p class="page-subtitle">One readiness flow for vehicle details, operational checks, schematic notes, and vehicle-carried equipment.</p>
         </header>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -157,8 +157,8 @@
             </section>
 
             <div class="save-bar two-actions">
-                <button class="menu-btn vehicle-btn save-btn" type="submit">Save Inspection</button>
-                <a class="menu-btn equipment-btn save-btn" href="@Model.EquipmentChecklistUrl">Next: Equipment Checklist</a>
+                <button class="menu-btn vehicle-btn save-btn" type="submit">Save Vehicle Section</button>
+                <a class="menu-btn equipment-btn save-btn" href="@Model.EquipmentChecklistUrl">Next: Equipment Section</a>
             </div>
         </form>
     </div>

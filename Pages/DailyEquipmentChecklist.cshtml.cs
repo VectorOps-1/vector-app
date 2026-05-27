@@ -69,8 +69,8 @@ public class DailyEquipmentChecklistModel : PageModel
         }
 
         StatusMessage = SameAsPreviousEquipmentCheck
-            ? $"Equipment checklist marked same as previous shift against linked vehicle: {LinkedVehicleLabel}."
-            : $"Equipment checklist ready to save against linked vehicle: {LinkedVehicleLabel}. Database storage, daily inspection session linkage, signed-in profile linkage, and audit logging will be connected in the production data phase.";
+            ? $"Equipment section marked same as previous shift against linked vehicle: {LinkedVehicleLabel}."
+            : $"Equipment section ready to save against linked vehicle: {LinkedVehicleLabel}.";
         ActionSaved = true;
         return Page();
     }
