@@ -36,7 +36,15 @@
                                 <td><input value="A101" /></td>
                                 <td><input value="123456" /></td>
                                 <td><input value="Toyota HiAce" /></td>
-                                <td><input value="Main Base" /></td>
+                                <td>
+                                    <select>
+                                        <option value="">Select location</option>
+                                        @foreach (var location in Model.LocationOptions)
+                                        {
+                                            <option value="@location.Value">@location.Text</option>
+                                        }
+                                    </select>
+                                </td>
                                 <td><input value="Operational" /></td>
                                 <td><input type="date" /></td>
                                 <td>
@@ -52,7 +60,15 @@
                                 <td><input value="A102" /></td>
                                 <td><input value="654321" /></td>
                                 <td><input value="Toyota Land Cruiser" /></td>
-                                <td><input value="Standby Post" /></td>
+                                <td>
+                                    <select>
+                                        <option value="">Select location</option>
+                                        @foreach (var location in Model.LocationOptions)
+                                        {
+                                            <option value="@location.Value">@location.Text</option>
+                                        }
+                                    </select>
+                                </td>
                                 <td><input value="Maintenance" /></td>
                                 <td><input type="date" /></td>
                                 <td>

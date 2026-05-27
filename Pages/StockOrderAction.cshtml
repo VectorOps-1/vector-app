@@ -133,7 +133,9 @@
                                 <span>Batch: @(line.BatchNumber ?? "Not confirmed") | Expiry: @(line.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not confirmed")</span>
                             </div>
                             <input asp-for="LineUpdates[index].LineId" type="hidden" />
-                            <input class="text-input" asp-for="LineUpdates[index].RegisterLocation" placeholder="Main store, base, shelf, etc." />
+                            <select class="text-input" asp-for="LineUpdates[index].RegisterLocation" asp-items="Model.LocationOptions">
+                                <option value="">Select register location</option>
+                            </select>
                         </div>
                     }
                     <div class="button-row">
@@ -161,7 +163,9 @@
                             </div>
                             <input asp-for="LineUpdates[index].LineId" type="hidden" />
                             <input class="text-input" asp-for="LineUpdates[index].QuantityAllocated" type="number" min="0" />
-                            <input class="text-input" asp-for="LineUpdates[index].AllocationLocation" placeholder="Vehicle, base, kit, store room" />
+                            <select class="text-input" asp-for="LineUpdates[index].AllocationLocation" asp-items="Model.LocationOptions">
+                                <option value="">Select allocation location</option>
+                            </select>
                         </div>
                     }
                     <div class="button-row">

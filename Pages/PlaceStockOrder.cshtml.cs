@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using vector_app_local.Data;
 using vector_app_local.Models;
 using vector_app_local.Services;
@@ -11,11 +12,13 @@ public class PlaceStockOrderModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly LocationOptionService _locationOptions;
 
-    public PlaceStockOrderModel(VectorDbContext db, CurrentUserService currentUser)
+    public PlaceStockOrderModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
     {
         _db = db;
         _currentUser = currentUser;
+        _locationOptions = locationOptions;
     }
 
     [BindProperty] public string SupplierName { get; set; } = string.Empty;
@@ -24,6 +27,19 @@ public class PlaceStockOrderModel : PageModel
     [BindProperty] public string? DeliveryInstructions { get; set; }
     [BindProperty] public string? OrderNotes { get; set; }
     [BindProperty] public List<StockOrderLineInput> Lines { get; set; } = NewLineInputs();
+    public List<SelectListItem> DeliveryLocationOptions { get; private set; } = new();
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        await LoadDeliveryLocationOptionsAsync(currentUser.CompanyId);
+        return Page();
+    }
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -32,6 +48,8 @@ public class PlaceStockOrderModel : PageModel
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
+
+        await LoadDeliveryLocationOptionsAsync(currentUser.CompanyId);
 
         var orderLines = Lines
             .Where(line => !string.IsNullOrWhiteSpace(line.ItemName) && line.QuantityRequested > 0)
@@ -67,7 +85,7 @@ public class PlaceStockOrderModel : PageModel
             ApprovedBySeniorUserId = isSenior ? currentUser.Id : null,
             SupplierName = SupplierName.Trim(),
             SupplierEmail = SupplierEmail.Trim(),
-            DeliveryAddress = DeliveryAddress,
+            DeliveryAddress = LocationOptionService.NormalizeSelectedLocation(DeliveryAddress),
             DeliveryInstructions = DeliveryInstructions,
             OrderNotes = OrderNotes,
             Status = isSenior ? StockOrderStatuses.ReadyToEmailSupplier : StockOrderStatuses.PendingSeniorApproval,
@@ -125,6 +143,11 @@ public class PlaceStockOrderModel : PageModel
     private static List<StockOrderLineInput> NewLineInputs()
     {
         return Enumerable.Range(0, 6).Select(_ => new StockOrderLineInput()).ToList();
+    }
+
+    private async Task LoadDeliveryLocationOptionsAsync(int companyId)
+    {
+        DeliveryLocationOptions = await _locationOptions.GetOperationalAreaOptionsAsync(companyId);
     }
 
     private static string BuildEmailBody(StockOrder order, string requestedBy)

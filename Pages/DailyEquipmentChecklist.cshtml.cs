@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
@@ -11,11 +12,13 @@ public class DailyEquipmentChecklistModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly LocationOptionService _locationOptions;
 
-    public DailyEquipmentChecklistModel(VectorDbContext db, CurrentUserService currentUser)
+    public DailyEquipmentChecklistModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
     {
         _db = db;
         _currentUser = currentUser;
+        _locationOptions = locationOptions;
     }
 
     [BindProperty] public string? Callsign { get; set; }
@@ -33,11 +36,12 @@ public class DailyEquipmentChecklistModel : PageModel
     public bool AllowSameAsPreviousEquipmentCheck { get; private set; } = true;
     public string DraftStorageKey { get; private set; } = "daily-equipment-readiness:anonymous";
     public string FreshChecklistUrl => "/DailyEquipmentChecklist";
+    public List<SelectListItem> LocationOptions { get; private set; } = new();
 
     public string PreviousAssetId => "MON-001";
     public string PreviousSerialNumber => "LP15-TEST-001";
     public string PreviousEquipmentName => "Defibrillator Monitor";
-    public string PreviousAssignedLocation => string.IsNullOrWhiteSpace(Callsign) ? "Linked vehicle" : Callsign;
+    public string PreviousAssignedLocation => LocationOptionService.BuildVehicleLocationValue(Callsign, Registration);
     public string PreviousBatteryState => "Full";
     public string PreviousEquipmentStatus => "Operational";
     public string PreviousChecklistNotes => "Previous shift reported equipment present, operational, undamaged, and battery-ready.";
@@ -58,9 +62,12 @@ public class DailyEquipmentChecklistModel : PageModel
 
         Callsign = callsign;
         Registration = registration;
-        AssignedLocation = string.IsNullOrWhiteSpace(callsign) ? null : callsign;
+        AssignedLocation = string.IsNullOrWhiteSpace(callsign) && string.IsNullOrWhiteSpace(registration)
+            ? null
+            : PreviousAssignedLocation;
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
+        await LoadLocationOptionsAsync(currentUser.CompanyId);
         return Page();
     }
 
@@ -74,6 +81,7 @@ public class DailyEquipmentChecklistModel : PageModel
 
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
+        await LoadLocationOptionsAsync(currentUser.CompanyId);
 
         if (SameAsPreviousEquipmentCheck)
         {
@@ -270,6 +278,21 @@ public class DailyEquipmentChecklistModel : PageModel
             .FirstOrDefaultAsync();
 
         AllowSameAsPreviousEquipmentCheck = setting;
+    }
+
+    private async Task LoadLocationOptionsAsync(int companyId)
+    {
+        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(companyId);
+        var linkedVehicleLocation = PreviousAssignedLocation;
+        if (!string.IsNullOrWhiteSpace(Callsign)
+            && LocationOptions.All(option => option.Value != linkedVehicleLocation))
+        {
+            LocationOptions.Insert(0, new SelectListItem
+            {
+                Value = linkedVehicleLocation,
+                Text = linkedVehicleLocation
+            });
+        }
     }
 
     private static string? NormalizeOptional(string? value)

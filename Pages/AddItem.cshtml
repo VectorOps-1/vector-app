@@ -33,7 +33,12 @@
                 {
                     <label>Schedule<input asp-for="Schedule" type="text" placeholder="Medication schedule" /></label>
                 }
-                <label>Location<input asp-for="Location" type="text" placeholder="Base, store, vehicle, department, or file location" /></label>
+                <label>
+                    Location
+                    <select asp-for="Location" asp-items="Model.LocationOptions">
+                        <option value="">Select location</option>
+                    </select>
+                </label>
                 <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
                 <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>
                 <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" /></label>

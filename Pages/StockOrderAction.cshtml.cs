@@ -12,11 +12,13 @@ public class StockOrderActionModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly LocationOptionService _locationOptions;
 
-    public StockOrderActionModel(VectorDbContext db, CurrentUserService currentUser)
+    public StockOrderActionModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
     {
         _db = db;
         _currentUser = currentUser;
+        _locationOptions = locationOptions;
     }
 
     [BindProperty] public int? AuthorisedUserId { get; set; }
@@ -27,6 +29,7 @@ public class StockOrderActionModel : PageModel
     public bool IsSeniorManager { get; private set; }
     public bool CanEnterRegister { get; private set; }
     public string? SuccessMessage { get; private set; }
+    public List<SelectListItem> LocationOptions { get; private set; } = [];
 
     public async Task<IActionResult> OnGetAsync(int orderId)
     {
@@ -269,6 +272,7 @@ public class StockOrderActionModel : PageModel
 
         CanEnterRegister = IsSeniorManager || order.RegisterEntryAuthorisedUserId == currentUser.Id;
         AuthorisedUserId = order.RegisterEntryAuthorisedUserId;
+        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
         OperationalManagers = await _db.AppUsers
             .AsNoTracking()
             .Include(user => user.AppRole)
@@ -372,6 +376,8 @@ public class StockOrderActionModel : PageModel
         string movementType,
         string? notes)
     {
+        location = LocationOptionService.NormalizeSelectedLocation(location);
+        var area = await _locationOptions.FindOperationalAreaAsync(companyId, location);
         var stockItem = await _db.StockItems.FirstOrDefaultAsync(item =>
             item.CompanyId == companyId
             && item.ItemName == itemName
@@ -389,6 +395,7 @@ public class StockOrderActionModel : PageModel
                 ItemType = itemType,
                 BatchNumber = batchNumber,
                 Location = location,
+                CurrentOperationalAreaId = area?.Id,
                 Quantity = quantity,
                 Status = "Active",
                 Notes = notes,
@@ -400,6 +407,7 @@ public class StockOrderActionModel : PageModel
         {
             stockItem.Quantity = quantity;
             stockItem.ItemType = itemType;
+            stockItem.CurrentOperationalAreaId = area?.Id;
             stockItem.Notes = notes;
             stockItem.UpdatedAtUtc = now;
         }

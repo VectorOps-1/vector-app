@@ -19,6 +19,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddScoped<LocationOptionService>();
 builder.Services.AddDbContext<VectorDbContext>(options =>
 {
     if (builder.Environment.IsDevelopment())

@@ -86,12 +86,24 @@
 
                 <div class="field-group">
                     <label class="field-label">Destination / recipient detail</label>
-                    <input class="text-input" type="text" placeholder="Base, callsign, practitioner, or crew name" />
+                    <select class="text-input">
+                        <option value="">Select destination / recipient location</option>
+                        @foreach (var location in Model.LocationOptions)
+                        {
+                            <option value="@location.Value">@location.Text</option>
+                        }
+                    </select>
                 </div>
 
                 <div class="field-group">
                     <label class="field-label">Storage location</label>
-                    <input class="text-input" type="text" placeholder="Store, safe, vehicle, base, or kit location" />
+                    <select class="text-input">
+                        <option value="">Select storage location</option>
+                        @foreach (var location in Model.LocationOptions)
+                        {
+                            <option value="@location.Value">@location.Text</option>
+                        }
+                    </select>
                 </div>
             </div>
         </section>

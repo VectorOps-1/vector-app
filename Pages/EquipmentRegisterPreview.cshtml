@@ -37,7 +37,15 @@
                                 <td><input value="Monitor Defibrillator" /></td>
                                 <td><input value="Example Model" /></td>
                                 <td><input value="SN-0001" /></td>
-                                <td><input value="Ambulance A101" /></td>
+                                <td>
+                                    <select>
+                                        <option value="">Select location</option>
+                                        @foreach (var location in Model.LocationOptions)
+                                        {
+                                            <option value="@location.Value">@location.Text</option>
+                                        }
+                                    </select>
+                                </td>
                                 <td><input value="Operational" /></td>
                                 <td><input type="date" /></td>
                             </tr>
@@ -46,7 +54,15 @@
                                 <td><input value="Ventilator" /></td>
                                 <td><input value="Example Model" /></td>
                                 <td><input value="SN-0002" /></td>
-                                <td><input value="Main Base" /></td>
+                                <td>
+                                    <select>
+                                        <option value="">Select location</option>
+                                        @foreach (var location in Model.LocationOptions)
+                                        {
+                                            <option value="@location.Value">@location.Text</option>
+                                        }
+                                    </select>
+                                </td>
                                 <td><input value="Service Due" /></td>
                                 <td><input type="date" /></td>
                             </tr>

@@ -42,7 +42,13 @@
 
                     <div class="field-group">
                         <label class="field-label">Department / base / location</label>
-                        <input class="text-input" type="text" placeholder="Main Base" />
+                        <select class="text-input">
+                            <option value="">Select base / location</option>
+                            @foreach (var location in Model.LocationOptions)
+                            {
+                                <option value="@location.Value">@location.Text</option>
+                            }
+                        </select>
                     </div>
 
                     <div class="field-group">

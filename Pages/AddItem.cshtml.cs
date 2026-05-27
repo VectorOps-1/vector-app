@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
@@ -11,11 +12,13 @@ public class AddItemModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly LocationOptionService _locationOptions;
 
-    public AddItemModel(VectorDbContext db, CurrentUserService currentUser)
+    public AddItemModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
     {
         _db = db;
         _currentUser = currentUser;
+        _locationOptions = locationOptions;
     }
 
     [BindProperty(SupportsGet = true)] public string Type { get; set; } = "equipment";
@@ -32,6 +35,7 @@ public class AddItemModel : PageModel
 
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
+    public List<SelectListItem> LocationOptions { get; private set; } = new();
 
     public string ItemLabel => NormalizedType switch
     {
@@ -99,14 +103,30 @@ public class AddItemModel : PageModel
         Type = HasRequestType ? RequestType : NormalizedType;
     }
 
-    public void OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
         ApplyRequestType();
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        await LoadLocationOptionsAsync(currentUser.CompanyId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         ApplyRequestType();
+
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        await LoadLocationOptionsAsync(currentUser.CompanyId);
 
         if (string.IsNullOrWhiteSpace(PrimaryName))
         {
@@ -116,12 +136,6 @@ public class AddItemModel : PageModel
 
         if (Type is "vehicle" or "equipment")
         {
-            var currentUser = await _currentUser.GetCurrentUserAsync();
-            if (currentUser is null)
-            {
-                return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
-            }
-
             if (Type == "vehicle")
             {
                 return await SaveVehicleAsync(currentUser);
@@ -132,13 +146,9 @@ public class AddItemModel : PageModel
 
         if (Type == "medication")
         {
-            var currentUser = await _currentUser.GetCurrentUserAsync();
-            if (currentUser is null)
-            {
-                return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
-            }
-
             var now = DateTime.UtcNow;
+            var area = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
+            var selectedLocation = LocationOptionService.NormalizeSelectedLocation(Location);
             var medication = new MedicationItem
             {
                 CompanyId = currentUser.CompanyId,
@@ -148,7 +158,8 @@ public class AddItemModel : PageModel
                 BatchNumber = string.IsNullOrWhiteSpace(SerialOrBatch) ? null : SerialOrBatch.Trim(),
                 MedicationType = string.IsNullOrWhiteSpace(MakeModelType) ? null : MakeModelType.Trim(),
                 Schedule = string.IsNullOrWhiteSpace(Schedule) ? null : Schedule.Trim(),
-                StorageLocation = string.IsNullOrWhiteSpace(Location) ? null : Location.Trim(),
+                StorageLocation = selectedLocation,
+                CurrentOperationalAreaId = area?.Id,
                 Status = string.IsNullOrWhiteSpace(Status) ? "Active" : Status.Trim(),
                 Quantity = Quantity,
                 ExpiryDate = ExpiryOrReviewDate,
@@ -179,13 +190,9 @@ public class AddItemModel : PageModel
 
         if (Type == "stock")
         {
-            var currentUser = await _currentUser.GetCurrentUserAsync();
-            if (currentUser is null)
-            {
-                return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
-            }
-
             var now = DateTime.UtcNow;
+            var area = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
+            var selectedLocation = LocationOptionService.NormalizeSelectedLocation(Location);
             var stockItem = new StockItem
             {
                 CompanyId = currentUser.CompanyId,
@@ -194,7 +201,8 @@ public class AddItemModel : PageModel
                 ItemName = PrimaryName.Trim(),
                 ItemType = string.IsNullOrWhiteSpace(MakeModelType) ? null : MakeModelType.Trim(),
                 BatchNumber = string.IsNullOrWhiteSpace(SerialOrBatch) ? null : SerialOrBatch.Trim(),
-                Location = string.IsNullOrWhiteSpace(Location) ? null : Location.Trim(),
+                Location = selectedLocation,
+                CurrentOperationalAreaId = area?.Id,
                 Status = string.IsNullOrWhiteSpace(Status) ? "Active" : Status.Trim(),
                 Quantity = Quantity ?? 0,
                 LastMovementType = "Manual register entry",
@@ -249,7 +257,7 @@ public class AddItemModel : PageModel
         }
 
         var now = DateTime.UtcNow;
-        var area = await FindAreaByNameAsync(currentUser.CompanyId, Location);
+        var area = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
         var vehicle = new Vehicle
         {
             CompanyId = currentUser.CompanyId,
@@ -257,7 +265,7 @@ public class AddItemModel : PageModel
             Callsign = PrimaryName!.Trim(),
             VehicleType = string.IsNullOrWhiteSpace(MakeModelType) ? "Vehicle" : MakeModelType.Trim(),
             CurrentOperationalAreaId = area?.Id,
-            CurrentLocationDetail = area is null ? NormalizeOptional(Location) : null,
+            CurrentLocationDetail = area is null ? LocationOptionService.NormalizeSelectedLocation(Location) : null,
             NextServiceDate = ExpiryOrReviewDate,
             Status = string.IsNullOrWhiteSpace(Status) ? "Active" : Status.Trim(),
             Notes = NormalizeOptional(Notes),
@@ -288,7 +296,7 @@ public class AddItemModel : PageModel
     private async Task<IActionResult> SaveEquipmentAsync(AppUser currentUser)
     {
         var now = DateTime.UtcNow;
-        var area = await FindAreaByNameAsync(currentUser.CompanyId, Location);
+        var area = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
         var equipment = new EquipmentItem
         {
             CompanyId = currentUser.CompanyId,
@@ -297,7 +305,7 @@ public class AddItemModel : PageModel
             Model = NormalizeOptional(MakeModelType),
             SerialOrAssetId = NormalizeOptional(SerialOrBatch) ?? NormalizeOptional(ReferenceNumber),
             CurrentOperationalAreaId = area?.Id,
-            CurrentLocationDetail = area is null ? NormalizeOptional(Location) : null,
+            CurrentLocationDetail = area is null ? LocationOptionService.NormalizeSelectedLocation(Location) : null,
             NextServiceDate = ExpiryOrReviewDate,
             BatteryRequired = false,
             Status = string.IsNullOrWhiteSpace(Status) ? "Active" : Status.Trim(),
@@ -326,16 +334,11 @@ public class AddItemModel : PageModel
         return Page();
     }
 
-    private async Task<OperationalArea?> FindAreaByNameAsync(int companyId, string? location)
+    private async Task LoadLocationOptionsAsync(int companyId)
     {
-        if (string.IsNullOrWhiteSpace(location))
-        {
-            return null;
-        }
-
-        var name = location.Trim();
-        return await _db.OperationalAreas
-            .FirstOrDefaultAsync(area => area.CompanyId == companyId && area.Name == name && area.Status == "Active");
+        LocationOptions = Type == "vehicle"
+            ? await _locationOptions.GetOperationalAreaOptionsAsync(companyId)
+            : await _locationOptions.GetAssetLocationOptionsAsync(companyId);
     }
 
     private static string? NormalizeOptional(string? value)

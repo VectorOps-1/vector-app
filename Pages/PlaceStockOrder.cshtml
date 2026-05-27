@@ -36,7 +36,9 @@
 
                     <div class="field-group full-row">
                         <label class="field-label" asp-for="DeliveryAddress">Delivery address</label>
-                        <input class="text-input" asp-for="DeliveryAddress" placeholder="Base, station, head office, or delivery address" />
+                        <select class="text-input" asp-for="DeliveryAddress" asp-items="Model.DeliveryLocationOptions">
+                            <option value="">Select delivery location</option>
+                        </select>
                     </div>
 
                     <div class="field-group full-row">

@@ -57,7 +57,12 @@
                 <label>Module<select asp-for="Module"><option>General</option><option>Vehicle</option><option>Equipment</option><option>Stock</option><option>Medication</option><option>Staff</option><option>Checklist</option></select></label>
                 <label>Issue type<select asp-for="IssueType"><option value="">Select issue type</option><option>Damage</option><option>Fault / failure</option><option>Missing item</option><option>Expired item</option><option>Low stock</option><option>Incorrect allocation</option><option>Safety concern</option><option>Other</option></select></label>
                 <label>Related asset / item<input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" /></label>
-                <label>Location<input asp-for="Location" type="text" placeholder="Base, vehicle, store, department, or scene" /></label>
+                <label>
+                    Location
+                    <select asp-for="Location" asp-items="Model.LocationOptions">
+                        <option value="">Select location</option>
+                    </select>
+                </label>
                 <label>Severity<select asp-for="Severity"><option value="">Select severity</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
                 <label>Operational status<select asp-for="OperationalStatus"><option value="">Select status</option><option>Still operational</option><option>Operational with restriction</option><option>Out of service</option><option>Requires manager review</option></select></label>
             </div>

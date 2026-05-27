@@ -49,7 +49,12 @@
             <label>Asset ID<input asp-for="AssetId" id="assetIdInput" type="text" placeholder="Equipment ID" /></label>
             <label>Serial number<input asp-for="SerialNumber" id="serialNumberInput" type="text" placeholder="S/N" /></label>
             <label>Equipment name<input asp-for="EquipmentName" id="equipmentNameInput" type="text" placeholder="Name/type" /></label>
-            <label>Assigned location<input asp-for="AssignedLocation" id="assignedLocationInput" type="text" placeholder="Base / vehicle / store" /></label>
+            <label>
+                Assigned location
+                <select asp-for="AssignedLocation" asp-items="Model.LocationOptions" id="assignedLocationInput">
+                    <option value="">Select location</option>
+                </select>
+            </label>
             <label>Battery state<select asp-for="BatteryState" id="batteryStateInput"><option value="">Select battery state</option><option>Full</option><option>Acceptable</option><option>Low</option><option>Not applicable</option></select></label>
             <label>Status<select asp-for="EquipmentStatus" id="equipmentStatusInput"><option value="">Select status</option><option>Operational</option><option>Operational with notes</option><option>Faulty</option><option>Missing</option></select></label>
         </div>

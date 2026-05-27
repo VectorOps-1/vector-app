@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
@@ -31,11 +32,13 @@ public class ReportIssueModel : PageModel
 
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly LocationOptionService _locationOptions;
 
-    public ReportIssueModel(VectorDbContext db, CurrentUserService currentUser)
+    public ReportIssueModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
     {
         _db = db;
         _currentUser = currentUser;
+        _locationOptions = locationOptions;
     }
 
     [BindProperty(SupportsGet = true)] public string Module { get; set; } = "General";
@@ -53,24 +56,32 @@ public class ReportIssueModel : PageModel
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public List<ManagerRecipientOption> ManagerRecipients { get; private set; } = new();
+    public List<SelectListItem> LocationOptions { get; private set; } = new();
 
-    public async Task OnGetAsync(string? module)
+    public async Task<IActionResult> OnGetAsync(string? module)
     {
         Module = NormaliseModule(module ?? Module);
         NotificationMethod = "In-app notification";
-        await LoadManagerRecipientsAsync();
-    }
-
-    public async Task<IActionResult> OnPostAsync()
-    {
-        Module = NormaliseModule(Module);
-        await LoadManagerRecipientsAsync();
-
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
         }
+
+        await LoadFormOptionsAsync(currentUser.CompanyId);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        Module = NormaliseModule(Module);
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.StaffAccess });
+        }
+
+        await LoadFormOptionsAsync(currentUser.CompanyId);
 
         if (string.IsNullOrWhiteSpace(ManagerLevel) || !ManagerLevels.Contains(ManagerLevel))
         {
@@ -136,7 +147,7 @@ public class ReportIssueModel : PageModel
             Module = Module,
             IssueType = IssueType.Trim(),
             RelatedItem = string.IsNullOrWhiteSpace(RelatedItem) ? null : RelatedItem.Trim(),
-            Location = string.IsNullOrWhiteSpace(Location) ? null : Location.Trim(),
+            Location = LocationOptionService.NormalizeSelectedLocation(Location),
             Severity = string.IsNullOrWhiteSpace(Severity) ? null : Severity.Trim(),
             OperationalStatus = string.IsNullOrWhiteSpace(OperationalStatus) ? null : OperationalStatus.Trim(),
             Description = Description.Trim(),
@@ -178,12 +189,19 @@ public class ReportIssueModel : PageModel
         return Page();
     }
 
-    private async Task LoadManagerRecipientsAsync()
+    private async Task LoadFormOptionsAsync(int companyId)
+    {
+        await LoadManagerRecipientsAsync(companyId);
+        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(companyId);
+    }
+
+    private async Task LoadManagerRecipientsAsync(int companyId)
     {
         ManagerRecipients = await _db.AppUsers
             .Include(user => user.AppRole)
             .Where(user =>
-                user.Status == "Active"
+                user.CompanyId == companyId
+                && user.Status == "Active"
                 && user.AppRole != null
                 && ManagerLevels.Contains(user.AppRole.Name))
             .OrderBy(user => user.AppRole!.Name)
