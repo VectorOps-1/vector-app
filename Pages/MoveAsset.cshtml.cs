@@ -45,7 +45,7 @@ public class MoveAssetModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        AssetType = NormalizedAssetType;
+        ApplyRequestedAssetType();
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
         {
@@ -183,6 +183,14 @@ public class MoveAssetModel : PageModel
         StatusMessage = $"{movement.AssetLabel} moved to {movement.ToLocationText}.";
         await LoadPageDataAsync(currentUser.CompanyId);
         return Page();
+    }
+
+    private void ApplyRequestedAssetType()
+    {
+        var assetQuery = Request.Query["asset"].ToString();
+        AssetType = string.IsNullOrWhiteSpace(assetQuery)
+            ? NormalizedAssetType
+            : AssetTypes.Normalize(assetQuery);
     }
 
     private async Task ApplyTaskReferenceAsync(AppUser currentUser)
