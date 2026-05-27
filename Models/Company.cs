@@ -25,5 +25,10 @@ public class Company
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
     public ICollection<MedicationItem> MedicationItems { get; set; } = new List<MedicationItem>();
+    public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
+    public ICollection<EquipmentItem> EquipmentItems { get; set; } = new List<EquipmentItem>();
+    public ICollection<VehicleEquipmentAssignment> VehicleEquipmentAssignments { get; set; } = new List<VehicleEquipmentAssignment>();
+    public ICollection<DailyVehicleReadinessReport> DailyVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
+    public ICollection<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks { get; set; } = new List<DailyVehicleEquipmentCheck>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

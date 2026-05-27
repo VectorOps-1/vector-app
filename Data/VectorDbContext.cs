@@ -17,6 +17,11 @@ public class VectorDbContext : DbContext
     public DbSet<IssueReport> IssueReports => Set<IssueReport>();
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
+    public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<EquipmentItem> EquipmentItems => Set<EquipmentItem>();
+    public DbSet<VehicleEquipmentAssignment> VehicleEquipmentAssignments => Set<VehicleEquipmentAssignment>();
+    public DbSet<DailyVehicleReadinessReport> DailyVehicleReadinessReports => Set<DailyVehicleReadinessReport>();
+    public DbSet<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks => Set<DailyVehicleEquipmentCheck>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
@@ -124,6 +129,100 @@ public class VectorDbContext : DbContext
             .HasOne(medication => medication.CreatedByUser)
             .WithMany(user => user.CreatedMedicationItems)
             .HasForeignKey(medication => medication.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Vehicle>()
+            .HasIndex(vehicle => new { vehicle.CompanyId, vehicle.RegistrationNumber })
+            .IsUnique();
+
+        modelBuilder.Entity<Vehicle>()
+            .HasOne(vehicle => vehicle.Company)
+            .WithMany(company => company.Vehicles)
+            .HasForeignKey(vehicle => vehicle.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<EquipmentItem>()
+            .HasIndex(equipment => new { equipment.CompanyId, equipment.SerialOrAssetId });
+
+        modelBuilder.Entity<EquipmentItem>()
+            .HasOne(equipment => equipment.Company)
+            .WithMany(company => company.EquipmentItems)
+            .HasForeignKey(equipment => equipment.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleEquipmentAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.VehicleId, assignment.SortOrder });
+
+        modelBuilder.Entity<VehicleEquipmentAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.VehicleType, assignment.QualificationLevel });
+
+        modelBuilder.Entity<VehicleEquipmentAssignment>()
+            .HasOne(assignment => assignment.Company)
+            .WithMany(company => company.VehicleEquipmentAssignments)
+            .HasForeignKey(assignment => assignment.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleEquipmentAssignment>()
+            .HasOne(assignment => assignment.Vehicle)
+            .WithMany(vehicle => vehicle.EquipmentAssignments)
+            .HasForeignKey(assignment => assignment.VehicleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleEquipmentAssignment>()
+            .HasOne(assignment => assignment.EquipmentItem)
+            .WithMany(equipment => equipment.VehicleAssignments)
+            .HasForeignKey(assignment => assignment.EquipmentItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasIndex(report => new { report.CompanyId, report.VehicleId, report.InspectionDateUtc });
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasIndex(report => new { report.CompanyId, report.ReadinessStatus, report.InspectionDateUtc });
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.Company)
+            .WithMany(company => company.DailyVehicleReadinessReports)
+            .HasForeignKey(report => report.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.Vehicle)
+            .WithMany(vehicle => vehicle.ReadinessReports)
+            .HasForeignKey(report => report.VehicleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.PerformedByUser)
+            .WithMany(user => user.PerformedVehicleReadinessReports)
+            .HasForeignKey(report => report.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasIndex(check => new { check.CompanyId, check.DailyVehicleReadinessReportId, check.SortOrder });
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.Company)
+            .WithMany(company => company.DailyVehicleEquipmentChecks)
+            .HasForeignKey(check => check.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.DailyVehicleReadinessReport)
+            .WithMany(report => report.EquipmentChecks)
+            .HasForeignKey(check => check.DailyVehicleReadinessReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.VehicleEquipmentAssignment)
+            .WithMany(assignment => assignment.DailyEquipmentChecks)
+            .HasForeignKey(check => check.VehicleEquipmentAssignmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.EquipmentItem)
+            .WithMany(equipment => equipment.DailyEquipmentChecks)
+            .HasForeignKey(check => check.EquipmentItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AuditLog>()

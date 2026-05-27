@@ -88,3 +88,15 @@ Base and Pro do not require Azure Blob Storage. File uploads can use local stora
 7. Daily vehicle equipment check table.
 8. Combined daily vehicle readiness UI.
 9. Manager readiness dashboard.
+
+## Implemented Backbone Tables
+
+The current backend model includes:
+
+- `Vehicles`
+- `EquipmentItems`
+- `VehicleEquipmentAssignments`
+- `DailyVehicleReadinessReports`
+- `DailyVehicleEquipmentChecks`
+
+Daily readiness reports store snapshots of key vehicle and equipment details at the time of the check. This protects historical records when a vehicle callsign, schematic, service date, or equipment setup changes later.
