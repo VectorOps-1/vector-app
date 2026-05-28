@@ -85,6 +85,15 @@ public class DailyEquipmentChecklistModel : PageModel
             return Page();
         }
 
+        var rowsNeedingIssueNotes = populatedChecks.Count(check =>
+            (!check.IsOperational || string.Equals(check.BatteryState, "Low", StringComparison.OrdinalIgnoreCase)) &&
+            string.IsNullOrWhiteSpace(check.IssueNotes));
+        if (rowsNeedingIssueNotes > 0)
+        {
+            StatusMessage = "Add issue notes for every equipment item marked not operational or with a low battery.";
+            return Page();
+        }
+
         var savedCount = await SaveEquipmentReadinessAsync(currentUser, populatedChecks);
         StatusMessage = SameAsPreviousEquipmentCheck
             ? $"{savedCount} equipment rows marked same as previous shift and saved against linked vehicle: {LinkedVehicleLabel}."
@@ -116,6 +125,8 @@ public class DailyEquipmentChecklistModel : PageModel
                 row.EquipmentItemId = postedRow.EquipmentItemId ?? row.EquipmentItemId;
                 row.NextServiceDate = postedRow.NextServiceDate ?? row.NextServiceDate;
                 row.BatteryState = NormalizeOptional(postedRow.BatteryState) ?? row.BatteryState;
+                row.IsOperational = postedRow.IsOperational;
+                row.IssueNotes = NormalizeOptional(postedRow.IssueNotes);
                 row.PreviousEquipmentCheckId = postedRow.PreviousEquipmentCheckId;
             }
 
@@ -196,7 +207,9 @@ public class DailyEquipmentChecklistModel : PageModel
             NextServiceDate = equipmentItem?.NextServiceDate,
             RequiresBatteryCheck = assignment.RequiresBatteryCheck || equipmentItem?.BatteryRequired == true,
             BatteryState = assignment.RequiresBatteryCheck || equipmentItem?.BatteryRequired == true ? "Full" : "Not applicable",
+            IsOperational = true,
             PreviousBatteryState = "Full",
+            PreviousIsOperational = true,
             SortOrder = sortOrder
         };
 
@@ -219,7 +232,9 @@ public class DailyEquipmentChecklistModel : PageModel
             NextServiceDate = item.NextServiceDate,
             RequiresBatteryCheck = item.BatteryRequired,
             BatteryState = item.BatteryRequired ? "Full" : "Not applicable",
+            IsOperational = true,
             PreviousBatteryState = "Full",
+            PreviousIsOperational = true,
             SortOrder = sortOrder
         };
 
@@ -292,8 +307,10 @@ public class DailyEquipmentChecklistModel : PageModel
                 SerialOrAssetId = NormalizeOptional(row.SerialOrAssetId) ?? equipmentItem?.SerialOrAssetId,
                 NextServiceDateAtCheck = row.NextServiceDate ?? equipmentItem?.NextServiceDate,
                 BatteryStatus = NormalizeOptional(row.BatteryState),
+                IsOperational = row.IsOperational,
+                IssueNotes = NormalizeOptional(row.IssueNotes),
                 PresentStatus = "Present",
-                ReadinessImpact = string.Equals(row.BatteryState, "Low", StringComparison.OrdinalIgnoreCase) ? "Warning" : "None",
+                ReadinessImpact = !row.IsOperational || string.Equals(row.BatteryState, "Low", StringComparison.OrdinalIgnoreCase) ? "Warning" : "None",
                 SameAsPreviousShiftUsed = SameAsPreviousEquipmentCheck,
                 CopiedFromDailyVehicleEquipmentCheckId = SameAsPreviousEquipmentCheck ? row.PreviousEquipmentCheckId : null,
                 SameAsPreviousAppliedAtUtc = SameAsPreviousEquipmentCheck ? now : null,
@@ -380,6 +397,8 @@ public class DailyEquipmentChecklistModel : PageModel
             row.PreviousSerialOrAssetId = previousCheck.SerialOrAssetId;
             row.PreviousBatteryState = NormalizeOptional(previousCheck.BatteryStatus)
                 ?? (row.RequiresBatteryCheck ? "Full" : "Not applicable");
+            row.PreviousIsOperational = previousCheck.IsOperational;
+            row.PreviousIssueNotes = previousCheck.IssueNotes;
             row.PreviousEquipmentCheckId = previousCheck.Id;
         }
     }
@@ -517,6 +536,8 @@ public class DailyEquipmentChecklistModel : PageModel
             }
 
             row.BatteryState = row.RequiresBatteryCheck ? row.PreviousBatteryState ?? "Full" : "Not applicable";
+            row.IsOperational = row.PreviousIsOperational;
+            row.IssueNotes = row.PreviousIssueNotes;
         }
     }
 
@@ -555,8 +576,12 @@ public class EquipmentCheckInput
     public DateTime? NextServiceDate { get; set; }
     public bool RequiresBatteryCheck { get; set; }
     public string? BatteryState { get; set; }
+    public bool IsOperational { get; set; } = true;
+    public string? IssueNotes { get; set; }
     public string? PreviousSerialOrAssetId { get; set; }
     public string? PreviousBatteryState { get; set; }
+    public bool PreviousIsOperational { get; set; } = true;
+    public string? PreviousIssueNotes { get; set; }
     public int? PreviousEquipmentCheckId { get; set; }
     public int SortOrder { get; set; }
     public List<EquipmentSerialOption> SerialOptions { get; set; } = new();

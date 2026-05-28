@@ -55,6 +55,8 @@
                     <span role="columnheader">S/N / ID</span>
                     <span role="columnheader">Next Service</span>
                     <span role="columnheader">Battery</span>
+                    <span role="columnheader">Operational?</span>
+                    <span role="columnheader">Issues / errors</span>
                 </div>
 
                 @for (var rowIndex = 0; rowIndex < Model.EquipmentChecks.Count; rowIndex++)
@@ -69,19 +71,20 @@
                         <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresBatteryCheck" value="@checkRow.RequiresBatteryCheck.ToString().ToLowerInvariant()" />
                         <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousSerialOrAssetId" value="@checkRow.PreviousSerialOrAssetId" />
                         <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousBatteryState" value="@checkRow.PreviousBatteryState" />
+                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIsOperational" value="@checkRow.PreviousIsOperational.ToString().ToLowerInvariant()" />
+                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIssueNotes" value="@checkRow.PreviousIssueNotes" />
                         <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousEquipmentCheckId" value="@checkRow.PreviousEquipmentCheckId" />
                         <input type="hidden" name="EquipmentChecks[@rowIndex].SortOrder" value="@checkRow.SortOrder" />
 
-                        <label>
-                            <span>Name/item</span>
-                            <input class="equipment-cell item-cell" name="EquipmentChecks[@rowIndex].Name" value="@checkRow.Name" readonly />
+                        <label class="equipment-field">
+                            <input class="equipment-cell item-cell" name="EquipmentChecks[@rowIndex].Name" value="@checkRow.Name" aria-label="Name/item" readonly />
                         </label>
 
-                        <label>
-                            <span>S/N / ID</span>
+                        <label class="equipment-field">
                             <select class="equipment-cell serial-select"
                                     name="EquipmentChecks[@rowIndex].SerialOrAssetId"
-                                    data-previous-serial="@checkRow.PreviousSerialOrAssetId">
+                                    data-previous-serial="@checkRow.PreviousSerialOrAssetId"
+                                    aria-label="S/N / ID">
                                 <option value="">Select S/N / ID</option>
                                 @foreach (var serialOption in checkRow.SerialOptions)
                                 {
@@ -96,26 +99,44 @@
                             </select>
                         </label>
 
-                        <label>
-                            <span>Next Service</span>
+                        <label class="equipment-field">
                             <input class="equipment-cell next-service-input"
                                    type="date"
                                    name="EquipmentChecks[@rowIndex].NextServiceDate"
                                    value="@nextServiceValue"
+                                   aria-label="Next Service"
                                    readonly />
                         </label>
 
-                        <label>
-                            <span>Battery</span>
+                        <label class="equipment-field">
                             <select class="equipment-cell battery-select"
                                     name="EquipmentChecks[@rowIndex].BatteryState"
-                                    data-previous-battery="@(checkRow.PreviousBatteryState ?? "Full")">
+                                    data-previous-battery="@(checkRow.PreviousBatteryState ?? "Full")"
+                                    aria-label="Battery">
                                 <option value="">Select battery</option>
                                 <option selected="@(checkRow.BatteryState == "Full")">Full</option>
                                 <option selected="@(checkRow.BatteryState == "Acceptable")">Acceptable</option>
                                 <option selected="@(checkRow.BatteryState == "Low")">Low</option>
                                 <option selected="@(checkRow.BatteryState == "Not applicable")">Not applicable</option>
                             </select>
+                        </label>
+
+                        <label class="equipment-field">
+                            <select class="equipment-cell operational-select"
+                                    name="EquipmentChecks[@rowIndex].IsOperational"
+                                    data-previous-operational="@checkRow.PreviousIsOperational.ToString().ToLowerInvariant()"
+                                    aria-label="Operational?">
+                                <option value="true" selected="@checkRow.IsOperational">Yes</option>
+                                <option value="false" selected="@(!checkRow.IsOperational)">No</option>
+                            </select>
+                        </label>
+
+                        <label class="equipment-field issue-field">
+                            <textarea class="equipment-cell issue-input"
+                                      name="EquipmentChecks[@rowIndex].IssueNotes"
+                                      data-previous-issue="@checkRow.PreviousIssueNotes"
+                                      aria-label="Issues / errors"
+                                      placeholder="Describe any issue, error, or restriction">@checkRow.IssueNotes</textarea>
                         </label>
                     </div>
                 }
@@ -131,7 +152,7 @@
 
 <style>
 .checklist-form-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
-.checklist-form-inner { width: 100%; max-width: 1080px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.checklist-form-inner { width: 100%; max-width: 1280px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
 .page-logo { width: 320px; max-width: 72%; max-height: 180px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
 .client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
@@ -152,15 +173,17 @@
 .empty-equipment-panel { width: min(900px, 94%); display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid rgba(124,45,45,.2); border-radius: 8px; background: rgba(124,45,45,.05); text-align: left; color: #7f1d1d; box-sizing: border-box; }
 .empty-equipment-panel strong { font-size: 16px; }
 .empty-equipment-panel span { font-size: 13px; font-weight: 700; color: #52606d; }
-.equipment-table { width: min(980px, 96%); border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.76); text-align: left; }
-.equipment-table-header, .equipment-check-row { display: grid; grid-template-columns: minmax(180px, 1.15fr) minmax(220px, 1.1fr) minmax(150px, .75fr) minmax(150px, .75fr); gap: 0; align-items: stretch; }
+.equipment-table { width: min(1180px, 98%); border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.76); text-align: left; }
+.equipment-table-header, .equipment-check-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(190px, 1.05fr) minmax(135px, .72fr) minmax(135px, .72fr) minmax(120px, .58fr) minmax(220px, 1.25fr); gap: 0; align-items: stretch; }
 .equipment-table-header { background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 .equipment-table-header span { padding: 12px 14px; border-right: 1px solid rgba(255,255,255,.12); }
 .equipment-check-row { border-top: 1px solid rgba(66,84,102,.13); }
-.equipment-check-row label { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-right: 1px solid rgba(66,84,102,.1); color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.equipment-check-row .equipment-field { display: flex; flex-direction: column; justify-content: center; gap: 6px; margin: 0; padding: 10px; border-right: 1px solid rgba(66,84,102,.1); color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
 .equipment-check-row label:last-child, .equipment-table-header span:last-child { border-right: none; }
 .equipment-cell { width: 100%; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 14px; font-weight: 700; background: #fff; color: #1f2937; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
 .equipment-cell[readonly] { background: #f8fafc; color: #334155; }
+.issue-input { min-height: 64px; padding-top: 10px; resize: vertical; line-height: 1.35; }
+.operational-select[value="false"], .issue-input:not(:placeholder-shown) { border-color: rgba(155,59,59,.34); }
 .action-row { width: min(900px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
 .action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
@@ -169,8 +192,8 @@
     .equipment-table-header { display: none; }
     .equipment-table { border: none; background: transparent; overflow: visible; display: flex; flex-direction: column; gap: 12px; }
     .equipment-check-row { display: grid; grid-template-columns: 1fr; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.76); }
-    .equipment-check-row label { border-right: none; border-top: 1px solid rgba(66,84,102,.1); }
-    .equipment-check-row label:first-of-type { border-top: none; }
+    .equipment-check-row .equipment-field { border-right: none; border-top: 1px solid rgba(66,84,102,.1); }
+    .equipment-check-row .equipment-field:first-of-type { border-top: none; }
 }
 </style>
 
@@ -235,8 +258,12 @@
             document.querySelectorAll(".equipment-check-row").forEach(function (row) {
                 const serialSelect = row.querySelector(".serial-select");
                 const batterySelect = row.querySelector(".battery-select");
+                const operationalSelect = row.querySelector(".operational-select");
+                const issueInput = row.querySelector(".issue-input");
                 const previousSerial = serialSelect?.dataset.previousSerial;
                 const previousBattery = batterySelect?.dataset.previousBattery || "Full";
+                const previousOperational = operationalSelect?.dataset.previousOperational || "true";
+                const previousIssue = issueInput?.dataset.previousIssue || "";
 
                 if (serialSelect && previousSerial) {
                     serialSelect.value = previousSerial;
@@ -245,6 +272,14 @@
 
                 if (batterySelect) {
                     batterySelect.value = previousBattery;
+                }
+
+                if (operationalSelect) {
+                    operationalSelect.value = previousOperational;
+                }
+
+                if (issueInput) {
+                    issueInput.value = previousIssue;
                 }
             });
 
@@ -274,7 +309,7 @@
             status.textContent = "Manual change recorded. This equipment check is no longer marked as same as previous shift.";
         }
 
-        equipmentTable?.querySelectorAll("input:not([readonly]), select").forEach(function (element) {
+        equipmentTable?.querySelectorAll("input:not([readonly]), select, textarea").forEach(function (element) {
             element.addEventListener("input", markManualEquipmentChange);
             element.addEventListener("change", markManualEquipmentChange);
         });

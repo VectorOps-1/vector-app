@@ -328,6 +328,8 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousShiftUsed", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousShiftUsed" INTEGER NOT NULL DEFAULT 0;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "CopiedFromDailyVehicleEquipmentCheckId", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "CopiedFromDailyVehicleEquipmentCheckId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousAppliedAtUtc", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousAppliedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "IsOperational", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "IsOperational" INTEGER NOT NULL DEFAULT 1;""");
+        await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "IssueNotes", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "IssueNotes" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "CompanyId", """ALTER TABLE "ChecklistTemplates" ADD "CompanyId" INTEGER NOT NULL DEFAULT 1;""");
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "ChecklistType", """ALTER TABLE "ChecklistTemplates" ADD "ChecklistType" TEXT NOT NULL DEFAULT 'Vehicle';""");
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "TargetVehicleType", """ALTER TABLE "ChecklistTemplates" ADD "TargetVehicleType" TEXT NOT NULL DEFAULT 'All Vehicles';""");
@@ -593,7 +595,7 @@ public static class DevelopmentDatabase
             ("Same as previous shift", 20, new[] { "Allow vehicle inspection reuse", "Allow equipment check reuse" }),
             ("Operational Checks", 30, new[] { "Current kilometres", "Fuel level", "Vehicle condition", "Lights", "Sirens", "Warning lights", "Tyres", "Ops radio connectivity" }),
             ("Vehicle Schematic", 40, new[] { "Vehicle schematic", "Damage type", "Damage severity", "Damage notes" }),
-            ("Carried Equipment", 50, new[] { "Name/item", "S/N / ID", "Next Service", "Battery" }),
+            ("Carried Equipment", 50, new[] { "Name/item", "S/N / ID", "Next Service", "Battery", "Operational?", "Issues / errors" }),
             ("Notes / Issue", 60, new[] { "Inspection notes" })
         };
 

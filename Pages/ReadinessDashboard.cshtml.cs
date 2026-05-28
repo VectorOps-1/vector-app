@@ -288,6 +288,7 @@ public class ReadinessDashboardModel : PageModel
         }
 
         return report.EquipmentChecks.Any(check =>
+            !check.IsOperational ||
             IsProblemStatus(check.PresentStatus, "Present") ||
             IsProblemStatus(check.BatteryStatus, "Full", "Acceptable", "Not applicable", "N/A") ||
             IsProblemStatus(check.DamageStatus, "No damage", "None", "Good", "Not applicable", "N/A") ||

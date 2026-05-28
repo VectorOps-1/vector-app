@@ -41,6 +41,11 @@ public class DailyVehicleEquipmentCheck
     [MaxLength(80)]
     public string? BatteryStatus { get; set; }
 
+    public bool IsOperational { get; set; } = true;
+
+    [MaxLength(1200)]
+    public string? IssueNotes { get; set; }
+
     [MaxLength(80)]
     public string ReadinessImpact { get; set; } = "None";
 

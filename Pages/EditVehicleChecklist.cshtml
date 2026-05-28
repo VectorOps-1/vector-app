@@ -154,6 +154,8 @@
                                         <span>S/N / ID dropdown</span>
                                         <span>Auto-filled</span>
                                         <span>Battery dropdown</span>
+                                        <span>Yes/No</span>
+                                        <span>Issue notes</span>
                                     </div>
                                 }
                             </div>
@@ -275,6 +277,7 @@
                             <option>Damage severity</option>
                             <option>S/N / ID</option>
                             <option>Battery</option>
+                            <option>Operational?</option>
                         </select>
                     </label>
 
@@ -351,14 +354,14 @@
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .schematic-field-grid { grid-template-columns: minmax(0, 1fr); }
 .equipment-layout-preview { margin-bottom: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: #ffffff; }
-.equipment-preview-header, .equipment-preview-row { display: grid; grid-template-columns: minmax(160px, 1.15fr) minmax(180px, 1.1fr) minmax(130px, .75fr) minmax(130px, .75fr); }
+.equipment-preview-header, .equipment-preview-row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(160px, 1fr) minmax(110px, .7fr) minmax(110px, .7fr) minmax(100px, .55fr) minmax(160px, 1.1fr); }
 .equipment-preview-header { background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 .equipment-preview-header span, .equipment-preview-row span { padding: 11px 12px; border-right: 1px solid rgba(66,84,102,.12); }
 .equipment-preview-header span { border-color: rgba(255,255,255,.12); }
 .equipment-preview-row { border-top: 1px solid rgba(66,84,102,.12); color: #334155; font-size: 13px; font-weight: 800; }
 .equipment-preview-row span:not(:first-child) { color: #64748b; }
 .equipment-preview-header span:last-child, .equipment-preview-row span:last-child { border-right: none; }
-.equipment-column-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.equipment-column-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .builder-field { padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
 .builder-field.system-linked { border-color: rgba(14,94,122,.26); background: rgba(14,94,122,.04); }
 .field-toolbar { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; }

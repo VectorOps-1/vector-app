@@ -396,7 +396,9 @@ public class EditVehicleChecklistModel : PageModel
                     new("Name/item", "Configured row", true, false, true, "Vehicle equipment setup"),
                     new("S/N / ID", "Dropdown", true, true, true, "Equipment register"),
                     new("Next Service", "Date", false, false, true, "Equipment register"),
-                    new("Battery", "Dropdown", true, true, false, "Fresh entry")
+                    new("Battery", "Dropdown", true, true, false, "Fresh entry"),
+                    new("Operational?", "Yes/No", true, true, false, "Fresh entry"),
+                    new("Issues / errors", "Text", false, true, false, "Required if not operational")
                 }),
             new(
                 "Notes / Issue",
