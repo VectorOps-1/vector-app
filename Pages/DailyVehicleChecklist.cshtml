@@ -26,6 +26,7 @@
         <form method="post" class="inspection-form">
             <input asp-for="Frequency" type="hidden" />
             <input asp-for="SameAsPreviousShift" id="sameAsPreviousShiftInput" type="hidden" />
+            <input asp-for="PreviousVehicleReportId" id="previousVehicleReportIdInput" type="hidden" />
             <div id="vehicleDraftStatus" class="draft-status" aria-live="polite"></div>
 
             <section class="inspection-section">
@@ -50,6 +51,8 @@
                                         data-schematic-name="@vehicle.SchematicName"
                                         data-schematic-key="@vehicle.SchematicKey"
                                         data-next-service="@vehicle.NextServiceDate"
+                                        data-previous-report-id="@vehicle.PreviousSourceReportId"
+                                        data-previous-performer="@vehicle.PreviousSourcePerformer"
                                         data-previous-kilometres="@vehicle.PreviousKilometres"
                                         data-previous-fuel-level="@vehicle.PreviousFuelLevel"
                                         data-previous-vehicle-status="@vehicle.PreviousVehicleStatus"
@@ -80,7 +83,7 @@
                         data-default-allowed="@Model.AllowSameAsPreviousVehicleInspection.ToString().ToLowerInvariant()">
                     Same as previous shift
                 </button>
-                <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the operational checks, schematic, damage, and notes are unchanged.</p>
+                <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the last checklist for this vehicle by another profile is unchanged.</p>
             </div>
 
             <section class="inspection-section">
@@ -251,6 +254,7 @@
         const sameAsPreviousShiftButton = document.getElementById("sameAsPreviousShiftButton");
         const sameAsPreviousShiftStatus = document.getElementById("sameAsPreviousShiftStatus");
         const sameAsPreviousShiftInput = document.getElementById("sameAsPreviousShiftInput");
+        const previousVehicleReportIdInput = document.getElementById("previousVehicleReportIdInput");
         const previousShiftPanel = sameAsPreviousShiftButton?.closest(".previous-shift-panel");
         const damageTypeInput = document.getElementById("damageTypeInput");
         const damageSeverityInput = document.getElementById("damageSeverityInput");
@@ -288,6 +292,9 @@
         function clearPreviousShiftSelection() {
             if (sameAsPreviousShiftInput) {
                 sameAsPreviousShiftInput.value = "false";
+            }
+            if (previousVehicleReportIdInput) {
+                previousVehicleReportIdInput.value = "";
             }
 
             previousShiftPanel?.classList.remove("applied");
@@ -336,7 +343,7 @@
 
             sameAsPreviousShiftButton.disabled = !isAllowed;
             sameAsPreviousShiftStatus.textContent = isAllowed
-                ? "Fresh inspection is the default. Use this only when the operational checks, schematic, damage, and notes are unchanged."
+                ? "Fresh inspection is the default. Use this only when the last checklist for this vehicle by another profile is unchanged."
                 : "Same as previous shift is disabled by senior management.";
         }
 
@@ -345,6 +352,14 @@
             if (!option || !option.value) {
                 if (sameAsPreviousShiftStatus) {
                     sameAsPreviousShiftStatus.textContent = "Select a registration before using Same as previous shift.";
+                }
+                return;
+            }
+
+            if (!option.dataset.previousReportId) {
+                clearPreviousShiftSelection();
+                if (sameAsPreviousShiftStatus) {
+                    sameAsPreviousShiftStatus.textContent = "No previous checklist from another profile is available for this vehicle.";
                 }
                 return;
             }
@@ -365,10 +380,13 @@
             if (sameAsPreviousShiftInput) {
                 sameAsPreviousShiftInput.value = "true";
             }
+            if (previousVehicleReportIdInput) {
+                previousVehicleReportIdInput.value = option.dataset.previousReportId;
+            }
 
             previousShiftPanel?.classList.add("applied");
             if (sameAsPreviousShiftStatus) {
-                sameAsPreviousShiftStatus.textContent = "Previous shift operational checks, schematic, damage, and notes have been applied. Edit any field if something changed.";
+                sameAsPreviousShiftStatus.textContent = "Previous checklist values from " + (option.dataset.previousPerformer || "another profile") + " have been applied. Edit any field if something changed.";
             }
         }
 

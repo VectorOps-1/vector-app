@@ -36,6 +36,7 @@ public class DailyVehicleChecklistModel : PageModel
     [BindProperty] public string? DamageNotes { get; set; }
     [BindProperty] public string? ChecklistNotes { get; set; }
     [BindProperty] public bool SameAsPreviousShift { get; set; }
+    [BindProperty] public int? PreviousVehicleReportId { get; set; }
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public bool AllowSameAsPreviousVehicleInspection { get; private set; } = true;
@@ -44,7 +45,9 @@ public class DailyVehicleChecklistModel : PageModel
     public string FrequencyLabel => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Checklist" : "Daily Readiness";
     public string InspectionTitle => NormalizeFrequency(Frequency) == "monthly" ? "Monthly Vehicle Inspection" : "Daily Vehicle Readiness";
 
-    public IReadOnlyList<VehicleRegisterOption> VehicleRegisterOptions { get; } =
+    public List<VehicleRegisterOption> VehicleRegisterOptions { get; private set; } = new();
+
+    private static readonly IReadOnlyList<VehicleRegisterOption> DefaultVehicleRegisterOptions =
     [
         new(
             "AMB-101",
@@ -53,18 +56,20 @@ public class DailyVehicleChecklistModel : PageModel
             SchematicName("operational-ambulance"),
             "operational-ambulance",
             "2026-06-30",
-            68420,
-            "3/4",
-            "Operational",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Scratch",
-            "Minor",
-            "Light scratch on left rear locker door. No change reported on previous shift.",
-            "Previous shift reported no operational defects. Vehicle remained ready for duty."),
+            null,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""),
         new(
             "AMB-102",
             "Medic 2",
@@ -72,18 +77,20 @@ public class DailyVehicleChecklistModel : PageModel
             SchematicName("ift-ambulance"),
             "ift-ambulance",
             "2026-07-14",
-            72210,
-            "1/2",
-            "Operational with notes",
-            "Pass",
-            "Pass",
-            "Issue",
-            "Pass",
-            "Pass",
-            "Dent",
-            "Moderate",
-            "Existing dent on right front bumper. Manager already notified.",
-            "Previous shift completed with vehicle operational with notes."),
+            null,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""),
         new(
             "ICU-301",
             "ICU 1",
@@ -91,18 +98,20 @@ public class DailyVehicleChecklistModel : PageModel
             SchematicName("icu-ambulance"),
             "icu-ambulance",
             "2026-07-30",
-            55380,
-            "Full",
-            "Operational",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
+            null,
             "",
             "",
-            "No exterior damage recorded on previous shift.",
-            "Previous shift reported ICU vehicle ready for duty."),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""),
         new(
             "RSP-201",
             "Response 1",
@@ -110,18 +119,20 @@ public class DailyVehicleChecklistModel : PageModel
             SchematicName("response-pickup"),
             "response-pickup",
             "2026-08-05",
-            41890,
-            "Full",
-            "Operational",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
+            null,
             "",
             "",
-            "No exterior damage recorded on previous shift.",
-            "Previous shift reported no defects."),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""),
         new(
             "RSP-202",
             "Response 2",
@@ -129,18 +140,20 @@ public class DailyVehicleChecklistModel : PageModel
             SchematicName("response-sedan"),
             "response-sedan",
             "2026-08-22",
-            36710,
-            "3/4",
-            "Operational",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Pass",
-            "Scratch",
-            "Minor",
-            "Small scratch on rear bumper.",
-            "Previous shift reported sedan response vehicle ready.")
+            null,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "")
     ];
 
     public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
@@ -156,6 +169,7 @@ public class DailyVehicleChecklistModel : PageModel
 
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
+        await LoadVehicleRegisterOptionsAsync(currentUser.CompanyId, currentUser.Id);
         return Page();
     }
 
@@ -170,6 +184,7 @@ public class DailyVehicleChecklistModel : PageModel
 
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
+        await LoadVehicleRegisterOptionsAsync(currentUser.CompanyId, currentUser.Id);
 
         if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
         {
@@ -180,6 +195,12 @@ public class DailyVehicleChecklistModel : PageModel
         if (string.IsNullOrWhiteSpace(VehicleStatus))
         {
             StatusMessage = "Select the vehicle condition before saving.";
+            return Page();
+        }
+
+        if (SameAsPreviousShift && PreviousVehicleReportId is null)
+        {
+            StatusMessage = "No previous checklist from another profile is available for this vehicle.";
             return Page();
         }
 
@@ -204,6 +225,67 @@ public class DailyVehicleChecklistModel : PageModel
             .FirstOrDefaultAsync();
 
         AllowSameAsPreviousVehicleInspection = setting;
+    }
+
+    private async Task LoadVehicleRegisterOptionsAsync(int companyId, int currentUserId)
+    {
+        var vehicles = await _db.Vehicles
+            .AsNoTracking()
+            .Where(vehicle => vehicle.CompanyId == companyId)
+            .ToListAsync();
+        var vehiclesByRegistration = vehicles
+            .GroupBy(vehicle => vehicle.RegistrationNumber, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        var vehicleIds = vehicles.Select(vehicle => vehicle.Id).ToList();
+        var latestReports = vehicleIds.Count == 0
+            ? new List<DailyVehicleReadinessReport>()
+            : await _db.DailyVehicleReadinessReports
+                .AsNoTracking()
+                .Include(report => report.PerformedByUser)
+                .Where(report =>
+                    report.CompanyId == companyId &&
+                    vehicleIds.Contains(report.VehicleId) &&
+                    report.PerformedByUserId != currentUserId)
+                .OrderByDescending(report => report.InspectionDateUtc)
+                .ToListAsync();
+        var latestReportByVehicleId = latestReports
+            .GroupBy(report => report.VehicleId)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        VehicleRegisterOptions = DefaultVehicleRegisterOptions
+            .Select(option =>
+            {
+                if (!vehiclesByRegistration.TryGetValue(option.Registration, out var vehicle) ||
+                    !latestReportByVehicleId.TryGetValue(vehicle.Id, out var report))
+                {
+                    return option;
+                }
+
+                return option with
+                {
+                    Callsign = vehicle.Callsign,
+                    VehicleType = vehicle.VehicleType,
+                    SchematicKey = VehicleSchematicLibrary.Find(vehicle.SchematicType ?? string.Empty)?.Key ?? option.SchematicKey,
+                    SchematicName = VehicleSchematicLibrary.Find(vehicle.SchematicType ?? string.Empty)?.DisplayName ?? option.SchematicName,
+                    NextServiceDate = (vehicle.NextServiceDate ?? option.NextServiceDateAsDate)?.ToString("yyyy-MM-dd") ?? option.NextServiceDate,
+                    PreviousSourceReportId = report.Id,
+                    PreviousSourcePerformer = report.PerformedByUser?.FullName ?? "another profile",
+                    PreviousKilometres = ExtractNoteValue(report.OperationalNotes, "Kilometres") ?? "",
+                    PreviousFuelLevel = ExtractNoteValue(report.OperationalNotes, "Fuel") ?? "",
+                    PreviousVehicleStatus = report.ReadinessStatus,
+                    PreviousLightsStatus = report.LightsStatus ?? "",
+                    PreviousSirenStatus = report.SirensStatus ?? "",
+                    PreviousWarningLightsStatus = report.WarningLightsStatus ?? "",
+                    PreviousTyresStatus = report.TyresStatus ?? "",
+                    PreviousOpsRadioStatus = report.RadioConnectivityStatus ?? "",
+                    PreviousDamageType = ExtractNoteValue(report.SchematicNotes, "Damage type") ?? "",
+                    PreviousDamageSeverity = ExtractNoteValue(report.SchematicNotes, "Severity") ?? "",
+                    PreviousDamageNotes = report.DamageNotes ?? "",
+                    PreviousChecklistNotes = report.GeneralNotes ?? ""
+                };
+            })
+            .ToList();
     }
 
     private async Task<DailyVehicleReadinessReport> SaveVehicleReadinessAsync(AppUser currentUser)
@@ -231,7 +313,11 @@ public class DailyVehicleChecklistModel : PageModel
             VehicleNextServiceDateAtCheck = NextServiceDate ?? vehicle.NextServiceDate,
             SameAsPreviousShiftUsed = SameAsPreviousShift,
             VehicleSameAsPreviousShiftUsed = SameAsPreviousShift,
+            VehicleSameAsPreviousSourceReportId = SameAsPreviousShift ? PreviousVehicleReportId : null,
             VehicleSameAsPreviousAppliedAtUtc = SameAsPreviousShift ? now : null,
+            VehicleSameAsPreviousCopiedSummary = SameAsPreviousShift && PreviousVehicleReportId.HasValue
+                ? $"Vehicle inspection values copied from readiness report #{PreviousVehicleReportId.Value} completed by another profile."
+                : null,
             LightsStatus = NormalizeOptional(LightsStatus),
             SirensStatus = NormalizeOptional(SirenStatus),
             WarningLightsStatus = NormalizeOptional(WarningLightsStatus),
@@ -349,6 +435,25 @@ public class DailyVehicleChecklistModel : PageModel
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
+    private static string? ExtractNoteValue(string? notes, string label)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return null;
+        }
+
+        foreach (var part in notes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var prefix = $"{label}:";
+            if (part.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return part[prefix.Length..].Trim();
+            }
+        }
+
+        return null;
+    }
+
     private static string NormalizeFrequency(string? frequency)
     {
         return string.Equals(frequency, "monthly", StringComparison.OrdinalIgnoreCase) ? "monthly" : "daily";
@@ -366,7 +471,9 @@ public class DailyVehicleChecklistModel : PageModel
         string SchematicName,
         string SchematicKey,
         string NextServiceDate,
-        int PreviousKilometres,
+        int? PreviousSourceReportId,
+        string PreviousSourcePerformer,
+        string PreviousKilometres,
         string PreviousFuelLevel,
         string PreviousVehicleStatus,
         string PreviousLightsStatus,
@@ -377,5 +484,9 @@ public class DailyVehicleChecklistModel : PageModel
         string PreviousDamageType,
         string PreviousDamageSeverity,
         string PreviousDamageNotes,
-        string PreviousChecklistNotes);
+        string PreviousChecklistNotes)
+    {
+        public DateTime? NextServiceDateAsDate =>
+            DateTime.TryParse(NextServiceDate, out var date) ? date : null;
+    }
 }

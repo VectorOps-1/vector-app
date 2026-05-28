@@ -21,6 +21,7 @@ public class DailyEquipmentChecklistModel : PageModel
     [BindProperty] public string? Callsign { get; set; }
     [BindProperty] public string? Registration { get; set; }
     [BindProperty] public bool SameAsPreviousEquipmentCheck { get; set; }
+    [BindProperty] public int? PreviousEquipmentReportId { get; set; }
     [BindProperty] public List<EquipmentCheckInput> EquipmentChecks { get; set; } = new();
 
     public string? StatusMessage { get; private set; }
@@ -28,7 +29,6 @@ public class DailyEquipmentChecklistModel : PageModel
     public bool AllowSameAsPreviousEquipmentCheck { get; private set; } = true;
     public string DraftStorageKey { get; private set; } = "daily-equipment-readiness:anonymous";
     public string FreshChecklistUrl => "/DailyEquipmentChecklist";
-    public int? PreviousEquipmentReportId { get; private set; }
 
     public string LinkedVehicleLabel => string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration)
         ? "No vehicle selected"
@@ -48,7 +48,7 @@ public class DailyEquipmentChecklistModel : PageModel
         Registration = registration;
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
-        await LoadEquipmentChecklistRowsAsync(currentUser.CompanyId, preservePostedValues: false);
+        await LoadEquipmentChecklistRowsAsync(currentUser.CompanyId, currentUser.Id, preservePostedValues: false);
         return Page();
     }
 
@@ -62,7 +62,13 @@ public class DailyEquipmentChecklistModel : PageModel
 
         ApplyUserDraftContext(currentUser);
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
-        await LoadEquipmentChecklistRowsAsync(currentUser.CompanyId, preservePostedValues: true);
+        await LoadEquipmentChecklistRowsAsync(currentUser.CompanyId, currentUser.Id, preservePostedValues: true);
+
+        if (SameAsPreviousEquipmentCheck && PreviousEquipmentReportId is null)
+        {
+            StatusMessage = "No previous equipment checklist from another profile is available for this vehicle.";
+            return Page();
+        }
 
         if (SameAsPreviousEquipmentCheck)
         {
@@ -94,7 +100,7 @@ public class DailyEquipmentChecklistModel : PageModel
         DraftStorageKey = $"daily-equipment-readiness:user-{currentUser.Id}:access-{accessView}:vehicle-{vehicleKey}";
     }
 
-    private async Task LoadEquipmentChecklistRowsAsync(int companyId, bool preservePostedValues)
+    private async Task LoadEquipmentChecklistRowsAsync(int companyId, int currentUserId, bool preservePostedValues)
     {
         var postedRows = preservePostedValues
             ? EquipmentChecks.ToDictionary(row => row.RowKey, StringComparer.OrdinalIgnoreCase)
@@ -121,7 +127,7 @@ public class DailyEquipmentChecklistModel : PageModel
             EquipmentChecks[index].SortOrder = index + 1;
         }
 
-        await ApplyPreviousEquipmentCheckValuesAsync(companyId);
+        await ApplyPreviousEquipmentCheckValuesAsync(companyId, currentUserId);
     }
 
     private async Task<List<EquipmentCheckInput>> BuildConfiguredEquipmentRowsAsync(int companyId)
@@ -331,7 +337,7 @@ public class DailyEquipmentChecklistModel : PageModel
         return savedChecks.Count;
     }
 
-    private async Task ApplyPreviousEquipmentCheckValuesAsync(int companyId)
+    private async Task ApplyPreviousEquipmentCheckValuesAsync(int companyId, int currentUserId)
     {
         var vehicle = await FindLinkedVehicleAsync(companyId);
         if (vehicle is null)
@@ -344,7 +350,8 @@ public class DailyEquipmentChecklistModel : PageModel
             .Include(report => report.EquipmentChecks)
             .Where(report =>
                 report.CompanyId == companyId &&
-                report.VehicleId == vehicle.Id)
+                report.VehicleId == vehicle.Id &&
+                report.PerformedByUserId != currentUserId)
             .OrderByDescending(report => report.InspectionDateUtc)
             .FirstOrDefaultAsync();
 
