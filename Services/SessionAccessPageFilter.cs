@@ -44,6 +44,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/VehicleRegister"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
         ["/EquipmentRegister"] = ManagementAccess,
+        ["/EquipmentService"] = ManagementAccess,
         ["/MoveAsset"] = ManagementAccess,
         ["/Stock"] = ManagementAccess,
         ["/StockRegister"] = ManagementAccess,
@@ -93,6 +94,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
     {
         "/AddItem",
+        "/EquipmentService",
         "/Stock",
         "/MoveAsset"
     };
@@ -188,6 +190,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         {
             "Add New Vehicle" => IsAddItemRequest(pagePath, query, "vehicle"),
             "Add New Equipment" => IsAddItemRequest(pagePath, query, "equipment"),
+            "Update Equipment Service Dates" => IsEquipmentServiceRequest(pagePath),
+            "Service / Maintenance" => IsEquipmentServiceRequest(pagePath),
             "Add New Stock Item" => IsAddItemRequest(pagePath, query, "stock"),
             "Add Medication" => IsAddItemRequest(pagePath, query, "medication"),
             "Move / Reallocate Vehicle" => IsMoveAssetRequest(pagePath, query, "vehicle"),
@@ -200,6 +204,11 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "Expiry / Compliance Check" => IsStockRequest(pagePath),
             _ => false
         };
+    }
+
+    private static bool IsEquipmentServiceRequest(string pagePath)
+    {
+        return string.Equals(pagePath, "/EquipmentService", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAddItemRequest(string pagePath, IQueryCollection query, string itemType)

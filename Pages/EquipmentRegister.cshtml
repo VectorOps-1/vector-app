@@ -21,6 +21,7 @@
             <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
             <a class="menu-btn staff-btn toolbar-btn" href="/EquipmentRegister">All</a>
             <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=equipment">Add Equipment</a>
+            <a class="menu-btn stock-btn toolbar-btn" href="/EquipmentService?returnUrl=/EquipmentRegister">Service Dates</a>
             <a class="menu-btn report-btn toolbar-btn" href="/ReportIssue?module=equipment">Report Issue</a>
         </form>
 
@@ -63,6 +64,7 @@
                         </div>
                         <div role="cell"><span class="status-pill">@item.Status</span></div>
                         <div class="row-actions" role="cell">
+                            <a href="/EquipmentService?equipmentId=@item.Id&returnUrl=/EquipmentRegister">Service</a>
                             <a href="/MoveAsset?asset=equipment&assetId=@item.Id">Move</a>
                             <a href="/ReportIssue?module=equipment">Issue</a>
                         </div>
@@ -81,12 +83,12 @@
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(860px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
-.toolbar { width: min(1180px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 160px 140px; gap: 12px; }
+.toolbar { width: min(1180px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 160px 150px 140px; gap: 12px; }
 .search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
 .register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.register-header, .register-row { display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(120px, .7fr) minmax(150px, .8fr) minmax(150px, .8fr) minmax(150px, .8fr) minmax(170px, .9fr) 100px 110px; gap: 12px; align-items: center; padding: 14px 16px; }
+.register-header, .register-row { display: grid; grid-template-columns: minmax(180px, 1.05fr) minmax(110px, .65fr) minmax(140px, .75fr) minmax(145px, .78fr) minmax(140px, .72fr) minmax(160px, .82fr) 90px 150px; gap: 12px; align-items: center; padding: 14px 16px; }
 .register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
 .register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
 .equipment-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }

@@ -1,0 +1,144 @@
+@page
+@model EquipmentServiceModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Update Equipment Service Dates";
+    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+}
+
+<div class="equipment-service-screen">
+    <div class="equipment-service-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Equipment Servicing</div>
+        <h2 class="page-title">Update Equipment Service Dates</h2>
+        <p class="page-subtitle">Select one item or a returned service batch, then apply the new next service date to the equipment register.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form class="toolbar" method="get">
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, S/N / ID, model, vehicle, location, or status" />
+            <input asp-for="ReturnUrl" type="hidden" value="@Model.SafeReturnUrl" />
+            <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
+            <a class="menu-btn staff-btn toolbar-btn" href="/EquipmentService">All</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/EquipmentRegister">Register</a>
+        </form>
+
+        <form method="post" class="service-form">
+            <input asp-for="PostedReturnUrl" type="hidden" value="@Model.SafeReturnUrl" />
+
+            <section class="service-panel">
+                <div class="section-label">Service Return Details</div>
+                <div class="service-grid">
+                    <label>
+                        New next service date
+                        <input asp-for="NewNextServiceDate" type="date" />
+                    </label>
+                    <label>
+                        Service note
+                        <input asp-for="ServiceNote" type="text" placeholder="Optional service provider, job card, repair note, or batch note" />
+                    </label>
+                </div>
+            </section>
+
+            @if (!Model.EquipmentItems.Any())
+            {
+                <div class="empty-panel">No equipment records found.</div>
+            }
+            else
+            {
+                <div class="register-table" role="table" aria-label="Equipment service date update list">
+                    <div class="register-header" role="row">
+                        <div role="columnheader">Update</div>
+                        <div role="columnheader">Equipment</div>
+                        <div role="columnheader">S/N / ID</div>
+                        <div role="columnheader">Current Next Service</div>
+                        <div role="columnheader">Vehicle / Location</div>
+                        <div role="columnheader">Status</div>
+                    </div>
+
+                    @foreach (var item in Model.EquipmentItems)
+                    {
+                        <label class="register-row" role="row">
+                            <span role="cell">
+                                <input class="row-checkbox" type="checkbox" name="SelectedEquipmentItemIds" value="@item.Id" checked="@item.IsSelected" />
+                            </span>
+                            <span class="equipment-identity" role="cell">
+                                <strong>@item.Name</strong>
+                                <span>@(item.EquipmentType ?? "Type not set")</span>
+                                <span>@(item.Model ?? "Model not set")</span>
+                            </span>
+                            <span role="cell">@(item.SerialOrAssetId ?? "Not set")</span>
+                            <span role="cell"><strong>@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong></span>
+                            <span class="stacked-cell" role="cell">
+                                <strong>@(item.AssignedVehicle ?? "No vehicle allocation")</strong>
+                                <span>@(item.CurrentLocation ?? "Unallocated")</span>
+                            </span>
+                            <span role="cell"><span class="status-pill">@item.Status</span></span>
+                        </label>
+                    }
+                </div>
+            }
+
+            <div class="action-row">
+                <a class="menu-btn staff-btn" href="@Model.SafeReturnUrl">Back</a>
+                <button class="menu-btn equipment-btn continue-btn" type="submit" disabled="@(!Model.EquipmentItems.Any())">Save Service Date Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.equipment-service-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.equipment-service-inner { width: 100%; max-width: 1240px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(780px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 800; }
+.toolbar { width: min(1180px, 100%); margin: 0 auto 18px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 130px; gap: 12px; }
+.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.toolbar-btn { min-width: 0; border: none; }
+.service-form { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.service-panel { width: min(1180px, 100%); padding: 18px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; box-sizing: border-box; }
+.section-label { margin-bottom: 14px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.service-grid { display: grid; grid-template-columns: minmax(220px, .55fr) minmax(0, 1fr); gap: 16px; }
+.service-grid label { display: flex; flex-direction: column; gap: 8px; color: #52606d; font-size: 13px; font-weight: 800; }
+.service-grid input { min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.register-header, .register-row { display: grid; grid-template-columns: 80px minmax(210px, 1.1fr) minmax(140px, .75fr) minmax(150px, .7fr) minmax(220px, 1fr) 100px; gap: 12px; align-items: center; padding: 14px 16px; }
+.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; cursor: pointer; }
+.register-row:hover { background: rgba(14,94,122,.04); }
+.row-checkbox { width: 20px; height: 20px; accent-color: #0E5E7A; }
+.equipment-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
+.equipment-identity strong, .stacked-cell strong { color: #1f2937; font-size: 15px; }
+.equipment-identity span, .stacked-cell span { color: #6b7280; font-size: 13px; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+.action-row { width: min(760px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.action-row .menu-btn { width: 100%; border: none; text-align: center; }
+.action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
+@@media (max-width: 920px) {
+    .toolbar, .service-grid, .action-row, .register-header, .register-row { grid-template-columns: 1fr; }
+    .register-header { display: none; }
+    .register-row { gap: 8px; }
+}
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Equipment service date updated."),
+            redirectUrl: @Json.Serialize(Model.SafeReturnUrl),
+            delay: 1300
+        });
+    </script>
+}
