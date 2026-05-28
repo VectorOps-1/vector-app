@@ -182,22 +182,37 @@
 
         const taskNotification = document.getElementById("taskNotification");
         const taskCount = document.getElementById("taskCount");
+        const issueNotification = document.getElementById("issueNotification");
+        const issueCount = document.getElementById("issueCount");
 
-        if (!taskNotification || !taskCount) {
-            return;
+        if (taskNotification && taskCount) {
+            fetch("/TaskNotificationCount", { cache: "no-store" })
+                .then(response => response.ok ? response.json() : { count: 0 })
+                .then(data => {
+                    const count = Number(data.count || 0);
+                    if (count > 0) {
+                        taskCount.textContent = String(count);
+                        taskNotification.classList.add("visible");
+                    }
+                })
+                .catch(() => {
+                    // Keep the UI quiet if the count endpoint is unavailable.
+                });
         }
 
-        fetch("/TaskNotificationCount", { cache: "no-store" })
-            .then(response => response.ok ? response.json() : { count: 0 })
-            .then(data => {
-                const count = Number(data.count || 0);
-                if (count > 0) {
-                    taskCount.textContent = String(count);
-                    taskNotification.classList.add("visible");
-                }
-            })
-            .catch(() => {
-                // Keep the UI quiet if the count endpoint is unavailable.
-            });
+        if (issueNotification && issueCount) {
+            fetch("/IssueNotificationCount", { cache: "no-store" })
+                .then(response => response.ok ? response.json() : { count: 0 })
+                .then(data => {
+                    const count = Number(data.count || 0);
+                    if (count > 0) {
+                        issueCount.textContent = String(count);
+                        issueNotification.classList.add("visible");
+                    }
+                })
+                .catch(() => {
+                    // Keep the UI quiet if the count endpoint is unavailable.
+                });
+        }
     });
 })();
