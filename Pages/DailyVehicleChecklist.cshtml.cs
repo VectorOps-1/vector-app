@@ -252,14 +252,30 @@ public class DailyVehicleChecklistModel : PageModel
         var latestReportByVehicleId = latestReports
             .GroupBy(report => report.VehicleId)
             .ToDictionary(group => group.Key, group => group.First());
+        var publishedTemplates = await _db.ChecklistTemplates
+            .AsNoTracking()
+            .Where(template =>
+                template.CompanyId == companyId &&
+                template.ChecklistType == "Vehicle" &&
+                template.IsPublished)
+            .ToListAsync();
 
         VehicleRegisterOptions = DefaultVehicleRegisterOptions
             .Select(option =>
             {
+                var vehicleType = vehiclesByRegistration.TryGetValue(option.Registration, out var registeredVehicle)
+                    ? registeredVehicle.VehicleType
+                    : option.VehicleType;
+                var publishedTemplate = SelectPublishedTemplateForVehicleType(publishedTemplates, vehicleType);
+
                 if (!vehiclesByRegistration.TryGetValue(option.Registration, out var vehicle) ||
                     !latestReportByVehicleId.TryGetValue(vehicle.Id, out var report))
                 {
-                    return option;
+                    return option with
+                    {
+                        PublishedChecklistTemplateId = publishedTemplate?.Id,
+                        PublishedChecklistTemplateName = publishedTemplate?.Name ?? ""
+                    };
                 }
 
                 return option with
@@ -282,7 +298,9 @@ public class DailyVehicleChecklistModel : PageModel
                     PreviousDamageType = ExtractNoteValue(report.SchematicNotes, "Damage type") ?? "",
                     PreviousDamageSeverity = ExtractNoteValue(report.SchematicNotes, "Severity") ?? "",
                     PreviousDamageNotes = report.DamageNotes ?? "",
-                    PreviousChecklistNotes = report.GeneralNotes ?? ""
+                    PreviousChecklistNotes = report.GeneralNotes ?? "",
+                    PublishedChecklistTemplateId = publishedTemplate?.Id,
+                    PublishedChecklistTemplateName = publishedTemplate?.Name ?? ""
                 };
             })
             .ToList();
@@ -454,6 +472,51 @@ public class DailyVehicleChecklistModel : PageModel
         return null;
     }
 
+    private static ChecklistTemplate? SelectPublishedTemplateForVehicleType(
+        IReadOnlyList<ChecklistTemplate> templates,
+        string? vehicleType)
+    {
+        if (templates.Count == 0)
+        {
+            return null;
+        }
+
+        var normalizedVehicleType = NormalizeOptional(vehicleType) ?? "All Vehicles";
+        return templates.FirstOrDefault(template => string.Equals(template.TargetVehicleType, normalizedVehicleType, StringComparison.OrdinalIgnoreCase))
+            ?? templates.FirstOrDefault(template => VehicleTypeMatchesTemplateTarget(normalizedVehicleType, template.TargetVehicleType))
+            ?? templates.FirstOrDefault(template => string.Equals(template.TargetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool VehicleTypeMatchesTemplateTarget(string vehicleType, string targetVehicleType)
+    {
+        if (string.Equals(targetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (vehicleType.Contains("ICU", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(targetVehicleType, "ICU Ambulance", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (vehicleType.Contains("Ambulance", StringComparison.OrdinalIgnoreCase))
+        {
+            return targetVehicleType.Contains("Ambulance", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (vehicleType.Contains("Response", StringComparison.OrdinalIgnoreCase))
+        {
+            return targetVehicleType.Contains("Response", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (vehicleType.Contains("Rescue", StringComparison.OrdinalIgnoreCase))
+        {
+            return targetVehicleType.Contains("Rescue", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
     private static string NormalizeFrequency(string? frequency)
     {
         return string.Equals(frequency, "monthly", StringComparison.OrdinalIgnoreCase) ? "monthly" : "daily";
@@ -484,7 +547,9 @@ public class DailyVehicleChecklistModel : PageModel
         string PreviousDamageType,
         string PreviousDamageSeverity,
         string PreviousDamageNotes,
-        string PreviousChecklistNotes)
+        string PreviousChecklistNotes,
+        int? PublishedChecklistTemplateId = null,
+        string PublishedChecklistTemplateName = "")
     {
         public DateTime? NextServiceDateAsDate =>
             DateTime.TryParse(NextServiceDate, out var date) ? date : null;

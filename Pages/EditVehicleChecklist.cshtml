@@ -24,14 +24,35 @@
 
         <form method="post" class="editor-form">
             <section class="editor-section setup-section">
-                <div class="section-heading">Checklist Version</div>
+                <div class="section-heading">Checklist Template</div>
                 <div class="form-grid">
                     <label>
-                        Currently used checklist
+                        Available vehicle template
+                        <select asp-for="SelectedTemplateId" id="templateSelect">
+                            <option value="">Create new template</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id" selected="@(Model.SelectedTemplateId == template.Id)">@template.DisplayName</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Checklist name
                         <select asp-for="ChecklistName">
                             <option>Daily Vehicle Readiness</option>
                             <option>Monthly Vehicle Checklist</option>
                             <option>Custom Uploaded Vehicle Checklist</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Target vehicle type
+                        <select asp-for="TargetVehicleType" id="targetVehicleTypeSelect">
+                            @foreach (var vehicleType in Model.TargetVehicleTypeOptions)
+                            {
+                                <option value="@vehicleType" selected="@(string.Equals(Model.TargetVehicleType, vehicleType, StringComparison.OrdinalIgnoreCase))">@vehicleType</option>
+                            }
                         </select>
                     </label>
 
@@ -45,6 +66,9 @@
                             <option>Archived</option>
                         </select>
                     </label>
+                </div>
+                <div class="template-note">
+                    Published templates become the available checklist versions for matching vehicle types. A response vehicle, ambulance, and ICU ambulance can each have a different live checklist.
                 </div>
             </section>
 
@@ -314,6 +338,7 @@
 .form-grid label, .section-title-editor label, .field-editor-grid label, .previous-shift-editor label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
 .form-grid input, .form-grid select, .form-grid textarea, .section-title-editor input, .field-editor-grid input, .field-editor-grid select, .previous-shift-editor input { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 14px; background: #fff; color: #1f2937; box-sizing: border-box; }
 .form-grid textarea { padding-top: 12px; resize: vertical; }
+.template-note { margin-top: 12px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; }
 .builder-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .builder-toolbar p { margin: 0; color: #6b7280; font-size: 13px; font-weight: 700; }
 .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
@@ -365,6 +390,7 @@
         const vehicleSameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
         const equipmentSameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
         const layoutBuilder = document.querySelector(".layout-builder");
+        const templateSelect = document.getElementById("templateSelect");
 
         function renumberSections() {
             document.querySelectorAll(".checklist-section-editor").forEach(function (section, index) {
@@ -466,6 +492,16 @@
                 localStorage.setItem(equipmentSameShiftSettingKey, String(equipmentToggle.checked));
             });
         }
+
+        templateSelect?.addEventListener("change", function () {
+            if (!templateSelect.value) {
+                return;
+            }
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("templateId", templateSelect.value);
+            window.location.href = url.toString();
+        });
 
         layoutBuilder?.addEventListener("click", function (event) {
             const button = event.target.closest("button[data-action]");

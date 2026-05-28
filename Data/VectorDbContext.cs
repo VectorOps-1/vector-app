@@ -390,6 +390,33 @@ public class VectorDbContext : DbContext
             .HasForeignKey(check => check.CopiedFromDailyVehicleEquipmentCheckId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasIndex(template => new { template.CompanyId, template.ChecklistType, template.TargetVehicleType, template.Name });
+
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasOne(template => template.Company)
+            .WithMany(company => company.ChecklistTemplates)
+            .HasForeignKey(template => template.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistSection>()
+            .HasOne(section => section.ChecklistTemplate)
+            .WithMany(template => template.Sections)
+            .HasForeignKey(section => section.ChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChecklistItem>()
+            .HasOne(item => item.ChecklistSection)
+            .WithMany(section => section.Items)
+            .HasForeignKey(item => item.ChecklistSectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UploadedFile>()
+            .HasOne(file => file.ChecklistTemplate)
+            .WithMany(template => template.UploadedFiles)
+            .HasForeignKey(file => file.ChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<AuditLog>()
             .HasOne(auditLog => auditLog.Company)
             .WithMany(company => company.AuditLogs)

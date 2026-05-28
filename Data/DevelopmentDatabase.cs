@@ -215,6 +215,43 @@ public static class DevelopmentDatabase
             """);
 
         await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "ChecklistTemplates" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_ChecklistTemplates" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL DEFAULT 1,
+                "ClientName" TEXT NOT NULL,
+                "Name" TEXT NOT NULL,
+                "ChecklistType" TEXT NOT NULL DEFAULT 'Vehicle',
+                "TargetVehicleType" TEXT NOT NULL DEFAULT 'All Vehicles',
+                "Version" TEXT NOT NULL,
+                "Status" TEXT NOT NULL DEFAULT 'Draft',
+                "IsPublished" INTEGER NOT NULL DEFAULT 0,
+                "PublishedAtUtc" TEXT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "ChecklistSections" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_ChecklistSections" PRIMARY KEY AUTOINCREMENT,
+                "ChecklistTemplateId" INTEGER NOT NULL,
+                "Name" TEXT NOT NULL,
+                "DisplayOrder" INTEGER NOT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "ChecklistItems" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_ChecklistItems" PRIMARY KEY AUTOINCREMENT,
+                "ChecklistSectionId" INTEGER NOT NULL,
+                "Prompt" TEXT NOT NULL,
+                "ResponseType" TEXT NOT NULL,
+                "RequiresCommentOnFail" INTEGER NOT NULL,
+                "DisplayOrder" INTEGER NOT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "AssetMovements" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_AssetMovements" PRIMARY KEY AUTOINCREMENT,
                 "CompanyId" INTEGER NOT NULL,
@@ -260,6 +297,13 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousShiftUsed", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousShiftUsed" INTEGER NOT NULL DEFAULT 0;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "CopiedFromDailyVehicleEquipmentCheckId", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "CopiedFromDailyVehicleEquipmentCheckId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleEquipmentChecks", "SameAsPreviousAppliedAtUtc", """ALTER TABLE "DailyVehicleEquipmentChecks" ADD "SameAsPreviousAppliedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "CompanyId", """ALTER TABLE "ChecklistTemplates" ADD "CompanyId" INTEGER NOT NULL DEFAULT 1;""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "ChecklistType", """ALTER TABLE "ChecklistTemplates" ADD "ChecklistType" TEXT NOT NULL DEFAULT 'Vehicle';""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "TargetVehicleType", """ALTER TABLE "ChecklistTemplates" ADD "TargetVehicleType" TEXT NOT NULL DEFAULT 'All Vehicles';""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "Status", """ALTER TABLE "ChecklistTemplates" ADD "Status" TEXT NOT NULL DEFAULT 'Draft';""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "IsPublished", """ALTER TABLE "ChecklistTemplates" ADD "IsPublished" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "PublishedAtUtc", """ALTER TABLE "ChecklistTemplates" ADD "PublishedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "UpdatedAtUtc", """ALTER TABLE "ChecklistTemplates" ADD "UpdatedAtUtc" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedByUserId", """ALTER TABLE "MedicationItems" ADD "LastAllocatedByUserId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocatedAtUtc", """ALTER TABLE "MedicationItems" ADD "LastAllocatedAtUtc" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "LastAllocationLocation", """ALTER TABLE "MedicationItems" ADD "LastAllocationLocation" TEXT NULL;""");
@@ -284,6 +328,7 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleReadinessReports_VehicleSameAsPreviousSourceReportId" ON "DailyVehicleReadinessReports" ("VehicleSameAsPreviousSourceReportId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleReadinessReports_EquipmentSameAsPreviousSourceReportId" ON "DailyVehicleReadinessReports" ("EquipmentSameAsPreviousSourceReportId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId" ON "DailyVehicleEquipmentChecks" ("CopiedFromDailyVehicleEquipmentCheckId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistTemplates_CompanyId_ChecklistType_TargetVehicleType_Name" ON "ChecklistTemplates" ("CompanyId", "ChecklistType", "TargetVehicleType", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_OperationalAreas_CompanyId_Name" ON "OperationalAreas" ("CompanyId", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetMovements_CompanyId_AssetType_AssetId_CreatedAtUtc" ON "AssetMovements" ("CompanyId", "AssetType", "AssetId", "CreatedAtUtc");""");
     }
@@ -352,6 +397,7 @@ public static class DevelopmentDatabase
         await EnsureOperationalAreaAsync(db, company.Id, "Secondary Base", "Base");
         await EnsureOperationalAreaAsync(db, company.Id, "Main Store", "Store");
         await EnsurePrototypeVehicleEquipmentAsync(db, company.Id);
+        await EnsurePrototypeVehicleChecklistTemplatesAsync(db, company);
 
         await db.SaveChangesAsync();
     }
@@ -407,6 +453,93 @@ public static class DevelopmentDatabase
             Status = "Active",
             CreatedAtUtc = DateTime.UtcNow
         });
+    }
+
+    private static async Task EnsurePrototypeVehicleChecklistTemplatesAsync(VectorDbContext db, Company company)
+    {
+        var templates = new[]
+        {
+            ("Daily Vehicle Readiness", "Ambulance"),
+            ("Daily Vehicle Readiness", "ICU Ambulance"),
+            ("Daily Vehicle Readiness", "Response Vehicle"),
+            ("Daily Vehicle Readiness", "Rescue Vehicle")
+        };
+
+        foreach (var (name, targetVehicleType) in templates)
+        {
+            await EnsureVehicleChecklistTemplateAsync(db, company, name, targetVehicleType);
+        }
+    }
+
+    private static async Task EnsureVehicleChecklistTemplateAsync(
+        VectorDbContext db,
+        Company company,
+        string name,
+        string targetVehicleType)
+    {
+        var template = await db.ChecklistTemplates.FirstOrDefaultAsync(item =>
+                item.CompanyId == company.Id &&
+                item.ChecklistType == "Vehicle" &&
+                item.Name == name &&
+                item.TargetVehicleType == targetVehicleType);
+
+        if (template is null)
+        {
+            template = new ChecklistTemplate
+            {
+                CompanyId = company.Id,
+                ClientName = company.Name,
+                Name = name,
+                ChecklistType = "Vehicle",
+                TargetVehicleType = targetVehicleType,
+                Version = "1.0",
+                Status = "Published",
+                IsPublished = true,
+                CreatedAtUtc = DateTime.UtcNow,
+                PublishedAtUtc = DateTime.UtcNow
+            };
+
+            db.ChecklistTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        if (await db.ChecklistSections.AnyAsync(section => section.ChecklistTemplateId == template.Id))
+        {
+            return;
+        }
+
+        var sections = new[]
+        {
+            ("Vehicle Details", 10, new[] { "Registration number", "Vehicle / callsign", "Vehicle type", "Next service date" }),
+            ("Same as previous shift", 20, new[] { "Allow vehicle inspection reuse", "Allow equipment check reuse" }),
+            ("Operational Checks", 30, new[] { "Current kilometres", "Fuel level", "Vehicle condition", "Lights", "Sirens", "Warning lights", "Tyres", "Ops radio connectivity" }),
+            ("Vehicle Schematic", 40, new[] { "Vehicle schematic", "Damage type", "Damage severity", "Damage notes" }),
+            ("Carried Equipment", 50, new[] { "Name/item", "S/N / ID", "Next Service", "Battery" }),
+            ("Notes / Issue", 60, new[] { "Inspection notes" })
+        };
+
+        foreach (var (sectionName, sectionOrder, prompts) in sections)
+        {
+            var section = new ChecklistSection
+            {
+                ChecklistTemplateId = template.Id,
+                Name = sectionName,
+                DisplayOrder = sectionOrder
+            };
+
+            for (var index = 0; index < prompts.Length; index++)
+            {
+                section.Items.Add(new ChecklistItem
+                {
+                    Prompt = prompts[index],
+                    ResponseType = sectionName == "Carried Equipment" ? "EquipmentColumn" : "ChecklistField",
+                    RequiresCommentOnFail = sectionName is "Operational Checks" or "Vehicle Schematic",
+                    DisplayOrder = index + 1
+                });
+            }
+
+            db.ChecklistSections.Add(section);
+        }
     }
 
     private static async Task EnsurePrototypeVehicleEquipmentAsync(VectorDbContext db, int companyId)

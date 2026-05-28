@@ -51,6 +51,8 @@
                                         data-schematic-name="@vehicle.SchematicName"
                                         data-schematic-key="@vehicle.SchematicKey"
                                         data-next-service="@vehicle.NextServiceDate"
+                                        data-template-id="@vehicle.PublishedChecklistTemplateId"
+                                        data-template-name="@vehicle.PublishedChecklistTemplateName"
                                         data-previous-report-id="@vehicle.PreviousSourceReportId"
                                         data-previous-performer="@vehicle.PreviousSourcePerformer"
                                         data-previous-kilometres="@vehicle.PreviousKilometres"
@@ -74,6 +76,8 @@
                     <label>Vehicle type<input asp-for="VehicleType" id="vehicleTypeInput" type="text" placeholder="Vehicle type" /></label>
                     <label>Next service date<input asp-for="NextServiceDate" id="nextServiceDateInput" type="date" /></label>
                 </div>
+
+                <div id="checklistTemplateName" class="template-loaded-note">Select a registration to load the published checklist template for that vehicle type.</div>
             </section>
 
             <div class="previous-shift-panel">
@@ -188,6 +192,7 @@
 .registration-field { grid-column: 1 / -1; }
 .vehicle-register-grid label, .damage-grid label, .operational-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 800; color: #52606d; }
 .vehicle-register-grid input, .vehicle-register-grid select, .damage-grid select, .operational-grid input, .operational-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #ffffff; color: #1f2937; box-sizing: border-box; }
+.template-loaded-note { margin-top: 14px; padding: 10px 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); color: #52606d; font-size: 13px; font-weight: 800; text-align: left; }
 .notes-field textarea { padding-top: 12px; resize: vertical; }
 .schematic-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .schematic-tab { min-height: 38px; border: 1px solid rgba(66, 84, 102, 0.18); border-radius: 8px; background: #ffffff; color: #334155; font-size: 13px; font-weight: 800; }
@@ -243,6 +248,7 @@
         const kilometresInput = document.getElementById("kilometresInput");
         const fuelLevelInput = document.getElementById("fuelLevelInput");
         const nextServiceDateInput = document.getElementById("nextServiceDateInput");
+        const checklistTemplateName = document.getElementById("checklistTemplateName");
         const vehicleStatusInput = document.getElementById("vehicleStatusInput");
         const lightsStatusInput = document.getElementById("lightsStatusInput");
         const sirenStatusInput = document.getElementById("sirenStatusInput");
@@ -286,6 +292,11 @@
             }
             if (schematicName && option.dataset.schematicName) {
                 schematicName.textContent = "Loaded schematic: " + option.dataset.schematicName;
+            }
+            if (checklistTemplateName) {
+                checklistTemplateName.textContent = option.dataset.templateName
+                    ? "Loaded checklist template: " + option.dataset.templateName + " for " + (option.dataset.type || "selected vehicle type")
+                    : "No published checklist template is currently assigned to this vehicle type.";
             }
         }
 
