@@ -104,7 +104,7 @@ public class PlaceStockOrderModel : PageModel
             });
         }
 
-        order.EmailSubject = $"Stock order request from {currentUser.Company?.Name ?? "Vector client"}";
+        order.EmailSubject = $"Stock order request from {currentUser.Company?.Name ?? "AcuityOps client"}";
         order.EmailBody = BuildEmailBody(order, currentUser.FullName);
 
         _db.StockOrders.Add(order);

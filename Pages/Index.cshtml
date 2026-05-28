@@ -12,9 +12,10 @@
 
 <div id="splash">
     <div class="splash-content">
-        <img src="/vector-splash.png" alt="Vector Splash" />
-        <div class="splash-brand">VECTOR - EMS</div>
-        <div class="tagline" aria-label="Create Order">
+        <img src="/acuityops-splash.svg" alt="AcuityOps" />
+        <div class="splash-brand">AcuityOps</div>
+        <div class="splash-company">by Vector Ops Group Pty Ltd</div>
+        <div class="tagline" aria-label="Operational readiness">
             <span id="taglineText" class="tagline-text"></span><span id="taglineCursor" class="tagline-cursor"></span>
         </div>
     </div>
@@ -22,9 +23,9 @@
 
 <div id="mainContent" class="selector-screen">
     <div class="selector-inner">
-        <div class="home-label">Vector Access</div>
+        <div class="home-label">AcuityOps Access</div>
 
-        <img src="/vector-splash.png" class="selector-logo" alt="Vector Logo" />
+        <img src="/acuityops-splash.svg" class="selector-logo" alt="AcuityOps" />
 
         <div class="home-context">Client: @ViewData["ClientName"]</div>
 
@@ -36,7 +37,7 @@
             <a class="menu-btn vehicle-btn" href="/RoleLogin?access=senior-management">Senior Management</a>
         </div>
 
-        <div class="home-footer">Vector v0.1</div>
+        <div class="home-footer">AcuityOps v0.1</div>
     </div>
 </div>
 
@@ -70,14 +71,15 @@ html, body {
     min-width: 260px;
     opacity: 0;
     transform: scale(0.95);
+    filter: brightness(0) invert(1);
     animation: logoFadeIn 1.5s ease-out forwards;
 }
 
 .splash-brand {
     margin-top: 18px;
-    font-family: "Engravers MT", serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 35px;
-    font-weight: 700;
+    font-weight: 800;
     background: linear-gradient(90deg, #d8dde4 0%, #9fb8cc 36%, #f05a55 72%, #f2f4f7 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -86,9 +88,19 @@ html, body {
     animation: brandFadeIn 0.8s ease-out 0.7s forwards;
 }
 
+.splash-company {
+    margin-top: 8px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.72);
+    opacity: 0;
+    animation: brandFadeIn 0.8s ease-out 0.9s forwards;
+}
+
 .tagline {
     margin-top: 18px;
-    font-family: "Engravers MT", serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 36px;
     font-weight: 700;
     color: #ffffff;
@@ -227,7 +239,7 @@ window.addEventListener("load", function () {
     const splash = document.getElementById("splash");
     const mainContent = document.getElementById("mainContent");
     const taglineText = document.getElementById("taglineText");
-    const phrase = "Create Order";
+    const phrase = "Operational Readiness";
 
     if (document.documentElement.classList.contains("skip-splash")) {
         return;
