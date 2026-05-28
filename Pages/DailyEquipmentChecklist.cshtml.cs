@@ -28,6 +28,7 @@ public class DailyEquipmentChecklistModel : PageModel
     public bool AllowSameAsPreviousEquipmentCheck { get; private set; } = true;
     public string DraftStorageKey { get; private set; } = "daily-equipment-readiness:anonymous";
     public string FreshChecklistUrl => "/DailyEquipmentChecklist";
+    public int? PreviousEquipmentReportId { get; private set; }
 
     public string LinkedVehicleLabel => string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration)
         ? "No vehicle selected"
@@ -109,6 +110,7 @@ public class DailyEquipmentChecklistModel : PageModel
                 row.EquipmentItemId = postedRow.EquipmentItemId ?? row.EquipmentItemId;
                 row.NextServiceDate = postedRow.NextServiceDate ?? row.NextServiceDate;
                 row.BatteryState = NormalizeOptional(postedRow.BatteryState) ?? row.BatteryState;
+                row.PreviousEquipmentCheckId = postedRow.PreviousEquipmentCheckId;
             }
 
             return row;
@@ -287,6 +289,7 @@ public class DailyEquipmentChecklistModel : PageModel
                 PresentStatus = "Present",
                 ReadinessImpact = string.Equals(row.BatteryState, "Low", StringComparison.OrdinalIgnoreCase) ? "Warning" : "None",
                 SameAsPreviousShiftUsed = SameAsPreviousEquipmentCheck,
+                CopiedFromDailyVehicleEquipmentCheckId = SameAsPreviousEquipmentCheck ? row.PreviousEquipmentCheckId : null,
                 SameAsPreviousAppliedAtUtc = SameAsPreviousEquipmentCheck ? now : null,
                 SortOrder = nextSortOrder++,
                 CreatedAtUtc = now
@@ -301,9 +304,12 @@ public class DailyEquipmentChecklistModel : PageModel
         report.LastSavedAtUtc = now;
         report.UpdatedAtUtc = now;
         report.EquipmentSameAsPreviousShiftUsed = SameAsPreviousEquipmentCheck;
+        report.EquipmentSameAsPreviousSourceReportId = SameAsPreviousEquipmentCheck && PreviousEquipmentReportId != report.Id
+            ? PreviousEquipmentReportId
+            : null;
         report.EquipmentSameAsPreviousAppliedAtUtc = SameAsPreviousEquipmentCheck ? now : null;
         report.EquipmentSameAsPreviousCopiedSummary = SameAsPreviousEquipmentCheck
-            ? $"{savedChecks.Count} equipment rows copied from previous shift values."
+            ? $"{savedChecks.Count} equipment rows copied from previous shift values; {savedChecks.Count(check => check.CopiedFromDailyVehicleEquipmentCheckId is not null)} rows linked to previous equipment checks."
             : null;
         report.WarningIssueCount += savedChecks.Count(check => check.ReadinessImpact == "Warning");
         report.SubmittedAtUtc ??= now;
@@ -347,6 +353,8 @@ public class DailyEquipmentChecklistModel : PageModel
             return;
         }
 
+        PreviousEquipmentReportId = previousReport.Id;
+
         foreach (var row in EquipmentChecks)
         {
             var previousCheck = previousReport.EquipmentChecks
@@ -365,6 +373,7 @@ public class DailyEquipmentChecklistModel : PageModel
             row.PreviousSerialOrAssetId = previousCheck.SerialOrAssetId;
             row.PreviousBatteryState = NormalizeOptional(previousCheck.BatteryStatus)
                 ?? (row.RequiresBatteryCheck ? "Full" : "Not applicable");
+            row.PreviousEquipmentCheckId = previousCheck.Id;
         }
     }
 
@@ -541,6 +550,7 @@ public class EquipmentCheckInput
     public string? BatteryState { get; set; }
     public string? PreviousSerialOrAssetId { get; set; }
     public string? PreviousBatteryState { get; set; }
+    public int? PreviousEquipmentCheckId { get; set; }
     public int SortOrder { get; set; }
     public List<EquipmentSerialOption> SerialOptions { get; set; } = new();
 
