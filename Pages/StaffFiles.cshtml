@@ -7,7 +7,8 @@
     var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
     var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
     var selectedStaff = Model.SelectedStaff;
-    var folderNames = new[] { "Certifications", "Clinical Governance", "Employment", "Compliance", "Personal Documents" };
+    var selectedStaffUploadUrl = selectedStaff is null ? "/UploadStaffFiles" : $"/UploadStaffFiles?staffUserId={selectedStaff.Id}";
+    var folderNames = new[] { "Certifications", "Clinical Governance", "Employment", "Compliance", "Personal Documents", "Other" };
 }
 
 <div class="staff-files-screen">
@@ -20,8 +21,13 @@
 
         <div class="top-actions">
             <a class="menu-btn equipment-btn" href="/StaffRegister">Staff Register</a>
-            <a class="menu-btn staff-btn" href="/UploadStaffFiles">Upload Staff Files</a>
+            <a class="menu-btn staff-btn" href="@selectedStaffUploadUrl">Upload Staff Files</a>
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
 
         <div class="files-layout">
             <aside class="staff-list">
@@ -58,16 +64,37 @@
                             <h3>@selectedStaff.FullName</h3>
                             <span>@selectedStaff.RoleName - @selectedStaff.Status</span>
                         </div>
-                        <a class="small-link" href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(selectedStaff.FullName)">Open Records</a>
+                        <div class="selected-actions">
+                            <a class="small-link" href="/UploadStaffFiles?staffUserId=@selectedStaff.Id">Upload File</a>
+                            <a class="small-link" href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(selectedStaff.FullName)">Open Records</a>
+                        </div>
                     </div>
 
                     <div class="folder-grid">
                         @foreach (var folderName in folderNames)
                         {
+                            var folderFiles = Model.SelectedStaffFiles
+                                .Where(file => string.Equals(file.Category, folderName, StringComparison.OrdinalIgnoreCase))
+                                .ToList();
                             <div class="folder-card">
                                 <strong>@folderName</strong>
-                                <span>No linked files</span>
-                                <small>Ready for upload and review</small>
+                                <span>@folderFiles.Count file@(folderFiles.Count == 1 ? string.Empty : "s")</span>
+                                @if (folderFiles.Count == 0)
+                                {
+                                    <small>No linked files</small>
+                                }
+                                else
+                                {
+                                    <div class="file-list">
+                                        @foreach (var file in folderFiles)
+                                        {
+                                            <a class="file-link" href="/StaffFiles?handler=Download&fileId=@file.Id">
+                                                <span>@file.OriginalFileName</span>
+                                                <small>@file.SizeLabel - @file.UploadedAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</small>
+                                            </a>
+                                        }
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
@@ -87,6 +114,7 @@
 .page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
 .top-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
 .top-actions .menu-btn { min-width: 220px; }
+.status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 800; }
 .files-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; width: min(1040px, 100%); margin: 0 auto; text-align: left; }
 .staff-list, .folder-panel { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.7); padding: 18px; }
 .section-label { margin-bottom: 14px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
@@ -97,11 +125,16 @@
 .staff-list-item span, .folder-card span, .folder-card small, .selected-heading span { color: #6b7280; font-size: 13px; font-weight: 700; }
 .staff-list-item.selected { border-color: rgba(47,128,168,.52); background: rgba(47,128,168,.08); }
 .folder-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.folder-card { min-height: 118px; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 16px; }
+.folder-card { min-height: 118px; display: flex; flex-direction: column; justify-content: flex-start; gap: 7px; padding: 16px; }
 .selected-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .selected-heading h3 { margin: 0 0 4px 0; font-size: 22px; font-weight: 900; color: #1f2937; }
+.selected-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .small-link { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 13px; font-weight: 900; text-decoration: none; white-space: nowrap; }
 .small-link:hover { color: #0f5165; background: #eef3f8; }
+.file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.file-link { display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #ffffff; text-decoration: none; }
+.file-link span { color: #1f2937; font-size: 13px; font-weight: 900; }
+.file-link small { color: #6b7280; font-size: 12px; font-weight: 700; }
 @@media (max-width: 900px) {
     .files-layout, .folder-grid { grid-template-columns: 1fr; }
     .selected-heading { flex-direction: column; }

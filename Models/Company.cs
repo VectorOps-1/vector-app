@@ -38,5 +38,6 @@ public class Company
     public ICollection<DailyVehicleReadinessReport> DailyVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
     public ICollection<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks { get; set; } = new List<DailyVehicleEquipmentCheck>();
     public ICollection<ChecklistTemplate> ChecklistTemplates { get; set; } = new List<ChecklistTemplate>();
+    public ICollection<AssetFile> AssetFiles { get; set; } = new List<AssetFile>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

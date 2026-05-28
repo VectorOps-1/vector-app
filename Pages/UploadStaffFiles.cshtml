@@ -14,7 +14,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Master Setup</div>
         <h2 class="page-title">Upload Staff Files</h2>
-        <p class="page-subtitle">Upload existing staff documents, images, certificates, CVs, and supporting files</p>
+        <p class="page-subtitle">Save staff documents directly into the selected staff member's file area.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -22,10 +22,36 @@
         }
 
         <form method="post" enctype="multipart/form-data" class="upload-form">
+            <div class="form-grid">
+                <label>
+                    Staff member
+                    <select asp-for="StaffUserId" asp-items="Model.StaffOptions">
+                        <option value="">Select staff member</option>
+                    </select>
+                </label>
+
+                <label>
+                    Folder / category
+                    <select asp-for="Category">
+                        <option>Certifications</option>
+                        <option>Clinical Governance</option>
+                        <option>Employment</option>
+                        <option>Compliance</option>
+                        <option>Personal Documents</option>
+                        <option>Other</option>
+                    </select>
+                </label>
+            </div>
+
             <label class="upload-box" for="staffFiles">
                 <span class="upload-title">Select Staff Files</span>
                 <span class="upload-help">Accepted: PDF, images, Word, Excel, CSV, RTF, TXT</span>
                 <input id="staffFiles" asp-for="StaffFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.doc,.docx,.rtf,.txt,.xls,.xlsx,.csv" />
+            </label>
+
+            <label class="notes-field">
+                Notes
+                <textarea asp-for="Notes" rows="4" placeholder="Optional note, expiry reminder, certificate detail, or review comment"></textarea>
             </label>
 
             <div class="format-list">
@@ -36,7 +62,7 @@
                 <span>Spreadsheets</span>
             </div>
 
-            <button class="menu-btn staff-btn continue-btn" type="submit">Review Staff Files</button>
+            <button class="menu-btn staff-btn continue-btn" type="submit">Save Staff Files</button>
         </form>
     </div>
 </div>
@@ -116,6 +142,47 @@
     gap: 22px;
 }
 
+.form-grid {
+    width: min(620px, 94%);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    text-align: left;
+}
+
+.form-grid label,
+.notes-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #52606d;
+}
+
+.form-grid select,
+.notes-field textarea {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    padding: 0 14px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+.notes-field {
+    width: min(620px, 94%);
+    text-align: left;
+}
+
+.notes-field textarea {
+    padding-top: 12px;
+    resize: vertical;
+}
+
 .upload-box {
     width: min(620px, 94%);
     min-height: 160px;
@@ -169,5 +236,11 @@
 
 .continue-btn {
     border: none;
+}
+
+@@media (max-width: 700px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

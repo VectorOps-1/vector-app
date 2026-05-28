@@ -27,13 +27,6 @@ public class StockRegisterPreviewModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
-        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
-
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            FileName = fileName;
-        }
-
-        return Page();
+        return RedirectToPage("/StockRegister");
     }
 }

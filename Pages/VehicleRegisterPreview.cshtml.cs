@@ -28,13 +28,6 @@ public class VehicleRegisterPreviewModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
-        LocationOptions = await _locationOptions.GetOperationalAreaOptionsAsync(currentUser.CompanyId);
-
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            FileName = fileName;
-        }
-
-        return Page();
+        return RedirectToPage("/VehicleRegister");
     }
 }

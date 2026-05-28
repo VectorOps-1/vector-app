@@ -10,25 +10,13 @@ public class UploadStockRegisterModel : PageModel
 
     public string? StatusMessage { get; private set; }
 
-    public void OnGet()
+    public IActionResult OnGet()
     {
+        return RedirectToPage("/StockRegister");
     }
 
     public IActionResult OnPost()
     {
-        if (StockRegisterFile is null || StockRegisterFile.Length == 0)
-        {
-            StatusMessage = "Select an Excel stock register before continuing.";
-            return Page();
-        }
-
-        var extension = Path.GetExtension(StockRegisterFile.FileName).ToLowerInvariant();
-        if (extension is not ".xlsx" and not ".xls")
-        {
-            StatusMessage = "Upload an Excel file only: .xlsx or .xls.";
-            return Page();
-        }
-
-        return RedirectToPage("/StockRegisterPreview", new { fileName = StockRegisterFile.FileName });
+        return RedirectToPage("/StockRegister");
     }
 }

@@ -10,25 +10,13 @@ public class UploadChecklistModel : PageModel
 
     public string? StatusMessage { get; private set; }
 
-    public void OnGet()
+    public IActionResult OnGet()
     {
+        return RedirectToPage("/EditChecklist");
     }
 
     public IActionResult OnPost()
     {
-        if (ChecklistFile is null || ChecklistFile.Length == 0)
-        {
-            StatusMessage = "Select an Excel checklist file before continuing.";
-            return Page();
-        }
-
-        var extension = Path.GetExtension(ChecklistFile.FileName).ToLowerInvariant();
-        if (extension is not ".xlsx" and not ".xls")
-        {
-            StatusMessage = "Upload an Excel file only: .xlsx or .xls.";
-            return Page();
-        }
-
-        return RedirectToPage("/ChecklistPreview", new { fileName = ChecklistFile.FileName });
+        return RedirectToPage("/EditChecklist");
     }
 }

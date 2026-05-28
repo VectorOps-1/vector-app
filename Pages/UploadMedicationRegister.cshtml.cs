@@ -10,25 +10,13 @@ public class UploadMedicationRegisterModel : PageModel
 
     public string? StatusMessage { get; private set; }
 
-    public void OnGet()
+    public IActionResult OnGet()
     {
+        return RedirectToPage("/MedicationRegister");
     }
 
     public IActionResult OnPost()
     {
-        if (MedicationRegisterFile is null || MedicationRegisterFile.Length == 0)
-        {
-            StatusMessage = "Select an Excel medication register before continuing.";
-            return Page();
-        }
-
-        var extension = Path.GetExtension(MedicationRegisterFile.FileName).ToLowerInvariant();
-        if (extension is not ".xlsx" and not ".xls")
-        {
-            StatusMessage = "Upload an Excel file only: .xlsx or .xls.";
-            return Page();
-        }
-
-        return RedirectToPage("/MedicationRegisterPreview", new { fileName = MedicationRegisterFile.FileName });
+        return RedirectToPage("/MedicationRegister");
     }
 }

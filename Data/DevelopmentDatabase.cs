@@ -270,6 +270,24 @@ public static class DevelopmentDatabase
             );
             """);
 
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "AssetFiles" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_AssetFiles" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL,
+                "UploadedByUserId" INTEGER NOT NULL,
+                "LinkedEntityType" TEXT NOT NULL,
+                "LinkedEntityId" INTEGER NOT NULL,
+                "Category" TEXT NOT NULL,
+                "OriginalFileName" TEXT NOT NULL,
+                "ContentType" TEXT NOT NULL,
+                "StorageProvider" TEXT NOT NULL,
+                "StoragePath" TEXT NOT NULL,
+                "SizeBytes" INTEGER NOT NULL,
+                "Notes" TEXT NULL,
+                "UploadedAtUtc" TEXT NOT NULL
+            );
+            """);
+
         await EnsureSqliteColumnAsync(db, "Vehicles", "CurrentOperationalAreaId", """ALTER TABLE "Vehicles" ADD "CurrentOperationalAreaId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "Vehicles", "CurrentLocationDetail", """ALTER TABLE "Vehicles" ADD "CurrentLocationDetail" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Vehicles", "LastMovedByUserId", """ALTER TABLE "Vehicles" ADD "LastMovedByUserId" INTEGER NULL;""");
@@ -331,6 +349,8 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistTemplates_CompanyId_ChecklistType_TargetVehicleType_Name" ON "ChecklistTemplates" ("CompanyId", "ChecklistType", "TargetVehicleType", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_OperationalAreas_CompanyId_Name" ON "OperationalAreas" ("CompanyId", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetMovements_CompanyId_AssetType_AssetId_CreatedAtUtc" ON "AssetMovements" ("CompanyId", "AssetType", "AssetId", "CreatedAtUtc");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetFiles_CompanyId_LinkedEntityType_LinkedEntityId_Category" ON "AssetFiles" ("CompanyId", "LinkedEntityType", "LinkedEntityId", "Category");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetFiles_UploadedByUserId" ON "AssetFiles" ("UploadedByUserId");""");
     }
 
     private static async Task EnsureSqliteColumnAsync(VectorDbContext db, string tableName, string columnName, string alterSql)

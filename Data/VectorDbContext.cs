@@ -27,6 +27,7 @@ public class VectorDbContext : DbContext
     public DbSet<VehicleEquipmentAssignment> VehicleEquipmentAssignments => Set<VehicleEquipmentAssignment>();
     public DbSet<DailyVehicleReadinessReport> DailyVehicleReadinessReports => Set<DailyVehicleReadinessReport>();
     public DbSet<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks => Set<DailyVehicleEquipmentCheck>();
+    public DbSet<AssetFile> AssetFiles => Set<AssetFile>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
@@ -416,6 +417,21 @@ public class VectorDbContext : DbContext
             .WithMany(template => template.UploadedFiles)
             .HasForeignKey(file => file.ChecklistTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AssetFile>()
+            .HasIndex(file => new { file.CompanyId, file.LinkedEntityType, file.LinkedEntityId, file.Category });
+
+        modelBuilder.Entity<AssetFile>()
+            .HasOne(file => file.Company)
+            .WithMany(company => company.AssetFiles)
+            .HasForeignKey(file => file.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AssetFile>()
+            .HasOne(file => file.UploadedByUser)
+            .WithMany(user => user.UploadedAssetFiles)
+            .HasForeignKey(file => file.UploadedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AuditLog>()
             .HasOne(auditLog => auditLog.Company)

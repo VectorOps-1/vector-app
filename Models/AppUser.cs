@@ -39,5 +39,6 @@ public class AppUser
     public ICollection<EquipmentItem> LastMovedEquipmentItems { get; set; } = new List<EquipmentItem>();
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
     public ICollection<DailyVehicleReadinessReport> PerformedVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
+    public ICollection<AssetFile> UploadedAssetFiles { get; set; } = new List<AssetFile>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }
