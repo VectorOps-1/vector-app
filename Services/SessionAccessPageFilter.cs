@@ -89,8 +89,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/CreateOperationalStaffAccess"] = SeniorAccess,
         ["/TaskCommunicationSetup"] = SeniorAccess,
         ["/AuditLog"] = SeniorAccess,
-        ["/Onboarding"] = SeniorAccess,
-        ["/CompanyLogin"] = SeniorAccess
+        ["/Onboarding"] = SeniorAccess
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)

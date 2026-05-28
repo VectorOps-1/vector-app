@@ -1,22 +1,45 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using vector_app_local.Data;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class AccessModel : PageModel
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly VectorDbContext _db;
 
-    public AccessModel(IWebHostEnvironment environment)
+    public AccessModel(VectorDbContext db)
     {
-        _environment = environment;
+        _db = db;
     }
 
     public string Workspace { get; private set; } = "Selected Workspace";
 
-    public void OnGet(string? workspace)
+    public async Task<IActionResult> OnGetAsync()
     {
-        ViewData["ClientName"] = CompanyBranding.GetCompanyName(_environment);
-        Workspace = string.IsNullOrWhiteSpace(workspace) ? "Selected Workspace" : workspace;
+        var companyId = HttpContext.Session.GetInt32(CurrentUserService.CompanyIdSessionKey);
+        if (!companyId.HasValue)
+        {
+            return RedirectToPage("/CompanyLogin");
+        }
+
+        var company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == companyId.Value && item.Status == "Active");
+
+        if (company is null)
+        {
+            HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
+            HttpContext.Session.Remove("Vector.CompanyName");
+            return RedirectToPage("/CompanyLogin");
+        }
+
+        Workspace = company.Name;
+        ViewData["ClientName"] = company.Name;
+        HttpContext.Session.SetString("Vector.CompanyName", company.Name);
+
+        return Page();
     }
 }

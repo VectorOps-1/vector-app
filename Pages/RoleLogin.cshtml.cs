@@ -11,13 +11,11 @@ public class RoleLoginModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
-    private readonly IWebHostEnvironment _environment;
 
-    public RoleLoginModel(VectorDbContext db, CurrentUserService currentUser, IWebHostEnvironment environment)
+    public RoleLoginModel(VectorDbContext db, CurrentUserService currentUser)
     {
         _db = db;
         _currentUser = currentUser;
-        _environment = environment;
     }
 
     public string AccessView { get; private set; } = "operational-management";
@@ -30,16 +28,31 @@ public class RoleLoginModel : PageModel
     [BindProperty]
     public string? Password { get; set; }
 
-    public void OnGet(string? access)
+    public async Task<IActionResult> OnGetAsync(string? access)
     {
-        ViewData["ClientName"] = CompanyBranding.GetCompanyName(_environment);
         SetAccessView(access);
+
+        var company = await LoadSelectedCompanyAsync();
+        if (company is null)
+        {
+            return RedirectToPage("/CompanyLogin");
+        }
+
+        ViewData["ClientName"] = company.Name;
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(string? access)
     {
-        ViewData["ClientName"] = CompanyBranding.GetCompanyName(_environment);
         SetAccessView(access);
+
+        var company = await LoadSelectedCompanyAsync();
+        if (company is null)
+        {
+            return RedirectToPage("/CompanyLogin");
+        }
+
+        ViewData["ClientName"] = company.Name;
 
         if (string.IsNullOrWhiteSpace(Email))
         {
@@ -60,7 +73,10 @@ public class RoleLoginModel : PageModel
         var user = await _db.AppUsers
             .Include(appUser => appUser.AppRole)
             .Include(appUser => appUser.Company)
-            .FirstOrDefaultAsync(appUser => appUser.Email == email && appUser.Status == "Active");
+            .FirstOrDefaultAsync(appUser =>
+                appUser.CompanyId == company.Id &&
+                appUser.Email == email &&
+                appUser.Status == "Active");
 
         if (user is null || !CurrentUserService.AccessAllowsRole(AccessView, user.AppRole?.Name))
         {
@@ -97,5 +113,28 @@ public class RoleLoginModel : PageModel
             CurrentUserService.SeniorManagementAccess => "Senior Management Login",
             _ => "Operational Management Login"
         };
+    }
+
+    private async Task<Company?> LoadSelectedCompanyAsync()
+    {
+        var companyId = HttpContext.Session.GetInt32(CurrentUserService.CompanyIdSessionKey);
+        if (!companyId.HasValue)
+        {
+            return null;
+        }
+
+        var company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == companyId.Value && item.Status == "Active");
+
+        if (company is null)
+        {
+            HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
+            HttpContext.Session.Remove("Vector.CompanyName");
+            return null;
+        }
+
+        HttpContext.Session.SetString("Vector.CompanyName", company.Name);
+        return company;
     }
 }
