@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
+using vector_app_local.Models;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
@@ -55,6 +56,54 @@ public class IssueInboxModel : PageModel
             .ToListAsync();
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(int issueId)
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        var issue = await _db.IssueReports
+            .FirstOrDefaultAsync(report =>
+                report.Id == issueId &&
+                report.AssignedToUserId == currentUser.Id &&
+                report.Status == "Open");
+
+        if (issue is null)
+        {
+            return RedirectToPage(new { confirmation = "issue-not-found" });
+        }
+
+        var now = DateTime.UtcNow;
+        issue.Status = "Deleted";
+
+        _db.IssueReportEvents.Add(new IssueReportEvent
+        {
+            IssueReportId = issue.Id,
+            PerformedByUserId = currentUser.Id,
+            EventType = "Deleted",
+            Notes = "Issue removed from inbox by assigned user.",
+            CreatedAtUtc = now
+        });
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = issue.CompanyId,
+            AppUserId = currentUser.Id,
+            Action = "Issue deleted",
+            EntityType = "IssueReport",
+            EntityId = issue.Id,
+            Details = $"Assigned user deleted issue #{issue.Id} from inbox.",
+            CreatedAtUtc = now
+        });
+
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Issue removed from inbox and logged.";
+        return RedirectToPage();
     }
 
     public class IssueInboxItem
