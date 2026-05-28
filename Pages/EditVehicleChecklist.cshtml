@@ -52,7 +52,7 @@
                 <div class="builder-toolbar">
                     <div>
                         <div class="section-heading">Live Layout Builder</div>
-                        <p>@Model.LayoutBuilderSummary Staff-facing order: vehicle details, previous shift control, operational checks, schematic, notes.</p>
+                        <p>@Model.LayoutBuilderSummary Staff-facing order: vehicle details, previous shift control, operational checks, schematic, carried equipment, notes.</p>
                     </div>
                     <div class="toolbar-actions">
                         <button class="small-action" type="button" data-action="add-section">Add Section</button>
@@ -112,6 +112,73 @@
                                     </label>
                                 </div>
                             </div>
+                        }
+                        else if (checklistSection.Kind == ChecklistSectionKind.EquipmentTable)
+                        {
+                            <div class="equipment-layout-preview" role="table" aria-label="Equipment checklist row preview">
+                                <div class="equipment-preview-header" role="row">
+                                    @foreach (var field in checklistSection.Fields)
+                                    {
+                                        <span role="columnheader">@field.Label</span>
+                                    }
+                                </div>
+
+                                @foreach (var exampleRow in Model.EquipmentTableExampleRows)
+                                {
+                                    <div class="equipment-preview-row" role="row">
+                                        <span>@exampleRow</span>
+                                        <span>S/N / ID dropdown</span>
+                                        <span>Auto-filled</span>
+                                        <span>Battery dropdown</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="field-grid equipment-column-grid">
+                                @foreach (var field in checklistSection.Fields)
+                                {
+                                    <div class="builder-field @(field.IsSystemLinked ? "system-linked" : string.Empty)">
+                                        <div class="field-toolbar">
+                                            <span>@field.Source</span>
+                                            <div>
+                                                <button type="button" data-action="move-field-up">Up</button>
+                                                <button type="button" data-action="move-field-down">Down</button>
+                                                <button type="button" data-action="remove-field">Remove</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="field-editor-grid">
+                                            <label>
+                                                Column label
+                                                <input value="@field.Label" aria-label="@field.Label label" />
+                                            </label>
+                                            <label>
+                                                Input type
+                                                <select aria-label="@field.Label type">
+                                                    <option selected>@field.Type</option>
+                                                    <option>Configured row</option>
+                                                    <option>Text</option>
+                                                    <option>Date</option>
+                                                    <option>Dropdown</option>
+                                                    <option>Checkbox</option>
+                                                    <option>Photo Upload</option>
+                                                </select>
+                                            </label>
+                                        </div>
+
+                                        <div class="field-rule-row">
+                                            <label><input type="checkbox" checked="@field.IsRequired" /> Required</label>
+                                            <label><input type="checkbox" checked="@field.IsEditable" /> Editable</label>
+                                            @if (field.IsSystemLinked)
+                                            {
+                                                <span>Linked to equipment register</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Column to @checklistSection.Title</button>
                         }
                         else
                         {
@@ -182,6 +249,8 @@
                             <option>Ops radio connectivity</option>
                             <option>Damage type</option>
                             <option>Damage severity</option>
+                            <option>S/N / ID</option>
+                            <option>Battery</option>
                         </select>
                     </label>
 
@@ -256,6 +325,15 @@
 .section-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .schematic-field-grid { grid-template-columns: minmax(0, 1fr); }
+.equipment-layout-preview { margin-bottom: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: #ffffff; }
+.equipment-preview-header, .equipment-preview-row { display: grid; grid-template-columns: minmax(160px, 1.15fr) minmax(180px, 1.1fr) minmax(130px, .75fr) minmax(130px, .75fr); }
+.equipment-preview-header { background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.equipment-preview-header span, .equipment-preview-row span { padding: 11px 12px; border-right: 1px solid rgba(66,84,102,.12); }
+.equipment-preview-header span { border-color: rgba(255,255,255,.12); }
+.equipment-preview-row { border-top: 1px solid rgba(66,84,102,.12); color: #334155; font-size: 13px; font-weight: 800; }
+.equipment-preview-row span:not(:first-child) { color: #64748b; }
+.equipment-preview-header span:last-child, .equipment-preview-row span:last-child { border-right: none; }
+.equipment-column-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .builder-field { padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
 .builder-field.system-linked { border-color: rgba(14,94,122,.26); background: rgba(14,94,122,.04); }
 .field-toolbar { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; }
@@ -276,7 +354,7 @@
 .action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; position: sticky; bottom: 0; padding-top: 14px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 44%); }
 .action-row .menu-btn { width: 100%; border: none; }
 .action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
-@@media (max-width: 860px) { .form-grid, .builder-toolbar, .visual-section-heading, .section-title-editor, .field-grid, .field-editor-grid, .previous-shift-editor, .action-row { grid-template-columns: 1fr; } .toolbar-actions, .section-controls { justify-content: flex-start; } }
+@@media (max-width: 860px) { .form-grid, .builder-toolbar, .visual-section-heading, .section-title-editor, .field-grid, .field-editor-grid, .previous-shift-editor, .action-row, .equipment-preview-header, .equipment-preview-row { grid-template-columns: 1fr; } .toolbar-actions, .section-controls { justify-content: flex-start; } .equipment-preview-header { display: none; } .equipment-preview-row { border: 1px solid rgba(66,84,102,.14); } .equipment-preview-row + .equipment-preview-row { margin-top: 8px; } .equipment-preview-row span { border-right: none; border-top: 1px solid rgba(66,84,102,.1); } .equipment-preview-row span:first-child { border-top: none; background: #f8fafc; } }
 </style>
 
 <script>

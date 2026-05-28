@@ -34,10 +34,18 @@ public class EditVehicleChecklistModel : PageModel
     public bool IsSeniorChecklistPublisher { get; private set; }
     public string ChecklistAuthorityNote { get; private set; } = "Senior management publishes live checklist versions. Operational managers can draft assigned changes.";
     public string LayoutBuilderSummary => IsVehicleChecklistName(ChecklistName)
-        ? $"{ChecklistName} uses the shared readiness layout builder."
+        ? $"{ChecklistName} uses the shared readiness layout builder, including the carried-equipment row table."
         : "Select a daily or monthly vehicle checklist to edit the readiness layout.";
 
     public List<ChecklistSectionEditor> VehicleChecklistSections { get; private set; } = new();
+    public IReadOnlyList<string> EquipmentTableExampleRows { get; } = new[]
+    {
+        "LP15",
+        "Syringe driver 1",
+        "Syringe driver 2",
+        "Ventilator Oxylog",
+        "LUCAS"
+    };
 
     public async Task OnGetAsync(string? checklist)
     {
@@ -179,6 +187,17 @@ public class EditVehicleChecklistModel : PageModel
                     new("Damage notes", "Text", false, true, false, "Fresh entry")
                 }),
             new(
+                "Carried Equipment",
+                "One row per equipment item configured for the selected vehicle or vehicle category.",
+                ChecklistSectionKind.EquipmentTable,
+                new List<ChecklistFieldEditor>
+                {
+                    new("Name/item", "Configured row", true, false, true, "Vehicle equipment setup"),
+                    new("S/N / ID", "Dropdown", true, true, true, "Equipment register"),
+                    new("Next Service", "Date", false, false, true, "Equipment register"),
+                    new("Battery", "Dropdown", true, true, false, "Fresh entry")
+                }),
+            new(
                 "Notes / Issue",
                 "Record anything that requires follow-up.",
                 ChecklistSectionKind.Fields,
@@ -194,7 +213,8 @@ public enum ChecklistSectionKind
 {
     Fields,
     Action,
-    Schematic
+    Schematic,
+    EquipmentTable
 }
 
 public record ChecklistSectionEditor(

@@ -351,6 +351,7 @@ public static class DevelopmentDatabase
         await EnsureOperationalAreaAsync(db, company.Id, "Main Base", "Base");
         await EnsureOperationalAreaAsync(db, company.Id, "Secondary Base", "Base");
         await EnsureOperationalAreaAsync(db, company.Id, "Main Store", "Store");
+        await EnsurePrototypeVehicleEquipmentAsync(db, company.Id);
 
         await db.SaveChangesAsync();
     }
@@ -407,4 +408,150 @@ public static class DevelopmentDatabase
             CreatedAtUtc = DateTime.UtcNow
         });
     }
+
+    private static async Task EnsurePrototypeVehicleEquipmentAsync(VectorDbContext db, int companyId)
+    {
+        var vehicle = await EnsureVehicleAsync(
+            db,
+            companyId,
+            "AMB-101",
+            "Medic 1",
+            "Operational Ambulance",
+            "ALS",
+            "Operational Ambulance",
+            DateTime.UtcNow.AddMonths(2));
+
+        var equipmentRows = new[]
+        {
+            new PrototypeEquipmentRow("LP15", "Monitor/Defibrillator", "LP15", "LP15-TEST-001", DateTime.UtcNow.AddMonths(5), true, 10),
+            new PrototypeEquipmentRow("Syringe driver 1", "Infusion Pump", "Syringe Driver", "SYR-001", DateTime.UtcNow.AddMonths(4), true, 20),
+            new PrototypeEquipmentRow("Syringe driver 2", "Infusion Pump", "Syringe Driver", "SYR-002", DateTime.UtcNow.AddMonths(4), true, 30),
+            new PrototypeEquipmentRow("Ventilator Oxylog", "Ventilator", "Oxylog", "OXY-001", DateTime.UtcNow.AddMonths(3), true, 40),
+            new PrototypeEquipmentRow("LUCAS", "Mechanical CPR", "LUCAS", "LUCAS-001", DateTime.UtcNow.AddMonths(6), true, 50)
+        };
+
+        foreach (var row in equipmentRows)
+        {
+            var item = await EnsureEquipmentItemAsync(db, companyId, row);
+            await EnsureVehicleEquipmentAssignmentAsync(db, companyId, vehicle.Id, item.Id, row);
+        }
+    }
+
+    private static async Task<Vehicle> EnsureVehicleAsync(
+        VectorDbContext db,
+        int companyId,
+        string registrationNumber,
+        string callsign,
+        string vehicleType,
+        string qualificationLevel,
+        string schematicType,
+        DateTime nextServiceDate)
+    {
+        var vehicle = await db.Vehicles.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.RegistrationNumber == registrationNumber);
+
+        if (vehicle is not null)
+        {
+            vehicle.Callsign = string.IsNullOrWhiteSpace(vehicle.Callsign) ? callsign : vehicle.Callsign;
+            vehicle.VehicleType = string.IsNullOrWhiteSpace(vehicle.VehicleType) ? vehicleType : vehicle.VehicleType;
+            vehicle.QualificationLevel ??= qualificationLevel;
+            vehicle.SchematicType ??= schematicType;
+            vehicle.NextServiceDate ??= nextServiceDate;
+            return vehicle;
+        }
+
+        vehicle = new Vehicle
+        {
+            CompanyId = companyId,
+            RegistrationNumber = registrationNumber,
+            Callsign = callsign,
+            VehicleType = vehicleType,
+            QualificationLevel = qualificationLevel,
+            SchematicType = schematicType,
+            NextServiceDate = nextServiceDate,
+            Status = "Active",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        return vehicle;
+    }
+
+    private static async Task<EquipmentItem> EnsureEquipmentItemAsync(VectorDbContext db, int companyId, PrototypeEquipmentRow row)
+    {
+        var item = await db.EquipmentItems.FirstOrDefaultAsync(equipment =>
+            equipment.CompanyId == companyId &&
+            equipment.SerialOrAssetId == row.SerialOrAssetId);
+
+        if (item is not null)
+        {
+            item.Name = string.IsNullOrWhiteSpace(item.Name) ? row.Name : item.Name;
+            item.EquipmentType ??= row.EquipmentType;
+            item.Model ??= row.Model;
+            item.NextServiceDate ??= row.NextServiceDate;
+            item.BatteryRequired = row.BatteryRequired;
+            item.Status = string.IsNullOrWhiteSpace(item.Status) ? "Active" : item.Status;
+            return item;
+        }
+
+        item = new EquipmentItem
+        {
+            CompanyId = companyId,
+            Name = row.Name,
+            EquipmentType = row.EquipmentType,
+            Model = row.Model,
+            SerialOrAssetId = row.SerialOrAssetId,
+            NextServiceDate = row.NextServiceDate,
+            BatteryRequired = row.BatteryRequired,
+            Status = "Active",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        db.EquipmentItems.Add(item);
+        await db.SaveChangesAsync();
+        return item;
+    }
+
+    private static async Task EnsureVehicleEquipmentAssignmentAsync(
+        VectorDbContext db,
+        int companyId,
+        int vehicleId,
+        int equipmentItemId,
+        PrototypeEquipmentRow row)
+    {
+        if (await db.VehicleEquipmentAssignments.AnyAsync(assignment =>
+            assignment.CompanyId == companyId &&
+            assignment.VehicleId == vehicleId &&
+            assignment.EquipmentItemId == equipmentItemId))
+        {
+            return;
+        }
+
+        db.VehicleEquipmentAssignments.Add(new VehicleEquipmentAssignment
+        {
+            CompanyId = companyId,
+            VehicleId = vehicleId,
+            EquipmentItemId = equipmentItemId,
+            ExpectedEquipmentName = row.Name,
+            ExpectedEquipmentType = row.EquipmentType,
+            ExpectedModel = row.Model,
+            ExpectedQuantity = 1,
+            RequiredForReadiness = true,
+            RequiresBatteryCheck = row.BatteryRequired,
+            SortOrder = row.SortOrder,
+            Status = "Active",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    private record PrototypeEquipmentRow(
+        string Name,
+        string EquipmentType,
+        string Model,
+        string SerialOrAssetId,
+        DateTime NextServiceDate,
+        bool BatteryRequired,
+        int SortOrder);
 }
