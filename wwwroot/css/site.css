@@ -165,6 +165,17 @@ body {
     display: block;
 }
 
+img[src$="acuityops-app-icon-light.png"],
+img[src$="acuityops-app-icon-dark.png"] {
+    border-radius: 0 !important;
+}
+
+.page-logo[src$="acuityops-app-icon-light.png"] {
+    width: 160px !important;
+    max-width: 42% !important;
+    max-height: 90px !important;
+}
+
 .client-line {
     margin-bottom: 14px;
     font-size: 12px;

@@ -7,13 +7,13 @@ public static class CompanyBranding
         var uploadFolder = Path.Combine(environment.WebRootPath, "uploads", "company");
         if (!Directory.Exists(uploadFolder))
         {
-            return "/acuityops-splash.svg";
+            return "/acuityops-app-icon-light.png";
         }
 
         var logoFile = Directory.GetFiles(uploadFolder, "company-logo.*").FirstOrDefault();
         if (logoFile is null)
         {
-            return "/acuityops-splash.svg";
+            return "/acuityops-app-icon-light.png";
         }
 
         return $"/uploads/company/{Path.GetFileName(logoFile)}?v={File.GetLastWriteTimeUtc(logoFile).Ticks}";
