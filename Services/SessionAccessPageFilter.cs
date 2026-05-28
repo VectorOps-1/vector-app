@@ -42,6 +42,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
+        ["/ReadinessDashboard"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
         ["/EquipmentRegister"] = ManagementAccess,
         ["/EquipmentService"] = ManagementAccess,
@@ -72,6 +73,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         ["/MasterSetup"] = SeniorAccess,
         ["/OperationalAreas"] = SeniorAccess,
+        ["/ManagerAreas"] = SeniorAccess,
         ["/CompanyProfile"] = SeniorAccess,
         ["/CompanyName"] = SeniorAccess,
         ["/LogoUpload"] = SeniorAccess,

@@ -17,6 +17,7 @@ public class VectorDbContext : DbContext
     public DbSet<IssueReport> IssueReports => Set<IssueReport>();
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<OperationalArea> OperationalAreas => Set<OperationalArea>();
+    public DbSet<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments => Set<ManagerOperationalAreaAssignment>();
     public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
     public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
@@ -133,6 +134,34 @@ public class VectorDbContext : DbContext
             .HasOne(area => area.Company)
             .WithMany(company => company.OperationalAreas)
             .HasForeignKey(area => area.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ManagerOperationalAreaAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.ManagerUserId, assignment.OperationalAreaId })
+            .IsUnique();
+
+        modelBuilder.Entity<ManagerOperationalAreaAssignment>()
+            .HasOne(assignment => assignment.Company)
+            .WithMany(company => company.ManagerOperationalAreaAssignments)
+            .HasForeignKey(assignment => assignment.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ManagerOperationalAreaAssignment>()
+            .HasOne(assignment => assignment.ManagerUser)
+            .WithMany(user => user.OperationalAreaAssignments)
+            .HasForeignKey(assignment => assignment.ManagerUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ManagerOperationalAreaAssignment>()
+            .HasOne(assignment => assignment.OperationalArea)
+            .WithMany(area => area.ManagerAssignments)
+            .HasForeignKey(assignment => assignment.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ManagerOperationalAreaAssignment>()
+            .HasOne(assignment => assignment.AssignedByUser)
+            .WithMany(user => user.CreatedOperationalAreaAssignments)
+            .HasForeignKey(assignment => assignment.AssignedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AssetMovement>()

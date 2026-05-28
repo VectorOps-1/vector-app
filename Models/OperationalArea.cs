@@ -29,4 +29,5 @@ public class OperationalArea
 
     public ICollection<AssetMovement> SourceMovements { get; set; } = new List<AssetMovement>();
     public ICollection<AssetMovement> DestinationMovements { get; set; } = new List<AssetMovement>();
+    public ICollection<ManagerOperationalAreaAssignment> ManagerAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
 }

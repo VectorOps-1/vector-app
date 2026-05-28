@@ -40,5 +40,7 @@ public class AppUser
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
     public ICollection<DailyVehicleReadinessReport> PerformedVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
     public ICollection<AssetFile> UploadedAssetFiles { get; set; } = new List<AssetFile>();
+    public ICollection<ManagerOperationalAreaAssignment> OperationalAreaAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
+    public ICollection<ManagerOperationalAreaAssignment> CreatedOperationalAreaAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

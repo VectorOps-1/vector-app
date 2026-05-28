@@ -271,6 +271,19 @@ public static class DevelopmentDatabase
             """);
 
         await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "ManagerOperationalAreaAssignments" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_ManagerOperationalAreaAssignments" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL,
+                "ManagerUserId" INTEGER NOT NULL,
+                "OperationalAreaId" INTEGER NOT NULL,
+                "AssignedByUserId" INTEGER NULL,
+                "Status" TEXT NOT NULL,
+                "AssignedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "AssetFiles" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_AssetFiles" PRIMARY KEY AUTOINCREMENT,
                 "CompanyId" INTEGER NOT NULL,
@@ -348,6 +361,10 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_DailyVehicleEquipmentChecks_CopiedFromDailyVehicleEquipmentCheckId" ON "DailyVehicleEquipmentChecks" ("CopiedFromDailyVehicleEquipmentCheckId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistTemplates_CompanyId_ChecklistType_TargetVehicleType_Name" ON "ChecklistTemplates" ("CompanyId", "ChecklistType", "TargetVehicleType", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_OperationalAreas_CompanyId_Name" ON "OperationalAreas" ("CompanyId", "Name");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_ManagerOperationalAreaAssignments_CompanyId_ManagerUserId_OperationalAreaId" ON "ManagerOperationalAreaAssignments" ("CompanyId", "ManagerUserId", "OperationalAreaId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ManagerOperationalAreaAssignments_ManagerUserId" ON "ManagerOperationalAreaAssignments" ("ManagerUserId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ManagerOperationalAreaAssignments_OperationalAreaId" ON "ManagerOperationalAreaAssignments" ("OperationalAreaId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ManagerOperationalAreaAssignments_AssignedByUserId" ON "ManagerOperationalAreaAssignments" ("AssignedByUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetMovements_CompanyId_AssetType_AssetId_CreatedAtUtc" ON "AssetMovements" ("CompanyId", "AssetType", "AssetId", "CreatedAtUtc");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetFiles_CompanyId_LinkedEntityType_LinkedEntityId_Category" ON "AssetFiles" ("CompanyId", "LinkedEntityType", "LinkedEntityId", "Category");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AssetFiles_UploadedByUserId" ON "AssetFiles" ("UploadedByUserId");""");
@@ -416,6 +433,8 @@ public static class DevelopmentDatabase
         await EnsureOperationalAreaAsync(db, company.Id, "Main Base", "Base");
         await EnsureOperationalAreaAsync(db, company.Id, "Secondary Base", "Base");
         await EnsureOperationalAreaAsync(db, company.Id, "Main Store", "Store");
+        await db.SaveChangesAsync();
+        await EnsurePrototypeManagerAreaAssignmentAsync(db, company.Id, "ops@test.local", "Main Base");
         await EnsurePrototypeVehicleEquipmentAsync(db, company.Id);
         await EnsurePrototypeVehicleChecklistTemplatesAsync(db, company);
 
@@ -472,6 +491,46 @@ public static class DevelopmentDatabase
             AreaType = areaType,
             Status = "Active",
             CreatedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    private static async Task EnsurePrototypeManagerAreaAssignmentAsync(
+        VectorDbContext db,
+        int companyId,
+        string managerEmail,
+        string areaName)
+    {
+        var manager = await db.AppUsers.FirstOrDefaultAsync(user =>
+            user.CompanyId == companyId &&
+            user.Email == managerEmail);
+        var area = await db.OperationalAreas.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.Name == areaName);
+
+        if (manager is null || area is null)
+        {
+            return;
+        }
+
+        var assignment = await db.ManagerOperationalAreaAssignments.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.ManagerUserId == manager.Id &&
+            item.OperationalAreaId == area.Id);
+
+        if (assignment is not null)
+        {
+            assignment.Status = "Active";
+            assignment.UpdatedAtUtc = DateTime.UtcNow;
+            return;
+        }
+
+        db.ManagerOperationalAreaAssignments.Add(new ManagerOperationalAreaAssignment
+        {
+            CompanyId = companyId,
+            ManagerUserId = manager.Id,
+            OperationalAreaId = area.Id,
+            Status = "Active",
+            AssignedAtUtc = DateTime.UtcNow
         });
     }
 
@@ -573,6 +632,16 @@ public static class DevelopmentDatabase
             "ALS",
             "Operational Ambulance",
             DateTime.UtcNow.AddMonths(2));
+
+        var mainBase = await db.OperationalAreas.FirstOrDefaultAsync(area =>
+            area.CompanyId == companyId &&
+            area.Name == "Main Base");
+        if (mainBase is not null && vehicle.CurrentOperationalAreaId is null)
+        {
+            vehicle.CurrentOperationalAreaId = mainBase.Id;
+            vehicle.CurrentLocationDetail = "Daily operations";
+            vehicle.UpdatedAtUtc = DateTime.UtcNow;
+        }
 
         var equipmentRows = new[]
         {
