@@ -50,18 +50,25 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100%;
+    padding: 36px 24px;
+    box-sizing: border-box;
 }
 
 #splash img {
-    width: min(80vw, 760px);
-    min-width: 240px;
+    width: min(58vw, 560px);
+    min-width: 210px;
+    max-height: 58vh;
+    object-fit: contain;
     opacity: 0;
     transform: scale(0.95);
     animation: logoFadeIn 1.5s ease-out forwards;
 }
 
 .splash-brand {
-    margin-top: 18px;
+    margin-top: 14px;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 35px;
     font-weight: 800;
@@ -71,7 +78,7 @@
 }
 
 .splash-company {
-    margin-top: 8px;
+    margin-top: 6px;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 15px;
     font-weight: 700;
@@ -164,9 +171,29 @@
 </style>
 
 <script>
-window.addEventListener("load", function () {
+(function () {
+    const splashSessionKey = "acuityopsSplashShown";
     const splash = document.getElementById("splash");
     const mainContent = document.getElementById("mainContent");
+    let splashAlreadyShown = false;
+
+    try {
+        splashAlreadyShown = sessionStorage.getItem(splashSessionKey) === "true";
+    } catch {
+        splashAlreadyShown = false;
+    }
+
+    if (splashAlreadyShown) {
+        splash.style.display = "none";
+        mainContent.classList.add("ready", "show");
+        return;
+    }
+
+    try {
+        sessionStorage.setItem(splashSessionKey, "true");
+    } catch {
+        // If browser storage is unavailable, fall back to the normal splash animation.
+    }
 
     setTimeout(function () {
         mainContent.classList.add("ready");
@@ -180,5 +207,5 @@ window.addEventListener("load", function () {
     setTimeout(function () {
         splash.style.display = "none";
     }, 5300);
-});
+})();
 </script>
