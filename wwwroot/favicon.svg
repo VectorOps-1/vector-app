@@ -1,6 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#10233F"/>
-  <circle cx="32" cy="32" r="22" fill="#F8FAFC"/>
-  <path d="M13 35h13l6-15 9 25 7-10h3" fill="none" stroke="#126C84" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="51" cy="35" r="4" fill="#8F3A3A"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AcuityOps">
+  <rect width="64" height="64" rx="10" fill="#F4F7FB"/>
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#6B7280" stroke-width="3"/>
+  <path d="M32 7l4 17-4 7-4-7 4-17Z" fill="#5F6368"/>
+  <path d="M10 33l14-3v6l-14-3Z" fill="#5F6368"/>
+  <path d="M54 33l-14 3v-6l14 3Z" fill="#5F6368"/>
+  <path d="M20 51l12-31 12 31-12-14-12 14Z" fill="#5F6368"/>
+  <path d="M25 43h6l2-7 4 16 3-9h5" fill="none" stroke="#F4F7FB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 41c2 4 5 8 9 10" fill="none" stroke="#9B2C2C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M46 41c-2 4-5 8-9 10" fill="none" stroke="#0F5D86" stroke-width="4" stroke-linecap="round"/>
 </svg>
