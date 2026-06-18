@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Vehicles";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="module-screen">
@@ -14,32 +15,27 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Vehicles</h2>
-        <p class="page-subtitle">Vehicle register, readiness, movement, maintenance, and issue workflows</p>
+        <p class="page-subtitle">Choose the exact vehicle action from one place.</p>
 
         <div class="module-grid">
             <a class="module-card primary" href="/VehicleRegister">
-                <strong>Search Vehicles</strong>
-                <span>Find a vehicle by registration, callsign, status, or location</span>
-            </a>
-
-            <a class="module-card" href="/VehicleRegister">
                 <strong>Vehicle Register</strong>
-                <span>Open all vehicles with service, readiness, movement, and allocation details</span>
+                <span>Open the full register grouped by function and subtype. Use the search field inside the register when needed.</span>
             </a>
 
-            <a class="module-card" href="/DailyVehicleChecklist">
-                <strong>Daily Vehicle Readiness</strong>
-                <span>Start the vehicle and vehicle-carried equipment readiness report</span>
-            </a>
-
-            <a class="module-card" href="/AddItem?type=vehicle">
+            <a class="module-card primary" href="/AddItem?type=vehicle">
                 <strong>Add New Vehicle</strong>
                 <span>Add a vehicle record for registration and callsign setup</span>
             </a>
 
+            <a class="module-card" href="/ReassignVehicleCallsign">
+                <strong>Reassign Callsign</strong>
+                <span>Move a callsign to a different existing registration number</span>
+            </a>
+
             <a class="module-card" href="/MoveAsset?asset=vehicle" data-move-asset="vehicle">
                 <strong>Move / Reallocate</strong>
-                <span>Update vehicle assignment, base, or operational allocation</span>
+                <span>Move a vehicle between bases, areas, or operational locations</span>
             </a>
 
             <a class="module-card danger" href="/ReportIssue?module=vehicle">

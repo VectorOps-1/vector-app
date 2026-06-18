@@ -1,0 +1,147 @@
+@page
+@model OperationsReportsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Operational Reports";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="reports-screen">
+    <div class="reports-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Operational Intelligence</div>
+        <h2 class="page-title">Operational Reports</h2>
+        <p class="page-subtitle">One management view for readiness checks, issues, tasks, asset movement, imports, expiry pressure, and audit evidence.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form class="report-filter" method="get">
+            <input class="filter-input" asp-for="FromDate" type="date" />
+            <input class="filter-input" asp-for="ToDate" type="date" />
+            <input class="filter-input wide-filter" asp-for="SearchTerm" type="text" placeholder="Search vehicle, person, batch, issue, file, task, or asset" />
+            <button class="menu-btn equipment-btn filter-btn" type="submit">Run Report</button>
+        </form>
+
+        <div class="scope-line">Scope: @Model.ScopeLabel | Date range: @Model.FromDate?.ToString("yyyy-MM-dd") to @Model.ToDate?.ToString("yyyy-MM-dd")</div>
+
+        <section class="metric-grid" aria-label="Report summary">
+            <a class="metric-card metric-card-link @(Model.IsMetricSelected("submitted-checks") ? "selected" : string.Empty)" href="@Model.MetricUrl("submitted-checks")"><strong>@Model.Summary.SubmittedReadinessChecks</strong><span>Saved / submitted checks</span></a>
+            <a class="metric-card metric-card-link @(Model.IsMetricSelected("drafts") ? "selected" : string.Empty)" href="@Model.MetricUrl("drafts")"><strong>@Model.Summary.DraftReadinessChecks</strong><span>Saved drafts</span></a>
+            <a class="metric-card metric-card-link danger @(Model.IsMetricSelected("open-issues") ? "selected" : string.Empty)" href="@Model.MetricUrl("open-issues")"><strong>@Model.Summary.OpenIssues</strong><span>Open issues</span></a>
+            <a class="metric-card metric-card-link warning @(Model.IsMetricSelected("open-tasks") ? "selected" : string.Empty)" href="@Model.MetricUrl("open-tasks")"><strong>@Model.Summary.OpenTasks</strong><span>Open tasks</span></a>
+            <a class="metric-card metric-card-link @(Model.IsMetricSelected("completed-tasks") ? "selected" : string.Empty)" href="@Model.MetricUrl("completed-tasks")"><strong>@Model.Summary.CompletedTasks</strong><span>Completed tasks</span></a>
+            <a class="metric-card metric-card-link @(Model.IsMetricSelected("asset-movements") ? "selected" : string.Empty)" href="@Model.MetricUrl("asset-movements")"><strong>@Model.Summary.AssetMovements</strong><span>Asset movements</span></a>
+            <a class="metric-card metric-card-link warning @(Model.IsMetricSelected("service-expiry") ? "selected" : string.Empty)" href="@Model.MetricUrl("service-expiry")"><strong>@Model.Summary.ServiceOrExpiryPressure</strong><span>Service / expiry pressure</span></a>
+            <a class="metric-card metric-card-link @(Model.IsMetricSelected("setup-uploads") ? "selected" : string.Empty)" href="@Model.MetricUrl("setup-uploads")"><strong>@Model.Summary.SetupUploads</strong><span>Setup uploads</span></a>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedMetricTitle))
+        {
+            <section class="report-section metric-detail-section">
+                <div class="section-heading">
+                    <div>
+                        <h3>@Model.SelectedMetricTitle</h3>
+                        <p class="section-note">@Model.SelectedMetricDescription</p>
+                    </div>
+                    <a href="@Model.OverviewUrl()">Clear selection</a>
+                </div>
+
+                @if (Model.MetricRows.Count == 0)
+                {
+                    <div class="empty-panel">No items collected for this block in the selected scope and date range.</div>
+                }
+                else
+                {
+                    <div class="metric-detail-list">
+                        <div class="metric-detail-header">
+                            <span>Item / Source</span>
+                            <span>Callsign</span>
+                            <span>Area / Origin</span>
+                            <span>Person</span>
+                            <span>Status / Action</span>
+                        </div>
+                        @foreach (var row in Model.MetricRows)
+                        {
+                            <a class="metric-detail-row" href="@row.DetailUrl">
+                                <span>
+                                    <strong>@row.Item</strong>
+                                    <small>@row.Source | @(row.RecordedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Date not set")</small>
+                                </span>
+                                <span>@row.Callsign</span>
+                                <span>@row.Area</span>
+                                <span>
+                                    <strong>@row.SubmittedBy</strong>
+                                    <small>Assigned: @row.AssignedTo</small>
+                                </span>
+                                <span>
+                                    <strong>@row.Status</strong>
+                                    <small>@row.ActionState</small>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
+        }
+        else
+        {
+            <section class="report-section metric-empty-state">
+                <h3>Select a report block</h3>
+                <p>Choose one of the summary blocks above to view the items included for the selected dates, search terms, and access scope.</p>
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+.reports-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.reports-inner { width: 100%; max-width: 1180px; margin: 0 auto; padding: 40px 20px; text-align: center; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { width: min(880px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(880px, 94%); margin: 0 auto 18px auto; padding: 12px 16px; border: 1px solid rgba(155,59,59,.18); border-radius: 8px; background: rgba(155,59,59,.08); color: #7f2f2f; font-weight: 800; }
+.report-filter { width: min(980px, 100%); margin: 0 auto 12px auto; display: grid; grid-template-columns: 150px 150px minmax(220px, 1fr) 150px; gap: 12px; }
+.filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+.filter-btn { min-width: 0; border: none; }
+.scope-line { margin-bottom: 18px; color: #52606d; font-size: 13px; font-weight: 900; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: min(1080px, 100%); margin: 0 auto 18px auto; }
+.metric-card { min-height: 88px; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.78); box-shadow: 0 12px 24px rgba(15,23,42,.06); text-align: left; box-sizing: border-box; }
+.metric-card-link { display: block; color: inherit; text-decoration: none; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.metric-card-link:hover, .metric-card-link:focus-visible { border-color: rgba(18,108,132,.5); box-shadow: 0 14px 28px rgba(18,108,132,.14); outline: none; transform: translateY(-1px); }
+.metric-card-link.selected { border-color: #126C84; box-shadow: inset 4px 0 0 #126C84, 0 14px 28px rgba(18,108,132,.12); }
+.metric-card strong { display: block; color: #102a3a; font-size: 28px; font-weight: 900; }
+.metric-card span { display: block; margin-top: 4px; color: #52606d; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.metric-card.warning strong { color: #8A5A13; }
+.metric-card.danger strong { color: #8A2C2C; }
+.metric-detail-section { padding: 14px; }
+.section-note { margin: 4px 0 0 0; color: #52606d; font-size: 13px; font-weight: 800; line-height: 1.35; }
+.metric-detail-list { overflow-x: auto; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #fff; }
+.metric-detail-header, .metric-detail-row { display: grid; grid-template-columns: minmax(190px, 1.35fr) 100px minmax(150px, .9fr) minmax(160px, .9fr) minmax(210px, 1.15fr); align-items: center; min-width: 890px; }
+.metric-detail-header { background: #2f4056; color: #fff; }
+.metric-detail-header span { padding: 10px 12px; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.metric-detail-row { color: #1f2937; text-decoration: none; border-top: 1px solid rgba(66,84,102,.12); }
+.metric-detail-row:hover, .metric-detail-row:focus-visible { background: rgba(18,108,132,.06); outline: none; }
+.metric-detail-row > span { padding: 10px 12px; color: #24364a; font-size: 12px; font-weight: 800; line-height: 1.35; }
+.metric-detail-row strong { display: block; color: #102a3a; font-size: 13px; font-weight: 900; }
+.metric-detail-row small { display: block; margin-top: 2px; color: #66758a; font-size: 11px; font-weight: 800; line-height: 1.35; }
+.report-section { width: min(1080px, 100%); margin: 0 auto 18px auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.76); box-shadow: 0 12px 24px rgba(15,23,42,.06); text-align: left; box-sizing: border-box; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.section-heading h3 { margin: 0; color: #1f2937; font-size: 20px; font-weight: 900; }
+.section-heading a { color: #126C84; font-size: 13px; font-weight: 900; text-decoration: none; }
+.metric-empty-state h3 { margin: 0 0 6px 0; color: #1f2937; font-size: 18px; font-weight: 900; }
+.metric-empty-state p { margin: 0; color: #52606d; font-size: 13px; font-weight: 800; line-height: 1.45; }
+.empty-panel { padding: 16px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #fff; color: #52606d; font-size: 13px; font-weight: 900; text-align: center; }
+@@media (max-width: 900px) {
+    .report-filter, .metric-grid { grid-template-columns: 1fr; }
+    .metric-detail-list { padding-bottom: 8px; }
+}
+</style>

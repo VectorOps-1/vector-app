@@ -23,15 +23,19 @@ public class MoveAssetModel : PageModel
     [BindProperty(SupportsGet = true)] public int? TaskId { get; set; }
     [BindProperty(SupportsGet = true)] public bool TaskAccess { get; set; }
     [BindProperty(SupportsGet = true)] public int AssetId { get; set; }
+    [BindProperty(SupportsGet = true)] public string? ReturnUrl { get; set; }
+    [BindProperty] public string? DestinationKey { get; set; }
     [BindProperty] public int ToOperationalAreaId { get; set; }
     [BindProperty] public string? LocationDetail { get; set; }
     [BindProperty] public int? QuantityMoved { get; set; }
     [BindProperty] public string? MovementReason { get; set; }
+    [BindProperty] public bool SendAsTask { get; set; }
     [BindProperty] public int AssignedToUserId { get; set; }
     [BindProperty] public DateTime? ExpiresAtLocal { get; set; }
 
     public List<SelectListItem> AssetOptions { get; private set; } = new();
     public List<SelectListItem> OperationalAreaOptions { get; private set; } = new();
+    public List<SelectListItem> DestinationOptions { get; private set; } = new();
     public List<SelectListItem> Recipients { get; private set; } = new();
     public List<MovementRecord> RecentMovements { get; private set; } = new();
 
@@ -40,12 +44,14 @@ public class MoveAssetModel : PageModel
     public bool IsQuantityAsset => NormalizedAssetType == AssetTypes.Stock || NormalizedAssetType == AssetTypes.Medication;
     public bool ActionSaved { get; private set; }
     public string? StatusMessage { get; private set; }
+    public string SafeReturnUrl { get; private set; } = "/MoveAsset?asset=vehicle";
 
     private string NormalizedAssetType => AssetTypes.Normalize(AssetType);
 
     public async Task<IActionResult> OnGetAsync()
     {
         ApplyRequestedAssetType();
+        SafeReturnUrl = NormalizeReturnUrl(ReturnUrl, AssetType);
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
         {
@@ -66,6 +72,7 @@ public class MoveAssetModel : PageModel
     public async Task<IActionResult> OnPostAsync(string submitAction)
     {
         AssetType = NormalizedAssetType;
+        SafeReturnUrl = NormalizeReturnUrl(ReturnUrl, AssetType);
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
         {
@@ -74,15 +81,14 @@ public class MoveAssetModel : PageModel
 
         await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(_db);
 
-        var destination = await _db.OperationalAreas
-            .FirstOrDefaultAsync(area =>
-                area.Id == ToOperationalAreaId &&
-                area.CompanyId == currentUser.CompanyId &&
-                area.Status == "Active");
+        var destination = await ResolveDestinationAsync(currentUser.CompanyId);
 
         if (destination is null)
         {
-            ModelState.AddModelError(nameof(ToOperationalAreaId), "Select an active destination from Master Setup.");
+            var destinationHint = NormalizedAssetType == AssetTypes.Vehicle
+                ? "Select an active destination from Master Setup."
+                : "Select an active destination from Master Setup or a registered vehicle.";
+            ModelState.AddModelError(nameof(DestinationKey), destinationHint);
         }
 
         if (AssetId <= 0)
@@ -104,7 +110,7 @@ public class MoveAssetModel : PageModel
             ModelState.AddModelError(nameof(AssetId), $"Selected {AssetDisplayName.ToLowerInvariant()} was not found.");
         }
 
-        var sendAsTask = string.Equals(submitAction, "send-task", StringComparison.OrdinalIgnoreCase);
+        var sendAsTask = SendAsTask && string.Equals(submitAction, "send-task", StringComparison.OrdinalIgnoreCase);
         if (sendAsTask && AssignedToUserId <= 0)
         {
             ModelState.AddModelError(nameof(AssignedToUserId), "Select the person who must complete this movement task.");
@@ -234,6 +240,11 @@ public class MoveAssetModel : PageModel
         if (int.TryParse(parts[2], out var destinationId))
         {
             ToOperationalAreaId = destinationId;
+            DestinationKey = BuildAreaDestinationKey(destinationId);
+        }
+        else
+        {
+            DestinationKey = parts[2];
         }
 
         if (parts.Length > 3 && int.TryParse(parts[3], out var quantity))
@@ -242,7 +253,7 @@ public class MoveAssetModel : PageModel
         }
     }
 
-    private async Task CreateMovementTaskAsync(AppUser currentUser, OperationalArea destination, string assetLabel)
+    private async Task CreateMovementTaskAsync(AppUser currentUser, MovementDestination destination, string assetLabel)
     {
         var now = DateTime.UtcNow;
         var task = new TaskItem
@@ -251,7 +262,7 @@ public class MoveAssetModel : PageModel
             AssignedToUserId = AssignedToUserId,
             AssignedByUserId = currentUser.Id,
             ActionType = AssetTypes.TaskAction(AssetType),
-            RelatedItemReference = BuildTaskReference(destination.Id),
+            RelatedItemReference = BuildTaskReference(destination),
             InstructionMessage = BuildTaskInstruction(assetLabel, destination),
             Status = "Open",
             CreatedAtUtc = now,
@@ -277,14 +288,14 @@ public class MoveAssetModel : PageModel
             Action = "Movement task sent",
             EntityType = "TaskItem",
             EntityId = task.Id,
-            Details = $"{task.ActionType}: {assetLabel} to {destination.Name}.",
+            Details = $"{task.ActionType}: {assetLabel} to {destination.LocationText}.",
             CreatedAtUtc = now
         });
 
         await _db.SaveChangesAsync();
     }
 
-    private async Task<AssetMovement?> ApplyMovementAsync(AppUser currentUser, OperationalArea destination)
+    private async Task<AssetMovement?> ApplyMovementAsync(AppUser currentUser, MovementDestination destination)
     {
         return AssetType switch
         {
@@ -295,7 +306,7 @@ public class MoveAssetModel : PageModel
         };
     }
 
-    private async Task<AssetMovement?> MoveVehicleAsync(AppUser currentUser, OperationalArea destination)
+    private async Task<AssetMovement?> MoveVehicleAsync(AppUser currentUser, MovementDestination destination)
     {
         var vehicle = await _db.Vehicles
             .Include(item => item.CurrentOperationalArea)
@@ -308,19 +319,19 @@ public class MoveAssetModel : PageModel
 
         var fromAreaId = vehicle.CurrentOperationalAreaId;
         var fromText = BuildExistingLocation(vehicle.CurrentOperationalArea?.Name, vehicle.CurrentLocationDetail);
-        var toText = BuildDestinationLocation(destination.Name);
+        var toText = BuildDestinationLocation(destination);
         var label = $"{vehicle.RegistrationNumber} / {vehicle.Callsign}";
 
-        vehicle.CurrentOperationalAreaId = destination.Id;
+        vehicle.CurrentOperationalAreaId = destination.OperationalAreaId;
         vehicle.CurrentLocationDetail = NormalizeOptional(LocationDetail);
         vehicle.LastMovedByUserId = currentUser.Id;
         vehicle.LastMovedAtUtc = DateTime.UtcNow;
         vehicle.UpdatedAtUtc = DateTime.UtcNow;
 
-        return await AddMovementAsync(currentUser, destination.Id, fromAreaId, fromText, toText, label);
+        return await AddMovementAsync(currentUser, destination.OperationalAreaId, fromAreaId, fromText, toText, label);
     }
 
-    private async Task<AssetMovement?> MoveEquipmentAsync(AppUser currentUser, OperationalArea destination)
+    private async Task<AssetMovement?> MoveEquipmentAsync(AppUser currentUser, MovementDestination destination)
     {
         var equipment = await _db.EquipmentItems
             .Include(item => item.CurrentOperationalArea)
@@ -333,21 +344,21 @@ public class MoveAssetModel : PageModel
 
         var fromAreaId = equipment.CurrentOperationalAreaId;
         var fromText = BuildExistingLocation(equipment.CurrentOperationalArea?.Name, equipment.CurrentLocationDetail);
-        var toText = BuildDestinationLocation(destination.Name);
+        var toText = BuildDestinationLocation(destination);
         var label = string.IsNullOrWhiteSpace(equipment.SerialOrAssetId)
             ? equipment.Name
             : $"{equipment.Name} / {equipment.SerialOrAssetId}";
 
-        equipment.CurrentOperationalAreaId = destination.Id;
-        equipment.CurrentLocationDetail = NormalizeOptional(LocationDetail);
+        equipment.CurrentOperationalAreaId = destination.OperationalAreaId;
+        equipment.CurrentLocationDetail = BuildDestinationDetail(destination);
         equipment.LastMovedByUserId = currentUser.Id;
         equipment.LastMovedAtUtc = DateTime.UtcNow;
         equipment.UpdatedAtUtc = DateTime.UtcNow;
 
-        return await AddMovementAsync(currentUser, destination.Id, fromAreaId, fromText, toText, label);
+        return await AddMovementAsync(currentUser, destination.OperationalAreaId, fromAreaId, fromText, toText, label);
     }
 
-    private async Task<AssetMovement?> MoveStockAsync(AppUser currentUser, OperationalArea destination)
+    private async Task<AssetMovement?> MoveStockAsync(AppUser currentUser, MovementDestination destination)
     {
         var stock = await _db.StockItems
             .Include(item => item.CurrentOperationalArea)
@@ -360,22 +371,22 @@ public class MoveAssetModel : PageModel
 
         var fromAreaId = stock.CurrentOperationalAreaId;
         var fromText = BuildExistingLocation(stock.CurrentOperationalArea?.Name, stock.Location);
-        var toText = BuildDestinationLocation(destination.Name);
+        var toText = BuildDestinationLocation(destination);
         var label = string.IsNullOrWhiteSpace(stock.BatchNumber)
             ? stock.ItemName
             : $"{stock.ItemName} / Batch {stock.BatchNumber}";
 
-        stock.CurrentOperationalAreaId = destination.Id;
+        stock.CurrentOperationalAreaId = destination.OperationalAreaId;
         stock.Location = toText;
         stock.LastMovedByUserId = currentUser.Id;
         stock.LastMovementType = "Move / Reallocate";
         stock.LastMovementAtUtc = DateTime.UtcNow;
         stock.UpdatedAtUtc = DateTime.UtcNow;
 
-        return await AddMovementAsync(currentUser, destination.Id, fromAreaId, fromText, toText, label);
+        return await AddMovementAsync(currentUser, destination.OperationalAreaId, fromAreaId, fromText, toText, label);
     }
 
-    private async Task<AssetMovement?> MoveMedicationAsync(AppUser currentUser, OperationalArea destination)
+    private async Task<AssetMovement?> MoveMedicationAsync(AppUser currentUser, MovementDestination destination)
     {
         var medication = await _db.MedicationItems
             .Include(item => item.CurrentOperationalArea)
@@ -388,19 +399,19 @@ public class MoveAssetModel : PageModel
 
         var fromAreaId = medication.CurrentOperationalAreaId;
         var fromText = BuildExistingLocation(medication.CurrentOperationalArea?.Name, medication.StorageLocation);
-        var toText = BuildDestinationLocation(destination.Name);
+        var toText = BuildDestinationLocation(destination);
         var label = string.IsNullOrWhiteSpace(medication.BatchNumber)
             ? medication.Name
             : $"{medication.Name} / Batch {medication.BatchNumber}";
 
-        medication.CurrentOperationalAreaId = destination.Id;
+        medication.CurrentOperationalAreaId = destination.OperationalAreaId;
         medication.StorageLocation = toText;
         medication.LastAllocatedByUserId = currentUser.Id;
         medication.LastAllocationLocation = toText;
         medication.LastAllocatedAtUtc = DateTime.UtcNow;
         medication.UpdatedAtUtc = DateTime.UtcNow;
 
-        return await AddMovementAsync(currentUser, destination.Id, fromAreaId, fromText, toText, label);
+        return await AddMovementAsync(currentUser, destination.OperationalAreaId, fromAreaId, fromText, toText, label);
     }
 
     private async Task<AssetMovement> AddMovementAsync(
@@ -456,6 +467,83 @@ public class MoveAssetModel : PageModel
         };
     }
 
+    private async Task<MovementDestination?> ResolveDestinationAsync(int companyId)
+    {
+        var destinationKey = NormalizeDestinationKey(DestinationKey, ToOperationalAreaId);
+        DestinationKey = destinationKey;
+
+        if (string.IsNullOrWhiteSpace(destinationKey))
+        {
+            return null;
+        }
+
+        var parts = destinationKey.Split(':', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var destinationId))
+        {
+            return null;
+        }
+
+        if (string.Equals(parts[0], "area", StringComparison.OrdinalIgnoreCase))
+        {
+            var area = await _db.OperationalAreas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item =>
+                    item.Id == destinationId &&
+                    item.CompanyId == companyId &&
+                    item.Status == "Active");
+
+            if (area is null)
+            {
+                return null;
+            }
+
+            ToOperationalAreaId = area.Id;
+            return new MovementDestination(
+                BuildAreaDestinationKey(area.Id),
+                "Area",
+                area.Id,
+                null,
+                area.Name,
+                area.Name,
+                area.Name);
+        }
+
+        if (!string.Equals(parts[0], "vehicle", StringComparison.OrdinalIgnoreCase) ||
+            NormalizedAssetType == AssetTypes.Vehicle)
+        {
+            return null;
+        }
+
+        var vehicle = await _db.Vehicles
+            .AsNoTracking()
+            .Include(item => item.CurrentOperationalArea)
+            .FirstOrDefaultAsync(item =>
+                item.Id == destinationId &&
+                item.CompanyId == companyId &&
+                item.Status != "Deleted" &&
+                item.CurrentOperationalAreaId.HasValue &&
+                item.CurrentOperationalArea != null &&
+                item.CurrentOperationalArea.Status == "Active");
+
+        if (vehicle is null || !vehicle.CurrentOperationalAreaId.HasValue)
+        {
+            return null;
+        }
+
+        var areaName = vehicle.CurrentOperationalArea?.Name ?? "Unallocated";
+        var vehicleLabel = BuildVehicleLabel(vehicle);
+        ToOperationalAreaId = vehicle.CurrentOperationalAreaId.Value;
+
+        return new MovementDestination(
+            BuildVehicleDestinationKey(vehicle.Id),
+            "Vehicle",
+            vehicle.CurrentOperationalAreaId.Value,
+            vehicle.Id,
+            vehicleLabel,
+            areaName,
+            BuildExistingLocation(areaName, vehicleLabel) ?? vehicleLabel);
+    }
+
     private async Task LoadPageDataAsync(int companyId)
     {
         OperationalAreaOptions = await _db.OperationalAreas
@@ -469,6 +557,18 @@ public class MoveAssetModel : PageModel
                 Text = area.Address == null ? $"{area.Name} ({area.AreaType})" : $"{area.Name} ({area.AreaType}) - {area.Address}"
             })
             .ToListAsync();
+
+        if (string.IsNullOrWhiteSpace(DestinationKey) && ToOperationalAreaId > 0)
+        {
+            DestinationKey = BuildAreaDestinationKey(ToOperationalAreaId);
+        }
+
+        DestinationOptions = BuildDestinationOptions();
+
+        if (NormalizedAssetType is AssetTypes.Equipment or AssetTypes.Stock or AssetTypes.Medication)
+        {
+            DestinationOptions.AddRange(await LoadVehicleDestinationOptionsAsync(companyId));
+        }
 
         AssetOptions = AssetType switch
         {
@@ -506,6 +606,45 @@ public class MoveAssetModel : PageModel
                 CreatedAtUtc = movement.CreatedAtUtc
             })
             .ToListAsync();
+    }
+
+    private List<SelectListItem> BuildDestinationOptions()
+    {
+        var areaGroup = new SelectListGroup { Name = "Bases / operational areas" };
+        return OperationalAreaOptions
+            .Select(area => new SelectListItem
+            {
+                Value = BuildAreaDestinationKey(int.Parse(area.Value)),
+                Text = area.Text,
+                Group = areaGroup
+            })
+            .ToList();
+    }
+
+    private async Task<List<SelectListItem>> LoadVehicleDestinationOptionsAsync(int companyId)
+    {
+        var vehicleGroup = new SelectListGroup { Name = "Vehicles" };
+        var vehicles = await _db.Vehicles
+            .AsNoTracking()
+            .Include(vehicle => vehicle.CurrentOperationalArea)
+            .Where(vehicle =>
+                vehicle.CompanyId == companyId &&
+                vehicle.Status != "Deleted" &&
+                vehicle.CurrentOperationalAreaId.HasValue &&
+                vehicle.CurrentOperationalArea != null &&
+                vehicle.CurrentOperationalArea.Status == "Active")
+            .OrderBy(vehicle => vehicle.Callsign)
+            .ThenBy(vehicle => vehicle.RegistrationNumber)
+            .ToListAsync();
+
+        return vehicles
+            .Select(vehicle => new SelectListItem
+            {
+                Value = BuildVehicleDestinationKey(vehicle.Id),
+                Text = $"{BuildVehicleLabel(vehicle)} - {vehicle.CurrentOperationalArea?.Name ?? "Unallocated"}",
+                Group = vehicleGroup
+            })
+            .ToList();
     }
 
     private async Task<List<SelectListItem>> LoadVehicleOptionsAsync(int companyId)
@@ -588,14 +727,14 @@ public class MoveAssetModel : PageModel
             .ToList();
     }
 
-    private string BuildTaskReference(int destinationId)
+    private string BuildTaskReference(MovementDestination destination)
     {
-        return string.Join('|', AssetType, AssetId, destinationId, QuantityMoved?.ToString() ?? string.Empty);
+        return string.Join('|', AssetType, AssetId, destination.Key, QuantityMoved?.ToString() ?? string.Empty);
     }
 
-    private string BuildTaskInstruction(string assetLabel, OperationalArea destination)
+    private string BuildTaskInstruction(string assetLabel, MovementDestination destination)
     {
-        var instruction = $"Move / reallocate {assetLabel} to {BuildDestinationLocation(destination.Name)}.";
+        var instruction = $"Move / reallocate {assetLabel} to {BuildDestinationLocation(destination)}.";
         if (!string.IsNullOrWhiteSpace(MovementReason))
         {
             instruction += $" Reason: {MovementReason.Trim()}";
@@ -604,10 +743,21 @@ public class MoveAssetModel : PageModel
         return instruction;
     }
 
-    private string BuildDestinationLocation(string destinationName)
+    private string BuildDestinationLocation(MovementDestination destination)
+    {
+        var detail = BuildDestinationDetail(destination);
+        return string.IsNullOrWhiteSpace(detail) ? destination.LocationText : BuildExistingLocation(destination.AreaName, detail) ?? destination.LocationText;
+    }
+
+    private string? BuildDestinationDetail(MovementDestination destination)
     {
         var detail = NormalizeOptional(LocationDetail);
-        return string.IsNullOrWhiteSpace(detail) ? destinationName : $"{destinationName} - {detail}";
+        if (destination.VehicleId.HasValue)
+        {
+            return string.IsNullOrWhiteSpace(detail) ? destination.Name : $"{destination.Name} - {detail}";
+        }
+
+        return detail;
     }
 
     private static string? BuildExistingLocation(string? areaName, string? detail)
@@ -620,9 +770,62 @@ public class MoveAssetModel : PageModel
         return string.IsNullOrWhiteSpace(detail) ? areaName : $"{areaName} - {detail}";
     }
 
+    private static string BuildVehicleLabel(Vehicle vehicle)
+    {
+        return string.IsNullOrWhiteSpace(vehicle.Callsign)
+            ? vehicle.RegistrationNumber
+            : $"{vehicle.Callsign} / {vehicle.RegistrationNumber}";
+    }
+
+    private static string BuildAreaDestinationKey(int areaId)
+    {
+        return $"area:{areaId}";
+    }
+
+    private static string BuildVehicleDestinationKey(int vehicleId)
+    {
+        return $"vehicle:{vehicleId}";
+    }
+
+    private static string? NormalizeDestinationKey(string? destinationKey, int areaId)
+    {
+        if (!string.IsNullOrWhiteSpace(destinationKey))
+        {
+            var trimmed = destinationKey.Trim();
+            if (trimmed.StartsWith("area:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("vehicle:", StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed;
+            }
+
+            if (int.TryParse(trimmed, out var parsedAreaId))
+            {
+                return BuildAreaDestinationKey(parsedAreaId);
+            }
+
+            return trimmed;
+        }
+
+        return areaId > 0 ? BuildAreaDestinationKey(areaId) : null;
+    }
+
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string NormalizeReturnUrl(string? returnUrl, string assetType)
+    {
+        var fallback = $"/MoveAsset?asset={AssetTypes.Normalize(assetType)}";
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return fallback;
+        }
+
+        var trimmed = returnUrl.Trim();
+        return trimmed.StartsWith('/') && !trimmed.StartsWith("//", StringComparison.Ordinal)
+            ? trimmed
+            : fallback;
     }
 
     public sealed class MovementRecord
@@ -634,4 +837,13 @@ public class MoveAssetModel : PageModel
         public string? MovedByName { get; set; }
         public DateTime CreatedAtUtc { get; set; }
     }
+
+    private sealed record MovementDestination(
+        string Key,
+        string Type,
+        int OperationalAreaId,
+        int? VehicleId,
+        string Name,
+        string AreaName,
+        string LocationText);
 }

@@ -33,12 +33,18 @@ public class ReportIssueModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly CustomDropdownOptionService _customDropdownOptions;
 
-    public ReportIssueModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public ReportIssueModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        CustomDropdownOptionService customDropdownOptions)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _customDropdownOptions = customDropdownOptions;
     }
 
     [BindProperty(SupportsGet = true)] public string Module { get; set; } = "General";
@@ -46,6 +52,7 @@ public class ReportIssueModel : PageModel
     [BindProperty] public int? AssignedToUserId { get; set; }
     [BindProperty] public string? NotificationMethod { get; set; }
     [BindProperty] public string? IssueType { get; set; }
+    [BindProperty] public string? IssueTypeOther { get; set; }
     [BindProperty] public string? RelatedItem { get; set; }
     [BindProperty] public string? Location { get; set; }
     [BindProperty] public string? Severity { get; set; }
@@ -57,6 +64,7 @@ public class ReportIssueModel : PageModel
     public bool ActionSaved { get; private set; }
     public List<ManagerRecipientOption> ManagerRecipients { get; private set; } = new();
     public List<SelectListItem> LocationOptions { get; private set; } = new();
+    public List<SelectListItem> IssueTypeOptions { get; private set; } = new();
 
     public async Task<IActionResult> OnGetAsync(string? module)
     {
@@ -120,6 +128,20 @@ public class ReportIssueModel : PageModel
             return Page();
         }
 
+        var resolvedIssueType = await _customDropdownOptions.ResolveSelectionAsync(
+            currentUser.CompanyId,
+            currentUser.Id,
+            CustomDropdownOptionService.IssueTypeKey,
+            IssueType,
+            IssueTypeOther,
+            "Other");
+
+        if (resolvedIssueType is null)
+        {
+            StatusMessage = "Name the Other issue type before submitting.";
+            return Page();
+        }
+
         if (string.IsNullOrWhiteSpace(Description))
         {
             StatusMessage = "Enter an issue description before submitting.";
@@ -145,7 +167,7 @@ public class ReportIssueModel : PageModel
             AssignedToUserId = assignedTo.Id,
             ManagerLevel = ManagerLevel,
             Module = Module,
-            IssueType = IssueType.Trim(),
+            IssueType = resolvedIssueType,
             RelatedItem = string.IsNullOrWhiteSpace(RelatedItem) ? null : RelatedItem.Trim(),
             Location = LocationOptionService.NormalizeSelectedLocation(Location),
             Severity = string.IsNullOrWhiteSpace(Severity) ? null : Severity.Trim(),
@@ -193,6 +215,11 @@ public class ReportIssueModel : PageModel
     {
         await LoadManagerRecipientsAsync(companyId);
         LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(companyId);
+        IssueTypeOptions = await _customDropdownOptions.BuildOptionsAsync(
+            companyId,
+            CustomDropdownOptionService.IssueTypeKey,
+            CustomDropdownOptionService.IssueTypeDefaults,
+            IssueType);
     }
 
     private async Task LoadManagerRecipientsAsync(int companyId)

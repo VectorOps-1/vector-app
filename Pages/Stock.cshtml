@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Stock";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="module-screen">
@@ -14,47 +15,22 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Stock</h2>
-        <p class="page-subtitle">Stock control, batch tracking, expiry management, and replenishment workflows</p>
+        <p class="page-subtitle">Choose the exact stock action from one place.</p>
 
         <div class="module-grid">
-            <a class="module-card primary" href="/StockRegister">
-                <strong>Search Stock</strong>
-                <span>Find stock by item name, location, batch, quantity, or status</span>
-            </a>
-
-            <a class="module-card" href="/StockRegister">
+            <a class="module-card primary" href="/StockRegister?view=register">
                 <strong>Stock Register</strong>
-                <span>Open all stock by item, quantity, batch number, location, and last movement</span>
+                <span>Open the full stock register by item, quantity, batch, location, and movement. Use the search field inside the register when needed.</span>
             </a>
 
-            <a class="module-card" href="/PlaceStockOrder">
-                <strong>Place Stock Order</strong>
-                <span>Create a supplier order request with item, type, quantity, and delivery details</span>
-            </a>
-
-            <a class="module-card" href="/StockOrders">
-                <strong>Stock Orders</strong>
-                <span>Track order status from senior approval through supplier confirmation</span>
-            </a>
-
-            <a class="module-card" href="/SupplierConfirmations">
-                <strong>Supplier Confirmations</strong>
-                <span>Record confirmed quantity, batch number, and expiry date</span>
-            </a>
-
-            <a class="module-card" href="/EnterStockRegister">
-                <strong>Enter Stock Into Register</strong>
-                <span>Senior managers or authorised operational managers enter confirmed stock</span>
-            </a>
-
-            <a class="module-card" href="/AllocateStock">
-                <strong>Allocate Stock</strong>
-                <span>Allocate stock by batch number, item, quantity, and location</span>
+            <a class="module-card primary" href="/StockOrders">
+                <strong>Stock Orders &amp; Distribution</strong>
+                <span>Place orders, track supplier confirmations, enter received stock, and allocate stock from one workflow</span>
             </a>
 
             <a class="module-card" href="/MoveAsset?asset=stock" data-move-asset="stock">
-                <strong>Move / Reallocate Stock</strong>
-                <span>Move stock between bases, stores, vehicles, kits, or operating areas</span>
+                <strong>Move / Reallocate</strong>
+                <span>Move stock between stores, bases, vehicles, or operational areas</span>
             </a>
 
             <a class="module-card" href="/AddItem?type=stock">
@@ -62,23 +38,8 @@
                 <span>Add one stock item manually into the register</span>
             </a>
 
-            <a class="module-card" href="#">
-                <strong>Expiry Tracking</strong>
-                <span>Review stock nearing expiry and manage replacement actions</span>
-            </a>
-
-            <a class="module-card" href="#">
-                <strong>Batch Number Tracking</strong>
-                <span>Track items by batch number for accountability and recalls</span>
-            </a>
-
-            <a class="module-card" href="#">
-                <strong>Reorder / Replenishment</strong>
-                <span>Review replenishment needs and stock level actions</span>
-            </a>
-
             <a class="module-card danger" href="/ReportIssue?module=stock">
-                <strong>Report Stock Issue</strong>
+                <strong>Report Issue</strong>
                 <span>Report shortages, damaged stock, expired items, or control problems</span>
             </a>
         </div>

@@ -1,0 +1,110 @@
+@page
+@model ReassignVehicleCallsignModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Reassign Callsign";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Vehicle Register</div>
+        <h2 class="page-title">Reassign Callsign</h2>
+        <p class="page-subtitle">Move a callsign onto a different existing registration number. The vehicle register remains the source of truth.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="reassign-form">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <section class="form-panel">
+                <div class="section-label">Callsign Source</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label" asp-for="SourceVehicleId">Take callsign from existing vehicle</label>
+                        <select class="text-input" asp-for="SourceVehicleId" asp-items="Model.VehicleOptions">
+                            <option value="">Use custom callsign instead</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" asp-for="CustomCallsign">Custom callsign</label>
+                        <input class="text-input" asp-for="CustomCallsign" type="text" placeholder="Only use if not selecting an existing callsign" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Target Vehicle</div>
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label class="field-label" asp-for="TargetVehicleId">Apply callsign to registration</label>
+                        <select class="text-input" asp-for="TargetVehicleId" asp-items="Model.VehicleOptions">
+                            <option value="">Select target vehicle</option>
+                        </select>
+                        <span class="field-error" asp-validation-for="TargetVehicleId"></span>
+                    </div>
+
+                    <label class="toggle-card">
+                        <input asp-for="SwapPreviousCallsign" type="checkbox" />
+                        <span>
+                            <strong>Swap previous target callsign back to the source vehicle</strong>
+                            <small>If this is off, the source vehicle will be marked as unassigned.</small>
+                        </span>
+                    </label>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <a class="menu-btn staff-btn" href="/VehicleRegister">Back: Vehicle Register</a>
+                <button class="menu-btn vehicle-btn" type="submit">Save Callsign Reassignment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.module-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.module-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.reassign-form { display: flex; flex-direction: column; gap: 18px; }
+.form-panel { padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; }
+.section-label { margin-bottom: 16px; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #5f6b7a; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+.field-group { text-align: left; }
+.field-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #425466; }
+.text-input { width: 100%; padding: 14px 16px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #fff; font-size: 16px; color: #111827; box-sizing: border-box; }
+.toggle-card { min-height: 76px; display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #fff; color: #425466; cursor: pointer; }
+.toggle-card input { width: 20px; height: 20px; flex: 0 0 auto; }
+.toggle-card strong, .toggle-card small { display: block; }
+.toggle-card strong { color: #102a3a; font-size: 14px; font-weight: 900; }
+.toggle-card small { margin-top: 4px; color: #6b7280; font-size: 12px; font-weight: 700; }
+.action-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.action-row .menu-btn { min-width: 260px; border: none; }
+.status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.validation-summary, .field-error { color: #9f3030; font-size: 13px; font-weight: 700; }
+@@media (max-width: 780px) { .form-grid { grid-template-columns: 1fr; } }
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Callsign reassigned."),
+            redirectUrl: "/VehicleRegister",
+            delay: 1300
+        });
+    </script>
+}

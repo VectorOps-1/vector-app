@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Upload Staff Files";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="upload-screen">
@@ -32,14 +33,14 @@
 
                 <label>
                     Folder / category
-                    <select asp-for="Category">
-                        <option>Certifications</option>
-                        <option>Clinical Governance</option>
-                        <option>Employment</option>
-                        <option>Compliance</option>
-                        <option>Personal Documents</option>
-                        <option>Other</option>
+                    <select asp-for="Category" asp-items="Model.CategoryOptions" data-other-select="staff-file-category">
+                        <option value="">Select folder / category</option>
                     </select>
+                </label>
+
+                <label class="other-option-field is-hidden" data-other-field="staff-file-category" hidden>
+                    Name this folder / category
+                    <input asp-for="CategoryOther" type="text" placeholder="Example: Clinical Governance" />
                 </label>
             </div>
 
@@ -53,14 +54,6 @@
                 Notes
                 <textarea asp-for="Notes" rows="4" placeholder="Optional note, expiry reminder, certificate detail, or review comment"></textarea>
             </label>
-
-            <div class="format-list">
-                <span>PDF copies</span>
-                <span>Photos</span>
-                <span>Certificates</span>
-                <span>CVs</span>
-                <span>Spreadsheets</span>
-            </div>
 
             <button class="menu-btn staff-btn continue-btn" type="submit">Save Staff Files</button>
         </form>
@@ -214,24 +207,6 @@
 .upload-box input {
     margin-top: 10px;
     max-width: 100%;
-}
-
-.format-list {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    width: min(680px, 94%);
-}
-
-.format-list span {
-    padding: 8px 12px;
-    border: 1px solid rgba(66, 84, 102, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.62);
-    font-size: 13px;
-    font-weight: 700;
-    color: #425466;
 }
 
 .continue-btn {

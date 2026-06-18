@@ -1,0 +1,175 @@
+@page
+@model ReadinessAlertsModel
+@using vector_app_local.Models
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Readiness Alerts";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="readiness-alert-screen">
+    <div class="readiness-alert-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Readiness Alerts</div>
+        <h2 class="page-title">Automatic Readiness Alerts</h2>
+        <p class="page-subtitle">Scoring engine rules with Manager alert enabled appear here when a completed check triggers them.</p>
+
+        @if (!Model.Alerts.Any())
+        {
+            <div class="empty-panel">No open readiness alerts.</div>
+        }
+        else
+        {
+            <div class="alert-list-header" aria-hidden="true">
+                <span>Vehicle</span>
+                <span>Trigger</span>
+                <span>Severity</span>
+                <span>Manager</span>
+                <span>Actions</span>
+            </div>
+
+            <div class="alert-list">
+                @foreach (var alert in Model.Alerts)
+                {
+                    var statusClass = alert.Status == ReadinessAlertStatuses.Open ? "open" : "acknowledged";
+                    <section class="readiness-alert-row @statusClass">
+                        <a class="alert-source-link" href="@alert.SourceUrl">
+                            <span>
+                                <strong>@alert.VehicleLabel</strong>
+                                <small>@alert.AssetType - @alert.ItemName</small>
+                            </span>
+                            <span>
+                                <strong>@alert.TriggerValue</strong>
+                                <small>@alert.FieldKey: @(alert.SourceValue ?? "N/A")</small>
+                            </span>
+                            <span>
+                                <strong>@alert.Severity</strong>
+                                <small>@(alert.IsHardBlocker ? "Hard blocker" : $"{alert.ImpactPercent}% impact")</small>
+                            </span>
+                            <span>
+                                <strong>@alert.AssignedToName</strong>
+                                <small>Triggered by @alert.TriggeredByName</small>
+                            </span>
+                        </a>
+
+                        <div class="alert-actions">
+                            <a class="source-btn" href="@alert.SourceUrl">View Source</a>
+
+                            @if (alert.Status == ReadinessAlertStatuses.Open)
+                            {
+                                <form method="post" asp-page-handler="Acknowledge">
+                                    <input type="hidden" name="alertId" value="@alert.Id" />
+                                    <button class="ack-btn" type="submit">Acknowledge</button>
+                                </form>
+                            }
+
+                            <form method="post" asp-page-handler="Resolve">
+                                <input type="hidden" name="alertId" value="@alert.Id" />
+                                <input class="action-note" name="reviewNote" placeholder="Resolution note" />
+                                <button class="resolve-btn" type="submit">Resolve</button>
+                            </form>
+
+                            <form class="delete-alert-form" method="post" asp-page-handler="Delete">
+                                <input type="hidden" name="alertId" value="@alert.Id" />
+                                <button class="delete-row-btn" type="button" aria-expanded="false">Delete</button>
+                                <div class="delete-confirm-panel" hidden>
+                                    <div>Delete this readiness alert?</div>
+                                    <input class="action-note" name="reviewNote" placeholder="Optional delete note" />
+                                    <div class="delete-confirm-actions">
+                                        <button type="submit" class="delete-confirm-btn">Confirm</button>
+                                        <button type="button" class="delete-cancel-btn">Cancel</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="alert-summary">@alert.AlertSummary</div>
+                        <div class="alert-meta">Status: @alert.Status | Created: @alert.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                    </section>
+                }
+            </div>
+        }
+
+        <a class="back-link" asp-page="/ReadinessDashboard">Back: Readiness Dashboard</a>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll(".delete-alert-form").forEach(function (form) {
+        const openButton = form.querySelector(".delete-row-btn");
+        const panel = form.querySelector(".delete-confirm-panel");
+        const cancelButton = form.querySelector(".delete-cancel-btn");
+
+        openButton?.addEventListener("click", function () {
+            panel.hidden = false;
+            openButton.hidden = true;
+            openButton.setAttribute("aria-expanded", "true");
+        });
+
+        cancelButton?.addEventListener("click", function () {
+            panel.hidden = true;
+            openButton.hidden = false;
+            openButton.setAttribute("aria-expanded", "false");
+        });
+    });
+</script>
+
+<style>
+.readiness-alert-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.readiness-alert-inner { width: 100%; max-width: 1120px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { width: min(780px, 94%); margin: 0 auto 22px auto; font-size: 15px; font-weight: 700; color: #6b7280; }
+.empty-panel { width: min(780px, 94%); margin: 0 auto 18px auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); font-weight: 900; color: #52606d; }
+.alert-list-header, .readiness-alert-row { width: min(1080px, 100%); margin: 0 auto; box-sizing: border-box; }
+.alert-list-header { display: grid; grid-template-columns: 1.1fr 1.1fr .7fr 1fr 1.05fr; gap: 10px; padding: 10px 14px; border-radius: 8px 8px 0 0; background: #334155; color: #ffffff; text-align: left; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.alert-list { display: grid; gap: 12px; }
+.readiness-alert-row { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 12px; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-left: 6px solid #9B2C2C; border-radius: 8px; background: rgba(255,255,255,.78); box-shadow: 0 14px 26px rgba(15, 23, 42, .06); text-align: left; }
+.readiness-alert-row.acknowledged { border-left-color: #B4711C; }
+.alert-source-link { display: grid; grid-template-columns: 1.1fr 1.1fr .7fr 1fr; gap: 10px; align-items: center; color: #1f2937; text-decoration: none; }
+.alert-source-link:hover { color: #0E5E7A; }
+.alert-source-link strong { display: block; font-size: 13px; font-weight: 900; line-height: 1.25; }
+.alert-source-link small { display: block; margin-top: 3px; color: #667085; font-size: 11px; font-weight: 800; line-height: 1.25; }
+.alert-actions { display: grid; gap: 7px; align-content: start; }
+.alert-actions form { margin: 0; display: grid; gap: 6px; }
+.source-btn, .ack-btn, .resolve-btn, .delete-row-btn, .delete-confirm-btn, .delete-cancel-btn { min-height: 34px; border-radius: 8px; border: 1px solid rgba(66,84,102,.20); cursor: pointer; font-size: 12px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
+.source-btn { color: #0E5E7A; background: #ffffff; }
+.ack-btn { color: #ffffff; background: #2f80a8; border-color: #2f80a8; }
+.resolve-btn { color: #ffffff; background: #1f6f5b; border-color: #1f6f5b; }
+.delete-row-btn, .delete-confirm-btn { color: #ffffff; background: #9B2C2C; border-color: #9B2C2C; }
+.delete-cancel-btn { color: #1f2937; background: #ffffff; }
+.action-note { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba(66,84,102,.20); border-radius: 8px; color: #1f2937; font-size: 12px; font-weight: 750; box-sizing: border-box; }
+.delete-confirm-panel { display: grid; gap: 7px; padding: 8px; border: 1px solid rgba(155,44,44,.18); border-radius: 8px; background: rgba(155,44,44,.06); color: #7f1d1d; font-size: 12px; font-weight: 900; }
+.delete-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.alert-summary { grid-column: 1 / -1; padding-top: 2px; color: #425466; font-size: 13px; font-weight: 750; }
+.alert-meta { grid-column: 1 / -1; color: #667085; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .5px; }
+.back-link { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; margin-top: 18px; padding: 0 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: #fff; color: #0E5E7A; font-weight: 900; text-decoration: none; }
+.back-link:hover { background: #eef3f8; color: #0b4b61; }
+@@media (max-width: 900px) {
+    .alert-list-header { display: none; }
+    .readiness-alert-row { grid-template-columns: 1fr; }
+    .alert-source-link { grid-template-columns: 1fr; }
+    .alert-source-link span::before { display: block; margin-bottom: 2px; color: #6b7280; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+    .alert-source-link span:nth-child(1)::before { content: "Vehicle"; }
+    .alert-source-link span:nth-child(2)::before { content: "Trigger"; }
+    .alert-source-link span:nth-child(3)::before { content: "Severity"; }
+    .alert-source-link span:nth-child(4)::before { content: "Manager"; }
+}
+</style>
+
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.SuccessMessage),
+            redirectUrl: "/ReadinessAlerts",
+            delay: 1200
+        });
+    </script>
+}

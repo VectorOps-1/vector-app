@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Manager Area Assignment";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
     var returnUrl = Url.Page("/ManagerAreas", new { managerUserId = Model.ManagerUserId });
 }
 

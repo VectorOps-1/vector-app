@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Upload Equipment Register";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="upload-screen">
@@ -24,8 +25,8 @@
         <form method="post" enctype="multipart/form-data" class="upload-form">
             <label class="upload-box" for="equipmentRegisterFile">
                 <span class="upload-title">Select Equipment Register</span>
-                <span class="upload-help">Accepted now: .xlsx or .xls</span>
-                <input id="equipmentRegisterFile" asp-for="EquipmentRegisterFile" type="file" accept=".xlsx,.xls" />
+                <span class="upload-help">Accepted now: .xlsx, .xls, or .csv</span>
+                <input id="equipmentRegisterFile" asp-for="EquipmentRegisterFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
             <button class="menu-btn equipment-btn continue-btn" type="submit">Generate Equipment Register Preview</button>

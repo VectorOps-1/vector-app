@@ -10,16 +10,34 @@ namespace vector_app_local.Pages;
 
 public class AddItemModel : PageModel
 {
+    public const string CustomSubtypeValue = "__custom";
+
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly IFileStorageService _fileStorage;
+    private readonly CustomDropdownOptionService _customDropdownOptions;
 
-    public AddItemModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public AddItemModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        IFileStorageService fileStorage,
+        CustomDropdownOptionService customDropdownOptions)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _fileStorage = fileStorage;
+        _customDropdownOptions = customDropdownOptions;
     }
+
+    private static readonly HashSet<string> AllowedStaffFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff",
+        ".doc", ".docx", ".rtf", ".txt",
+        ".xls", ".xlsx", ".csv"
+    };
 
     [BindProperty(SupportsGet = true)] public string Type { get; set; } = "equipment";
     [BindProperty] public string? PrimaryName { get; set; }
@@ -27,15 +45,41 @@ public class AddItemModel : PageModel
     [BindProperty] public string? SerialOrBatch { get; set; }
     [BindProperty] public string? MakeModelType { get; set; }
     [BindProperty] public string? Schedule { get; set; }
+    [BindProperty] public string? StaffEmail { get; set; }
+    [BindProperty] public string? NationalId { get; set; }
+    [BindProperty] public string? CellNumber { get; set; }
+    [BindProperty] public string? StaffQualificationFunction { get; set; }
+    [BindProperty] public string? StaffPractitionerNumber { get; set; }
+    [BindProperty] public DateTime? StaffAnnualLicenseExpiryDate { get; set; }
+    [BindProperty] public string? StaffCpdComplianceStatus { get; set; }
+    [BindProperty] public DateTime? StaffCpdComplianceExpiryDate { get; set; }
+    [BindProperty] public string? VehicleFunction { get; set; }
+    [BindProperty] public string? VehicleSubtype { get; set; }
+    [BindProperty] public string? CustomVehicleSubtype { get; set; }
+    [BindProperty] public string? VinNumber { get; set; }
+    [BindProperty] public string? ChassisNumber { get; set; }
+    [BindProperty] public string? LicenseNumber { get; set; }
+    [BindProperty] public string? UnitSchematicKey { get; set; }
+    [BindProperty] public DateTime? LicenseDiscExpiryDate { get; set; }
+    [BindProperty] public DateTime? LastServiceDate { get; set; }
     [BindProperty] public string? Location { get; set; }
     [BindProperty] public string? Status { get; set; }
     [BindProperty] public int? Quantity { get; set; }
     [BindProperty] public DateTime? ExpiryOrReviewDate { get; set; }
     [BindProperty] public string? Notes { get; set; }
+    [BindProperty] public string StaffFileCategory { get; set; } = "Personal Documents";
+    [BindProperty] public string? StaffFileCategoryOther { get; set; }
+    [BindProperty] public string? StaffFileNotes { get; set; }
+    [BindProperty] public List<IFormFile> StaffFiles { get; set; } = new();
 
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public List<SelectListItem> LocationOptions { get; private set; } = new();
+    public List<SelectListItem> VehicleSubtypeOptions { get; private set; } = new();
+    public List<SelectListItem> StaffFileCategoryOptions { get; private set; } = new();
+    public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
+    public bool IsStaffProfile => NormalizedType == "staff";
+    public bool IsVehicleEntry => NormalizedType == "vehicle";
 
     public string ItemLabel => NormalizedType switch
     {
@@ -48,7 +92,7 @@ public class AddItemModel : PageModel
 
     public string PrimaryLabel => NormalizedType switch
     {
-        "vehicle" => "Vehicle callsign / name",
+        "vehicle" => "Callsign",
         "staff" => "Staff member name",
         "medication" => "Medication name",
         "stock" => "Stock item name",
@@ -57,7 +101,7 @@ public class AddItemModel : PageModel
 
     public string PrimaryPlaceholder => NormalizedType switch
     {
-        "vehicle" => "Callsign or vehicle name",
+        "vehicle" => "Assigned callsign",
         "staff" => "Full name",
         "medication" => "Medication name",
         "stock" => "Stock item name",
@@ -66,18 +110,44 @@ public class AddItemModel : PageModel
 
     public bool ShowMedicationSchedule => NormalizedType == "medication";
 
+    public string PageSubtitle => NormalizedType switch
+    {
+        "staff" => "Add one staff profile without uploading a full staff register.",
+        "vehicle" => "Add one vehicle record without uploading a full vehicle register.",
+        _ => "Add one register record without uploading a full register."
+    };
+
     public string ReferenceLabel => NormalizedType switch
     {
         "medication" => "Medication code / reference",
         "stock" => "Stock code / reference",
+        "staff" => "Staff ID",
+        "vehicle" => "Registration number",
         _ => "ID / reference number"
+    };
+
+    public string ReferencePlaceholder => NormalizedType switch
+    {
+        "vehicle" => "Registration number",
+        "stock" => "Stock code or internal reference",
+        "medication" => "Medication code or internal reference",
+        "staff" => "Staff ID or employee number",
+        _ => "Asset ID or internal reference"
     };
 
     public string TypeLabel => NormalizedType switch
     {
         "medication" => "Medication type / form",
         "stock" => "Stock type / size",
+        "vehicle" => "Vehicle type",
         _ => "Make / model / type"
+    };
+
+    public string NotesPlaceholder => NormalizedType switch
+    {
+        "staff" => "Staff notes, access notes, onboarding note, or manager instruction",
+        "vehicle" => "Vehicle notes, allocation note, service note, or manager instruction",
+        _ => "Additional details, acquisition note, supplier, or manager instruction"
     };
 
     private string NormalizedType => NormalizeItemType(Type);
@@ -112,7 +182,7 @@ public class AddItemModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        await LoadLocationOptionsAsync(currentUser.CompanyId);
+        await LoadOptionsAsync(currentUser.CompanyId);
         return Page();
     }
 
@@ -126,12 +196,17 @@ public class AddItemModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        await LoadLocationOptionsAsync(currentUser.CompanyId);
+        await LoadOptionsAsync(currentUser.CompanyId);
 
         if (string.IsNullOrWhiteSpace(PrimaryName))
         {
             StatusMessage = $"Enter the {PrimaryLabel.ToLowerInvariant()} before saving.";
             return Page();
+        }
+
+        if (Type == "staff")
+        {
+            return await SaveStaffAsync(currentUser);
         }
 
         if (Type is "vehicle" or "equipment")
@@ -258,12 +333,37 @@ public class AddItemModel : PageModel
 
         var now = DateTime.UtcNow;
         var area = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
+        var vehicleSubtype = ResolveSubmittedVehicleSubtype();
+        if (vehicleSubtype is null)
+        {
+            StatusMessage = "Select an existing subtype or create a custom subtype before saving the vehicle.";
+            PrepareVehicleSubtypeSelection();
+            return Page();
+        }
+
+        var function = NormalizeOptional(VehicleFunction);
+        if (function is null)
+        {
+            StatusMessage = "Select whether this vehicle is an Ambulance or Response Vehicle before saving.";
+            PrepareVehicleSubtypeSelection();
+            return Page();
+        }
+
+        var vehicleType = vehicleSubtype;
         var vehicle = new Vehicle
         {
             CompanyId = currentUser.CompanyId,
             RegistrationNumber = registration,
             Callsign = PrimaryName!.Trim(),
-            VehicleType = string.IsNullOrWhiteSpace(MakeModelType) ? "Vehicle" : MakeModelType.Trim(),
+            VehicleType = vehicleType,
+            VehicleFunction = function,
+            VehicleSubtype = vehicleSubtype,
+            SchematicType = NormalizeOptional(UnitSchematicKey),
+            VinNumber = NormalizeOptional(VinNumber),
+            ChassisNumber = NormalizeOptional(ChassisNumber),
+            LicenseNumber = NormalizeOptional(LicenseNumber),
+            LicenseDiscExpiryDate = LicenseDiscExpiryDate,
+            LastServiceDate = LastServiceDate,
             CurrentOperationalAreaId = area?.Id,
             CurrentLocationDetail = area is null ? LocationOptionService.NormalizeSelectedLocation(Location) : null,
             NextServiceDate = ExpiryOrReviewDate,
@@ -290,6 +390,10 @@ public class AddItemModel : PageModel
 
         ActionSaved = true;
         StatusMessage = $"{ItemLabel} saved to the vehicle register.";
+        VehicleSubtype = vehicleSubtype;
+        CustomVehicleSubtype = null;
+        await LoadOptionsAsync(currentUser.CompanyId);
+        PrepareVehicleSubtypeSelection();
         return Page();
     }
 
@@ -334,15 +438,224 @@ public class AddItemModel : PageModel
         return Page();
     }
 
-    private async Task LoadLocationOptionsAsync(int companyId)
+    private async Task<IActionResult> SaveStaffAsync(AppUser currentUser)
     {
-        LocationOptions = Type == "vehicle"
+        if (string.IsNullOrWhiteSpace(StaffEmail))
+        {
+            StatusMessage = "Enter the staff member's email before saving the staff profile.";
+            return Page();
+        }
+
+        var unsupportedFile = StaffFiles.FirstOrDefault(file =>
+            file.Length > 0 && !AllowedStaffFileExtensions.Contains(Path.GetExtension(file.FileName)));
+        if (unsupportedFile is not null)
+        {
+            StatusMessage = $"Unsupported staff file type: {unsupportedFile.FileName}.";
+            return Page();
+        }
+
+        var email = StaffEmail.Trim();
+        var duplicateExists = await _db.AppUsers.AnyAsync(user =>
+            user.CompanyId == currentUser.CompanyId &&
+            user.Email == email);
+
+        if (duplicateExists)
+        {
+            StatusMessage = "A staff profile with this email already exists.";
+            return Page();
+        }
+
+        var staffRole = await _db.AppRoles.FirstOrDefaultAsync(role => role.Name == "Staff");
+        if (staffRole is null)
+        {
+            StatusMessage = "Staff role is missing. Create the Staff role before adding staff profiles.";
+            return Page();
+        }
+
+        var now = DateTime.UtcNow;
+        var assignedArea = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
+        var staffProfile = new AppUser
+        {
+            CompanyId = currentUser.CompanyId,
+            AppRoleId = staffRole.Id,
+            FullName = PrimaryName!.Trim(),
+            Email = email,
+            StaffIdentifier = NormalizeOptional(ReferenceNumber),
+            NationalId = NormalizeOptional(NationalId),
+            CellNumber = NormalizeOptional(CellNumber),
+            QualificationFunction = NormalizeOptional(StaffQualificationFunction),
+            PractitionerNumber = NormalizeOptional(StaffPractitionerNumber),
+            AnnualLicenseExpiryDate = StaffAnnualLicenseExpiryDate,
+            CpdComplianceStatus = NormalizeOptional(StaffCpdComplianceStatus),
+            CpdComplianceExpiryDate = StaffCpdComplianceExpiryDate,
+            AssignedOperationalAreaId = assignedArea?.Id,
+            Status = string.IsNullOrWhiteSpace(Status) ? "Active" : Status.Trim(),
+            CreatedAtUtc = now
+        };
+
+        _db.AppUsers.Add(staffProfile);
+        await _db.SaveChangesAsync();
+
+        var savedFileCount = 0;
+        var hasFilesToSave = StaffFiles.Any(file => file.Length > 0);
+        var fileCategory = "Personal Documents";
+
+        if (hasFilesToSave)
+        {
+            var resolvedCategory = await _customDropdownOptions.ResolveSelectionAsync(
+                currentUser.CompanyId,
+                currentUser.Id,
+                CustomDropdownOptionService.StaffFileCategoryKey,
+                StaffFileCategory,
+                StaffFileCategoryOther,
+                "Personal Documents");
+
+            if (resolvedCategory is null)
+            {
+                StatusMessage = "Name the Other folder / category before saving staff files.";
+                return Page();
+            }
+
+            fileCategory = resolvedCategory;
+        }
+
+        foreach (var file in StaffFiles.Where(file => file.Length > 0))
+        {
+            var storedFile = await _fileStorage.SaveAsync(file, $"staff-{staffProfile.Id}");
+            _db.AssetFiles.Add(new AssetFile
+            {
+                CompanyId = currentUser.CompanyId,
+                UploadedByUserId = currentUser.Id,
+                LinkedEntityType = "Staff",
+                LinkedEntityId = staffProfile.Id,
+                Category = fileCategory,
+                OriginalFileName = storedFile.OriginalFileName,
+                ContentType = storedFile.ContentType,
+                StorageProvider = storedFile.ProviderName,
+                StoragePath = storedFile.StoragePath,
+                SizeBytes = storedFile.SizeBytes,
+                Notes = NormalizeOptional(StaffFileNotes),
+                UploadedAtUtc = now
+            });
+
+            savedFileCount++;
+        }
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = currentUser.CompanyId,
+            AppUserId = currentUser.Id,
+            Action = "Staff profile added",
+            EntityType = "AppUser",
+            EntityId = staffProfile.Id,
+            Details = $"Staff profile added: {staffProfile.FullName}.",
+            CreatedAtUtc = now
+        });
+
+        if (savedFileCount > 0)
+        {
+            _db.AuditLogs.Add(new AuditLog
+            {
+                CompanyId = currentUser.CompanyId,
+                AppUserId = currentUser.Id,
+                Action = "Staff files uploaded",
+                EntityType = "AppUser",
+                EntityId = staffProfile.Id,
+                Details = $"{savedFileCount} staff file(s) uploaded into {fileCategory} while creating {staffProfile.FullName}.",
+                CreatedAtUtc = now
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        ActionSaved = true;
+        StatusMessage = savedFileCount == 0
+            ? "Staff profile saved to the staff register."
+            : $"Staff profile saved with {savedFileCount} linked file(s).";
+        return Page();
+    }
+
+    private async Task LoadOptionsAsync(int companyId)
+    {
+        LocationOptions = Type is "vehicle" or "staff"
             ? await _locationOptions.GetOperationalAreaOptionsAsync(companyId)
             : await _locationOptions.GetAssetLocationOptionsAsync(companyId);
+
+        if (Type == "vehicle")
+        {
+            await LoadVehicleSubtypeOptionsAsync(companyId);
+            PrepareVehicleSubtypeSelection();
+        }
+
+        if (Type == "staff")
+        {
+            StaffFileCategoryOptions = await _customDropdownOptions.BuildOptionsAsync(
+                companyId,
+                CustomDropdownOptionService.StaffFileCategoryKey,
+                CustomDropdownOptionService.StaffFileCategoryDefaults,
+                StaffFileCategory);
+        }
+    }
+
+    private async Task LoadVehicleSubtypeOptionsAsync(int companyId)
+    {
+        var vehicles = await _db.Vehicles
+            .AsNoTracking()
+            .Where(vehicle =>
+                vehicle.CompanyId == companyId &&
+                vehicle.Status != "Deleted")
+            .Select(vehicle => new
+            {
+                vehicle.VehicleSubtype,
+                vehicle.VehicleType
+            })
+            .ToListAsync();
+
+        var subtypes = vehicles
+            .Select(vehicle => NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value)
+            .ToList();
+
+        VehicleSubtypeOptions = subtypes
+            .Select(value => new SelectListItem(value, value))
+            .ToList();
+    }
+
+    private string? ResolveSubmittedVehicleSubtype()
+    {
+        return string.Equals(VehicleSubtype, CustomSubtypeValue, StringComparison.OrdinalIgnoreCase)
+            ? NormalizeOptional(CustomVehicleSubtype)
+            : NormalizeOptional(VehicleSubtype);
+    }
+
+    private void PrepareVehicleSubtypeSelection()
+    {
+        var subtype = NormalizeOptional(VehicleSubtype);
+        if (subtype is null)
+        {
+            return;
+        }
+
+        if (string.Equals(subtype, CustomSubtypeValue, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (VehicleSubtypeOptions.Any(option => string.Equals(option.Value, subtype, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        CustomVehicleSubtype = subtype;
+        VehicleSubtype = CustomSubtypeValue;
     }
 
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
 }

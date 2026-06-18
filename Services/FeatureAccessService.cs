@@ -22,7 +22,7 @@ public class FeatureAccessService : IFeatureAccessService
         [VectorFeatures.LocalFileStorage] = SubscriptionTiers.Base,
 
         [VectorFeatures.VehicleEquipmentLoadouts] = SubscriptionTiers.Pro,
-        [VectorFeatures.CustomChecklistBuilder] = SubscriptionTiers.Pro,
+        [VectorFeatures.CustomChecklistBuilder] = SubscriptionTiers.Base,
         [VectorFeatures.EquipmentServiceTracking] = SubscriptionTiers.Pro,
         [VectorFeatures.StaffFiles] = SubscriptionTiers.Pro,
         [VectorFeatures.MedicationRegister] = SubscriptionTiers.Pro,

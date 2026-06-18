@@ -1,4 +1,4 @@
-@page
+@page "{workspaceSlug?}"
 @model CompanyLoginModel
 @{
     ViewData["Title"] = "Company Login";
@@ -8,24 +8,35 @@
     <div class="company-login-inner">
         <div class="home-label">AcuityOps Workspace</div>
 
-        <img src="/acuityops-app-icon-light.png" class="company-login-logo" alt="AcuityOps" />
+        <img src="@Model.LogoPath" class="company-login-logo" alt="AcuityOps logo" />
+
+        <div class="home-context">Client: @Model.ClientName</div>
 
         <h2 class="page-title">Company Login</h2>
-        <p class="page-subtitle">Enter the company ID linked to the subscription</p>
+        <p class="page-subtitle">@Model.PageSubtitle</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.LoginError))
         {
             <div class="login-error">@Model.LoginError</div>
         }
 
-        <form class="workspace-form" method="post">
-            <label asp-for="CompanyId">Company ID</label>
-            <input asp-for="CompanyId" type="text" inputmode="numeric" placeholder="Enter company ID" autocomplete="organization" />
+        @if (Model.ShowLoginForm)
+        {
+            <form class="workspace-form" method="post">
+                <input type="hidden" asp-for="WorkspaceSlug" />
 
-            <button class="menu-btn equipment-btn" type="submit">Continue</button>
-        </form>
+                <label asp-for="CompanyAccessCode">Company access code</label>
+                <input asp-for="CompanyAccessCode"
+                       type="password"
+                       value="@Model.CompanyAccessCode"
+                       placeholder="Enter company access code"
+                       autocomplete="off" />
 
-        <p class="security-note">This selects the company workspace before staff, operational management, or senior management login.</p>
+                <button class="menu-btn equipment-btn" type="submit">Continue</button>
+            </form>
+        }
+
+        <p class="security-note">@Model.SecurityNote</p>
     </div>
 </div>
 
@@ -61,6 +72,13 @@
     max-width: 42%;
     margin: 0 auto 12px auto;
     display: block;
+}
+
+.home-context {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
 }
 
 .page-title {

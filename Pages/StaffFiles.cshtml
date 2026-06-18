@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Staff Files and Folders";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
     var selectedStaff = Model.SelectedStaff;
     var selectedStaffUploadUrl = selectedStaff is null ? "/UploadStaffFiles" : $"/UploadStaffFiles?staffUserId={selectedStaff.Id}";
     var folderNames = new[] { "Certifications", "Clinical Governance", "Employment", "Compliance", "Personal Documents", "Other" };
@@ -37,6 +38,8 @@
                     <a class="staff-list-item @(selectedStaff?.Id == staff.Id ? "selected" : string.Empty)" href="/StaffFiles?staffUserId=@staff.Id">
                         <strong>@staff.FullName</strong>
                         <span>@staff.RoleName</span>
+                        <small>@(string.IsNullOrWhiteSpace(staff.StaffIdentifier) ? staff.AssignedArea : $"{staff.StaffIdentifier} - {staff.AssignedArea}")</small>
+                        <small>@(string.IsNullOrWhiteSpace(staff.PractitionerNumber) ? "Practitioner no. not set" : $"Practitioner: {staff.PractitionerNumber}")</small>
                     </a>
                 }
             </aside>
@@ -52,6 +55,8 @@
                                 <strong>@staff.FullName</strong>
                                 <span>@staff.RoleName</span>
                                 <small>@staff.Email</small>
+                                <small>@(string.IsNullOrWhiteSpace(staff.CellNumber) ? "No cell number" : staff.CellNumber)</small>
+                                <small>@(string.IsNullOrWhiteSpace(staff.PractitionerNumber) ? "Practitioner no. not set" : staff.PractitionerNumber)</small>
                             </a>
                         }
                     </div>
@@ -63,10 +68,15 @@
                             <div class="section-label">Selected Staff</div>
                             <h3>@selectedStaff.FullName</h3>
                             <span>@selectedStaff.RoleName - @selectedStaff.Status</span>
+                            <span>@(string.IsNullOrWhiteSpace(selectedStaff.StaffIdentifier) ? "Staff ID not set" : $"Staff ID: {selectedStaff.StaffIdentifier}")</span>
+                            <span>@(string.IsNullOrWhiteSpace(selectedStaff.PractitionerNumber) ? "Practitioner number not set" : $"Practitioner: {selectedStaff.PractitionerNumber}")</span>
+                            <span>Licence expiry: @(selectedStaff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                            <span>CPD: @(string.IsNullOrWhiteSpace(selectedStaff.CpdComplianceStatus) ? "N/A" : selectedStaff.CpdComplianceStatus) / @(selectedStaff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                            <span>Assigned area: @selectedStaff.AssignedArea</span>
                         </div>
                         <div class="selected-actions">
                             <a class="small-link" href="/UploadStaffFiles?staffUserId=@selectedStaff.Id">Upload File</a>
-                            <a class="small-link" href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(selectedStaff.FullName)">Open Records</a>
+                            <a class="small-link" href="/StaffRecordsSearch?staffUserId=@selectedStaff.Id">Open Profile</a>
                         </div>
                     </div>
 
@@ -122,7 +132,8 @@
 .staff-list-item, .folder-card { border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; color: #425466; text-decoration: none; }
 .staff-list-item { display: flex; flex-direction: column; gap: 4px; padding: 12px; }
 .staff-list-item strong, .folder-card strong { color: #1f2937; }
-.staff-list-item span, .folder-card span, .folder-card small, .selected-heading span { color: #6b7280; font-size: 13px; font-weight: 700; }
+.staff-list-item span, .staff-list-item small, .folder-card span, .folder-card small, .selected-heading span { color: #6b7280; font-size: 13px; font-weight: 700; }
+.staff-list-item small { font-size: 12px; }
 .staff-list-item.selected { border-color: rgba(47,128,168,.52); background: rgba(47,128,168,.08); }
 .folder-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .folder-card { min-height: 118px; display: flex; flex-direction: column; justify-content: flex-start; gap: 7px; padding: 16px; }

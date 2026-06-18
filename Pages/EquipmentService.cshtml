@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Update Equipment Service Dates";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="equipment-service-screen">
@@ -26,7 +27,7 @@
             <input asp-for="ReturnUrl" type="hidden" value="@Model.SafeReturnUrl" />
             <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
             <a class="menu-btn staff-btn toolbar-btn" href="/EquipmentService">All</a>
-            <a class="menu-btn vehicle-btn toolbar-btn" href="/EquipmentRegister">Register</a>
+            <a class="menu-btn vehicle-btn toolbar-btn" href="/EquipmentRegister?view=register">Register</a>
         </form>
 
         <form method="post" class="service-form">
@@ -52,35 +53,55 @@
             }
             else
             {
-                <div class="register-table" role="table" aria-label="Equipment service date update list">
-                    <div class="register-header" role="row">
-                        <div role="columnheader">Update</div>
-                        <div role="columnheader">Equipment</div>
-                        <div role="columnheader">S/N / ID</div>
-                        <div role="columnheader">Current Next Service</div>
-                        <div role="columnheader">Vehicle / Location</div>
-                        <div role="columnheader">Status</div>
-                    </div>
-
-                    @foreach (var item in Model.EquipmentItems)
+                <div class="service-groups" aria-label="Equipment service date update list grouped by equipment name">
+                    @foreach (var equipmentGroup in Model.EquipmentItems
+                        .GroupBy(item => string.IsNullOrWhiteSpace(item.Name) ? "Unnamed equipment" : item.Name)
+                        .OrderBy(group => group.Key))
                     {
-                        <label class="register-row" role="row">
-                            <span role="cell">
-                                <input class="row-checkbox" type="checkbox" name="SelectedEquipmentItemIds" value="@item.Id" checked="@item.IsSelected" />
-                            </span>
-                            <span class="equipment-identity" role="cell">
-                                <strong>@item.Name</strong>
-                                <span>@(item.EquipmentType ?? "Type not set")</span>
-                                <span>@(item.Model ?? "Model not set")</span>
-                            </span>
-                            <span role="cell">@(item.SerialOrAssetId ?? "Not set")</span>
-                            <span role="cell"><strong>@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong></span>
-                            <span class="stacked-cell" role="cell">
-                                <strong>@(item.AssignedVehicle ?? "No vehicle allocation")</strong>
-                                <span>@(item.CurrentLocation ?? "Unallocated")</span>
-                            </span>
-                            <span role="cell"><span class="status-pill">@item.Status</span></span>
-                        </label>
+                        var groupItems = equipmentGroup
+                            .OrderBy(item => item.SerialOrAssetId)
+                            .ThenBy(item => item.AssignedVehicle)
+                            .ToList();
+                        var selectedCount = groupItems.Count(item => item.IsSelected);
+                        var shouldOpen = selectedCount > 0 || !string.IsNullOrWhiteSpace(Model.SearchTerm);
+
+                        <details class="service-group" open="@shouldOpen">
+                            <summary>
+                                <span>@equipmentGroup.Key</span>
+                                <strong>@groupItems.Count item@(groupItems.Count == 1 ? string.Empty : "s")@(selectedCount > 0 ? $" | {selectedCount} selected" : string.Empty)</strong>
+                            </summary>
+
+                            <div class="register-table" role="table" aria-label="@equipmentGroup.Key service date update list">
+                                <div class="register-header" role="row">
+                                    <div role="columnheader">Update</div>
+                                    <div role="columnheader">Details</div>
+                                    <div role="columnheader">S/N / ID</div>
+                                    <div role="columnheader">Current Next Service</div>
+                                    <div role="columnheader">Vehicle / Location</div>
+                                    <div role="columnheader">Status</div>
+                                </div>
+
+                                @foreach (var item in groupItems)
+                                {
+                                    <label class="register-row" role="row">
+                                        <span role="cell">
+                                            <input class="row-checkbox" type="checkbox" name="SelectedEquipmentItemIds" value="@item.Id" checked="@item.IsSelected" />
+                                        </span>
+                                        <span class="equipment-identity" role="cell">
+                                            <strong>@(item.Model ?? "Model not set")</strong>
+                                            <span>@(item.EquipmentType ?? "Type not set")</span>
+                                        </span>
+                                        <span role="cell">@(item.SerialOrAssetId ?? "Not set")</span>
+                                        <span role="cell"><strong>@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong></span>
+                                        <span class="stacked-cell" role="cell">
+                                            <strong>@(item.AssignedVehicle ?? "No vehicle allocation")</strong>
+                                            <span>@(item.CurrentLocation ?? "Unallocated")</span>
+                                        </span>
+                                        <span role="cell"><span class="status-pill">@item.Status</span></span>
+                                    </label>
+                                }
+                            </div>
+                        </details>
                     }
                 </div>
             }
@@ -112,10 +133,19 @@
 .service-grid label { display: flex; flex-direction: column; gap: 8px; color: #52606d; font-size: 13px; font-weight: 800; }
 .service-grid input { min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
+.service-groups { width: min(1180px, 100%); display: grid; gap: 10px; }
+.service-group { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.74); overflow: hidden; text-align: left; }
+.service-group summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 16px; cursor: pointer; color: #1f2937; font-size: 16px; font-weight: 900; list-style: none; }
+.service-group summary::-webkit-details-marker { display: none; }
+.service-group summary::after { content: "Open"; color: #0E5E7A; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.service-group[open] summary { border-bottom: 1px solid rgba(66,84,102,.14); }
+.service-group[open] summary::after { content: "Close"; }
+.service-group summary strong { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.register-table { width: 100%; margin: 0; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
 .register-header, .register-row { display: grid; grid-template-columns: 80px minmax(210px, 1.1fr) minmax(140px, .75fr) minmax(150px, .7fr) minmax(220px, 1fr) 100px; gap: 12px; align-items: center; padding: 14px 16px; }
 .register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
 .register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; cursor: pointer; }
+.register-header + .register-row { border-top: 0; }
 .register-row:hover { background: rgba(14,94,122,.04); }
 .row-checkbox { width: 20px; height: 20px; accent-color: #0E5E7A; }
 .equipment-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
@@ -129,6 +159,8 @@
     .toolbar, .service-grid, .action-row, .register-header, .register-row { grid-template-columns: 1fr; }
     .register-header { display: none; }
     .register-row { gap: 8px; }
+    .service-group summary { align-items: flex-start; flex-direction: column; padding: 10px 14px; }
+    .service-group summary strong { margin-left: 0; }
 }
 </style>
 

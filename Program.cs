@@ -1,14 +1,27 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using vector_app_local.Data;
 using vector_app_local.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.ConfigureFilter(new SessionAccessPageFilter());
 });
 builder.Services.AddDistributedMemoryCache();
+if (builder.Environment.IsDevelopment())
+{
+    var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, ".data-protection-keys");
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+        .SetApplicationName("AcuityOpsLocal");
+}
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(8);
@@ -18,8 +31,19 @@ builder.Services.AddSession(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
+builder.Services.AddScoped<IUserActionPermissionService, UserActionPermissionService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<LocationOptionService>();
+builder.Services.AddScoped<SetupUploadService>();
+builder.Services.AddScoped<ChecklistVarianceService>();
+builder.Services.AddScoped<ReadinessAlertService>();
+builder.Services.AddScoped<AuditTrailService>();
+builder.Services.AddScoped<ChecklistReportPdfService>();
+builder.Services.AddScoped<ReadinessEngineService>();
+builder.Services.AddScoped<ReadinessEngineScoringService>();
+builder.Services.AddScoped<VehicleSchematicAssignmentService>();
+builder.Services.AddScoped<CustomDropdownOptionService>();
+builder.Services.AddScoped<ExpiryPressureService>();
 builder.Services.AddDbContext<VectorDbContext>(options =>
 {
     if (builder.Environment.IsDevelopment())
@@ -39,6 +63,7 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<VectorDbContext>();
     await DevelopmentDatabase.InitialiseAsync(db);
+    app.Logger.LogInformation("Development database schema checked. Sample/prototype data is not seeded by application startup.");
 }
 
 if (!app.Environment.IsDevelopment())

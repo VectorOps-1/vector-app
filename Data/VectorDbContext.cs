@@ -24,17 +24,40 @@ public class VectorDbContext : DbContext
     public DbSet<StockOrder> StockOrders => Set<StockOrder>();
     public DbSet<StockOrderLine> StockOrderLines => Set<StockOrderLine>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<VehicleSchematicAssignment> VehicleSchematicAssignments => Set<VehicleSchematicAssignment>();
     public DbSet<EquipmentItem> EquipmentItems => Set<EquipmentItem>();
     public DbSet<VehicleEquipmentAssignment> VehicleEquipmentAssignments => Set<VehicleEquipmentAssignment>();
     public DbSet<DailyVehicleReadinessReport> DailyVehicleReadinessReports => Set<DailyVehicleReadinessReport>();
     public DbSet<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks => Set<DailyVehicleEquipmentCheck>();
     public DbSet<AssetFile> AssetFiles => Set<AssetFile>();
+    public DbSet<AppUserAccessPermission> AppUserAccessPermissions => Set<AppUserAccessPermission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
     public DbSet<ChecklistSection> ChecklistSections => Set<ChecklistSection>();
     public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
+    public DbSet<ChecklistColumnDefinition> ChecklistColumnDefinitions => Set<ChecklistColumnDefinition>();
+    public DbSet<ChecklistPublishScope> ChecklistPublishScopes => Set<ChecklistPublishScope>();
+    public DbSet<ChecklistVarianceAlert> ChecklistVarianceAlerts => Set<ChecklistVarianceAlert>();
+    public DbSet<ReadinessAlert> ReadinessAlerts => Set<ReadinessAlert>();
+    public DbSet<ReadinessEngineVersion> ReadinessEngineVersions => Set<ReadinessEngineVersion>();
+    public DbSet<ReadinessEngineRule> ReadinessEngineRules => Set<ReadinessEngineRule>();
+    public DbSet<ReadinessScoringChangeRequest> ReadinessScoringChangeRequests => Set<ReadinessScoringChangeRequest>();
+    public DbSet<CatalogueItem> CatalogueItems => Set<CatalogueItem>();
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
+    public DbSet<CustomDropdownOption> CustomDropdownOptions => Set<CustomDropdownOption>();
+
+    public override int SaveChanges()
+    {
+        PrepareAuditLogs();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        PrepareAuditLogs();
+        return base.SaveChangesAsync(cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,9 +67,29 @@ public class VectorDbContext : DbContext
             .HasIndex(role => role.Name)
             .IsUnique();
 
+        modelBuilder.Entity<Company>()
+            .HasIndex(company => company.WorkspaceSlug)
+            .IsUnique()
+            .HasFilter("WorkspaceSlug IS NOT NULL");
+
         modelBuilder.Entity<AppUser>()
             .HasIndex(user => new { user.CompanyId, user.Email })
             .IsUnique();
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => new { user.CompanyId, user.StaffIdentifier });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => new { user.CompanyId, user.QualificationFunction });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => new { user.CompanyId, user.PractitionerNumber });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => new { user.CompanyId, user.AnnualLicenseExpiryDate });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => new { user.CompanyId, user.CpdComplianceStatus });
 
         modelBuilder.Entity<AppUser>()
             .HasOne(user => user.Company)
@@ -58,6 +101,34 @@ public class VectorDbContext : DbContext
             .HasOne(user => user.AppRole)
             .WithMany(role => role.Users)
             .HasForeignKey(user => user.AppRoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppUser>()
+            .HasOne(user => user.AssignedOperationalArea)
+            .WithMany()
+            .HasForeignKey(user => user.AssignedOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppUserAccessPermission>()
+            .HasIndex(permission => new { permission.CompanyId, permission.AppUserId, permission.PermissionKey })
+            .IsUnique();
+
+        modelBuilder.Entity<AppUserAccessPermission>()
+            .HasOne(permission => permission.Company)
+            .WithMany(company => company.AppUserAccessPermissions)
+            .HasForeignKey(permission => permission.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppUserAccessPermission>()
+            .HasOne(permission => permission.AppUser)
+            .WithMany(user => user.AccessPermissions)
+            .HasForeignKey(permission => permission.AppUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppUserAccessPermission>()
+            .HasOne(permission => permission.UpdatedByUser)
+            .WithMany(user => user.UpdatedAccessPermissions)
+            .HasForeignKey(permission => permission.UpdatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<TaskItem>()
@@ -225,6 +296,9 @@ public class VectorDbContext : DbContext
             .HasIndex(stock => new { stock.CompanyId, stock.ItemName, stock.BatchNumber, stock.Location });
 
         modelBuilder.Entity<StockItem>()
+            .HasIndex(stock => new { stock.CompanyId, stock.StockCategory, stock.ItemName });
+
+        modelBuilder.Entity<StockItem>()
             .HasOne(stock => stock.Company)
             .WithMany(company => company.StockItems)
             .HasForeignKey(stock => stock.CompanyId)
@@ -303,6 +377,24 @@ public class VectorDbContext : DbContext
             .HasForeignKey(vehicle => vehicle.LastMovedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.ScopeType, assignment.VehicleFunction, assignment.VehicleSubtype });
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.SchematicKey });
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasOne(assignment => assignment.Company)
+            .WithMany()
+            .HasForeignKey(assignment => assignment.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasOne(assignment => assignment.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(assignment => assignment.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<EquipmentItem>()
             .HasIndex(equipment => new { equipment.CompanyId, equipment.SerialOrAssetId });
 
@@ -376,6 +468,12 @@ public class VectorDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<DailyVehicleReadinessReport>()
+            .HasOne(report => report.ChecklistTemplate)
+            .WithMany()
+            .HasForeignKey(report => report.ChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DailyVehicleReadinessReport>()
             .HasOne(report => report.VehicleSameAsPreviousSourceReport)
             .WithMany()
             .HasForeignKey(report => report.VehicleSameAsPreviousSourceReportId)
@@ -420,6 +518,12 @@ public class VectorDbContext : DbContext
             .HasForeignKey(check => check.CopiedFromDailyVehicleEquipmentCheckId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<DailyVehicleEquipmentCheck>()
+            .HasOne(check => check.ChecklistItem)
+            .WithMany()
+            .HasForeignKey(check => check.ChecklistItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<ChecklistTemplate>()
             .HasIndex(template => new { template.CompanyId, template.ChecklistType, template.TargetVehicleType, template.Name });
 
@@ -427,6 +531,24 @@ public class VectorDbContext : DbContext
             .HasOne(template => template.Company)
             .WithMany(company => company.ChecklistTemplates)
             .HasForeignKey(template => template.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasOne(template => template.ParentChecklistTemplate)
+            .WithMany(template => template.ChildTemplates)
+            .HasForeignKey(template => template.ParentChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasOne(template => template.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(template => template.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasOne(template => template.PublishedByUser)
+            .WithMany()
+            .HasForeignKey(template => template.PublishedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ChecklistSection>()
@@ -440,6 +562,268 @@ public class VectorDbContext : DbContext
             .WithMany(section => section.Items)
             .HasForeignKey(item => item.ChecklistSectionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChecklistItem>()
+            .HasIndex(item => item.ParentChecklistItemId);
+
+        modelBuilder.Entity<ChecklistItem>()
+            .HasOne(item => item.ParentChecklistItem)
+            .WithMany(item => item.SubItems)
+            .HasForeignKey(item => item.ParentChecklistItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistItem>()
+            .HasOne(item => item.CatalogueItem)
+            .WithMany()
+            .HasForeignKey(item => item.CatalogueItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistColumnDefinition>()
+            .HasIndex(column => new { column.ChecklistItemId, column.SortOrder });
+
+        modelBuilder.Entity<ChecklistColumnDefinition>()
+            .HasOne(column => column.ChecklistItem)
+            .WithMany(item => item.ColumnDefinitions)
+            .HasForeignKey(column => column.ChecklistItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasIndex(scope => new { scope.ChecklistTemplateId, scope.ScopeType, scope.IsActive });
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasOne(scope => scope.ChecklistTemplate)
+            .WithMany(template => template.PublishScopes)
+            .HasForeignKey(scope => scope.ChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasOne(scope => scope.OperationalArea)
+            .WithMany()
+            .HasForeignKey(scope => scope.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasOne(scope => scope.Vehicle)
+            .WithMany()
+            .HasForeignKey(scope => scope.VehicleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasOne(scope => scope.PublishedByUser)
+            .WithMany()
+            .HasForeignKey(scope => scope.PublishedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatalogueItem>()
+            .HasIndex(item => new { item.CompanyId, item.CatalogueType, item.Category, item.ItemName });
+
+        modelBuilder.Entity<CatalogueItem>()
+            .HasOne(item => item.Company)
+            .WithMany(company => company.CatalogueItems)
+            .HasForeignKey(item => item.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CustomDropdownOption>()
+            .HasIndex(option => new { option.CompanyId, option.DropdownKey, option.Value });
+
+        modelBuilder.Entity<CustomDropdownOption>()
+            .HasOne(option => option.Company)
+            .WithMany(company => company.CustomDropdownOptions)
+            .HasForeignKey(option => option.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CustomDropdownOption>()
+            .HasOne(option => option.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(option => option.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasIndex(alert => new { alert.CompanyId, alert.AssignedToUserId, alert.Status, alert.CreatedAtUtc });
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.Company)
+            .WithMany(company => company.ChecklistVarianceAlerts)
+            .HasForeignKey(alert => alert.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.DailyVehicleReadinessReport)
+            .WithMany(report => report.VarianceAlerts)
+            .HasForeignKey(alert => alert.DailyVehicleReadinessReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.DailyVehicleEquipmentCheck)
+            .WithMany(check => check.VarianceAlerts)
+            .HasForeignKey(alert => alert.DailyVehicleEquipmentCheckId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.Vehicle)
+            .WithMany()
+            .HasForeignKey(alert => alert.VehicleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.DetectedForUser)
+            .WithMany(user => user.DetectedChecklistVarianceAlerts)
+            .HasForeignKey(alert => alert.DetectedForUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.AssignedToUser)
+            .WithMany(user => user.AssignedChecklistVarianceAlerts)
+            .HasForeignKey(alert => alert.AssignedToUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChecklistVarianceAlert>()
+            .HasOne(alert => alert.ReviewedByUser)
+            .WithMany(user => user.ReviewedChecklistVarianceAlerts)
+            .HasForeignKey(alert => alert.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasIndex(alert => new { alert.CompanyId, alert.AssignedToUserId, alert.Status, alert.CreatedAtUtc });
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasIndex(alert => new { alert.CompanyId, alert.Status, alert.CreatedAtUtc });
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.Company)
+            .WithMany(company => company.ReadinessAlerts)
+            .HasForeignKey(alert => alert.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.ReadinessEngineRule)
+            .WithMany()
+            .HasForeignKey(alert => alert.ReadinessEngineRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.DailyVehicleReadinessReport)
+            .WithMany(report => report.ReadinessAlerts)
+            .HasForeignKey(alert => alert.DailyVehicleReadinessReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.DailyVehicleEquipmentCheck)
+            .WithMany(check => check.ReadinessAlerts)
+            .HasForeignKey(alert => alert.DailyVehicleEquipmentCheckId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.Vehicle)
+            .WithMany()
+            .HasForeignKey(alert => alert.VehicleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.TriggeredByUser)
+            .WithMany(user => user.TriggeredReadinessAlerts)
+            .HasForeignKey(alert => alert.TriggeredByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.AssignedToUser)
+            .WithMany(user => user.AssignedReadinessAlerts)
+            .HasForeignKey(alert => alert.AssignedToUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessAlert>()
+            .HasOne(alert => alert.ReviewedByUser)
+            .WithMany(user => user.ReviewedReadinessAlerts)
+            .HasForeignKey(alert => alert.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineVersion>()
+            .HasIndex(version => new { version.CompanyId, version.Status, version.CreatedAtUtc });
+
+        modelBuilder.Entity<ReadinessEngineVersion>()
+            .HasOne(version => version.Company)
+            .WithMany(company => company.ReadinessEngineVersions)
+            .HasForeignKey(version => version.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineVersion>()
+            .HasOne(version => version.SourceReadinessEngineVersion)
+            .WithMany()
+            .HasForeignKey(version => version.SourceReadinessEngineVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineVersion>()
+            .HasOne(version => version.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(version => version.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineVersion>()
+            .HasOne(version => version.PublishedByUser)
+            .WithMany()
+            .HasForeignKey(version => version.PublishedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasIndex(rule => new { rule.CompanyId, rule.AssetType, rule.Section, rule.ItemName, rule.TriggerValue });
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasIndex(rule => new { rule.ReadinessEngineVersionId, rule.SortOrder });
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .Property(rule => rule.ReadinessScope)
+            .HasMaxLength(80);
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasOne(rule => rule.Company)
+            .WithMany(company => company.ReadinessEngineRules)
+            .HasForeignKey(rule => rule.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasOne(rule => rule.ReadinessEngineVersion)
+            .WithMany(version => version.Rules)
+            .HasForeignKey(rule => rule.ReadinessEngineVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasOne(rule => rule.OperationalArea)
+            .WithMany()
+            .HasForeignKey(rule => rule.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessEngineRule>()
+            .HasOne(rule => rule.ChecklistTemplate)
+            .WithMany()
+            .HasForeignKey(rule => rule.ChecklistTemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessScoringChangeRequest>()
+            .HasIndex(request => new { request.CompanyId, request.Status, request.CreatedAtUtc });
+
+        modelBuilder.Entity<ReadinessScoringChangeRequest>()
+            .HasOne(request => request.Company)
+            .WithMany(company => company.ReadinessScoringChangeRequests)
+            .HasForeignKey(request => request.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessScoringChangeRequest>()
+            .HasOne(request => request.RequestedByUser)
+            .WithMany()
+            .HasForeignKey(request => request.RequestedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessScoringChangeRequest>()
+            .HasOne(request => request.ReviewedByUser)
+            .WithMany()
+            .HasForeignKey(request => request.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReadinessScoringChangeRequest>()
+            .HasOne(request => request.ReadinessEngineRule)
+            .WithMany()
+            .HasForeignKey(request => request.ReadinessEngineRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<UploadedFile>()
             .HasOne(file => file.ChecklistTemplate)
@@ -473,5 +857,39 @@ public class VectorDbContext : DbContext
             .WithMany(user => user.AuditLogs)
             .HasForeignKey(auditLog => auditLog.AppUserId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private void PrepareAuditLogs()
+    {
+        var now = DateTime.UtcNow;
+        foreach (var entry in ChangeTracker.Entries<AuditLog>()
+            .Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.Action = CleanAuditText(entry.Entity.Action, 120, "Unknown action");
+            entry.Entity.EntityType = CleanAuditText(entry.Entity.EntityType, 120, "Unknown entity");
+            entry.Entity.Details = CleanOptionalAuditText(entry.Entity.Details, 1200);
+
+            if (entry.Entity.CreatedAtUtc == default)
+            {
+                entry.Entity.CreatedAtUtc = now;
+            }
+        }
+    }
+
+    private static string CleanAuditText(string? value, int maxLength, string fallback)
+    {
+        var cleaned = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+        return cleaned.Length <= maxLength ? cleaned : cleaned[..maxLength];
+    }
+
+    private static string? CleanOptionalAuditText(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var cleaned = value.Trim();
+        return cleaned.Length <= maxLength ? cleaned : cleaned[..maxLength];
     }
 }

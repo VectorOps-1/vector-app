@@ -5,9 +5,10 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = Model.PageTitle;
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
-    var returnUrl = $"/MoveAsset?asset={Model.AssetType}";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var returnUrl = Model.SafeReturnUrl;
 }
 
 <div class="module-screen">
@@ -16,11 +17,11 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Asset Movement</div>
         <h2 class="page-title">@Model.PageTitle</h2>
-        <p class="page-subtitle">Move assets between the bases and operational areas created in Master Setup.</p>
+        <p class="page-subtitle">Move assets between bases, operational areas, and registered vehicles where applicable.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
-            <div class="status-message">@Model.StatusMessage</div>
+            <div class="status-message" data-action-status data-confirmation-duration="2600" role="status">@Model.StatusMessage</div>
         }
 
         <nav class="asset-tabs" aria-label="Asset type">
@@ -34,9 +35,10 @@
             <input asp-for="AssetType" type="hidden" />
             <input asp-for="TaskId" type="hidden" />
             <input asp-for="TaskAccess" type="hidden" />
+            <input asp-for="ReturnUrl" type="hidden" value="@Model.SafeReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
 
-            @if (Model.OperationalAreaOptions.Count == 0)
+            @if (Model.DestinationOptions.Count == 0)
             {
                 <section class="form-panel warning-panel">
                     <div class="section-label">Setup Required</div>
@@ -58,11 +60,11 @@
                         </div>
 
                         <div class="field-group">
-                            <label class="field-label" asp-for="ToOperationalAreaId">Move to</label>
-                            <select class="text-input" asp-for="ToOperationalAreaId" asp-items="Model.OperationalAreaOptions">
+                            <label class="field-label" asp-for="DestinationKey">Move to</label>
+                            <select class="text-input" asp-for="DestinationKey" asp-items="Model.DestinationOptions">
                                 <option value="">Select destination</option>
                             </select>
-                            <span class="field-error" asp-validation-for="ToOperationalAreaId"></span>
+                            <span class="field-error" asp-validation-for="DestinationKey"></span>
                         </div>
 
                         @if (Model.IsQuantityAsset)
@@ -84,8 +86,16 @@
                 @if (!Model.TaskAccess)
                 {
                     <section class="form-panel">
-                        <div class="section-label">Send As Task</div>
-                        <div class="form-grid">
+                        <div class="section-label">Optional Task</div>
+                        <label class="task-toggle-card">
+                            <input id="sendAsTaskToggle" asp-for="SendAsTask" type="checkbox" />
+                            <span>
+                                <strong>Send this movement as a task instead of moving it now</strong>
+                                <small>Leave this off when you are only recording a movement that already happened.</small>
+                            </span>
+                        </label>
+
+                        <div id="movementTaskFields" class="form-grid task-fields @(Model.SendAsTask ? "visible" : string.Empty)">
                             <div class="field-group">
                                 <label class="field-label" asp-for="AssignedToUserId">Assigned person</label>
                                 <select class="text-input" asp-for="AssignedToUserId" asp-items="Model.Recipients">
@@ -106,7 +116,7 @@
                     <button class="menu-btn equipment-btn" type="submit" name="submitAction" value="save">Save Movement</button>
                     @if (!Model.TaskAccess)
                     {
-                        <button class="menu-btn vehicle-btn" type="submit" name="submitAction" value="send-task">Send Movement Task</button>
+                        <button id="sendMovementTaskButton" class="menu-btn vehicle-btn task-submit @(Model.SendAsTask ? string.Empty : "is-disabled")" type="submit" name="submitAction" value="send-task" disabled="@(!Model.SendAsTask)">Send Movement Task</button>
                     }
                 </div>
             }
@@ -126,7 +136,7 @@
                         <article class="movement-row">
                             <div>
                                 <strong>@movement.AssetLabel</strong>
-                                <span>@(movement.FromLocation ?? "Unallocated") → @(movement.ToLocation ?? "Not set")</span>
+                                <span>@(movement.FromLocation ?? "Unallocated") -> @(movement.ToLocation ?? "Not set")</span>
                             </div>
                             <div>
                                 <strong>@movement.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong>
@@ -162,6 +172,14 @@
 .message-input { min-height: 120px; resize: vertical; }
 .action-row { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
 .action-row .menu-btn { min-width: 260px; border: none; }
+.task-toggle-card { min-height: 78px; display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #fff; color: #425466; cursor: pointer; }
+.task-toggle-card input { width: 20px; height: 20px; flex: 0 0 auto; }
+.task-toggle-card strong, .task-toggle-card small { display: block; }
+.task-toggle-card strong { color: #102a3a; font-size: 14px; font-weight: 900; }
+.task-toggle-card small { margin-top: 4px; color: #6b7280; font-size: 12px; font-weight: 700; }
+.task-fields { display: none; margin-top: 18px; }
+.task-fields.visible { display: grid; }
+.task-submit.is-disabled { opacity: .46; cursor: not-allowed; }
 .status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
 .validation-summary, .field-error { color: #9f3030; font-size: 13px; font-weight: 700; }
 .list-panel { margin-top: 28px; }
@@ -173,10 +191,32 @@
 @@media (max-width: 780px) { .asset-tabs, .form-grid, .movement-row { grid-template-columns: 1fr; } }
 </style>
 
+<script>
+    (function () {
+        const toggle = document.getElementById("sendAsTaskToggle");
+        const fields = document.getElementById("movementTaskFields");
+        const button = document.getElementById("sendMovementTaskButton");
+
+        if (!toggle || !fields || !button) {
+            return;
+        }
+
+        function syncTaskState() {
+            fields.classList.toggle("visible", toggle.checked);
+            button.disabled = !toggle.checked;
+            button.classList.toggle("is-disabled", !toggle.checked);
+        }
+
+        toggle.addEventListener("change", syncTaskState);
+        syncTaskState();
+    })();
+</script>
+
 @if (Model.ActionSaved)
 {
     <script>
-        window.VectorActionConfirmation?.show({
+        window.VectorPendingConfirmations = window.VectorPendingConfirmations || [];
+        window.VectorPendingConfirmations.push({
             message: @Json.Serialize(Model.StatusMessage ?? "Movement saved."),
             redirectUrl: @Json.Serialize(returnUrl),
             delay: 1300

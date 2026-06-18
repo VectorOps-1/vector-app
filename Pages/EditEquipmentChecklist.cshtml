@@ -3,9 +3,10 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Edit Equipment Checklist";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Edit Equipment Check";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="placeholder-screen">
@@ -13,17 +14,17 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Action</div>
-        <h2 class="page-title">Edit Equipment Checklist</h2>
+        <h2 class="page-title">Edit Equipment Check</h2>
         <p class="page-subtitle">Equipment checklist editing will be built separately from the vehicle checklist builder.</p>
 
         <div class="placeholder-panel">
             <strong>Separate checklist type</strong>
-            <p>This keeps vehicle-specific controls, registration lookup, schematic markup, and same-as-previous shift behavior out of equipment checklist setup.</p>
+            <p>This keeps vehicle-specific controls, registration lookup, unit schematic markup, and same-as-previous shift behavior out of equipment checklist setup.</p>
         </div>
 
         <div class="action-row">
-            <a class="menu-btn vehicle-btn" href="/EditChecklist">Back to Checklist Type</a>
-            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle">Edit Vehicle Checklist</a>
+            <a class="menu-btn vehicle-btn" href="/EditChecklist">Back to Checklist Management</a>
+            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle">Edit Vehicle Check</a>
         </div>
     </div>
 </div>

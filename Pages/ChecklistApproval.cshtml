@@ -1,0 +1,115 @@
+@page
+@model ChecklistApprovalModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Approval";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var template = Model.Template;
+    var task = Model.ApprovalTask;
+}
+
+<div class="approval-screen">
+    <div class="approval-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Checklist Approval</div>
+        <h2 class="page-title">Review Submitted Checklist</h2>
+        <p class="page-subtitle">Approve this checklist for live use, or return it to the submitter for modification.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        @if (template is null || task is null)
+        {
+            <div class="empty-state">No open checklist approval request was found.</div>
+        }
+        else
+        {
+            <section class="approval-summary">
+                <div>
+                    <div class="source-label">Submitted checklist</div>
+                    <h3>@template.TargetVehicleType - @template.Name</h3>
+                    <p>Version @template.Version | @template.ChecklistType | @template.SourceType | @template.Status</p>
+                </div>
+                <span class="status-pill">@template.Status</span>
+            </section>
+
+            <section class="approval-details">
+                <div class="detail-row">
+                    <span>Submitted by</span>
+                    <strong>@Model.SubmittedBy</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Submitted at</span>
+                    <strong>@task.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Requested target</span>
+                    <strong>@(template.PublishScopeSummary ?? "No target captured")</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Submission note</span>
+                    <strong>@(template.PublishNotes ?? task.InstructionMessage ?? "No note entered")</strong>
+                </div>
+            </section>
+
+            <section class="approval-actions">
+                <div>
+                    <div class="source-label">Decision</div>
+                    <h3>Review, approve, or send back</h3>
+                    <p>Open Crew View shows what staff would see. Approve / Publish opens the live-use target screen and warns if another checklist will be replaced.</p>
+                </div>
+
+                <div class="decision-row">
+                    <a class="secondary-link" href="@Model.CrewViewUrl">Open Crew View</a>
+                    <a class="primary-link" href="@Model.PublishUrl">Approve / Publish</a>
+                </div>
+
+                <form method="post" asp-page-handler="Return" class="return-form">
+                    <input asp-for="TaskId" type="hidden" />
+                    <label>
+                        Send back note
+                        <textarea asp-for="ReturnNote" rows="4" placeholder="Explain what must be changed before this checklist can be approved"></textarea>
+                    </label>
+                    <button type="submit" class="return-button">Send Back for Modification</button>
+                </form>
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+.approval-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.approval-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 38px 20px 58px; box-sizing: border-box; }
+.page-logo { width: 260px; max-width: 72%; max-height: 150px; object-fit: contain; margin: 0 auto 12px; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px; color: #1f2937; font-size: 30px; font-weight: 900; }
+.page-subtitle { margin: 0 0 22px; color: #6b7280; font-size: 16px; font-weight: 750; }
+.status-message { margin: 0 auto 18px; padding: 12px 16px; border: 1px solid rgba(31,111,91,.26); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-size: 14px; font-weight: 900; }
+.approval-summary, .approval-details, .approval-actions { margin-top: 14px; padding: 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.78); text-align: left; }
+.approval-summary { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.source-label { margin-bottom: 4px; color: #5f6b7a; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.approval-summary h3, .approval-actions h3 { margin: 0 0 4px; color: #1f2937; font-size: 20px; font-weight: 900; }
+.approval-summary p, .approval-actions p { margin: 0; color: #52606d; font-size: 13px; font-weight: 800; line-height: 1.42; }
+.status-pill { display: inline-flex; min-height: 28px; align-items: center; padding: 0 10px; border-radius: 999px; background: rgba(180,113,28,.12); color: #8a4f10; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+.approval-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.detail-row { display: grid; gap: 4px; padding: 10px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: rgba(248,250,252,.75); }
+.detail-row span { color: #64748b; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.detail-row strong { color: #1f2937; font-size: 13px; font-weight: 900; line-height: 1.35; }
+.decision-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.secondary-link, .primary-link, .return-button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 900; text-decoration: none; box-sizing: border-box; }
+.secondary-link { border: 1px solid rgba(66,84,102,.18); background: #f8fafc; color: #0E5E7A; }
+.primary-link { border: 0; background: #0E5E7A; color: #fff; }
+.return-form { margin-top: 16px; display: grid; gap: 10px; }
+.return-form label { display: grid; gap: 7px; color: #52606d; font-size: 12px; font-weight: 900; }
+.return-form textarea { width: 100%; min-height: 94px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 750; resize: vertical; box-sizing: border-box; }
+.return-button { justify-self: end; border: 1px solid rgba(148,57,57,.3); background: rgba(148,57,57,.08); color: #7f2f2f; cursor: pointer; }
+.empty-state { padding: 14px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; background: rgba(248,250,252,.82); color: #64748b; font-size: 13px; font-weight: 900; text-align: center; }
+@@media (max-width: 780px) { .approval-summary, .approval-details { grid-template-columns: 1fr; flex-direction: column; align-items: stretch; } .decision-row, .secondary-link, .primary-link, .return-button { width: 100%; } }
+</style>

@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Staff";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
     var currentAccessView = HttpContext.Session.GetString(CurrentUserService.AccessViewSessionKey);
     var isSeniorManagement = currentAccessView == CurrentUserService.SeniorManagementAccess;
 }
@@ -16,27 +17,12 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Staff</h2>
-        <p class="page-subtitle">Staff register, files, folders, records, access, and management actions</p>
+        <p class="page-subtitle">Staff register, profile records, access, and management actions</p>
 
         <div class="module-grid">
             <a class="module-card primary" href="/StaffRegister">
                 <strong>Staff Register</strong>
-                <span>All staff, roles, status, and record access</span>
-            </a>
-
-            <a class="module-card" href="/StaffFiles">
-                <strong>Files & Folders</strong>
-                <span>Open staff document folders across the service</span>
-            </a>
-
-            <a class="module-card" href="/StaffRecordsSearch">
-                <strong>Search Staff Records</strong>
-                <span>Find a staff member and view linked record areas</span>
-            </a>
-
-            <a class="module-card" href="/UploadStaffFiles">
-                <strong>Upload Staff Files</strong>
-                <span>Add documents, certificates, CVs, and supporting files</span>
+                <span>Open staff profiles, linked files, access roles, clinical scope, status, and record access</span>
             </a>
 
             <a class="module-card" href="/AddItem?type=staff">
@@ -46,14 +32,9 @@
 
             @if (isSeniorManagement)
             {
-                <a class="module-card" href="/CreateOperationalStaffAccess">
-                    <strong>Create Staff Access</strong>
-                    <span>Issue operational staff access</span>
-                </a>
-
-                <a class="module-card" href="/CreateManagerAccess">
-                    <strong>Create Manager Access</strong>
-                    <span>Issue management access</span>
+                <a class="module-card" href="/AreaManagerControl">
+                    <strong>Area / Manager Control</strong>
+                    <span>Create access, assign manager areas, and maintain operational areas from one setup control point</span>
                 </a>
             }
         </div>

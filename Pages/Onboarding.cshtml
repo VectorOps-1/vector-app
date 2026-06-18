@@ -13,17 +13,25 @@
         <h2 class="page-title">Company Login</h2>
         <p class="page-subtitle">Senior management workspace setup and company access</p>
 
-        <form class="workspace-form" method="get" action="/Access">
-            <label for="workspaceCode">Workspace code</label>
-            <input id="workspaceCode" name="workspace" type="text" placeholder="Enter company workspace code" autocomplete="organization" />
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="login-error">@Model.StatusMessage</div>
+        }
 
-            <label for="companyPassword">Company password</label>
-            <input id="companyPassword" name="companyPassword" type="password" placeholder="Enter senior management password" autocomplete="current-password" />
+        @if (!string.IsNullOrWhiteSpace(Model.WorkspaceLoginUrl))
+        {
+            <div class="workspace-card">
+                <label for="workspaceLink">Company workspace link</label>
+                <input id="workspaceLink" value="@Model.WorkspaceLoginUrl" readonly />
 
-            <button class="menu-btn equipment-btn" type="submit">Continue</button>
-        </form>
+                <label for="companyAccessCode">Company access code</label>
+                <input id="companyAccessCode" value="@Model.CompanyAccessCode" readonly />
 
-        <p class="security-note">Production access will require encrypted accounts, MFA, role checks, and tenant-isolated data.</p>
+                <a class="menu-btn equipment-btn" href="@Model.WorkspaceLoginUrl">Open Company Login</a>
+            </div>
+        }
+
+        <p class="security-note">Share the workspace link with the company. Keep the company access code with the owner or chosen senior management. Individual staff and manager logins remain separate.</p>
     </div>
 </div>
 
@@ -84,13 +92,24 @@
     text-align: left;
 }
 
-.workspace-form label {
+.workspace-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(100%, 520px);
+    margin: 0 auto;
+    text-align: left;
+}
+
+.workspace-form label,
+.workspace-card label {
     font-size: 13px;
     font-weight: 700;
     color: #52606d;
 }
 
-.workspace-form input {
+.workspace-form input,
+.workspace-card input {
     width: 100%;
     min-height: 48px;
     border: 1px solid #cbd5e1;
@@ -102,10 +121,30 @@
     box-sizing: border-box;
 }
 
-.workspace-form .menu-btn {
+.workspace-card input[readonly] {
+    background: #f8fafc;
+    font-weight: 800;
+}
+
+.workspace-form .menu-btn,
+.workspace-card .menu-btn {
     width: 100%;
     margin-top: 8px;
     border: 0;
+    text-align: center;
+}
+
+.login-error {
+    width: min(520px, 100%);
+    margin: 0 auto 16px auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(148, 57, 57, 0.22);
+    border-radius: 8px;
+    background: rgba(148, 57, 57, 0.07);
+    color: #943939;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: left;
 }
 
 .security-note {

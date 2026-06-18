@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Supplier Details";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="supplier-screen">
@@ -69,7 +70,9 @@
                 </section>
             </div>
 
-            <button class="menu-btn equipment-btn save-btn" type="button" data-action-confirmation data-confirmation-message="Supplier details saved.">Save Supplier Details</button>
+            <div class="action-row">
+                <a class="menu-btn equipment-btn save-btn" href="/StockOrders">Open Stock Orders</a>
+            </div>
         </form>
     </div>
 </div>

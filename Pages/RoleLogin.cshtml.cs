@@ -11,15 +11,19 @@ public class RoleLoginModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly IWebHostEnvironment _environment;
 
-    public RoleLoginModel(VectorDbContext db, CurrentUserService currentUser)
+    public RoleLoginModel(VectorDbContext db, CurrentUserService currentUser, IWebHostEnvironment environment)
     {
         _db = db;
         _currentUser = currentUser;
+        _environment = environment;
     }
 
     public string AccessView { get; private set; } = "operational-management";
     public string RoleTitle { get; private set; } = "Operational Management Login";
+    public string ClientName { get; private set; } = "Company Workspace";
+    public string LogoPath { get; private set; } = "/acuityops-app-icon-light.png";
     public string? LoginError { get; private set; }
 
     [BindProperty]
@@ -38,7 +42,8 @@ public class RoleLoginModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
-        ViewData["ClientName"] = company.Name;
+        ApplyCompanyBranding(company);
+        ApplyPrototypeLoginDefaults();
         return Page();
     }
 
@@ -52,7 +57,7 @@ public class RoleLoginModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
-        ViewData["ClientName"] = company.Name;
+        ApplyCompanyBranding(company);
 
         if (string.IsNullOrWhiteSpace(Email))
         {
@@ -115,12 +120,31 @@ public class RoleLoginModel : PageModel
         };
     }
 
+    private void ApplyCompanyBranding(Company company)
+    {
+        ClientName = CompanyBranding.GetDisplayCompanyName(company);
+        LogoPath = CompanyBranding.GetLogoPath(_environment, company);
+        ViewData["ClientName"] = ClientName;
+    }
+
+    private void ApplyPrototypeLoginDefaults()
+    {
+        Email = AccessView switch
+        {
+            CurrentUserService.StaffAccess => "staff@test.local",
+            CurrentUserService.SeniorManagementAccess => "senior@test.local",
+            _ => "ops@test.local"
+        };
+
+        Password = "prototype";
+    }
+
     private async Task<Company?> LoadSelectedCompanyAsync()
     {
         var companyId = HttpContext.Session.GetInt32(CurrentUserService.CompanyIdSessionKey);
         if (!companyId.HasValue)
         {
-            return null;
+            return await LoadDevelopmentCompanyAsync();
         }
 
         var company = await _db.Companies
@@ -131,10 +155,32 @@ public class RoleLoginModel : PageModel
         {
             HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
             HttpContext.Session.Remove("Vector.CompanyName");
+            return await LoadDevelopmentCompanyAsync();
+        }
+
+        HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
+        return company;
+    }
+
+    private async Task<Company?> LoadDevelopmentCompanyAsync()
+    {
+        if (!_environment.IsDevelopment())
+        {
             return null;
         }
 
-        HttpContext.Session.SetString("Vector.CompanyName", company.Name);
+        var company = await _db.Companies
+            .AsNoTracking()
+            .Where(item => item.Status == "Active")
+            .OrderBy(item => item.Id)
+            .FirstOrDefaultAsync();
+
+        if (company is not null)
+        {
+            HttpContext.Session.SetInt32(CurrentUserService.CompanyIdSessionKey, company.Id);
+            HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
+        }
+
         return company;
     }
 }

@@ -3,9 +3,10 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Stock Orders";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Stock Orders & Distribution";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="stock-order-screen">
@@ -13,38 +14,90 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Stock Control</div>
-        <h2 class="page-title">Stock Orders</h2>
-        <p class="page-subtitle">Supplier orders, senior approval, supplier confirmation, register entry, and allocation.</p>
+        <h2 class="page-title">Stock Orders &amp; Distribution</h2>
+        <p class="page-subtitle">One workflow for order requests, senior approval, supplier confirmation, register entry, and allocation.</p>
 
-        <div class="action-row">
-            <a class="menu-btn equipment-btn" href="/PlaceStockOrder">Place Stock Order</a>
-            <a class="menu-btn staff-btn" href="/SupplierConfirmations">Supplier Confirmations</a>
-            <a class="menu-btn vehicle-btn" href="/EnterStockRegister">Enter Stock Into Register</a>
-            <a class="menu-btn equipment-btn" href="/AllocateStock">Allocate Stock</a>
-        </div>
+        <section class="workflow-panel" aria-label="Stock order workflow">
+            <div class="workflow-head">
+                <div>
+                    <div class="section-label">Stock order flow</div>
+                    <h3>Follow the order from request to distribution</h3>
+                </div>
+                <a class="menu-btn equipment-btn start-order-btn" href="/PlaceStockOrder">Place Stock Order</a>
+            </div>
+
+            <div class="workflow-steps">
+                <a class="workflow-step primary-step" href="/PlaceStockOrder">
+                    <span class="step-number">1</span>
+                    <strong>Place order</strong>
+                    <span>Create the supplier request with lines, quantities, and delivery details.</span>
+                </a>
+                <a class="workflow-step" href="#currentStockOrders">
+                    <span class="step-number">2</span>
+                    <strong>Stock orders</strong>
+                    <span>Open an order below to review approval, supplier, register, and allocation status.</span>
+                </a>
+                <a class="workflow-step" href="#currentStockOrders">
+                    <span class="step-number">3</span>
+                    <strong>Supplier confirmation</strong>
+                    <span>Record confirmed quantity, batch number, and expiry inside the selected order.</span>
+                </a>
+                <a class="workflow-step" href="#currentStockOrders">
+                    <span class="step-number">4</span>
+                    <strong>Enter into register</strong>
+                    <span>Capture received stock into the register once confirmation is complete.</span>
+                </a>
+                <a class="workflow-step" href="#currentStockOrders">
+                    <span class="step-number">5</span>
+                    <strong>Allocate stock</strong>
+                    <span>Allocate stock by batch, item, quantity, and destination from the order record.</span>
+                </a>
+            </div>
+        </section>
 
         @if (!Model.Orders.Any())
         {
-            <div class="empty-panel">No stock orders have been created yet.</div>
+            <div id="currentStockOrders" class="empty-panel">No stock orders have been created yet.</div>
         }
         else
         {
-            <div class="order-list">
+            <section id="currentStockOrders" class="order-panel">
+                <div class="order-panel-head">
+                    <div>
+                        <div class="section-label">Current stock orders</div>
+                        <h3>Open an order to continue the flow</h3>
+                    </div>
+                    <span>@Model.Orders.Count order@(Model.Orders.Count == 1 ? "" : "s")</span>
+                </div>
+
+                <div class="order-table" role="table" aria-label="Stock orders">
+                    <div class="order-header" role="row">
+                        <div role="columnheader">Order</div>
+                        <div role="columnheader">Supplier</div>
+                        <div role="columnheader">Status</div>
+                        <div role="columnheader">Requested by</div>
+                        <div role="columnheader">Created</div>
+                        <div role="columnheader">Lines</div>
+                        <div role="columnheader">Quantity</div>
+                    </div>
+
                 @foreach (var order in Model.Orders)
                 {
-                    <a class="order-card" href="/StockOrderAction?orderId=@order.Id">
-                        <div class="order-title">Order #@order.Id - @order.SupplierName</div>
-                        <div class="order-meta">
-                            <div>Status: @order.Status</div>
-                            <div>Requested by: @order.RequestedByName</div>
-                            <div>Supplier email: @order.SupplierEmail</div>
-                            <div>Created: @order.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
-                            <div>Lines: @order.LineCount</div>
-                            <div>Total quantity requested: @order.QuantityRequested</div>
+                    <a class="order-row" href="/StockOrderAction?orderId=@order.Id" role="row">
+                        <div role="cell"><strong>#@order.Id</strong></div>
+                        <div class="supplier-cell" role="cell">
+                            <strong>@order.SupplierName</strong>
+                            <span>@order.SupplierEmail</span>
                         </div>
+                        <div role="cell"><span class="status-pill">@order.Status</span></div>
+                        <div role="cell">@order.RequestedByName</div>
+                        <div role="cell">@order.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                        <div role="cell">@order.LineCount</div>
+                        <div role="cell">@order.QuantityRequested</div>
                     </a>
                 }
-            </div>
+                </div>
+            </section>
         }
     </div>
 </div>
@@ -57,15 +110,34 @@
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(720px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
-.action-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 auto 24px auto; width: min(980px, 100%); }
-.action-row .menu-btn { min-width: 0; }
+.workflow-panel, .order-panel { width: min(1060px, 100%); margin: 0 auto 22px auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.74); box-sizing: border-box; text-align: left; }
+.workflow-head, .order-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.workflow-head h3, .order-panel-head h3 { margin: 0; color: #1f2937; font-size: 18px; font-weight: 900; }
+.order-panel-head span { color: #52606d; font-size: 13px; font-weight: 900; }
+.section-label { margin-bottom: 4px; color: #52606d; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.start-order-btn { min-width: 210px; border: none; }
+.workflow-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.workflow-step { min-height: 150px; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #ffffff; color: #1f2937; text-decoration: none; box-sizing: border-box; }
+.workflow-step:hover { color: #1f2937; border-color: rgba(47,128,168,.45); }
+.primary-step { border-color: rgba(21,119,139,.38); background: rgba(21,119,139,.07); }
+.step-number { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #334155; color: #fff; font-size: 12px; font-weight: 900; }
+.workflow-step strong { font-size: 14px; font-weight: 900; }
+.workflow-step span:last-child { color: #52606d; font-size: 12px; font-weight: 750; line-height: 1.35; }
 .empty-panel { width: min(780px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.order-list { display: grid; gap: 16px; width: min(900px, 94%); margin: 0 auto; text-align: left; }
-.order-card { display: block; padding: 18px 20px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: rgba(255,255,255,.78); color: #1f2937; text-decoration: none; box-shadow: 0 14px 28px rgba(47,128,168,.10); }
-.order-card:hover { color: #1f2937; border-color: rgba(47,128,168,.52); }
-.order-title { margin-bottom: 10px; font-size: 18px; font-weight: 900; }
-.order-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 13px; font-weight: 700; color: #52606d; }
-@@media (max-width: 850px) { .action-row, .order-meta { grid-template-columns: 1fr; } }
+.order-table { border: 1px solid rgba(66,84,102,.16); border-radius: 8px; overflow-x: auto; background: #fff; }
+.order-header, .order-row { display: grid; grid-template-columns: 84px minmax(190px, 1.2fr) 140px minmax(160px, 1fr) 150px 70px 90px; gap: 12px; align-items: center; min-width: 950px; padding: 12px 14px; }
+.order-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.order-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 13px; font-weight: 800; text-decoration: none; }
+.order-row:hover { background: rgba(21,119,139,.07); color: #1f2937; }
+.supplier-cell { display: flex; flex-direction: column; gap: 2px; }
+.supplier-cell strong { color: #1f2937; }
+.supplier-cell span { color: #6b7280; font-size: 12px; }
+.status-pill { display: inline-flex; width: fit-content; min-height: 28px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+@@media (max-width: 950px) {
+    .workflow-head, .order-panel-head { align-items: stretch; flex-direction: column; }
+    .start-order-btn { width: 100%; }
+    .workflow-steps { grid-template-columns: 1fr; }
+}
 </style>
 
 @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))

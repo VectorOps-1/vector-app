@@ -3,231 +3,197 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Search Staff Records";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = Model.SelectedStaff is null ? "Staff Profile Lookup" : Model.SelectedIsCurrentUser ? "My Profile" : "Staff Profile";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var selectedStaff = Model.SelectedStaff;
 }
 
-<div class="staff-search-screen">
-    <div class="staff-search-inner">
+<div class="staff-profile-screen">
+    <div class="staff-profile-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Senior Management</div>
-        <h2 class="page-title">Search Staff Records</h2>
-        <p class="page-subtitle">Search a staff member and view linked checklists, actions, files, folders, and compliance records</p>
+        <div class="home-label">@(Model.SelectedIsCurrentUser ? "My Profile" : "Staff Register")</div>
+        <h2 class="page-title">@(selectedStaff is null ? "Staff Profile Lookup" : selectedStaff.FullName)</h2>
+        <p class="page-subtitle">@(selectedStaff is null ? "Find a staff member, then open the full staff profile." : Model.SelectedIsCurrentUser ? "View your profile, linked documents, checks, tasks, and issue history." : "View linked uploads, checks, tasks, and issue history for this staff profile.")</p>
+        <div class="scope-pill">@Model.ScopeLabel</div>
 
-        <form class="search-panel" method="get">
-            <input class="search-input" name="searchTerm" value="@Model.SearchTerm" placeholder="Search staff name, ID, role, file, folder, checklist, or action" />
-            <button class="menu-btn equipment-btn search-btn" type="submit">Search</button>
-        </form>
+        @if (selectedStaff is null)
+        {
+            <form class="search-panel" method="get">
+                <input class="search-input" asp-for="SearchTerm" placeholder="Search name, staff ID, practitioner number, national ID, cell, clinical scope, CPD, role, or area" />
+                <button class="menu-btn equipment-btn search-btn" type="submit">Search</button>
+            </form>
+        }
 
-        <div class="profile-layout">
-            <aside class="profile-card">
-                <div class="profile-initials">JS</div>
-                <input class="profile-name" value="Jane Smith" />
-                <input class="profile-field" value="Critical Care Paramedic" />
-                <input class="profile-field" value="Staff ID: EMS-001" />
-                <div class="status-pill">Compliant</div>
-            </aside>
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
 
-            <section class="record-grid">
-                <div class="record-card">
-                    <div class="record-title">Uploaded Files and Folders</div>
-                    <div class="record-item">Folder: Certifications</div>
-                    <div class="record-item">File: ACLS Certificate.pdf</div>
-                    <div class="record-item">File: CV.docx</div>
+        @if (selectedStaff is not null)
+        {
+            <section class="profile-shell">
+                <div class="profile-header">
+                    <div class="profile-initials">@GetInitials(selectedStaff.FullName)</div>
+                    <div>
+                        <h3>@selectedStaff.FullName</h3>
+                        <span>@(string.IsNullOrWhiteSpace(selectedStaff.QualificationFunction) ? "Clinical qualification / scope not set" : selectedStaff.QualificationFunction)</span>
+                    </div>
+                    <div class="profile-header-actions">
+                        <strong class="status-pill">@selectedStaff.Status</strong>
+                        <a class="small-link" href="/EditStaffProfile?staffUserId=@selectedStaff.Id&returnUrl=@Uri.EscapeDataString($"/StaffRecordsSearch?staffUserId={selectedStaff.Id}")">Edit Profile</a>
+                    </div>
                 </div>
 
-                <div class="record-card">
-                    <div class="record-title">Completed Checklists</div>
-                    <div class="record-item">Daily Vehicle Checklist - A101</div>
-                    <div class="record-item">Equipment Readiness - Monitor</div>
-                    <div class="record-item">Monthly Ambulance Check</div>
+                <div class="profile-grid">
+                    <div class="profile-field"><span>Staff ID</span><strong>@TextOrDefault(selectedStaff.StaffIdentifier, "Not set")</strong></div>
+                    <div class="profile-field"><span>Access role</span><strong>@selectedStaff.RoleName</strong></div>
+                    <div class="profile-field"><span>Clinical qualification / scope</span><strong>@TextOrDefault(selectedStaff.QualificationFunction, "Not set")</strong></div>
+                    <div class="profile-field"><span>Practitioner Number</span><strong>@TextOrDefault(selectedStaff.PractitionerNumber, "Not set")</strong></div>
+                    <div class="profile-field"><span>Annual licence expiry</span><strong>@FormatDate(selectedStaff.AnnualLicenseExpiryDate)</strong></div>
+                    <div class="profile-field"><span>CPD compliance</span><strong>@TextOrDefault(selectedStaff.CpdComplianceStatus, "N/A")</strong></div>
+                    <div class="profile-field"><span>CPD valid until</span><strong>@FormatDate(selectedStaff.CpdComplianceExpiryDate)</strong></div>
+                    <div class="profile-field"><span>Assigned area</span><strong>@selectedStaff.AssignedArea</strong></div>
+                    <div class="profile-field"><span>Email</span><strong>@selectedStaff.Email</strong></div>
+                    <div class="profile-field"><span>Cell number</span><strong>@TextOrDefault(selectedStaff.CellNumber, "Not set")</strong></div>
+                    <div class="profile-field"><span>National ID</span><strong>@TextOrDefault(selectedStaff.NationalId, "Not set")</strong></div>
+                    <div class="profile-field"><span>Created</span><strong>@selectedStaff.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</strong></div>
+                    <div class="profile-field"><span>Last login</span><strong>@(selectedStaff.LastLoginAtUtc.HasValue ? selectedStaff.LastLoginAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "Not recorded")</strong></div>
                 </div>
 
-                <div class="record-card">
-                    <div class="record-title">Actions and Tasks</div>
-                    <div class="record-item">Assigned: Upload renewed certification</div>
-                    <div class="record-item">Closed: Reported vehicle damage</div>
-                    <div class="record-item">Pending: Manager review</div>
+                <div class="record-summary-grid" aria-label="Staff linked record summary">
+                    <div><span>Files</span><strong>@Model.RecordSummary.FileCount</strong></div>
+                    <div><span>Submitted checks</span><strong>@Model.RecordSummary.SubmittedChecks</strong></div>
+                    <div><span>Draft checks</span><strong>@Model.RecordSummary.DraftChecks</strong></div>
+                    <div><span>Open tasks</span><strong>@Model.RecordSummary.OpenTasks</strong></div>
+                    <div><span>Completed tasks</span><strong>@Model.RecordSummary.CompletedTasks</strong></div>
+                    <div><span>Reported issues</span><strong>@Model.RecordSummary.ReportedIssues</strong></div>
+                    <div><span>Assigned issues</span><strong>@Model.RecordSummary.AssignedIssues</strong></div>
                 </div>
 
-                <div class="record-card">
-                    <div class="record-title">Compliance and Accreditation</div>
-                    <div class="record-item">HPCSA: Active</div>
-                    <div class="record-item">ACLS: Expires 2027-04-12</div>
-                    <div class="record-item">PHTLS: Expires 2026-11-18</div>
+                <section class="file-summary-panel">
+                    <div class="section-label">File Uploads</div>
+                    @if (!Model.FileCategories.Any())
+                    {
+                        <div class="empty-panel compact">No file uploads linked to this staff profile yet.</div>
+                    }
+                    else
+                    {
+                        <div class="file-summary-list">
+                            @foreach (var category in Model.FileCategories)
+                            {
+                                <div class="file-summary-row">
+                                    <strong>@category.Category</strong>
+                                    <span>@category.FileCount file@(category.FileCount == 1 ? string.Empty : "s")</span>
+                                    <small>Latest: @category.LatestUploadAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</small>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+            </section>
+
+            <div class="staff-profile-action-bar">
+                <a class="menu-btn vehicle-btn" href="/EditStaffProfile?staffUserId=@selectedStaff.Id&returnUrl=@Uri.EscapeDataString($"/StaffRecordsSearch?staffUserId={selectedStaff.Id}")">Edit Profile</a>
+                @if (Model.SelectedIsCurrentUser)
+                {
+                    <a class="menu-btn equipment-btn" href="/PersonalDocuments">Upload / Manage Documents</a>
+                }
+                else
+                {
+                    <a class="menu-btn equipment-btn" href="/StaffFiles?staffUserId=@selectedStaff.Id">View File Uploads</a>
+                }
+            </div>
+        }
+        else if (Model.SearchResults.Any())
+        {
+            <section class="search-results-panel">
+                <div class="section-label">Search Results</div>
+                <div class="search-result-list">
+                    @foreach (var staff in Model.SearchResults)
+                    {
+                        <a class="search-result-row" href="/StaffRecordsSearch?staffUserId=@staff.Id">
+                            <strong>@staff.FullName</strong>
+                            <span>@TextOrDefault(staff.StaffIdentifier, "Staff ID not set")</span>
+                            <span>@TextOrDefault(staff.QualificationFunction, "Clinical scope not set")</span>
+                            <span>@TextOrDefault(staff.PractitionerNumber, "Practitioner no. not set")</span>
+                            <span>@staff.AssignedArea</span>
+                            <small>@staff.RoleName | CPD: @TextOrDefault(staff.CpdComplianceStatus, "N/A")</small>
+                        </a>
+                    }
                 </div>
             </section>
-        </div>
+        }
     </div>
 </div>
 
-<style>
-.staff-search-screen {
-    display: flex;
-    width: 100%;
-    min-height: calc(100vh - 70px);
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.staff-search-inner {
-    width: 100%;
-    max-width: 1180px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 40px 20px 30px 20px;
-    box-sizing: border-box;
-}
-
-.page-logo {
-    width: 300px;
-    max-width: 72%;
-    max-height: 170px;
-    object-fit: contain;
-    margin: 0 auto 12px auto;
-    display: block;
-}
-
-.client-line {
-    margin-bottom: 14px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #6b7280;
-}
-
-.home-label {
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.page-title {
-    margin: 0 0 8px 0;
-    font-size: 28px;
-    font-weight: 700;
-    color: #2f2f2f;
-}
-
-.page-subtitle {
-    margin: 0 auto 28px auto;
-    max-width: 780px;
-    font-size: 16px;
-    font-weight: 500;
-    color: #6b7280;
-}
-
-.search-panel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 180px;
-    gap: 14px;
-    width: min(860px, 100%);
-    margin: 0 auto 28px auto;
-}
-
-.search-input,
-.profile-name,
-.profile-field {
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid rgba(66, 84, 102, 0.24);
-    border-radius: 8px;
-    background: #ffffff;
-    font-size: 16px;
-    color: #111827;
-    box-sizing: border-box;
-}
-
-.search-btn {
-    min-width: 0;
-    border: none;
-}
-
-.profile-layout {
-    display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-    text-align: left;
-}
-
-.profile-card,
-.record-card {
-    border: 1px solid rgba(66, 84, 102, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.58);
-    padding: 22px;
-}
-
-.profile-card {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-}
-
-.profile-initials {
-    width: 76px;
-    height: 76px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: #425466;
-    color: #ffffff;
-    font-size: 24px;
-    font-weight: 800;
-    align-self: center;
-}
-
-.profile-name {
-    font-size: 18px;
-    font-weight: 800;
-    text-align: center;
-}
-
-.status-pill {
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: rgba(31, 111, 91, 0.12);
-    color: #1f6f5b;
-    font-size: 13px;
-    font-weight: 800;
-    text-align: center;
-}
-
-.record-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-}
-
-.record-title {
-    margin-bottom: 12px;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.record-item {
-    padding: 11px 0;
-    border-bottom: 1px solid rgba(66, 84, 102, 0.14);
-    font-size: 14px;
-    font-weight: 700;
-    color: #425466;
-}
-
-@@media (max-width: 860px) {
-    .search-panel,
-    .profile-layout,
-    .record-grid {
-        grid-template-columns: 1fr;
+@functions {
+    private static string TextOrDefault(string? value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value;
     }
+
+    private static string GetInitials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Concat(parts.Take(2).Select(part => char.ToUpperInvariant(part[0])));
+    }
+
+    private static string FormatDate(DateTime? value)
+    {
+        return value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "N/A";
+    }
+}
+
+<style>
+.staff-profile-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.staff-profile-inner { width: 100%; max-width: 1120px; margin: 0 auto; text-align: center; padding: 40px 20px 108px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 12px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.scope-pill { width: fit-content; max-width: 100%; margin: 0 auto 20px auto; padding: 8px 12px; border: 1px solid rgba(14,94,122,.2); border-radius: 8px; background: rgba(14,94,122,.07); color: #0E5E7A; font-size: 12px; font-weight: 900; }
+.search-panel { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; width: min(860px, 100%); margin: 0 auto 20px auto; }
+.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.search-btn { min-width: 0; border: none; }
+.status-message, .empty-panel { width: min(820px, 100%); margin: 0 auto 18px auto; padding: 14px 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.74); color: #52606d; font-weight: 800; }
+.empty-panel.compact { width: 100%; margin: 0; text-align: left; }
+.profile-shell, .search-results-panel { width: min(980px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); padding: 18px; text-align: left; }
+.profile-header { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid rgba(66,84,102,.14); }
+.profile-header h3 { margin: 0 0 4px 0; color: #1f2937; font-size: 24px; font-weight: 900; }
+.profile-header span { color: #6b7280; font-size: 14px; font-weight: 800; }
+.profile-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.profile-initials { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #334155; color: #fff; font-size: 22px; font-weight: 900; }
+.status-pill { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
+.small-link { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; white-space: nowrap; }
+.small-link:hover { background: #eef3f8; color: #0f5165; }
+.profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.profile-field, .record-summary-grid div, .file-summary-row { border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #f8fafc; padding: 12px; }
+.profile-field span, .record-summary-grid span { display: block; margin-bottom: 5px; color: #6b7280; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.profile-field strong { color: #1f2937; font-size: 14px; font-weight: 900; overflow-wrap: anywhere; }
+.record-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.record-summary-grid strong { color: #10233f; font-size: 24px; font-weight: 900; }
+.file-summary-panel { margin-top: 18px; }
+.section-label { margin-bottom: 12px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.file-summary-list, .search-result-list { display: grid; gap: 8px; }
+.file-summary-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 150px; gap: 12px; align-items: center; }
+.file-summary-row strong { color: #1f2937; font-weight: 900; }
+.file-summary-row span, .file-summary-row small { color: #6b7280; font-size: 13px; font-weight: 800; }
+.search-result-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(120px, .7fr) minmax(150px, 1fr) minmax(140px, .8fr) minmax(150px, .8fr) minmax(150px, .9fr); gap: 12px; align-items: center; min-height: 50px; padding: 9px 12px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #f8fafc; color: #425466; text-decoration: none; }
+.search-result-row strong { color: #1f2937; }
+.search-result-row span, .search-result-row small { overflow: hidden; color: #6b7280; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.search-result-row:hover { border-color: rgba(47,128,168,.36); background: #eef3f8; }
+.staff-profile-action-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 18; display: flex; gap: 12px; justify-content: center; padding: 12px 20px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 32%); }
+.staff-profile-action-bar .menu-btn { width: min(300px, 48%); }
+@@media (max-width: 820px) {
+    .search-panel, .profile-header, .profile-grid, .record-summary-grid, .file-summary-row, .search-result-row { grid-template-columns: 1fr; }
+    .profile-header { align-items: flex-start; }
+    .profile-header-actions { justify-content: flex-start; }
+    .search-result-row span, .search-result-row small { white-space: normal; }
+    .staff-profile-action-bar { flex-direction: column; }
+    .staff-profile-action-bar .menu-btn { width: min(460px, 100%); }
 }
 </style>

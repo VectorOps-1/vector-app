@@ -3,22 +3,31 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Daily Readiness Equipment Section";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Daily Equipment Check";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="checklist-form-screen"><div class="checklist-form-inner">
     <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
     <div class="client-line">Client: @companyName</div>
-    <div class="home-label">Daily Vehicle Readiness</div>
-    <h2 class="page-title">Equipment Section</h2>
+    <div class="home-label">Daily Vehicle & Equipment Check</div>
+    <h2 class="page-title">Equipment Check</h2>
     <p class="page-subtitle">Check each configured item carried on this vehicle.</p>
 
     <div class="linked-vehicle-panel">
         <span>Linked vehicle</span>
         <strong>@Model.LinkedVehicleLabel</strong>
     </div>
+    @if (Model.HasAssignedChecklist)
+    {
+        <div class="template-loaded-note">Loaded checklist template: @Model.AssignedChecklistName.</div>
+    }
+    else
+    {
+        <div class="template-loaded-note unavailable">No assigned checklist available for this vehicle.</div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <div class="status-message">@Model.StatusMessage</div> }
 
@@ -29,123 +38,215 @@
         <input asp-for="PreviousEquipmentReportId" id="previousEquipmentReportIdInput" type="hidden" />
         <div id="equipmentDraftStatus" class="draft-status" aria-live="polite"></div>
 
-        <div class="previous-shift-panel">
-            <button id="sameAsPreviousEquipmentButton"
-                    class="same-shift-button"
-                    type="button"
-                    data-default-allowed="@Model.AllowSameAsPreviousEquipmentCheck.ToString().ToLowerInvariant()"
-                    data-previous-report-id="@Model.PreviousEquipmentReportId">
-                Same as previous shift
-            </button>
-            <p id="sameAsPreviousEquipmentStatus">Fresh equipment checks are the default. Use this only when the last equipment checklist for this vehicle by another profile is unchanged.</p>
-        </div>
+        @if (Model.HasAssignedChecklist)
+        {
+            <div class="previous-shift-panel">
+                <button id="sameAsPreviousEquipmentButton"
+                        class="same-shift-button"
+                        type="button"
+                        data-default-allowed="@Model.AllowSameAsPreviousEquipmentCheck.ToString().ToLowerInvariant()"
+                        data-previous-report-id="@Model.PreviousEquipmentReportId">
+                    Same as previous shift
+                </button>
+                <p id="sameAsPreviousEquipmentStatus">Fresh equipment checks are the default. Use this only when the last equipment checklist for this vehicle by another profile is unchanged.</p>
+            </div>
+        }
 
         @if (Model.EquipmentChecks.Count == 0)
         {
             <div class="empty-equipment-panel">
-                <strong>No equipment configured for this vehicle.</strong>
-                <span>Add vehicle equipment in Master Setup or the Equipment Register, then return to complete this section.</span>
+                @if (!Model.HasAssignedChecklist)
+                {
+                    <strong>No assigned checklist available.</strong>
+                    <span>Ask senior management to publish a checklist in Checklist Management before this vehicle can be checked.</span>
+                }
+                else if (!Model.HasLinkedVehicleSelection)
+                {
+                    <strong>Select a vehicle first.</strong>
+                    <span>Use the vehicle section to select a registration, then continue to the equipment section so the correct published template can load.</span>
+                }
+                else
+                {
+                    <strong>No equipment configured for this vehicle.</strong>
+                    <span>Add equipment rows in the published checklist template or assign equipment in Master Setup, then return to complete this section.</span>
+                }
             </div>
         }
         else
         {
-            <div class="equipment-table" role="table" aria-label="Vehicle equipment checks">
-                <div class="equipment-table-header" role="row">
-                    <span role="columnheader">Name/item</span>
-                    <span role="columnheader">S/N / ID</span>
-                    <span role="columnheader">Next Service</span>
-                    <span role="columnheader">Battery</span>
-                    <span role="columnheader">Operational?</span>
-                    <span role="columnheader">Issues / errors</span>
-                </div>
-
-                @for (var rowIndex = 0; rowIndex < Model.EquipmentChecks.Count; rowIndex++)
-                {
-                    var checkRow = Model.EquipmentChecks[rowIndex];
-                    var nextServiceValue = checkRow.NextServiceDate?.ToString("yyyy-MM-dd") ?? string.Empty;
-                    <div class="equipment-check-row" role="row">
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].VehicleEquipmentAssignmentId" value="@checkRow.VehicleEquipmentAssignmentId" />
-                        <input class="equipment-item-id-input" type="hidden" name="EquipmentChecks[@rowIndex].EquipmentItemId" value="@checkRow.EquipmentItemId" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].EquipmentType" value="@checkRow.EquipmentType" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].Model" value="@checkRow.Model" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresBatteryCheck" value="@checkRow.RequiresBatteryCheck.ToString().ToLowerInvariant()" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousSerialOrAssetId" value="@checkRow.PreviousSerialOrAssetId" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousBatteryState" value="@checkRow.PreviousBatteryState" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIsOperational" value="@checkRow.PreviousIsOperational.ToString().ToLowerInvariant()" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIssueNotes" value="@checkRow.PreviousIssueNotes" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousEquipmentCheckId" value="@checkRow.PreviousEquipmentCheckId" />
-                        <input type="hidden" name="EquipmentChecks[@rowIndex].SortOrder" value="@checkRow.SortOrder" />
-
-                        <label class="equipment-field">
-                            <input class="equipment-cell item-cell" name="EquipmentChecks[@rowIndex].Name" value="@checkRow.Name" aria-label="Name/item" readonly />
-                        </label>
-
-                        <label class="equipment-field">
-                            <select class="equipment-cell serial-select"
-                                    name="EquipmentChecks[@rowIndex].SerialOrAssetId"
-                                    data-previous-serial="@checkRow.PreviousSerialOrAssetId"
-                                    aria-label="S/N / ID">
-                                <option value="">Select S/N / ID</option>
-                                @foreach (var serialOption in checkRow.SerialOptions)
-                                {
-                                    var isSelected = string.Equals(serialOption.Value, checkRow.SerialOrAssetId, StringComparison.OrdinalIgnoreCase);
-                                    <option value="@serialOption.Value"
-                                            data-next-service="@(serialOption.NextServiceDate?.ToString("yyyy-MM-dd") ?? string.Empty)"
-                                            data-equipment-item-id="@serialOption.EquipmentItemId"
-                                            selected="@isSelected">
-                                        @serialOption.Text
-                                    </option>
-                                }
-                            </select>
-                        </label>
-
-                        <label class="equipment-field">
-                            <input class="equipment-cell next-service-input"
-                                   type="date"
-                                   name="EquipmentChecks[@rowIndex].NextServiceDate"
-                                   value="@nextServiceValue"
-                                   aria-label="Next Service"
-                                   readonly />
-                        </label>
-
-                        <label class="equipment-field">
-                            <select class="equipment-cell battery-select"
-                                    name="EquipmentChecks[@rowIndex].BatteryState"
-                                    data-previous-battery="@(checkRow.PreviousBatteryState ?? "Full")"
-                                    aria-label="Battery">
-                                <option value="">Select battery</option>
-                                <option selected="@(checkRow.BatteryState == "Full")">Full</option>
-                                <option selected="@(checkRow.BatteryState == "Acceptable")">Acceptable</option>
-                                <option selected="@(checkRow.BatteryState == "Low")">Low</option>
-                                <option selected="@(checkRow.BatteryState == "Not applicable")">Not applicable</option>
-                            </select>
-                        </label>
-
-                        <label class="equipment-field">
-                            <select class="equipment-cell operational-select"
-                                    name="EquipmentChecks[@rowIndex].IsOperational"
-                                    data-previous-operational="@checkRow.PreviousIsOperational.ToString().ToLowerInvariant()"
-                                    aria-label="Operational?">
-                                <option value="true" selected="@checkRow.IsOperational">Yes</option>
-                                <option value="false" selected="@(!checkRow.IsOperational)">No</option>
-                            </select>
-                        </label>
-
-                        <label class="equipment-field issue-field">
-                            <textarea class="equipment-cell issue-input"
-                                      name="EquipmentChecks[@rowIndex].IssueNotes"
-                                      data-previous-issue="@checkRow.PreviousIssueNotes"
-                                      aria-label="Issues / errors"
-                                      placeholder="Describe any issue, error, or restriction">@checkRow.IssueNotes</textarea>
-                        </label>
+            <div class="equipment-table-shell" data-equipment-table-shell>
+                <div class="equipment-table" data-equipment-table role="table" aria-label="Vehicle equipment checks">
+                    <div class="equipment-table-header" role="row">
+                        <span role="columnheader">Name/item</span>
+                        <span role="columnheader">S/N / ID</span>
+                        <span role="columnheader">Next Service</span>
+                        <span role="columnheader">Battery</span>
+                        <span role="columnheader">Operational?</span>
+                        <span role="columnheader">Issues / errors</span>
                     </div>
-                }
+
+                    @for (var rowIndex = 0; rowIndex < Model.EquipmentChecks.Count; rowIndex++)
+                    {
+                        var checkRow = Model.EquipmentChecks[rowIndex];
+                        var nextServiceValue = checkRow.NextServiceDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+                        var previousNextServiceValue = checkRow.PreviousNextServiceDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+                        var isSubItem = !string.IsNullOrWhiteSpace(checkRow.ParentItemName);
+                        <div class="equipment-check-row @(isSubItem ? "equipment-subitem-check-row" : string.Empty)" role="row">
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].ChecklistItemId" value="@checkRow.ChecklistItemId" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].VehicleEquipmentAssignmentId" value="@checkRow.VehicleEquipmentAssignmentId" />
+                            <input class="equipment-item-id-input" type="hidden" name="EquipmentChecks[@rowIndex].EquipmentItemId" value="@checkRow.EquipmentItemId" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].ParentItemName" value="@checkRow.ParentItemName" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].EquipmentType" value="@checkRow.EquipmentType" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].Model" value="@checkRow.Model" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresSerialOrAssetCheck" value="@checkRow.RequiresSerialOrAssetCheck.ToString().ToLowerInvariant()" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresNextServiceCheck" value="@checkRow.RequiresNextServiceCheck.ToString().ToLowerInvariant()" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresBatteryCheck" value="@checkRow.RequiresBatteryCheck.ToString().ToLowerInvariant()" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresOperationalCheck" value="@checkRow.RequiresOperationalCheck.ToString().ToLowerInvariant()" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].RequiresIssueNotesCheck" value="@checkRow.RequiresIssueNotesCheck.ToString().ToLowerInvariant()" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousSerialOrAssetId" value="@checkRow.PreviousSerialOrAssetId" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousNextServiceDate" value="@previousNextServiceValue" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousBatteryState" value="@checkRow.PreviousBatteryState" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIsOperational" value="@(checkRow.PreviousIsOperational?.ToString().ToLowerInvariant() ?? string.Empty)" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousIssueNotes" value="@checkRow.PreviousIssueNotes" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].PreviousEquipmentCheckId" value="@checkRow.PreviousEquipmentCheckId" />
+                            <input type="hidden" name="EquipmentChecks[@rowIndex].SortOrder" value="@checkRow.SortOrder" />
+
+                            <label class="equipment-field">
+                                @if (isSubItem)
+                                {
+                                    <span class="parent-item-label">@checkRow.ParentItemName</span>
+                                }
+                                <input class="equipment-cell item-cell" name="EquipmentChecks[@rowIndex].Name" value="@checkRow.Name" aria-label="Name/item" readonly />
+                            </label>
+
+                            <label class="equipment-field">
+                                @if (checkRow.RequiresSerialOrAssetCheck)
+                                {
+                                    <select class="equipment-cell serial-select"
+                                            name="EquipmentChecks[@rowIndex].SerialOrAssetId"
+                                            data-previous-serial="@checkRow.PreviousSerialOrAssetId"
+                                            aria-label="S/N / ID">
+                                        <option value="">Select S/N / ID</option>
+                                        @foreach (var serialOption in checkRow.SerialOptions)
+                                        {
+                                            var isSelected = string.Equals(serialOption.Value, checkRow.SerialOrAssetId, StringComparison.OrdinalIgnoreCase);
+                                            <option value="@serialOption.Value"
+                                                    data-next-service="@(serialOption.NextServiceDate?.ToString("yyyy-MM-dd") ?? string.Empty)"
+                                                    data-equipment-item-id="@serialOption.EquipmentItemId"
+                                                    selected="@isSelected">
+                                                @serialOption.Text
+                                            </option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="EquipmentChecks[@rowIndex].SerialOrAssetId" value="" />
+                                    <input class="equipment-cell item-cell" value="N/A" aria-label="S/N / ID not applicable" readonly />
+                                }
+                            </label>
+
+                            <label class="equipment-field">
+                                @if (checkRow.RequiresNextServiceCheck)
+                                {
+                                    <input class="equipment-cell next-service-input"
+                                           type="date"
+                                           name="EquipmentChecks[@rowIndex].NextServiceDate"
+                                           value="@nextServiceValue"
+                                           data-previous-next-service="@previousNextServiceValue"
+                                           aria-label="Next Service" />
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="EquipmentChecks[@rowIndex].NextServiceDate" value="" />
+                                    <input class="equipment-cell item-cell" value="N/A" aria-label="Next Service not applicable" readonly />
+                                }
+                            </label>
+
+                            <label class="equipment-field">
+                                @if (checkRow.RequiresBatteryCheck)
+                                {
+                                    <select class="equipment-cell battery-select"
+                                            name="EquipmentChecks[@rowIndex].BatteryState"
+                                            data-previous-battery="@(checkRow.PreviousBatteryState ?? "Full")"
+                                            aria-label="Battery">
+                                        <option value="">Select battery</option>
+                                        <option selected="@(checkRow.BatteryState == "N/A")">N/A</option>
+                                        <option selected="@(checkRow.BatteryState == "Full")">Full</option>
+                                        <option selected="@(checkRow.BatteryState == "Acceptable")">Acceptable</option>
+                                        <option selected="@(checkRow.BatteryState == "Charging")">Charging</option>
+                                        <option selected="@(checkRow.BatteryState == "Low")">Low</option>
+                                        <option selected="@(checkRow.BatteryState == "Not applicable")">Not applicable</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="EquipmentChecks[@rowIndex].BatteryState" value="Not applicable" />
+                                    <input class="equipment-cell item-cell" value="N/A" aria-label="Battery not applicable" readonly />
+                                }
+                            </label>
+
+                            <label class="equipment-field">
+                                @if (checkRow.RequiresOperationalCheck)
+                                {
+                                    <select class="equipment-cell operational-select"
+                                            name="EquipmentChecks[@rowIndex].IsOperational"
+                                            data-previous-operational="@(checkRow.PreviousIsOperational?.ToString().ToLowerInvariant() ?? string.Empty)"
+                                            aria-label="Operational?">
+                                        <option value="" selected="@(!checkRow.IsOperational.HasValue)">N/A</option>
+                                        <option value="true" selected="@(checkRow.IsOperational == true)">Yes</option>
+                                        <option value="false" selected="@(checkRow.IsOperational == false)">No</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="EquipmentChecks[@rowIndex].IsOperational" value="" />
+                                    <input class="equipment-cell item-cell" value="N/A" aria-label="Operational not applicable" readonly />
+                                }
+                            </label>
+
+                            <label class="equipment-field issue-field">
+                                @if (checkRow.RequiresIssueNotesCheck)
+                                {
+                                    <textarea class="equipment-cell issue-input"
+                                              name="EquipmentChecks[@rowIndex].IssueNotes"
+                                              data-previous-issue="@checkRow.PreviousIssueNotes"
+                                              aria-label="Issues / errors"
+                                              placeholder="Describe any issue, error, or restriction">@checkRow.IssueNotes</textarea>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="EquipmentChecks[@rowIndex].IssueNotes" value="" />
+                                    <input class="equipment-cell item-cell" value="N/A" aria-label="Issues not applicable" readonly />
+                                }
+                            </label>
+                        </div>
+                    }
+                </div>
+                <div class="equipment-scroll-proxy" data-equipment-scroll-proxy aria-label="Equipment checklist horizontal scroll">
+                    <div class="equipment-scroll-track" data-equipment-scroll-track tabindex="0">
+                        <div class="equipment-scroll-spacer" data-equipment-scroll-spacer></div>
+                    </div>
+                </div>
             </div>
+        }
+
+        @if (Model.HasAssignedChecklist)
+        {
+            <label class="section-note-field">
+                General equipment note
+                <textarea asp-for="EquipmentSectionNote"
+                          rows="4"
+                          placeholder="Add anything relevant to this equipment section that does not fit one specific item."></textarea>
+            </label>
         }
 
         <div class="action-row">
             <a class="menu-btn vehicle-btn" href="@Model.VehicleChecklistUrl">Back: Vehicle Section</a>
-            <button class="menu-btn equipment-btn continue-btn" type="submit" disabled="@(Model.EquipmentChecks.Count == 0)">Save Equipment Section</button>
+            @if (Model.HasAssignedChecklist)
+            {
+                <button class="menu-btn equipment-btn continue-btn" type="submit" disabled="@(Model.EquipmentChecks.Count == 0)">Save Equipment Section</button>
+            }
         </div>
     </form>
 </div></div>
@@ -161,6 +262,8 @@
 .linked-vehicle-panel { width: min(900px, 94%); margin: 0 auto 20px auto; padding: 14px 16px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.68); text-align: left; display: flex; flex-direction: column; gap: 4px; }
 .linked-vehicle-panel span { color: #6b7280; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; }
 .linked-vehicle-panel strong { color: #1f2937; font-size: 18px; }
+.template-loaded-note { width: min(900px, 94%); margin: -8px auto 18px auto; padding: 10px 12px; border: 1px solid rgba(31,111,91,.24); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-size: 13px; font-weight: 900; text-align: left; box-sizing: border-box; }
+.template-loaded-note.unavailable { border-color: rgba(155,59,59,.24); background: rgba(155,59,59,.07); color: #7f2f2f; }
 .status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
 .checklist-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
 .draft-status { width: min(900px, 94%); margin: -8px auto -4px auto; color: #64748b; font-size: 12px; font-weight: 800; text-align: center; }
@@ -173,27 +276,42 @@
 .empty-equipment-panel { width: min(900px, 94%); display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid rgba(124,45,45,.2); border-radius: 8px; background: rgba(124,45,45,.05); text-align: left; color: #7f1d1d; box-sizing: border-box; }
 .empty-equipment-panel strong { font-size: 16px; }
 .empty-equipment-panel span { font-size: 13px; font-weight: 700; color: #52606d; }
-.equipment-table { width: min(1180px, 98%); border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.76); text-align: left; }
-.equipment-table-header, .equipment-check-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(190px, 1.05fr) minmax(135px, .72fr) minmax(135px, .72fr) minmax(120px, .58fr) minmax(220px, 1.25fr); gap: 0; align-items: stretch; }
+.equipment-table-shell { width: min(1120px, 100%); position: relative; padding-bottom: 24px; }
+.equipment-table { width: 100%; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow-x: auto; overflow-y: hidden; background: rgba(255,255,255,.76); text-align: left; }
+.equipment-table-header, .equipment-check-row { display: grid; grid-template-columns: minmax(145px, .9fr) minmax(175px, 1fr) 132px 108px 92px minmax(280px, 1.4fr); min-width: 934px; gap: 0; align-items: stretch; }
 .equipment-table-header { background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 .equipment-table-header span { padding: 12px 14px; border-right: 1px solid rgba(255,255,255,.12); }
+.equipment-scroll-proxy { display: none; pointer-events: none; }
+.equipment-scroll-proxy.is-active { display: block; position: fixed; z-index: 30; bottom: 78px; padding: 8px 10px; border: 1px solid rgba(66,84,102,.18); border-radius: 10px; background: rgba(248,250,252,.96); box-shadow: 0 10px 26px rgba(31,41,55,.18); pointer-events: auto; }
+.equipment-scroll-track { width: 100%; height: 18px; overflow-x: auto; overflow-y: hidden; scrollbar-width: auto; }
+.equipment-scroll-spacer { height: 1px; min-width: 100%; }
 .equipment-check-row { border-top: 1px solid rgba(66,84,102,.13); }
-.equipment-check-row .equipment-field { display: flex; flex-direction: column; justify-content: center; gap: 6px; margin: 0; padding: 10px; border-right: 1px solid rgba(66,84,102,.1); color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.equipment-subitem-check-row { background: rgba(14,94,122,.035); }
+.equipment-subitem-check-row .item-cell { padding-left: 18px; border-color: rgba(14,94,122,.24); }
+.parent-item-label { margin: 0 0 -2px 2px; color: #0E5E7A; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.equipment-check-row .equipment-field { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 6px; margin: 0; padding: 10px; border-right: 1px solid rgba(66,84,102,.1); color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
 .equipment-check-row label:last-child, .equipment-table-header span:last-child { border-right: none; }
-.equipment-cell { width: 100%; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 14px; font-weight: 700; background: #fff; color: #1f2937; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.equipment-cell { width: 100%; min-width: 0; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 14px; font-weight: 700; background: #fff; color: #1f2937; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
 .equipment-cell[readonly] { background: #f8fafc; color: #334155; }
+.battery-select, .operational-select { padding-left: 8px; padding-right: 8px; }
 .issue-input { min-height: 64px; padding-top: 10px; resize: vertical; line-height: 1.35; }
 .operational-select[value="false"], .issue-input:not(:placeholder-shown) { border-color: rgba(155,59,59,.34); }
+.section-note-field { width: min(900px, 94%); display: flex; flex-direction: column; gap: 8px; margin: 2px auto 0 auto; text-align: left; color: #52606d; font-size: 13px; font-weight: 900; }
+.section-note-field textarea { width: 100%; min-height: 104px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; padding: 12px 14px; background: #ffffff; color: #1f2937; font-size: 15px; font-weight: 650; line-height: 1.4; box-sizing: border-box; resize: vertical; }
+.section-note-field textarea:focus { outline: 3px solid rgba(14,94,122,.12); border-color: rgba(14,94,122,.46); }
 .action-row { width: min(900px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .action-row .menu-btn { width: 100%; border: none; text-align: center; }
 .action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
 @@media (max-width: 760px) {
     .action-row, .previous-shift-panel { grid-template-columns: 1fr; }
-    .equipment-table-header { display: none; }
-    .equipment-table { border: none; background: transparent; overflow: visible; display: flex; flex-direction: column; gap: 12px; }
-    .equipment-check-row { display: grid; grid-template-columns: 1fr; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.76); }
-    .equipment-check-row .equipment-field { border-right: none; border-top: 1px solid rgba(66,84,102,.1); }
-    .equipment-check-row .equipment-field:first-of-type { border-top: none; }
+    .equipment-table-shell { width: 100%; }
+    .equipment-table { border-radius: 8px; background: rgba(255,255,255,.76); overflow-x: auto; overflow-y: hidden; }
+    .equipment-table-header, .equipment-check-row { grid-template-columns: minmax(132px, .85fr) minmax(170px, 1fr) 126px 104px 88px minmax(260px, 1.35fr); min-width: 880px; }
+    .equipment-table-header { display: grid; }
+    .equipment-check-row { border-radius: 0; overflow: visible; background: transparent; }
+    .equipment-check-row .equipment-field { border-right: 1px solid rgba(66,84,102,.1); border-top: none; }
+    .equipment-scroll-proxy.is-active { bottom: 92px; padding: 10px; }
+    .equipment-scroll-track { height: 22px; }
 }
 </style>
 
@@ -206,6 +324,11 @@
         const panel = button?.closest(".previous-shift-panel");
         const sameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
         const equipmentTable = document.querySelector(".equipment-table");
+        const equipmentTableShell = document.querySelector("[data-equipment-table-shell]");
+        const equipmentScrollProxy = document.querySelector("[data-equipment-scroll-proxy]");
+        const equipmentScrollTrack = document.querySelector("[data-equipment-scroll-track]");
+        const equipmentScrollSpacer = document.querySelector("[data-equipment-scroll-spacer]");
+        let isSyncingEquipmentScroll = false;
 
         if (!button || !status) {
             return;
@@ -216,13 +339,14 @@
             const option = select.selectedOptions?.[0];
             const nextServiceInput = row?.querySelector(".next-service-input");
             const equipmentItemIdInput = row?.querySelector(".equipment-item-id-input");
+            const selectedValue = option?.value || "";
 
-            if (nextServiceInput && option) {
-                nextServiceInput.value = option.dataset.nextService || nextServiceInput.value;
+            if (nextServiceInput && option && selectedValue) {
+                nextServiceInput.value = option.dataset.nextService || "";
             }
 
-            if (equipmentItemIdInput && option?.dataset.equipmentItemId) {
-                equipmentItemIdInput.value = option.dataset.equipmentItemId;
+            if (equipmentItemIdInput && option && selectedValue) {
+                equipmentItemIdInput.value = option.dataset.equipmentItemId || "";
             }
         }
 
@@ -260,7 +384,9 @@
                 const batterySelect = row.querySelector(".battery-select");
                 const operationalSelect = row.querySelector(".operational-select");
                 const issueInput = row.querySelector(".issue-input");
+                const nextServiceInput = row.querySelector(".next-service-input");
                 const previousSerial = serialSelect?.dataset.previousSerial;
+                const previousNextService = nextServiceInput?.dataset.previousNextService || "";
                 const previousBattery = batterySelect?.dataset.previousBattery || "Full";
                 const previousOperational = operationalSelect?.dataset.previousOperational || "true";
                 const previousIssue = issueInput?.dataset.previousIssue || "";
@@ -268,6 +394,10 @@
                 if (serialSelect && previousSerial) {
                     serialSelect.value = previousSerial;
                     syncSerialSelection(serialSelect);
+                }
+
+                if (nextServiceInput && !nextServiceInput.value && previousNextService) {
+                    nextServiceInput.value = previousNextService;
                 }
 
                 if (batterySelect) {
@@ -313,6 +443,58 @@
             element.addEventListener("input", markManualEquipmentChange);
             element.addEventListener("change", markManualEquipmentChange);
         });
+
+        function updateEquipmentScrollProxy() {
+            if (!equipmentTableShell || !equipmentTable || !equipmentScrollProxy || !equipmentScrollTrack || !equipmentScrollSpacer) {
+                return;
+            }
+
+            const hasHorizontalOverflow = equipmentTable.scrollWidth > equipmentTable.clientWidth + 2;
+            const rect = equipmentTableShell.getBoundingClientRect();
+            const sectionIsActive = hasHorizontalOverflow && rect.top < window.innerHeight - 106 && rect.bottom > 112;
+            if (!sectionIsActive) {
+                equipmentScrollProxy.classList.remove("is-active");
+                return;
+            }
+
+            const left = Math.max(12, rect.left);
+            const right = Math.min(window.innerWidth - 12, rect.right);
+            equipmentScrollProxy.style.left = `${left}px`;
+            equipmentScrollProxy.style.width = `${Math.max(180, right - left)}px`;
+            equipmentScrollSpacer.style.width = `${equipmentTable.scrollWidth}px`;
+            equipmentScrollProxy.classList.add("is-active");
+
+            if (Math.abs(equipmentScrollTrack.scrollLeft - equipmentTable.scrollLeft) > 1) {
+                equipmentScrollTrack.scrollLeft = equipmentTable.scrollLeft;
+            }
+        }
+
+        if (equipmentTable && equipmentScrollTrack) {
+            equipmentTable.addEventListener("scroll", function () {
+                if (isSyncingEquipmentScroll) {
+                    return;
+                }
+
+                isSyncingEquipmentScroll = true;
+                equipmentScrollTrack.scrollLeft = equipmentTable.scrollLeft;
+                isSyncingEquipmentScroll = false;
+                updateEquipmentScrollProxy();
+            }, { passive: true });
+
+            equipmentScrollTrack.addEventListener("scroll", function () {
+                if (isSyncingEquipmentScroll) {
+                    return;
+                }
+
+                isSyncingEquipmentScroll = true;
+                equipmentTable.scrollLeft = equipmentScrollTrack.scrollLeft;
+                isSyncingEquipmentScroll = false;
+            }, { passive: true });
+
+            window.addEventListener("scroll", updateEquipmentScrollProxy, { passive: true });
+            window.addEventListener("resize", updateEquipmentScrollProxy);
+            updateEquipmentScrollProxy();
+        }
 
         const bindEquipmentDraft = function () {
             window.VectorShiftDrafts?.bindForm(document.querySelector(".checklist-form"), {

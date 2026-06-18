@@ -15,6 +15,12 @@ public class DailyVehicleReadinessReport
     public int PerformedByUserId { get; set; }
     public AppUser? PerformedByUser { get; set; }
 
+    public int? ChecklistTemplateId { get; set; }
+    public ChecklistTemplate? ChecklistTemplate { get; set; }
+
+    [MaxLength(40)]
+    public string? ChecklistTemplateVersion { get; set; }
+
     public DateTime InspectionDateUtc { get; set; } = DateTime.UtcNow;
 
     [MaxLength(80)]
@@ -91,6 +97,9 @@ public class DailyVehicleReadinessReport
     [MaxLength(1200)]
     public string? SchematicNotes { get; set; }
 
+    [MaxLength(4000)]
+    public string? SchematicMarkData { get; set; }
+
     [MaxLength(1200)]
     public string? GeneralNotes { get; set; }
 
@@ -105,4 +114,6 @@ public class DailyVehicleReadinessReport
     public DateTime? UpdatedAtUtc { get; set; }
 
     public ICollection<DailyVehicleEquipmentCheck> EquipmentChecks { get; set; } = new List<DailyVehicleEquipmentCheck>();
+    public ICollection<ChecklistVarianceAlert> VarianceAlerts { get; set; } = new List<ChecklistVarianceAlert>();
+    public ICollection<ReadinessAlert> ReadinessAlerts { get; set; } = new List<ReadinessAlert>();
 }

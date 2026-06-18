@@ -3,9 +3,10 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Vehicle Schematic Library";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Unit Schematic Library";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="schematic-library-screen">
@@ -13,9 +14,9 @@
         <header class="library-header">
             <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
             <div class="client-line">Client: @companyName</div>
-            <div class="home-label">Master Setup</div>
-            <h2 class="page-title">Vehicle Schematic Library</h2>
-            <p class="page-subtitle">Published schematics can be linked to registered vehicles for live inspections.</p>
+            <div class="home-label">Checklist Management</div>
+            <h2 class="page-title">Unit Schematic Library</h2>
+            <p class="page-subtitle">Published unit schematics are linked to the vehicle register by function, subtype, or specific vehicle. These links are separate from checklist templates.</p>
         </header>
 
         <div class="library-summary">
@@ -28,27 +29,42 @@
                 <p>Published</p>
             </div>
             <div>
-                <span>@(Model.Schematics.Select(schematic => schematic.Category).Distinct().Count())</span>
+                <span>@Model.Categories.Count</span>
                 <p>Categories</p>
             </div>
         </div>
 
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
         <div class="library-actions">
             <a class="menu-btn vehicle-btn" href="/VehicleRegister">Vehicle Register</a>
-            <a class="menu-btn equipment-btn" href="/MasterSetup">Back to Master Setup</a>
+            <a class="menu-btn equipment-btn" href="/EditChecklist">Back to Checklist Management</a>
         </div>
 
-        @foreach (var category in Model.Schematics.GroupBy(schematic => schematic.Category))
+        @foreach (var categoryName in Model.Categories)
         {
+            var categorySchematics = Model.SchematicsForCategory(categoryName);
             <section class="category-section">
                 <div class="category-heading">
-                    <h3>@category.Key</h3>
-                    <span>@category.Count() schematic types</span>
+                    <h3>@categoryName</h3>
+                    <span>@categorySchematics.Count schematic types</span>
                 </div>
 
-                <div class="schematic-grid">
-                    @foreach (var schematic in category)
+                @if (categorySchematics.Count == 0)
+                {
+                    <div class="empty-category-state">
+                        No custom schematic has been added yet. Custom schematics should only appear after a vehicle-specific schematic has been built and approved.
+                    </div>
+                }
+                else
+                {
+                    <div class="schematic-grid">
+                    @foreach (var schematic in categorySchematics)
                     {
+                        var assignments = Model.AssignmentsFor(schematic.Key);
                         <article class="schematic-card">
                             <div class="card-heading">
                                 <div>
@@ -58,37 +74,140 @@
                                 <span class="status-pill @(schematic.IsPublished ? "published" : "draft")">@schematic.Status</span>
                             </div>
 
-                            <div class="schematic-preview" data-schematic="@schematic.Key" aria-label="@schematic.DisplayName preview">
-                                <div class="schematic-roof"></div>
-                                <div class="schematic-body"></div>
-                                <div class="schematic-cab"></div>
-                                <div class="schematic-window front-window"></div>
-                                <div class="schematic-window rear-window"></div>
-                                <div class="schematic-wheel front-wheel"></div>
-                                <div class="schematic-wheel rear-wheel"></div>
-                            </div>
+                            @if (!string.IsNullOrWhiteSpace(schematic.LibraryAssetPath))
+                            {
+                                <div class="schematic-library-preview" data-schematic="@schematic.Key" aria-label="@schematic.DisplayName library preview">
+                                    <img src="@schematic.LibraryAssetPath" alt="@schematic.DisplayName schematic overview" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="schematic-view-grid" data-schematic="@schematic.Key" aria-label="@schematic.DisplayName views">
+                                    @foreach (var view in schematic.Views)
+                                    {
+                                        <figure>
+                                            <img src="@view.AssetPath" alt="@schematic.DisplayName @view.Label view" />
+                                            <figcaption>@view.Label</figcaption>
+                                        </figure>
+                                    }
+                                </div>
+                            }
 
-                            <dl class="schematic-meta">
-                                <div>
-                                    <dt>Body style</dt>
-                                    <dd>@schematic.BodyStyle</dd>
+                            <details class="schematic-details-dropdown">
+                                <summary>
+                                    <span>Details / vehicle links</span>
+                                    <strong>@assignments.Count vehicle link@(assignments.Count == 1 ? "" : "s")</strong>
+                                </summary>
+
+                                <div class="schematic-detail-grid">
+                                    <dl class="schematic-meta">
+                                        <div>
+                                            <dt>Body style</dt>
+                                            <dd>@schematic.BodyStyle</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Make / model range</dt>
+                                            <dd>@schematic.MakeModel</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Inspection views</dt>
+                                            <dd>@(string.Join(", ", schematic.Views.Select(view => view.Label)))</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Live use</dt>
+                                            <dd>@schematic.LiveUse</dd>
+                                        </div>
+                                    </dl>
+
+                                    <div class="assignment-panel">
+                                        <div class="assignment-title">Vehicle register links</div>
+                                        <p class="assignment-note">These links come from the vehicle register and schematic assignment rules. Deleting checklist templates does not remove them.</p>
+                                        @if (assignments.Count == 0)
+                                        {
+                                            <p class="assignment-empty">No vehicle register links yet. Link a function, subtype, or specific vehicle to make this schematic available when a checklist uses unit schematic markup.</p>
+                                        }
+                                        else
+                                        {
+                                            <ul class="assignment-list">
+                                                @foreach (var assignment in assignments)
+                                                {
+                                                    <li>
+                                                        <div>
+                                                            <strong>@assignment.ScopeType: @assignment.ScopeLabel</strong>
+                                                            <span>@assignment.Detail</span>
+                                                            @if (!string.IsNullOrWhiteSpace(assignment.ExampleCallsigns))
+                                                            {
+                                                                <small>@assignment.ExampleCallsigns</small>
+                                                            }
+                                                        </div>
+                                                        <form method="post" asp-page-handler="Unassign" class="unassign-inline">
+                                                            <input type="hidden" name="scopeType" value="@assignment.ScopeType" />
+                                                            <input type="hidden" name="vehicleFunction" value="@assignment.VehicleFunction" />
+                                                            <input type="hidden" name="vehicleSubtype" value="@assignment.VehicleSubtype" />
+                                                            <input type="hidden" name="vehicleId" value="@assignment.VehicleId" />
+                                                            <button type="submit">Unlink</button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        <div class="assignment-form-grid">
+                                            <form method="post" asp-page-handler="AssignFunction" class="assignment-form">
+                                                <input type="hidden" name="schematicKey" value="@schematic.Key" />
+                                                <label>
+                                                    Link by function
+                                                    <select name="vehicleFunction" required>
+                                                        <option value="">Select function</option>
+                                                        @foreach (var function in Model.FunctionOptions)
+                                                        {
+                                                            <option value="@function">@function</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                                <button type="submit">Link function</button>
+                                                <p>Applies when no subtype or vehicle-specific override exists.</p>
+                                            </form>
+
+                                            <form method="post" asp-page-handler="AssignSubtype" class="assignment-form">
+                                                <input type="hidden" name="schematicKey" value="@schematic.Key" />
+                                                <label>
+                                                    Link by subtype
+                                                    <select name="subtypeSelection" required>
+                                                        <option value="">Select subtype</option>
+                                                        @foreach (var subtype in Model.SubtypeOptions)
+                                                        {
+                                                            <option value="@subtype.Value">@subtype.Label</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                                <button type="submit">Link subtype</button>
+                                                <p>Overrides the broad function assignment for matching vehicles.</p>
+                                            </form>
+
+                                            <form method="post" asp-page-handler="AssignVehicle" class="assignment-form">
+                                                <input type="hidden" name="schematicKey" value="@schematic.Key" />
+                                                <label>
+                                                    Link to specific vehicle
+                                                    <select name="vehicleId" required>
+                                                        <option value="">Select callsign / reg</option>
+                                                        @foreach (var vehicle in Model.VehicleOptions)
+                                                        {
+                                                            <option value="@vehicle.Id">@vehicle.Label</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                                <button type="submit">Link vehicle</button>
+                                                <p>This is the highest-priority override for one registered unit.</p>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <dt>Make / model range</dt>
-                                    <dd>@schematic.MakeModel</dd>
-                                </div>
-                                <div>
-                                    <dt>Inspection views</dt>
-                                    <dd>@(string.Join(", ", schematic.Views))</dd>
-                                </div>
-                                <div>
-                                    <dt>Live use</dt>
-                                    <dd>@schematic.LiveUse</dd>
-                                </div>
-                            </dl>
+                            </details>
                         </article>
                     }
-                </div>
+                    </div>
+                }
             </section>
         }
     </div>
@@ -103,6 +222,7 @@
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(720px, 94%); margin: 0 auto 22px auto; font-size: 15px; font-weight: 600; color: #6b7280; }
+.status-message { margin: 0 auto 18px auto; max-width: 760px; padding: 12px 16px; border: 1px solid rgba(31,111,91,.26); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-size: 14px; font-weight: 800; text-align: center; }
 .library-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0 auto 18px auto; max-width: 760px; }
 .library-summary div { padding: 16px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.68); text-align: center; }
 .library-summary span { display: block; margin-bottom: 4px; color: #0E5E7A; font-size: 26px; font-weight: 900; }
@@ -113,42 +233,50 @@
 .category-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; margin-bottom: 12px; text-align: left; }
 .category-heading h3 { margin: 0; color: #1f2937; font-size: 20px; font-weight: 900; }
 .category-heading span { color: #64748b; font-size: 13px; font-weight: 800; }
-.schematic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.schematic-card { padding: 16px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); box-sizing: border-box; }
-.card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.empty-category-state { padding: 18px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; background: rgba(255,255,255,.72); color: #64748b; font-size: 13px; font-weight: 800; text-align: center; }
+.schematic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.schematic-card { padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); box-sizing: border-box; }
+.card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
 .card-heading p { margin: 0 0 4px 0; color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
 .card-heading h4 { margin: 0; color: #1f2937; font-size: 17px; font-weight: 900; }
 .status-pill { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 900; white-space: nowrap; }
 .status-pill.published { color: #1f6f5b; background: rgba(31, 111, 91, 0.12); border: 1px solid rgba(31, 111, 91, 0.24); }
 .status-pill.draft { color: #7c5b16; background: rgba(154, 115, 28, 0.12); border: 1px solid rgba(154, 115, 28, 0.24); }
-.schematic-preview { position: relative; height: 170px; margin-bottom: 14px; border: 1px dashed rgba(66, 84, 102, 0.34); border-radius: 8px; background: #f8fafc; overflow: hidden; }
-.schematic-body { position: absolute; left: 9%; right: 8%; bottom: 46px; height: 50px; border: 4px solid #334155; border-radius: 22px 18px 14px 14px; background: #ffffff; }
-.schematic-roof { position: absolute; left: 22%; right: 24%; bottom: 96px; height: 32px; border: 4px solid #334155; border-bottom: 0; border-radius: 30px 30px 0 0; }
-.schematic-cab { position: absolute; right: 13%; bottom: 70px; width: 18%; height: 54px; border-left: 4px solid #334155; transform: skewX(-18deg); }
-.schematic-window { position: absolute; bottom: 84px; height: 26px; border: 3px solid #52606d; border-radius: 8px; }
-.front-window { right: 18%; width: 15%; transform: skewX(-14deg); }
-.rear-window { left: 28%; width: 27%; }
-.schematic-wheel { position: absolute; bottom: 28px; width: 34px; height: 34px; border: 5px solid #1f2937; border-radius: 50%; background: #ffffff; }
-.front-wheel { right: 18%; }
-.rear-wheel { left: 18%; }
-.schematic-preview[data-schematic="ift-ambulance"] .schematic-roof { left: 27%; right: 30%; height: 28px; }
-.schematic-preview[data-schematic="icu-ambulance"] .schematic-body { left: 7%; right: 6%; height: 58px; }
-.schematic-preview[data-schematic="icu-ambulance"] .schematic-roof { left: 18%; right: 20%; height: 36px; }
-.schematic-preview[data-schematic="response-pickup"] .schematic-body { left: 15%; right: 14%; bottom: 52px; height: 42px; border-radius: 28px 28px 14px 14px; }
-.schematic-preview[data-schematic="response-pickup"] .schematic-roof { left: 35%; right: 34%; bottom: 94px; height: 28px; border-radius: 20px 20px 0 0; }
-.schematic-preview[data-schematic="response-pickup"] .schematic-cab { right: 24%; bottom: 72px; width: 14%; height: 46px; }
-.schematic-preview[data-schematic="response-pickup"] .rear-window { left: 39%; width: 15%; }
-.schematic-preview[data-schematic="response-pickup"] .front-window { right: 29%; width: 11%; }
-.schematic-preview[data-schematic="response-sedan"] .schematic-body { left: 16%; right: 14%; bottom: 54px; height: 36px; border-radius: 32px 32px 14px 14px; }
-.schematic-preview[data-schematic="response-sedan"] .schematic-roof { left: 34%; right: 31%; bottom: 90px; height: 28px; border-radius: 24px 24px 0 0; }
-.schematic-preview[data-schematic="response-sedan"] .schematic-cab { right: 21%; bottom: 72px; width: 16%; height: 42px; }
-.schematic-preview[data-schematic="response-sedan"] .rear-window { left: 37%; width: 17%; }
-.schematic-preview[data-schematic="response-sedan"] .front-window { right: 26%; width: 12%; }
-.schematic-preview[data-schematic="rescue-vehicle"] .schematic-body { left: 8%; right: 8%; height: 60px; border-radius: 12px; }
-.schematic-preview[data-schematic="rescue-vehicle"] .schematic-roof { left: 14%; right: 16%; height: 34px; border-radius: 8px 8px 0 0; }
+.schematic-library-preview { display: flex; align-items: center; justify-content: center; min-height: 210px; margin-bottom: 10px; border: 1px dashed rgba(66, 84, 102, 0.34); border-radius: 8px; background: #ffffff; overflow: hidden; }
+.schematic-library-preview img { width: 100%; max-height: 285px; object-fit: contain; object-position: center; display: block; }
+.schematic-view-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.schematic-view-grid figure { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 190px; margin: 0; border: 1px dashed rgba(66, 84, 102, 0.34); border-radius: 8px; background: #ffffff; overflow: hidden; }
+.schematic-view-grid img { width: 100%; height: 170px; object-fit: contain; object-position: center; display: block; }
+.schematic-view-grid figcaption { padding: 8px 10px; border-top: 1px solid rgba(66,84,102,.12); color: #334155; font-size: 12px; font-weight: 900; text-align: center; text-transform: uppercase; }
+.schematic-details-dropdown { border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #f8fafc; overflow: hidden; }
+.schematic-details-dropdown summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 42px; padding: 0 12px; color: #334155; cursor: pointer; list-style: none; font-size: 13px; font-weight: 900; }
+.schematic-details-dropdown summary::-webkit-details-marker { display: none; }
+.schematic-details-dropdown summary::after { content: "Open"; color: #0E5E7A; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.schematic-details-dropdown[open] summary { border-bottom: 1px solid rgba(66,84,102,.12); }
+.schematic-details-dropdown[open] summary::after { content: "Close"; }
+.schematic-details-dropdown summary strong { color: #64748b; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.schematic-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 16px; align-items: start; }
+.schematic-details-dropdown .schematic-detail-grid { padding: 12px; }
 .schematic-meta { display: grid; gap: 10px; margin: 0; text-align: left; }
 .schematic-meta div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; }
 .schematic-meta dt { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
 .schematic-meta dd { margin: 0; color: #334155; font-size: 13px; font-weight: 700; }
-@@media (max-width: 860px) { .library-summary, .schematic-grid { grid-template-columns: 1fr; } .category-heading { align-items: flex-start; flex-direction: column; } .schematic-meta div { grid-template-columns: 1fr; gap: 4px; } }
+.assignment-panel { padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; }
+.assignment-title { margin-bottom: 8px; color: #334155; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.assignment-note { margin: -2px 0 10px 0; color: #64748b; font-size: 11px; font-weight: 800; line-height: 1.35; }
+.assignment-empty { margin: 0 0 12px 0; color: #64748b; font-size: 12px; font-weight: 800; line-height: 1.35; }
+.assignment-list { display: grid; gap: 7px; margin: 0 0 12px 0; padding: 0; list-style: none; }
+.assignment-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #ffffff; }
+.assignment-list strong { color: #0f172a; font-size: 13px; font-weight: 900; }
+.assignment-list span, .assignment-list small { color: #64748b; font-size: 11px; font-weight: 800; }
+.unassign-inline { margin: 0; }
+.unassign-inline button { min-height: 30px; border: 1px solid rgba(153, 27, 27, .22); border-radius: 8px; background: #fff7f7; color: #991b1b; font-size: 11px; font-weight: 900; cursor: pointer; }
+.assignment-form-grid { display: grid; gap: 10px; }
+.assignment-form { display: grid; gap: 8px; margin: 0; }
+.assignment-form label { display: grid; gap: 6px; color: #52606d; font-size: 12px; font-weight: 900; }
+.assignment-form select { width: 100%; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; color: #1f2937; font-size: 13px; font-weight: 800; box-sizing: border-box; }
+.assignment-form button { min-height: 38px; border: none; border-radius: 8px; background: #0E5E7A; color: #ffffff; font-size: 13px; font-weight: 900; cursor: pointer; }
+.assignment-form p { margin: 0; color: #64748b; font-size: 11px; font-weight: 800; line-height: 1.35; }
+@@media (max-width: 860px) { .library-summary, .schematic-detail-grid { grid-template-columns: 1fr; } .schematic-view-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .category-heading { align-items: flex-start; flex-direction: column; } .schematic-meta div { grid-template-columns: 1fr; gap: 4px; } }
+@@media (max-width: 520px) { .schematic-view-grid { grid-template-columns: 1fr; } .assignment-list li { grid-template-columns: 1fr; } .unassign-inline button { width: 100%; } }
 </style>

@@ -4,8 +4,18 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Vehicle Register";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var isFiltered = !string.IsNullOrWhiteSpace(Model.SearchTerm)
+        || !string.IsNullOrWhiteSpace(Model.StatusFilter)
+        || Model.OperationalAreaId.HasValue;
+    var groupedVehicles = Model.Vehicles
+        .GroupBy(vehicle => string.IsNullOrWhiteSpace(vehicle.VehicleFunction) ? "Unassigned" : vehicle.VehicleFunction)
+        .OrderBy(group => group.Key == VehicleTaxonomyService.AmbulanceFunction ? 0 : group.Key == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : group.Key == "Unassigned" ? 99 : 50)
+        .ThenBy(group => group.Key)
+        .ToList();
+    var encodedReturnUrl = Uri.EscapeDataString(HttpContext.Request.Path + HttpContext.Request.QueryString);
 }
 
 <div class="vehicle-register-screen">
@@ -13,11 +23,16 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Vehicle Register</div>
-        <h2 class="page-title">Search Vehicles</h2>
-        <p class="page-subtitle">Find vehicles by registration, callsign, type, status, schematic, location, movement history, or readiness status.</p>
+        <h2 class="page-title">Vehicle Register</h2>
+        <p class="page-subtitle">Open vehicle records grouped by function and subtype. Use the search and filters to narrow the register.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-action-status data-confirmation-duration="2200" role="status">@Model.StatusMessage</div>
+        }
 
         <form class="toolbar" method="get">
-            <input class="search-input" asp-for="SearchTerm" placeholder="Search registration, callsign, type, status, location, or notes" />
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search registration, callsign, function, subtype, status, area, service, licence, VIN, chassis, or notes" />
             <select class="filter-input" asp-for="StatusFilter">
                 <option value="">Any status</option>
                 <option>Active</option>
@@ -42,49 +57,179 @@
         }
         else
         {
-            <div class="result-count">@Model.Vehicles.Count vehicle@(Model.Vehicles.Count == 1 ? string.Empty : "s") found</div>
+            <div class="result-count">
+                @(isFiltered ? "Search results" : "Register grouped by function and subtype"):
+                @Model.Vehicles.Count vehicle@(Model.Vehicles.Count == 1 ? string.Empty : "s")
+            </div>
 
-            <div class="register-table" role="table" aria-label="Vehicle register">
-                <div class="register-header" role="row">
-                    <div role="columnheader">Vehicle</div>
-                    <div role="columnheader">Location</div>
-                    <div role="columnheader">Service / Readiness</div>
-                    <div role="columnheader">Movement</div>
-                    <div role="columnheader">Status</div>
-                    <div role="columnheader">Actions</div>
-                </div>
-
-                @foreach (var vehicle in Model.Vehicles)
+            <div class="vehicle-groups" aria-label="Vehicle register grouped by function and subtype">
+                @foreach (var functionGroup in groupedVehicles)
                 {
-                    <div class="register-row" role="row">
-                        <div class="vehicle-identity" role="cell">
-                            <strong>@vehicle.RegistrationNumber / @vehicle.Callsign</strong>
-                            <span>@vehicle.VehicleType@(string.IsNullOrWhiteSpace(vehicle.QualificationLevel) ? string.Empty : $" / {vehicle.QualificationLevel}")</span>
-                            <span>@(vehicle.SchematicType ?? "No schematic assigned")</span>
-                        </div>
-                        <div role="cell">@(vehicle.CurrentLocation ?? "Unallocated")</div>
-                        <div class="stacked-cell" role="cell">
-                            <strong>Service: @(vehicle.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
-                            <span>Last check: @(vehicle.LastReadinessAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not recorded")</span>
-                            <span>@(vehicle.LastReadinessStatus ?? "No readiness status")</span>
-                        </div>
-                        <div class="stacked-cell" role="cell">
-                            <strong>@(vehicle.LastMovedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No movement")</strong>
-                            <span>@(vehicle.LastMovedByName ?? "No user")</span>
-                            <span>@vehicle.AssignedEquipmentCount assigned equipment item@(vehicle.AssignedEquipmentCount == 1 ? string.Empty : "s")</span>
-                        </div>
-                        <div role="cell"><span class="status-pill">@vehicle.Status</span></div>
-                        <div class="row-actions" role="cell">
-                            <a href="/DailyVehicleChecklist?registration=@Uri.EscapeDataString(vehicle.RegistrationNumber)&callsign=@Uri.EscapeDataString(vehicle.Callsign)">Check</a>
-                            <a href="/MoveAsset?asset=vehicle&assetId=@vehicle.Id">Move</a>
-                            <a href="/ReportIssue?module=vehicle">Issue</a>
-                        </div>
-                    </div>
+                    <details class="vehicle-group">
+                        <summary class="vehicle-group-header">
+                            <h3>@functionGroup.Key</h3>
+                            <span>@functionGroup.Count() vehicle@(functionGroup.Count() == 1 ? string.Empty : "s")</span>
+                        </summary>
+
+                        @foreach (var subtypeGroup in functionGroup
+                            .GroupBy(vehicle => string.IsNullOrWhiteSpace(vehicle.VehicleSubtype) ? "Unassigned" : vehicle.VehicleSubtype)
+                            .OrderBy(group => group.Key == "Unassigned" ? 99 : 0)
+                            .ThenBy(group => group.Key))
+                        {
+                            <section class="vehicle-subtype-group">
+                                <header class="vehicle-subtype-header">
+                                    <h4>@subtypeGroup.Key</h4>
+                                    <span>@subtypeGroup.Count() vehicle@(subtypeGroup.Count() == 1 ? string.Empty : "s")</span>
+                                </header>
+
+                                <div class="compact-register">
+                                    <div class="vehicle-list-header" aria-hidden="true">
+                                        <span>Reg number</span>
+                                        <span>Callsign</span>
+                                        <span>Subtype</span>
+                                        <span>Assigned area</span>
+                                        <span>Status</span>
+                                        <span></span>
+                                    </div>
+
+                                    @foreach (var vehicle in subtypeGroup)
+                                    {
+                                        <details class="vehicle-card">
+                                            <summary>
+                                                <span class="vehicle-list-row">
+                                                    <strong>@vehicle.RegistrationNumber</strong>
+                                                    <strong>@vehicle.Callsign</strong>
+                                                    <span>@(vehicle.VehicleSubtype ?? "Unassigned")</span>
+                                                    <span>@(vehicle.CurrentLocation ?? "Unallocated")</span>
+                                                    <span class="status-pill">@vehicle.Status</span>
+                                                    <span class="open-details">Details</span>
+                                                </span>
+                                            </summary>
+
+                                            <div class="vehicle-details-grid">
+                                                <div>
+                                                    <span>Function</span>
+                                                    <strong>@(vehicle.VehicleFunction ?? "Unassigned")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Subtype</span>
+                                                    <strong>@(vehicle.VehicleSubtype ?? "Unassigned")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Assigned area</span>
+                                                    <strong>@(vehicle.CurrentLocation ?? "Unallocated")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Last service date</span>
+                                                    <strong>@(vehicle.LastServiceDate?.ToString("yyyy-MM-dd") ?? vehicle.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Next service date</span>
+                                                    <strong>@(vehicle.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>VIN number</span>
+                                                    <strong>@(vehicle.VinNumber ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Chassis number</span>
+                                                    <strong>@(vehicle.ChassisNumber ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Vehicle licence number</span>
+                                                    <strong>@(vehicle.LicenseNumber ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Licence disc expiry</span>
+                                                    <strong>@(vehicle.LicenseDiscExpiryDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Unit Schematic</span>
+                                                    <strong>@(vehicle.SchematicType ?? "No unit schematic assigned")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Qualification level</span>
+                                                    <strong>@(vehicle.QualificationLevel ?? "Not set")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Last readiness check</span>
+                                                    <strong>@(vehicle.LastReadinessAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not recorded")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Readiness status</span>
+                                                    <strong>@(vehicle.LastReadinessStatus ?? "No readiness status")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Last movement</span>
+                                                    <strong>@(vehicle.LastMovedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No movement")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Moved by</span>
+                                                    <strong>@(vehicle.LastMovedByName ?? "No user")</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Assigned equipment</span>
+                                                    <strong>@vehicle.AssignedEquipmentCount item@(vehicle.AssignedEquipmentCount == 1 ? string.Empty : "s")</strong>
+                                                </div>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(vehicle.Notes))
+                                            {
+                                                <div class="vehicle-notes">
+                                                    <span>Notes</span>
+                                                    <strong>@vehicle.Notes</strong>
+                                                </div>
+                                            }
+
+                                            <div class="row-actions">
+                                                <a href="/EditVehicle?vehicleId=@vehicle.Id&returnUrl=@encodedReturnUrl">Edit</a>
+                                                <a href="/DailyVehicleChecklist?registration=@Uri.EscapeDataString(vehicle.RegistrationNumber)&callsign=@Uri.EscapeDataString(vehicle.Callsign)">Check</a>
+                                                <a href="/MoveAsset?asset=vehicle&assetId=@vehicle.Id&returnUrl=@encodedReturnUrl">Move</a>
+                                                <a href="/ReassignVehicleCallsign?sourceVehicleId=@vehicle.Id">Reassign Callsign</a>
+                                                <a href="/ReportIssue?module=vehicle">Issue</a>
+                                                <form method="post" asp-page-handler="Delete" class="delete-row-form">
+                                                    <input type="hidden" name="vehicleId" value="@vehicle.Id" />
+                                                    <input type="hidden" name="returnUrl" value="@Model.CurrentReturnUrl" />
+                                                    <button type="button" class="delete-row-btn" aria-label="Delete @vehicle.RegistrationNumber" title="Delete">Delete</button>
+                                                    <div class="delete-confirm-panel" hidden>
+                                                        <span>Delete this vehicle?</span>
+                                                        <div class="delete-confirm-actions">
+                                                            <button type="submit" class="delete-confirm-btn">Confirm</button>
+                                                            <button type="button" class="delete-cancel-btn">Cancel</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </details>
+                                    }
+                                </div>
+                            </section>
+                        }
+                    </details>
                 }
             </div>
         }
     </div>
 </div>
+
+<script>
+document.addEventListener("click", function (event) {
+    const trigger = event.target.closest(".delete-row-btn");
+    if (trigger) {
+        const form = trigger.closest(".delete-row-form");
+        form.querySelector(".delete-confirm-panel").hidden = false;
+        trigger.hidden = true;
+        return;
+    }
+
+    const cancel = event.target.closest(".delete-cancel-btn");
+    if (cancel) {
+        const form = cancel.closest(".delete-row-form");
+        form.querySelector(".delete-confirm-panel").hidden = true;
+        form.querySelector(".delete-row-btn").hidden = false;
+    }
+});
+</script>
 
 <style>
 .vehicle-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
@@ -97,22 +242,52 @@
 .toolbar { width: min(1180px, 100%); margin: 0 auto 18px auto; display: grid; grid-template-columns: minmax(240px, 1fr) 170px 210px 120px 90px 130px; gap: 12px; }
 .search-input, .filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
-.result-count { width: min(1180px, 100%); margin: 0 auto 10px auto; text-align: left; color: #52606d; font-size: 13px; font-weight: 900; }
+.status-message { width: min(1180px, 100%); box-sizing: border-box; margin: 0 auto 16px auto; padding: 12px 16px; border: 1px solid rgba(32,122,99,.24); border-radius: 8px; background: rgba(32,122,99,.10); color: #1f6f5b; font-size: 14px; font-weight: 900; text-align: left; }
+.result-count { width: min(1180px, 100%); margin: 0 auto 12px auto; text-align: left; color: #52606d; font-size: 13px; font-weight: 900; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.register-table { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(150px, .8fr) minmax(200px, 1fr) minmax(190px, 1fr) 100px minmax(160px, .8fr); gap: 14px; align-items: center; padding: 14px 16px; }
-.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
-.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
-.vehicle-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
-.vehicle-identity strong, .stacked-cell strong { color: #1f2937; font-size: 15px; }
-.vehicle-identity span, .stacked-cell span { color: #6b7280; font-size: 13px; }
-.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
-.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
+.vehicle-groups { width: min(1180px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 18px; text-align: left; }
+.vehicle-group { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); }
+.vehicle-group summary::-webkit-details-marker { display: none; }
+.vehicle-group-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-top: 8px solid #334155; background: #fff; cursor: pointer; }
+.vehicle-group-header h3 { margin: 0; color: #102a3a; font-size: 22px; font-weight: 900; }
+.vehicle-group-header span { color: #6b7280; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .8px; }
+.vehicle-group-header span::after { content: "  Open"; color: #126C84; }
+.vehicle-group[open] .vehicle-group-header span::after { content: "  Close"; }
+.vehicle-subtype-group { border-top: 1px solid rgba(66,84,102,.16); }
+.vehicle-subtype-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #f8fafc; border-left: 5px solid #126C84; }
+.vehicle-subtype-header h4 { margin: 0; color: #1f2937; font-size: 17px; font-weight: 900; }
+.vehicle-subtype-header span { color: #6b7280; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .8px; }
+.compact-register { display: block; overflow-x: auto; }
+.vehicle-list-header, .vehicle-list-row { min-width: 900px; display: grid; grid-template-columns: 1.1fr 1fr 1.6fr 1.4fr auto 78px; gap: 14px; align-items: center; }
+.vehicle-list-header { padding: 12px 18px; border-top: 1px solid rgba(66,84,102,.12); border-bottom: 1px solid rgba(66,84,102,.12); background: #fff; color: #6b7280; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.vehicle-card { border-top: 1px solid rgba(66,84,102,.14); background: #fff; }
+.vehicle-card summary { list-style: none; cursor: pointer; padding: 13px 18px; }
+.vehicle-card summary::-webkit-details-marker { display: none; }
+.vehicle-list-row strong { color: #102a3a; font-size: 15px; font-weight: 900; }
+.vehicle-list-row span { color: #425466; font-size: 14px; font-weight: 800; }
+.vehicle-card[open] summary { background: rgba(14,94,122,.05); border-bottom: 1px solid rgba(66,84,102,.12); }
+.summary-label, .vehicle-details-grid span, .vehicle-notes span { display: block; margin-bottom: 4px; color: #6b7280; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.status-pill { display: inline-flex; min-height: 28px; align-items: center; justify-content: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.open-details { color: #126C84 !important; font-size: 12px !important; font-weight: 900 !important; text-align: right; }
+.vehicle-details-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 18px 16px 18px; }
+.vehicle-details-grid div, .vehicle-notes { padding: 12px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #f8fafc; }
+.vehicle-details-grid strong, .vehicle-notes strong { color: #1f2937; font-size: 14px; font-weight: 800; }
+.vehicle-notes { margin: 0 18px 16px 18px; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 0 18px 18px 18px; }
+.row-actions a, .delete-row-btn { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 900; text-decoration: none; cursor: pointer; }
+.row-actions a { border: 1px solid rgba(47,128,168,.24); background: #f8fafc; color: #126C84; }
 .row-actions a:hover { color: #0f5165; background: #eef3f8; }
+.delete-row-form { margin: 0; }
+.delete-row-btn { border: 1px solid rgba(155,59,59,.24); background: #fff; color: #7f2f2f; }
+.delete-row-btn:hover { background: rgba(155,59,59,.08); }
+.delete-confirm-panel { display: grid; gap: 7px; min-width: 184px; padding: 8px; border: 1px solid rgba(155,44,44,.18); border-radius: 8px; background: rgba(155,44,44,.06); color: #7f1d1d; font-size: 12px; font-weight: 900; }
+.delete-confirm-panel[hidden] { display: none; }
+.delete-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.delete-confirm-btn, .delete-cancel-btn { min-height: 30px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 900; }
+.delete-confirm-btn { border: 1px solid rgba(155,59,59,.28); background: #9B3B3B; color: #fff; }
+.delete-cancel-btn { border: 1px solid rgba(66,84,102,.18); background: #fff; color: #334155; }
 @@media (max-width: 1050px) {
-    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
-    .register-header { display: none; }
-    .register-row { gap: 8px; }
+    .toolbar, .vehicle-details-grid { grid-template-columns: 1fr; }
+    .vehicle-list-header, .vehicle-list-row { min-width: 820px; grid-template-columns: 1fr .9fr 1.4fr 1.2fr auto 72px; }
 }
 </style>

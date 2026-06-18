@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Task Communication Setup";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="comm-screen">
@@ -69,10 +70,6 @@
                     </div>
                 </div>
             </section>
-
-            <div class="action-row">
-                <button class="menu-btn equipment-btn" type="button" data-action-confirmation data-confirmation-message="Communication setup saved.">Save Communication Setup</button>
-            </div>
         </form>
     </div>
 </div>

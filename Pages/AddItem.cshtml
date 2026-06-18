@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = $"Add {Model.ItemLabel}";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="add-item-screen">
@@ -14,42 +15,173 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Manual Entry</div>
         <h2 class="page-title">Add @Model.ItemLabel</h2>
-        <p class="page-subtitle">Add one newly acquired item without uploading a full register.</p>
+        <p class="page-subtitle">@Model.PageSubtitle</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        <form method="post" class="add-form">
+        <form method="post" enctype="multipart/form-data" class="add-form">
             <input asp-for="Type" type="hidden" />
 
             <div class="form-grid">
                 <label>@Model.PrimaryLabel<input asp-for="PrimaryName" type="text" placeholder="@Model.PrimaryPlaceholder" /></label>
-                <label>@Model.ReferenceLabel<input asp-for="ReferenceNumber" type="text" placeholder="Asset ID, staff ID, stock code, or medication code" /></label>
-                <label>Serial / batch number<input asp-for="SerialOrBatch" type="text" placeholder="Serial number, batch number, or file number" /></label>
-                <label>@Model.TypeLabel<input asp-for="MakeModelType" type="text" placeholder="Make, model, medication type, stock size, or staff role" /></label>
-                @if (Model.ShowMedicationSchedule)
+                <label>@Model.ReferenceLabel<input asp-for="ReferenceNumber" type="text" placeholder="@Model.ReferencePlaceholder" /></label>
+                @if (Model.IsStaffProfile)
                 {
-                    <label>Schedule<input asp-for="Schedule" type="text" placeholder="Medication schedule" /></label>
+                    <label>National ID<input asp-for="NationalId" type="text" placeholder="National ID or passport number" /></label>
+                    <label>Email<input asp-for="StaffEmail" type="email" placeholder="name@example.com" /></label>
+                    <label>Cell Number<input asp-for="CellNumber" type="tel" placeholder="Mobile / cell number" /></label>
+                    <label>Clinical qualification / scope<input asp-for="StaffQualificationFunction" type="text" list="clinicalScopeOptions" placeholder="Example: ECP, CCA, AEA, ILS, BLS" /></label>
+                    <label>Practitioner Number<input asp-for="StaffPractitionerNumber" type="text" placeholder="Professional council / practitioner number" /></label>
+                    <label>Annual licence expiry<input asp-for="StaffAnnualLicenseExpiryDate" type="date" /></label>
+                    <label>
+                        CPD compliance
+                        <select asp-for="StaffCpdComplianceStatus">
+                            <option value="N/A">N/A</option>
+                            <option>Compliant</option>
+                            <option>Pending</option>
+                            <option>Non-compliant</option>
+                            <option>Expired</option>
+                            <option>Under review</option>
+                        </select>
+                    </label>
+                    <label>CPD valid until<input asp-for="StaffCpdComplianceExpiryDate" type="date" /></label>
+                    <label>
+                        Assigned area
+                        <select asp-for="Location" asp-items="Model.LocationOptions">
+                            <option value="">Select assigned area</option>
+                        </select>
+                    </label>
+                    <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>On leave</option><option>Inactive</option></select></label>
                 }
-                <label>
-                    Location
-                    <select asp-for="Location" asp-items="Model.LocationOptions">
-                        <option value="">Select location</option>
-                    </select>
-                </label>
-                <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
-                <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>
-                <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+                else if (Model.IsVehicleEntry)
+                {
+                    <label>
+                        Function
+                        <select asp-for="VehicleFunction" id="vehicleFunctionSelect">
+                            <option value="">Select function</option>
+                            <option value="@VehicleTaxonomyService.AmbulanceFunction">Ambulance</option>
+                            <option value="@VehicleTaxonomyService.ResponseVehicleFunction">Response Vehicle</option>
+                        </select>
+                    </label>
+                    <label>
+                        Subtype
+                        <select asp-for="VehicleSubtype" id="vehicleSubtypeSelect">
+                            <option value="">Select subtype</option>
+                            @foreach (var option in Model.VehicleSubtypeOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                            <option value="@AddItemModel.CustomSubtypeValue">Create custom subtype</option>
+                        </select>
+                    </label>
+                    <label class="custom-subtype-field @(Model.VehicleSubtype == AddItemModel.CustomSubtypeValue ? "" : "is-hidden")" data-custom-subtype-field>
+                        Custom subtype
+                        <input asp-for="CustomVehicleSubtype" id="customVehicleSubtypeInput" type="text" placeholder="Example: Primary Ops Ambulance, IFT Ambulance, ALS RV" />
+                    </label>
+                    <label>
+                        Unit Schematic
+                        <select asp-for="UnitSchematicKey" id="unitSchematicSelect">
+                            <option value="">Select unit schematic</option>
+                            @foreach (var schematic in Model.PublishedUnitSchematics)
+                            {
+                                <option value="@schematic.Key" data-category="@schematic.Category" data-subtype="@schematic.Subtype">@schematic.Category - @schematic.DisplayName</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Assigned area
+                        <select asp-for="Location" asp-items="Model.LocationOptions">
+                            <option value="">Select assigned area</option>
+                        </select>
+                    </label>
+                    <label>VIN Number<input asp-for="VinNumber" type="text" placeholder="VIN number" /></label>
+                    <label>Chassis Number<input asp-for="ChassisNumber" type="text" placeholder="Chassis number" /></label>
+                    <label>Vehicle licence number<input asp-for="LicenseNumber" type="text" placeholder="Annual licence number" /></label>
+                    <label>Licence disc expiry<input asp-for="LicenseDiscExpiryDate" type="date" /></label>
+                    <label>Last service date<input asp-for="LastServiceDate" type="date" /></label>
+                    <label>Next service date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+                    <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
+                }
+                else
+                {
+                    <label>Serial / batch number<input asp-for="SerialOrBatch" type="text" placeholder="Serial number, batch number, or file number" /></label>
+                    <label>@Model.TypeLabel<input asp-for="MakeModelType" type="text" placeholder="Make, model, medication type, or stock size" /></label>
+                    @if (Model.ShowMedicationSchedule)
+                    {
+                        <label>Schedule<input asp-for="Schedule" type="text" placeholder="Medication schedule" /></label>
+                    }
+                    <label>
+                        Location
+                        <select asp-for="Location" asp-items="Model.LocationOptions">
+                            <option value="">Select location</option>
+                        </select>
+                    </label>
+                    <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
+                    <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>
+                    <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+                }
             </div>
 
-            <label class="notes-field">Notes<textarea asp-for="Notes" rows="5" placeholder="Additional details, acquisition note, supplier, or manager instruction"></textarea></label>
+            <label class="notes-field">Notes<textarea asp-for="Notes" rows="5" placeholder="@Model.NotesPlaceholder"></textarea></label>
+
+            @if (Model.IsStaffProfile)
+            {
+                <section class="staff-files-panel">
+                    <div class="section-label">Add Files</div>
+                    <p>Attach documents to this staff profile now, instead of creating the profile and uploading files later.</p>
+
+                    <div class="form-grid staff-file-grid">
+                        <label>
+                            Folder / category
+                            <select asp-for="StaffFileCategory" asp-items="Model.StaffFileCategoryOptions" data-other-select="staff-file-category">
+                                <option value="">Select folder / category</option>
+                            </select>
+                        </label>
+
+                        <label class="other-option-field is-hidden" data-other-field="staff-file-category" hidden>
+                            Name this folder / category
+                            <input asp-for="StaffFileCategoryOther" type="text" placeholder="Example: Professional Council Renewal" />
+                        </label>
+
+                        <label>
+                            File note
+                            <input asp-for="StaffFileNotes" type="text" placeholder="Optional file note or expiry reminder" />
+                        </label>
+                    </div>
+
+                    <label class="upload-box" for="staffFiles">
+                        <span class="upload-title">Select Staff Files</span>
+                        <span class="upload-help">Optional. Accepted: PDF, images, Word, Excel, CSV, RTF, TXT</span>
+                        <input id="staffFiles" asp-for="StaffFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.doc,.docx,.rtf,.txt,.xls,.xlsx,.csv" />
+                    </label>
+                </section>
+            }
 
             <button class="menu-btn equipment-btn continue-btn" type="submit">Save @Model.ItemLabel</button>
         </form>
     </div>
 </div>
+
+@if (Model.IsStaffProfile)
+{
+    <datalist id="clinicalScopeOptions">
+        <option value="N/A - non-clinical"></option>
+        <option value="Emergency Care Practitioner (ECP)"></option>
+        <option value="Critical Care Assistant (CCA)"></option>
+        <option value="Advanced Life Support (ALS)"></option>
+        <option value="Advanced Emergency Assistant (AEA)"></option>
+        <option value="Intermediate Life Support (ILS)"></option>
+        <option value="Basic Life Support (BLS)"></option>
+        <option value="Basic Ambulance Assistant (BAA)"></option>
+        <option value="Emergency Care Technician (ECT)"></option>
+        <option value="Registered Nurse"></option>
+        <option value="Driver / support"></option>
+        <option value="Dispatcher / control room"></option>
+    </datalist>
+}
 
 <style>
 .add-item-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
@@ -64,11 +196,77 @@
 .form-grid { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 700; color: #52606d; }
 .form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.is-hidden { display: none !important; }
 .notes-field { width: min(860px, 94%); }
 .notes-field textarea { padding-top: 12px; resize: vertical; }
+.staff-files-panel { width: min(860px, 94%); padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); box-sizing: border-box; text-align: left; }
+.staff-files-panel .section-label { margin-bottom: 8px; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.staff-files-panel p { margin: 0 0 16px 0; color: #6b7280; font-size: 14px; font-weight: 700; line-height: 1.45; }
+.staff-file-grid { width: 100%; margin-bottom: 16px; }
+.upload-box { width: 100%; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed rgba(14,94,122,.34); border-radius: 8px; background: rgba(14,94,122,.04); color: #425466; text-align: center; box-sizing: border-box; cursor: pointer; }
+.upload-title { color: #1f2937; font-size: 17px; font-weight: 900; }
+.upload-help { color: #6b7280; font-size: 13px; font-weight: 700; }
+.upload-box input { width: min(420px, 100%); margin-top: 8px; }
 .continue-btn { border: none; }
-@@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+@@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } .staff-files-panel { padding: 14px; } }
 </style>
+
+@if (Model.IsVehicleEntry)
+{
+    <script>
+        (function () {
+            const functionSelect = document.getElementById("vehicleFunctionSelect");
+            const subtypeSelect = document.getElementById("vehicleSubtypeSelect");
+            const customField = document.querySelector("[data-custom-subtype-field]");
+            const customInput = document.getElementById("customVehicleSubtypeInput");
+            const schematicSelect = document.getElementById("unitSchematicSelect");
+            if (!functionSelect || !subtypeSelect || !customField || !customInput || !schematicSelect) {
+                return;
+            }
+
+            function syncCustomSubtype() {
+                const isCustom = subtypeSelect.value === @Json.Serialize(AddItemModel.CustomSubtypeValue);
+                customField.classList.toggle("is-hidden", !isCustom);
+                customInput.disabled = !isCustom;
+                if (!isCustom) {
+                    customInput.value = "";
+                }
+            }
+
+            function suggestSchematic() {
+                if (schematicSelect.value) {
+                    return;
+                }
+
+                const subtype = subtypeSelect.value.toLowerCase();
+                const functionValue = functionSelect.value.toLowerCase();
+                const schematicKey = subtype.includes("pickup") ||
+                    subtype.includes("response") ||
+                    subtype.includes("rv") ||
+                    functionValue.includes("response")
+                    ? "pickup-rv"
+                    : functionValue.includes("ambulance") || subtype.includes("ambulance")
+                        ? "toyota-quantum-hiace-high-roof"
+                        : "";
+                if (!schematicKey) {
+                    return;
+                }
+
+                const matchingOption = Array.from(schematicSelect.options).find(option => option.value === schematicKey);
+                if (matchingOption) {
+                    schematicSelect.value = matchingOption.value;
+                }
+            }
+
+            subtypeSelect.addEventListener("change", function () {
+                syncCustomSubtype();
+                suggestSchematic();
+            });
+            functionSelect.addEventListener("change", suggestSchematic);
+            syncCustomSubtype();
+        })();
+    </script>
+}
 
 @if (Model.ActionSaved)
 {

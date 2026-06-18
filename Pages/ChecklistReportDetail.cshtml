@@ -1,0 +1,213 @@
+@page
+@model ChecklistReportDetailModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Report Detail";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="report-detail-screen">
+    <div class="report-detail-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Checklist Management</div>
+
+        @if (Model.Report is null)
+        {
+            <div class="empty-panel">Checklist report not found.</div>
+        }
+        else
+        {
+            var report = Model.Report;
+            var vehicle = report.Vehicle;
+            var performedBy = report.PerformedByUser;
+            var template = report.ChecklistTemplate;
+            var areaName = vehicle?.CurrentOperationalArea?.Name ?? "Unallocated";
+            var equipmentRows = report.EquipmentChecks
+                .OrderBy(check => check.SortOrder)
+                .ThenBy(check => check.Id)
+                .ToList();
+
+            <div class="report-title-row">
+                <div>
+                    <h2 class="page-title">@Model.Text(report.CallsignAtCheck) Checklist Report</h2>
+                    <p class="page-subtitle">@Model.Text(report.VehicleRegistrationNumber) | @Model.Text(report.VehicleTypeAtCheck) | @areaName</p>
+                </div>
+                <div class="report-actions">
+                    <a class="report-link" href="/ChecklistReports">Back to Reports</a>
+                    <a class="report-link primary" href="/ChecklistReports?handler=Pdf&id=@report.Id">Download PDF</a>
+                </div>
+            </div>
+
+            <section class="status-panel">
+                <div>
+                    <span>Recorded</span>
+                    <strong>@Model.FormatDateTime(Model.RecordedAtUtc)</strong>
+                </div>
+                <div>
+                    <span>Evidence status</span>
+                    <strong>@Model.Text(report.WorkflowStatus)</strong>
+                </div>
+                <div>
+                    <span>Readiness</span>
+                    <strong class="status-chip @Model.ReadinessStatusClass(report.ReadinessStatus)">@Model.Text(report.ReadinessStatus)</strong>
+                </div>
+                <div>
+                    <span>Issues</span>
+                    <strong>Critical @report.CriticalIssueCount | Warning @report.WarningIssueCount</strong>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Submission Details</h3>
+                </div>
+                <div class="detail-grid">
+                    <div><span>Report ID</span><strong>@report.Id</strong></div>
+                    <div><span>Submitted / recorded</span><strong>@Model.FormatDateTime(Model.RecordedAtUtc)</strong></div>
+                    <div><span>Shift</span><strong>@Model.Text(report.ShiftName)</strong></div>
+                    <div><span>Shift started</span><strong>@Model.FormatDateTime(report.ShiftStartedAtUtc)</strong></div>
+                    <div><span>Shift ended</span><strong>@Model.FormatDateTime(report.ShiftEndsAtUtc)</strong></div>
+                    <div><span>Template</span><strong>@(template?.Name ?? "Not linked") v@(report.ChecklistTemplateVersion ?? template?.Version ?? "N/A")</strong></div>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Completed By</h3>
+                </div>
+                <div class="detail-grid">
+                    <div><span>Name</span><strong>@(performedBy?.FullName ?? "Unknown")</strong></div>
+                    <div><span>Role</span><strong>@(performedBy?.AppRole?.Name ?? "Unknown")</strong></div>
+                    <div><span>Email</span><strong>@(performedBy?.Email ?? "Unknown")</strong></div>
+                    <div><span>Staff ID</span><strong>@Model.Text(performedBy?.StaffIdentifier)</strong></div>
+                    <div><span>Clinical qualification / scope</span><strong>@Model.Text(performedBy?.QualificationFunction)</strong></div>
+                    <div><span>Practitioner Number</span><strong>@Model.Text(performedBy?.PractitionerNumber)</strong></div>
+                    <div><span>Annual licence expiry</span><strong>@Model.FormatDate(performedBy?.AnnualLicenseExpiryDate)</strong></div>
+                    <div><span>CPD compliance</span><strong>@Model.Text(performedBy?.CpdComplianceStatus)</strong></div>
+                    <div><span>CPD valid until</span><strong>@Model.FormatDate(performedBy?.CpdComplianceExpiryDate)</strong></div>
+                    <div><span>Assigned area</span><strong>@(performedBy?.AssignedOperationalArea?.Name ?? "Not set")</strong></div>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Vehicle</h3>
+                </div>
+                <div class="detail-grid">
+                    <div><span>Registration</span><strong>@Model.Text(report.VehicleRegistrationNumber)</strong></div>
+                    <div><span>Callsign at check</span><strong>@Model.Text(report.CallsignAtCheck)</strong></div>
+                    <div><span>Vehicle type</span><strong>@Model.Text(report.VehicleTypeAtCheck)</strong></div>
+                    <div><span>Area / base</span><strong>@areaName</strong></div>
+                    <div><span>Unit schematic</span><strong>@Model.Text(report.SchematicTypeAtCheck)</strong></div>
+                    <div><span>Next service at check</span><strong>@Model.FormatDate(report.VehicleNextServiceDateAtCheck)</strong></div>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Checklist Evidence</h3>
+                </div>
+                <div class="notes-list">
+                    <div><span>Checklist responses</span><p>@Model.Text(report.OperationalNotes)</p></div>
+                    <div><span>Unit schematic marks</span><p>@Model.Text(report.SchematicNotes)</p></div>
+                    <div><span>General notes</span><p>@Model.Text(report.GeneralNotes)</p></div>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Same As Previous Shift</h3>
+                </div>
+                <div class="detail-grid">
+                    <div><span>Vehicle section copied</span><strong>@Model.YesNo(report.VehicleSameAsPreviousShiftUsed || report.SameAsPreviousShiftUsed)</strong></div>
+                    <div><span>Vehicle source report</span><strong>@(report.VehicleSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
+                    <div><span>Vehicle copied at</span><strong>@Model.FormatDateTime(report.VehicleSameAsPreviousAppliedAtUtc)</strong></div>
+                    <div><span>Equipment section copied</span><strong>@Model.YesNo(report.EquipmentSameAsPreviousShiftUsed)</strong></div>
+                    <div><span>Equipment source report</span><strong>@(report.EquipmentSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
+                    <div><span>Equipment copied at</span><strong>@Model.FormatDateTime(report.EquipmentSameAsPreviousAppliedAtUtc)</strong></div>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading">
+                    <h3>Equipment Checks</h3>
+                    <span>@equipmentRows.Count row@(equipmentRows.Count == 1 ? string.Empty : "s")</span>
+                </div>
+
+                @if (equipmentRows.Count == 0)
+                {
+                    <div class="empty-panel">No equipment rows were saved against this checklist.</div>
+                }
+                else
+                {
+                    <div class="equipment-report-list">
+                        @foreach (var check in equipmentRows)
+                        {
+                            <article class="equipment-row">
+                                <div>
+                                    <strong>@Model.Text(check.EquipmentName)</strong>
+                                    <span>@Model.Text(check.EquipmentType) | @Model.Text(check.Model)</span>
+                                </div>
+                                <div><span>S/N / ID</span><strong>@Model.Text(check.SerialOrAssetId)</strong></div>
+                                <div><span>Next service</span><strong>@Model.FormatDate(check.NextServiceDateAtCheck)</strong></div>
+                                <div><span>Battery</span><strong>@Model.Text(check.BatteryStatus)</strong></div>
+                                <div><span>Operational</span><strong class="status-chip @Model.EquipmentStatusClass(check)">@Model.YesNo(check.IsOperational)</strong></div>
+                                <div><span>Impact</span><strong>@Model.Text(check.ReadinessImpact)</strong></div>
+                                <div class="equipment-notes"><span>Issue notes</span><p>@Model.Text(check.IssueNotes)</p></div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+.report-detail-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.report-detail-inner { width: 100%; max-width: 1120px; margin: 0 auto; padding: 40px 20px; text-align: center; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.report-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; text-align: left; }
+.page-title { margin: 0 0 6px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { margin: 0; font-size: 16px; font-weight: 700; color: #6b7280; }
+.report-actions { display: grid; grid-template-columns: 1fr; gap: 8px; min-width: 190px; }
+.report-link { display: flex; min-height: 42px; align-items: center; justify-content: center; border: 1px solid rgba(66, 84, 102, .18); border-radius: 8px; background: #f8fafc; color: #24364a; font-size: 14px; font-weight: 900; text-decoration: none; }
+.report-link.primary { background: #126C84; border-color: #126C84; color: #fff; }
+.status-panel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.status-panel div, .report-section { border: 1px solid rgba(66, 84, 102, .16); border-radius: 8px; background: rgba(255, 255, 255, .78); box-shadow: 0 12px 24px rgba(15, 23, 42, .06); box-sizing: border-box; }
+.status-panel div { padding: 13px; text-align: left; }
+.status-panel span, .detail-grid span, .notes-list span, .equipment-row span { display: block; margin-bottom: 4px; color: #52606d; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.status-panel strong, .detail-grid strong, .equipment-row strong { color: #102a3a; font-size: 14px; font-weight: 900; }
+.status-chip { display: inline-flex; min-height: 28px; align-items: center; justify-content: center; width: fit-content; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 900; }
+.status-ok { background: rgba(32, 129, 96, .12); color: #146c4d; }
+.status-warning { background: rgba(138, 90, 19, .14); color: #8A5A13; }
+.status-danger { background: rgba(155, 59, 59, .12); color: #8A2C2C; }
+.report-section { margin-bottom: 16px; padding: 16px; text-align: left; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.section-heading h3 { margin: 0; color: #1f2937; font-size: 20px; font-weight: 900; }
+.section-heading span { color: #52606d; font-size: 13px; font-weight: 900; }
+.detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.detail-grid div, .notes-list div, .equipment-row { padding: 12px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; }
+.notes-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.notes-list p, .equipment-notes p { margin: 0; color: #1f2937; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.equipment-report-list { display: flex; flex-direction: column; gap: 10px; }
+.equipment-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(120px, .8fr) minmax(110px, .7fr) minmax(110px, .7fr) minmax(110px, .7fr); gap: 10px; }
+.equipment-row > div:first-child span { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 800; }
+.equipment-notes { grid-column: 1 / -1; }
+.empty-panel { padding: 16px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; color: #52606d; font-size: 13px; font-weight: 900; text-align: center; }
+@@media (max-width: 880px) {
+    .report-title-row { flex-direction: column; }
+    .report-actions { width: 100%; grid-template-columns: 1fr 1fr; }
+    .status-panel, .detail-grid, .notes-list { grid-template-columns: 1fr 1fr; }
+    .equipment-row { grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width: 560px) {
+    .status-panel, .detail-grid, .notes-list, .equipment-row, .report-actions { grid-template-columns: 1fr; }
+}
+</style>

@@ -1,13 +1,11 @@
 @page
 @model HomeModel
-@using vector_app_local.Services
-@inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Home";
     var isStaff = Model.AccessView == "staff";
     var isSeniorManagement = Model.AccessView == "senior-management";
     var viewName = isStaff ? "Staff View" : isSeniorManagement ? "Senior Management View" : "Operational Management View";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
+    var myProfileUrl = Model.SignedInUserId.HasValue ? $"/StaffRecordsSearch?staffUserId={Model.SignedInUserId.Value}" : "/MyProfile";
 }
 
 <div class="home-screen ready show">
@@ -15,24 +13,33 @@
         <div class="home-label">Operations Dashboard</div>
 
         <div class="company-logo-frame">
-            <img src="@companyLogoPath" class="home-logo" alt="Company Logo" />
+            <img src="@Model.CompanyLogoPath" class="home-logo" alt="@Model.ClientName logo" />
         </div>
 
-        <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <div class="home-context">Client: @Model.ClientName</div>
         <div class="signed-in-line">Signed in: @Model.SignedInName (@Model.SignedInRole)</div>
         <div class="view-badge">@viewName</div>
+
+        <section class="guide-entry" aria-label="Application guide">
+            <a class="guide-action" href="/AppGuide">What Every Button And Term Means</a>
+            <p>Search any button, term, or function before using the system.</p>
+        </section>
 
         <section class="dashboard-section">
             <div class="management-section-label">Operational Work</div>
 
             <div class="workflow-grid">
-                <a class="workflow-action primary-action" href="/DailyVehicleChecklist">Daily Vehicle Readiness</a>
+                <a class="workflow-action primary-action" href="/DailyVehicleChecklist">Daily Vehicle & Equipment Check</a>
                 <a class="workflow-action" href="/TaskInbox">My Tasks</a>
                 @if (!isStaff)
                 {
                     <a class="workflow-action" href="/IssueInbox">My Assigned Issues</a>
                 }
-                <a class="workflow-action" href="/PersonalDocuments">My Documents</a>
+                <a class="workflow-action" href="@myProfileUrl">My Profile</a>
+                @if (isStaff)
+                {
+                    <a class="workflow-action" href="/ExpiryNotifications">Expiry Notifications</a>
+                }
                 <a class="workflow-action" href="/TaskFeedback">Task Feedback</a>
                 <a class="workflow-action danger" href="/ReportIssue?module=general">Report Issue</a>
             </div>
@@ -50,8 +57,11 @@
                             <h2>Readiness</h2>
                             <span class="category-index">00</span>
                         </div>
-                        <div class="category-actions single-action">
+                        <div class="category-actions">
                             <a class="category-action primary" href="/ReadinessDashboard">Shift Readiness Dashboard</a>
+                            <a class="category-action" href="/EditChecklist">Checklist Management</a>
+                            <a class="category-action" href="/OperationsReports">Operational Reports</a>
+                            <a class="category-action" href="/ExpiryNotifications">Expiry Notifications</a>
                         </div>
                     </section>
 
@@ -60,11 +70,8 @@
                             <h2>Vehicles</h2>
                             <span class="category-index">01</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/Vehicles">Open Vehicles</a>
-                            <a class="category-action" href="/VehicleRegister">Search Vehicles</a>
-                            <a class="category-action" href="/VehicleRegister">Vehicle Register</a>
-                            <a class="category-action" href="/MoveAsset?asset=vehicle" data-move-asset="vehicle">Move / Reallocate</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Vehicles">Vehicle Module</a>
                         </div>
                     </section>
 
@@ -73,11 +80,8 @@
                             <h2>Equipment</h2>
                             <span class="category-index">02</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/Equipment">Open Equipment</a>
-                            <a class="category-action" href="/EquipmentRegister">Search Equipment</a>
-                            <a class="category-action" href="/EquipmentRegister">Equipment Register</a>
-                            <a class="category-action" href="/MoveAsset?asset=equipment" data-move-asset="equipment">Move / Reallocate</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Equipment">Equipment Module</a>
                         </div>
                     </section>
 
@@ -87,7 +91,7 @@
                             <span class="category-index">03</span>
                         </div>
                         <div class="category-actions single-action">
-                            <a class="category-action primary" href="/Staff">Open Staff</a>
+                            <a class="category-action primary" href="/Staff">Staff Module</a>
                         </div>
                     </section>
 
@@ -96,11 +100,8 @@
                             <h2>Stock</h2>
                             <span class="category-index">04</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/Stock">Open Stock</a>
-                            <a class="category-action" href="/StockRegister">Search Stock</a>
-                            <a class="category-action" href="/StockRegister">Stock Register</a>
-                            <a class="category-action" href="/MoveAsset?asset=stock" data-move-asset="stock">Move / Reallocate</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Stock">Stock Module</a>
                         </div>
                     </section>
 
@@ -109,11 +110,8 @@
                             <h2>Medication</h2>
                             <span class="category-index">05</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/Medication">Open Medication</a>
-                            <a class="category-action" href="/MedicationRegister">Search Medication</a>
-                            <a class="category-action" href="/MedicationRegister">Medication Register</a>
-                            <a class="category-action" href="/MoveAsset?asset=medication" data-move-asset="medication">Move / Reallocate</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Medication">Medication Module</a>
                         </div>
                     </section>
 
@@ -138,12 +136,7 @@
 
                     <div class="workflow-grid">
                         <a class="workflow-action" href="/MasterSetup">Master Setup</a>
-                        <a class="workflow-action" href="/OperationalAreas">Operational Areas</a>
-                        <a class="workflow-action" href="/ManagerAreas">Manager Areas</a>
-                        <a class="workflow-action" href="/EditChecklist">Checklist Builder</a>
-                        <a class="workflow-action" href="/CompanyProfile">Company Profile</a>
-                        <a class="workflow-action" href="/VehicleSchematicLibrary">Schematic Library</a>
-                        <a class="workflow-action" href="/CreateManagerAccess">Access Setup</a>
+                        <a class="workflow-action" href="/AreaManagerControl">Area / Manager Control</a>
                         <a class="workflow-action" href="/TaskCommunicationSetup">Task Communication</a>
                         <a class="workflow-action" href="/AuditLog">Audit Log</a>
                     </div>
@@ -222,6 +215,53 @@
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: #425466;
+}
+
+.guide-entry {
+    width: min(940px, 100%);
+    margin: 0 auto 24px auto;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(220px, .9fr) minmax(0, 1.1fr);
+    gap: 14px;
+    align-items: center;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+    box-sizing: border-box;
+}
+
+.guide-action {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #334155;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.guide-action:hover {
+    background: #24364a;
+    color: #ffffff;
+}
+
+.guide-entry p {
+    margin: 0;
+    color: #52606d;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    text-align: left;
 }
 
 .home-subtitle {
@@ -415,6 +455,14 @@
 @@media (max-width: 900px) {
     .management-category-grid {
         grid-template-columns: 1fr;
+    }
+
+    .guide-entry {
+        grid-template-columns: 1fr;
+    }
+
+    .guide-entry p {
+        text-align: center;
     }
 
     .workflow-grid {

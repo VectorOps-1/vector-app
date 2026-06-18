@@ -9,17 +9,22 @@ public class MedicationRegisterPreviewModel : PageModel
 {
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly SetupUploadService _setupUploads;
 
-    public MedicationRegisterPreviewModel(CurrentUserService currentUser, LocationOptionService locationOptions)
+    public MedicationRegisterPreviewModel(
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        SetupUploadService setupUploads)
     {
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _setupUploads = setupUploads;
     }
 
     public string FileName { get; private set; } = "Uploaded medication register";
     public List<SelectListItem> LocationOptions { get; private set; } = new();
 
-    public async Task<IActionResult> OnGetAsync(string? fileName)
+    public async Task<IActionResult> OnGetAsync(int? sourceFileId, string? fileName)
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
@@ -27,6 +32,17 @@ public class MedicationRegisterPreviewModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
-        return RedirectToPage("/MedicationRegister");
+        if (sourceFileId.HasValue)
+        {
+            FileName = await _setupUploads.GetUploadedFileNameAsync(sourceFileId.Value, SetupUploadService.RegisterUploadEntityType)
+                ?? FileName;
+        }
+        else if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            FileName = fileName;
+        }
+
+        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
+        return Page();
     }
 }

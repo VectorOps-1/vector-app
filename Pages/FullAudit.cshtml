@@ -1,11 +1,12 @@
 @page
-@model MonthlyChecklistModel
+@model FullAuditModel
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Monthly Checklist";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Full Audit";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="checklist-select-screen">
@@ -13,17 +14,17 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operational Checklists</div>
-        <h2 class="page-title">Monthly Checklist</h2>
+        <h2 class="page-title">Full Audit</h2>
 
         <div class="module-grid checklist-frequency-row">
-            <a class="module-card primary" href="/MonthlyVehicleChecklist">
-                <strong>Vehicle</strong>
-                <span>Open the monthly vehicle inspection checklist</span>
+            <a class="module-card primary" href="/DailyVehicleChecklist?frequency=full-audit">
+                <strong>Vehicle & Equipment Audit</strong>
+                <span>Open the full audit checklist flow</span>
             </a>
 
-            <a class="module-card" href="/MonthlyEquipmentChecklist">
-                <strong>Equipment</strong>
-                <span>Open the monthly equipment checklist</span>
+            <a class="module-card" href="/EditChecklist?view=register">
+                <strong>Checklist Register</strong>
+                <span>Review or publish full audit checklist templates</span>
             </a>
         </div>
     </div>

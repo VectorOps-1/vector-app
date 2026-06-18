@@ -13,12 +13,18 @@ public class UploadStaffFilesModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly IFileStorageService _fileStorage;
+    private readonly CustomDropdownOptionService _customDropdownOptions;
 
-    public UploadStaffFilesModel(VectorDbContext db, CurrentUserService currentUser, IFileStorageService fileStorage)
+    public UploadStaffFilesModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        IFileStorageService fileStorage,
+        CustomDropdownOptionService customDropdownOptions)
     {
         _db = db;
         _currentUser = currentUser;
         _fileStorage = fileStorage;
+        _customDropdownOptions = customDropdownOptions;
     }
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -30,6 +36,7 @@ public class UploadStaffFilesModel : PageModel
 
     [BindProperty(SupportsGet = true)] public int? StaffUserId { get; set; }
     [BindProperty] public string Category { get; set; } = "Personal Documents";
+    [BindProperty] public string? CategoryOther { get; set; }
     [BindProperty] public string? Notes { get; set; }
 
     [BindProperty]
@@ -37,6 +44,7 @@ public class UploadStaffFilesModel : PageModel
 
     public string? StatusMessage { get; private set; }
     public List<SelectListItem> StaffOptions { get; private set; } = new();
+    public List<SelectListItem> CategoryOptions { get; private set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -46,7 +54,8 @@ public class UploadStaffFilesModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        await LoadStaffOptionsAsync(currentUser.CompanyId);
+        await LoadStaffOptionsAsync(currentUser);
+        await LoadCategoryOptionsAsync(currentUser.CompanyId);
         return Page();
     }
 
@@ -58,9 +67,10 @@ public class UploadStaffFilesModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        await LoadStaffOptionsAsync(currentUser.CompanyId);
+        await LoadStaffOptionsAsync(currentUser);
+        await LoadCategoryOptionsAsync(currentUser.CompanyId);
 
-        if (!StaffUserId.HasValue || !await StaffExistsAsync(currentUser.CompanyId, StaffUserId.Value))
+        if (!StaffUserId.HasValue || !await StaffExistsAsync(currentUser, StaffUserId.Value))
         {
             StatusMessage = "Select the staff member these files belong to.";
             return Page();
@@ -80,7 +90,19 @@ public class UploadStaffFilesModel : PageModel
         }
 
         var now = DateTime.UtcNow;
-        var category = NormalizeCategory(Category);
+        var category = await _customDropdownOptions.ResolveSelectionAsync(
+            currentUser.CompanyId,
+            currentUser.Id,
+            CustomDropdownOptionService.StaffFileCategoryKey,
+            Category,
+            CategoryOther,
+            "Personal Documents");
+        if (category is null)
+        {
+            StatusMessage = "Name the Other folder / category before saving staff files.";
+            return Page();
+        }
+
         var savedCount = 0;
 
         foreach (var file in StaffFiles.Where(file => file.Length > 0))
@@ -127,32 +149,78 @@ public class UploadStaffFilesModel : PageModel
         return RedirectToPage("/StaffFiles", new { staffUserId = StaffUserId.Value, uploaded = savedCount });
     }
 
-    private async Task LoadStaffOptionsAsync(int companyId)
+    private async Task LoadStaffOptionsAsync(AppUser currentUser)
     {
-        StaffOptions = await _db.AppUsers
-            .AsNoTracking()
-            .Include(user => user.AppRole)
-            .Where(user => user.CompanyId == companyId && user.Status != "Deleted")
+        var query = await BuildScopedStaffQueryAsync(currentUser);
+
+        StaffOptions = await query
             .OrderBy(user => user.FullName)
             .Select(user => new SelectListItem
             {
                 Value = user.Id.ToString(),
-                Text = user.FullName + " - " + (user.AppRole == null ? "Unassigned" : user.AppRole.Name)
+                Text = user.FullName
+                    + (string.IsNullOrWhiteSpace(user.StaffIdentifier) ? string.Empty : $" / {user.StaffIdentifier}")
+                    + " - "
+                    + (user.AppRole == null ? "Unassigned" : user.AppRole.Name)
             })
             .ToListAsync();
     }
 
-    private async Task<bool> StaffExistsAsync(int companyId, int staffUserId)
+    private async Task LoadCategoryOptionsAsync(int companyId)
     {
-        return await _db.AppUsers.AnyAsync(user =>
-            user.CompanyId == companyId &&
-            user.Id == staffUserId &&
-            user.Status != "Deleted");
+        CategoryOptions = await _customDropdownOptions.BuildOptionsAsync(
+            companyId,
+            CustomDropdownOptionService.StaffFileCategoryKey,
+            CustomDropdownOptionService.StaffFileCategoryDefaults,
+            Category);
     }
 
-    private static string NormalizeCategory(string? value)
+    private async Task<bool> StaffExistsAsync(AppUser currentUser, int staffUserId)
     {
-        return string.IsNullOrWhiteSpace(value) ? "Personal Documents" : value.Trim();
+        var query = await BuildScopedStaffQueryAsync(currentUser);
+        return await query.AnyAsync(user => user.Id == staffUserId);
+    }
+
+    private async Task<IQueryable<AppUser>> BuildScopedStaffQueryAsync(AppUser currentUser)
+    {
+        var query = _db.AppUsers
+            .AsNoTracking()
+            .Include(user => user.AppRole)
+            .Include(user => user.AssignedOperationalArea)
+            .Where(user => user.CompanyId == currentUser.CompanyId && user.Status != "Deleted");
+
+        if (CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return query;
+        }
+
+        var assignedAreaIds = await LoadAssignedAreaIdsAsync(currentUser);
+
+        return assignedAreaIds.Count == 0
+            ? query.Where(user => user.Id == currentUser.Id)
+            : query.Where(user =>
+                user.Id == currentUser.Id ||
+                (user.AssignedOperationalAreaId.HasValue && assignedAreaIds.Contains(user.AssignedOperationalAreaId.Value)));
+    }
+
+    private async Task<List<int>> LoadAssignedAreaIdsAsync(AppUser currentUser)
+    {
+        var assignedAreaIds = await _db.ManagerOperationalAreaAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.CompanyId == currentUser.CompanyId &&
+                assignment.ManagerUserId == currentUser.Id &&
+                assignment.Status == "Active")
+            .Select(assignment => assignment.OperationalAreaId)
+            .ToListAsync();
+
+        if (currentUser.AssignedOperationalAreaId.HasValue &&
+            !assignedAreaIds.Contains(currentUser.AssignedOperationalAreaId.Value))
+        {
+            assignedAreaIds.Add(currentUser.AssignedOperationalAreaId.Value);
+        }
+
+        return assignedAreaIds;
     }
 
     private static string? NormalizeOptional(string? value)

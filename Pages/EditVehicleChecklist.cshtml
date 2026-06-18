@@ -1,11 +1,16 @@
 @page
 @model EditVehicleChecklistModel
+@using System.Text.Json
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Daily Readiness Checklist Setup";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Daily Vehicle & Equipment Check Setup";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var schematicOptions = Model.PublishedUnitSchematics
+        .Select(schematic => new { schematic.Key, schematic.DisplayName })
+        .ToList();
 }
 
 <div class="editor-screen">
@@ -13,7 +18,7 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Action</div>
-        <h2 class="page-title">Daily Readiness Checklist Setup</h2>
+        <h2 class="page-title">Daily Vehicle & Equipment Check Setup</h2>
         <p class="page-subtitle">Edit the checklist from the same structure crews use in the live vehicle readiness flow.</p>
         <div class="authority-note">@Model.ChecklistAuthorityNote</div>
 
@@ -22,12 +27,13 @@
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        <form method="post" class="editor-form">
+        <form method="post" class="editor-form" data-checklist-editor-form>
+            <input asp-for="CreateAsNewTemplate" type="hidden" />
             <section class="editor-section setup-section">
                 <div class="section-heading">Checklist Template</div>
                 <div class="form-grid">
                     <label>
-                        Available vehicle template
+                        Available vehicle template (optional)
                         <select asp-for="SelectedTemplateId" id="templateSelect">
                             <option value="">Create new template</option>
                             @foreach (var template in Model.AvailableTemplates)
@@ -39,21 +45,77 @@
 
                     <label>
                         Checklist name
-                        <select asp-for="ChecklistName">
-                            <option>Daily Vehicle Readiness</option>
-                            <option>Monthly Vehicle Checklist</option>
-                            <option>Custom Uploaded Vehicle Checklist</option>
+                        <select asp-for="ChecklistName"
+                                id="checklistNameSelect"
+                                data-manual-select="checklist-name"
+                                disabled="@(Model.UseCustomChecklistName ? "disabled" : null)">
+                            @foreach (var checklistName in Model.ChecklistNameOptions)
+                            {
+                                <option value="@checklistName" selected="@(string.Equals(Model.ChecklistName, checklistName, StringComparison.OrdinalIgnoreCase))">@checklistName</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="manual-entry-toggle">
+                        <input asp-for="UseCustomChecklistName"
+                               id="useCustomChecklistNameToggle"
+                               data-manual-toggle="checklist-name"
+                               type="checkbox" />
+                        <span>Use manual checklist name</span>
+                    </label>
+
+                    <label class="manual-entry-field @(Model.UseCustomChecklistName ? "" : "is-hidden")" data-manual-field="checklist-name">
+                        Manual checklist name
+                        <input asp-for="CustomChecklistName"
+                               id="customChecklistNameInput"
+                               placeholder="Enter checklist name"
+                               disabled="@(Model.UseCustomChecklistName ? null : "disabled")" />
+                    </label>
+
+                    <input asp-for="TargetVehicleType" type="hidden" id="targetVehicleTypeValue" />
+
+                    <label>
+                        Target vehicle function
+                        <select asp-for="TargetVehicleFunction" id="targetVehicleFunctionSelect">
+                            @foreach (var functionOption in Model.TargetVehicleFunctionOptions)
+                            {
+                                <option value="@functionOption.Value" selected="@functionOption.Selected">@functionOption.Text</option>
+                            }
                         </select>
                     </label>
 
                     <label>
-                        Target vehicle type
-                        <select asp-for="TargetVehicleType" id="targetVehicleTypeSelect">
-                            @foreach (var vehicleType in Model.TargetVehicleTypeOptions)
+                        Target subtype
+                        <select asp-for="TargetVehicleSubtype"
+                                id="targetVehicleSubtypeSelect"
+                                data-manual-select="target-vehicle-type"
+                                disabled="@(Model.UseCustomTargetVehicleType ? "disabled" : null)">
+                            <option value="">N/A / all subtypes</option>
+                            @foreach (var subtypeOption in Model.TargetVehicleSubtypeOptions)
                             {
-                                <option value="@vehicleType" selected="@(string.Equals(Model.TargetVehicleType, vehicleType, StringComparison.OrdinalIgnoreCase))">@vehicleType</option>
+                                <option value="@subtypeOption.Subtype"
+                                        data-function="@subtypeOption.Function"
+                                        selected="@(string.Equals(Model.TargetVehicleSubtype, subtypeOption.Subtype, StringComparison.OrdinalIgnoreCase))">
+                                    @subtypeOption.Label
+                                </option>
                             }
                         </select>
+                    </label>
+
+                    <label class="manual-entry-toggle">
+                        <input asp-for="UseCustomTargetVehicleType"
+                               id="useCustomTargetVehicleTypeToggle"
+                               data-manual-toggle="target-vehicle-type"
+                               type="checkbox" />
+                        <span>Use manual target subtype</span>
+                    </label>
+
+                    <label class="manual-entry-field @(Model.UseCustomTargetVehicleType ? "" : "is-hidden")" data-manual-field="target-vehicle-type">
+                        Manual target subtype
+                        <input asp-for="CustomTargetVehicleType"
+                               id="customTargetVehicleTypeInput"
+                               placeholder="Enter target subtype"
+                               disabled="@(Model.UseCustomTargetVehicleType ? null : "disabled")" />
                     </label>
 
                     <label>
@@ -68,7 +130,7 @@
                     </label>
                 </div>
                 <div class="template-note">
-                    Published templates become the available checklist versions for matching vehicle types. A response vehicle, ambulance, and ICU ambulance can each have a different live checklist.
+                    Published templates become the available checklist versions for matching vehicle functions and subtypes. Register vehicle function and subtype remain the source of truth.
                 </div>
             </section>
 
@@ -78,157 +140,318 @@
                         <div class="section-heading">Live Layout Builder</div>
                         <p>@Model.LayoutBuilderSummary Staff-facing order: vehicle details, previous shift control, operational checks, schematic, carried equipment, notes.</p>
                     </div>
-                    <div class="toolbar-actions">
-                        <button class="small-action" type="button" data-action="add-section">Add Section</button>
-                        <button class="small-action" type="button" data-action="add-heading">Add Heading</button>
-                        <button class="small-action" type="button" data-action="add-field">Add Field</button>
+                    <div class="toolbar-actions fixed-blocks-note">
+                        <span>@(Model.IsScratchBuildMode ? "Blank build: add your first section below" : "Loaded template structure")</span>
                     </div>
                 </div>
 
                 @for (var sectionIndex = 0; sectionIndex < Model.VehicleChecklistSections.Count; sectionIndex++)
                 {
                     var checklistSection = Model.VehicleChecklistSections[sectionIndex];
-                    <article class="checklist-section-editor">
+                    <article class="checklist-section-editor is-collapsed" data-section-kind="@checklistSection.Kind">
+                        <input type="hidden" data-section-name="Kind" name="VehicleChecklistSections[@sectionIndex].Kind" value="@checklistSection.Kind" />
                         <div class="visual-section-heading">
                             <span>@(sectionIndex + 1)</span>
                             <div class="section-title-editor">
                                 <label>
                                     Section heading
-                                    <input value="@checklistSection.Title" aria-label="@checklistSection.Title heading" />
+                                    <input data-section-name="Title"
+                                           name="VehicleChecklistSections[@sectionIndex].Title"
+                                           value="@checklistSection.Title"
+                                           aria-label="@checklistSection.Title heading" />
                                 </label>
                                 <label>
                                     Staff helper text
-                                    <input value="@checklistSection.HelperText" aria-label="@checklistSection.Title helper text" />
+                                    <input data-section-name="HelperText"
+                                           name="VehicleChecklistSections[@sectionIndex].HelperText"
+                                           value="@checklistSection.HelperText"
+                                           aria-label="@checklistSection.Title helper text" />
                                 </label>
                             </div>
                             <div class="section-controls" aria-label="@checklistSection.Title controls">
-                                <button type="button" data-action="move-section-up">Move Up</button>
-                                <button type="button" data-action="move-section-down">Move Down</button>
+                                <button type="button" data-action="move-section-up">Up</button>
+                                <button type="button" data-action="move-section-down">Down</button>
                                 <button type="button" data-action="remove-section">Remove</button>
+                                <button type="button" data-action="toggle-section" aria-expanded="false">Open Section</button>
                             </div>
                         </div>
 
-                        @if (checklistSection.Kind == ChecklistSectionKind.Action)
-                        {
-                            <div class="previous-shift-editor">
-                                <div>
-                                    <label>
-                                        Button label
-                                        <input value="Same as previous shift" />
-                                    </label>
-                                    <p>Senior management controls vehicle carry-forward and equipment carry-forward separately.</p>
-                                </div>
-                                <div class="same-shift-toggle-group">
-                                    <label class="toggle-row">
-                                        <input asp-for="AllowSameAsPreviousVehicleInspection"
-                                               id="allowSameAsPreviousVehicleInspectionToggle"
-                                               type="checkbox"
-                                               disabled="@(!Model.IsSeniorChecklistPublisher)" />
-                                        <span>Allow for vehicle inspection</span>
-                                    </label>
-
-                                    <label class="toggle-row">
-                                        <input asp-for="AllowSameAsPreviousEquipmentCheck"
-                                               id="allowSameAsPreviousEquipmentCheckToggle"
-                                               type="checkbox"
-                                               disabled="@(!Model.IsSeniorChecklistPublisher)" />
-                                        <span>Allow for equipment checks</span>
-                                    </label>
-                                </div>
-                            </div>
-                        }
-                        else if (checklistSection.Kind == ChecklistSectionKind.EquipmentTable)
-                        {
-                            <div class="equipment-layout-preview" role="table" aria-label="Equipment checklist row preview">
-                                <div class="equipment-preview-header" role="row">
-                                    @foreach (var field in checklistSection.Fields)
-                                    {
-                                        <span role="columnheader">@field.Label</span>
-                                    }
-                                </div>
-
-                                @foreach (var exampleRow in Model.EquipmentTableExampleRows)
-                                {
-                                    <div class="equipment-preview-row" role="row">
-                                        <span>@exampleRow</span>
-                                        <span>S/N / ID dropdown</span>
-                                        <span>Auto-filled</span>
-                                        <span>Battery dropdown</span>
-                                        <span>Yes/No</span>
-                                        <span>Issue notes</span>
+                        <div class="section-body" data-section-body>
+                            @if (checklistSection.Kind == ChecklistSectionKind.Action)
+                            {
+                                <div class="previous-shift-editor">
+                                    <div>
+                                        <label>
+                                            Button label
+                                            <input value="Same as previous shift" />
+                                        </label>
+                                        <p>Senior management controls vehicle carry-forward and equipment carry-forward separately.</p>
                                     </div>
-                                }
+                                    <div class="same-shift-toggle-group">
+                                        <label class="toggle-row">
+                                            <input asp-for="AllowSameAsPreviousVehicleInspection"
+                                                   id="allowSameAsPreviousVehicleInspectionToggle"
+                                                   type="checkbox"
+                                                   disabled="@(!Model.IsSeniorChecklistPublisher)" />
+                                            <span>Allow for vehicle inspection</span>
+                                        </label>
+
+                                        <label class="toggle-row">
+                                            <input asp-for="AllowSameAsPreviousEquipmentCheck"
+                                                   id="allowSameAsPreviousEquipmentCheckToggle"
+                                                   type="checkbox"
+                                                   disabled="@(!Model.IsSeniorChecklistPublisher)" />
+                                            <span>Allow for equipment checks</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            else if (checklistSection.Kind == ChecklistSectionKind.EquipmentTable)
+                            {
+                                var sectionMatrixColumnCount = Math.Max(checklistSection.MatrixColumns.Count, 1);
+                                var sectionMatrixGridStyle = $"grid-template-columns: minmax(190px, 1fr) repeat({sectionMatrixColumnCount}, minmax(118px, .9fr)); min-width: {190 + sectionMatrixColumnCount * 118}px;";
+                                <div class="axis-builder-note">
+                                    <strong>Builder axes</strong>
+                                    <span>X axis = checklist columns. Y axis = items and subitems. Register links are optional per column.</span>
+                                </div>
+
+                            <div class="axis-builder-actions">
+                                <button class="small-action" type="button" data-action="add-equipment-row">Add Item Row</button>
+                                <button class="small-action" type="button" data-action="add-equipment-column">Add Column</button>
                             </div>
 
-                            <div class="field-grid equipment-column-grid">
-                                @foreach (var field in checklistSection.Fields)
-                                {
-                                    <div class="builder-field @(field.IsSystemLinked ? "system-linked" : string.Empty)">
-                                        <div class="field-toolbar">
-                                            <span>@field.Source</span>
-                                            <div>
-                                                <button type="button" data-action="move-field-up">Up</button>
-                                                <button type="button" data-action="move-field-down">Down</button>
-                                                <button type="button" data-action="remove-field">Remove</button>
-                                            </div>
+                            <div class="axis-table-shell" data-axis-table-shell>
+                                <div class="axis-table" data-axis-table role="table" aria-label="Equipment checklist visual builder">
+                                    <div class="axis-table-row axis-header-row" role="row" style="@sectionMatrixGridStyle">
+                                        <div class="axis-corner-cell" role="columnheader">
+                                            <strong>Y Axis</strong>
+                                            <span>Item / subitem</span>
                                         </div>
-
-                                        <div class="field-editor-grid">
-                                            <label>
-                                                Column label
-                                                <input value="@field.Label" aria-label="@field.Label label" />
-                                            </label>
-                                            <label>
-                                                Input type
-                                                <select aria-label="@field.Label type">
-                                                    <option selected>@field.Type</option>
-                                                    <option>Configured row</option>
-                                                    <option>Text</option>
-                                                    <option>Date</option>
-                                                    <option>Dropdown</option>
-                                                    <option>Checkbox</option>
-                                                    <option>Photo Upload</option>
-                                                </select>
-                                            </label>
-                                        </div>
-
-                                        <div class="field-rule-row">
-                                            <label><input type="checkbox" checked="@field.IsRequired" /> Required</label>
-                                            <label><input type="checkbox" checked="@field.IsEditable" /> Editable</label>
-                                            @if (field.IsSystemLinked)
+                                        <div class="axis-column-list" data-equipment-column-list>
+                                            @for (var columnIndex = 0; columnIndex < checklistSection.MatrixColumns.Count; columnIndex++)
                                             {
-                                                <span>Linked to equipment register</span>
+                                                var field = checklistSection.MatrixColumns[columnIndex];
+                                                <div class="axis-header-cell @(field.IsSystemLinked ? "system-linked" : string.Empty)" data-equipment-column role="columnheader">
+                                                    <div class="axis-cell-toolbar">
+                                                        <span>X @(columnIndex + 1)</span>
+                                                        <div>
+                                                            <button type="button" data-action="move-equipment-column-up">Left</button>
+                                                            <button type="button" data-action="move-equipment-column-down">Right</button>
+                                                            <button type="button" data-action="remove-equipment-column">Remove</button>
+                                                        </div>
+                                                    </div>
+                                                    <label>
+                                                        Column heading
+                                                        <input data-name="Label" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].Label" value="@field.Label" aria-label="@field.Label label" />
+                                                    </label>
+                                                    <label>
+                                                        Input type
+                                                        <select data-name="Type" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].Type" aria-label="@field.Label type">
+                                                            <option selected>@field.Type</option>
+                                                            <option>Configured row</option>
+                                                            <option>Text</option>
+                                                            <option>Date</option>
+                                                            <option>Dropdown</option>
+                                                            <option>Checkbox</option>
+                                                            <option>Yes/No</option>
+                                                            <option>Photo Upload</option>
+                                                        </select>
+                                                    </label>
+                                                    <label>
+                                                        Data source
+                                                        <select data-name="Source" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].Source" aria-label="@field.Label source">
+                                                            <option value="Fresh entry" selected="@(string.IsNullOrWhiteSpace(field.Source) || string.Equals(field.Source, "Fresh entry", StringComparison.OrdinalIgnoreCase))">Fresh entry</option>
+                                                            <option value="Vehicle register" selected="@(string.Equals(field.Source, "Vehicle register", StringComparison.OrdinalIgnoreCase))">Vehicle register</option>
+                                                            <option value="Equipment register" selected="@(string.Equals(field.Source, "Equipment register", StringComparison.OrdinalIgnoreCase))">Equipment register</option>
+                                                            <option value="Stock register" selected="@(string.Equals(field.Source, "Stock register", StringComparison.OrdinalIgnoreCase))">Stock register</option>
+                                                            <option value="Medication register" selected="@(string.Equals(field.Source, "Medication register", StringComparison.OrdinalIgnoreCase))">Medication register</option>
+                                                            <option value="Custom" selected="@(!string.IsNullOrWhiteSpace(field.Source) && !new[] { "Fresh entry", "Vehicle register", "Equipment register", "Stock register", "Medication register" }.Contains(field.Source, StringComparer.OrdinalIgnoreCase))">Custom</option>
+                                                        </select>
+                                                        <input class="custom-source-input"
+                                                               data-custom-source
+                                                               value="@field.Source"
+                                                               placeholder="Custom source"
+                                                               aria-label="@field.Label custom source"
+                                                               hidden="@((string.IsNullOrWhiteSpace(field.Source) || new[] { "Fresh entry", "Vehicle register", "Equipment register", "Stock register", "Medication register" }.Contains(field.Source, StringComparer.OrdinalIgnoreCase)) ? "hidden" : null)" />
+                                                        <input type="hidden" data-name="ResolvedSource" value="@field.Source" />
+                                                    </label>
+                                                    <div class="field-rule-row compact-rule-row">
+                                                        <label><input type="checkbox" data-name="IsRequired" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].IsRequired" value="true" checked="@field.IsRequired" /> Required</label>
+                                                        <label><input type="checkbox" data-name="IsEditable" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].IsEditable" value="true" checked="@field.IsEditable" /> Editable</label>
+                                                        <label><input type="checkbox" data-name="IsSystemLinked" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].IsSystemLinked" value="true" checked="@field.IsSystemLinked" /> Register link</label>
+                                                        <label><input type="checkbox" data-name="AffectsReadiness" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].AffectsReadiness" value="true" checked="@field.AffectsReadiness" /> Readiness</label>
+                                                        <label><input type="checkbox" data-name="SameAsPreviousEligible" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].SameAsPreviousEligible" value="true" checked="@field.SameAsPreviousEligible" /> Previous</label>
+                                                        <label><input type="checkbox" data-name="RequiresNoteWhenNotNormal" name="VehicleChecklistSections[@sectionIndex].MatrixColumns[@columnIndex].RequiresNoteWhenNotNormal" value="true" checked="@field.RequiresNoteWhenNotNormal" /> Note</label>
+                                                    </div>
+                                                </div>
                                             }
                                         </div>
                                     </div>
-                                }
-                            </div>
 
-                            <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Column to @checklistSection.Title</button>
-                        }
-                        else
-                        {
-                            <div class="field-grid @(checklistSection.Kind == ChecklistSectionKind.Schematic ? "schematic-field-grid" : string.Empty)">
-                                @foreach (var field in checklistSection.Fields)
-                                {
-                                    <div class="builder-field @(field.IsSystemLinked ? "system-linked" : string.Empty)">
-                                        <div class="field-toolbar">
-                                            <span>@field.Source</span>
-                                            <div>
-                                                <button type="button" data-action="move-field-up">Up</button>
-                                                <button type="button" data-action="move-field-down">Down</button>
-                                                <button type="button" data-action="remove-field">Remove</button>
+                                    <div class="axis-row-list" data-equipment-row-list>
+                                        @for (var rowIndex = 0; rowIndex < checklistSection.MatrixRows.Count; rowIndex++)
+                                        {
+                                            var row = checklistSection.MatrixRows[rowIndex];
+                                            <div class="equipment-axis-group" data-equipment-row>
+                                                <div class="axis-table-row equipment-axis-row" role="row" style="@sectionMatrixGridStyle">
+                                                    <div class="axis-item-cell" role="rowheader">
+                                                        <div class="axis-cell-toolbar">
+                                                            <span>Item @(rowIndex + 1)</span>
+                                                            <div>
+                                                                <button type="button" data-action="move-equipment-row-up">Up</button>
+                                                                <button type="button" data-action="move-equipment-row-down">Down</button>
+                                                                <button type="button" data-action="remove-equipment-row">Remove</button>
+                                                            </div>
+                                                        </div>
+                                                        <label>
+                                                            Item name
+                                                            <input data-name="Name" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].Name" value="@row.Name" />
+                                                        </label>
+                                                        <label>
+                                                            Equipment type
+                                                            <input data-name="EquipmentType" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].EquipmentType" value="@row.EquipmentType" placeholder="Monitor defibrillator, ventilator, pump" />
+                                                        </label>
+                                                        <label>
+                                                            Model / variant
+                                                            <input data-name="Model" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].Model" value="@row.Model" placeholder="LP15, Oxylog, LUCAS" />
+                                                        </label>
+                                                        <div class="field-rule-row compact-rule-row">
+                                                            <label><input type="checkbox" data-name="IsRequired" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].IsRequired" value="true" checked="@row.IsRequired" /> Required</label>
+                                                            <label><input type="checkbox" data-name="IsReadinessCritical" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].IsReadinessCritical" value="true" checked="@row.IsReadinessCritical" /> Readiness</label>
+                                                            <label><input type="checkbox" data-name="AllowsSameAsPrevious" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].AllowsSameAsPrevious" value="true" checked="@row.AllowsSameAsPrevious" /> Previous</label>
+                                                        </div>
+                                                        <button class="small-action inline-add" type="button" data-action="add-equipment-subitem">Add Subitem</button>
+                                                    </div>
+
+                                                    @for (var columnIndex = 0; columnIndex < checklistSection.MatrixColumns.Count; columnIndex++)
+                                                    {
+                                                        var field = checklistSection.MatrixColumns[columnIndex];
+                                                        var overrideMode = Model.GetColumnOverrideMode(row.ColumnOverrides, columnIndex);
+                                                        <div class="axis-check-cell" role="cell">
+                                                            <span>@field.Label</span>
+                                                            <strong>@field.Type</strong>
+                                                            <small>@(string.IsNullOrWhiteSpace(field.Source) ? "Fresh entry" : field.Source)</small>
+                                                            <input type="hidden"
+                                                                   data-column-override-name="ColumnIndex"
+                                                                   name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].ColumnOverrides[@columnIndex].ColumnIndex"
+                                                                   value="@columnIndex" />
+                                                            <label class="column-override-label">
+                                                                Row setting
+                                                                <select data-column-override-name="Mode"
+                                                                        name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].ColumnOverrides[@columnIndex].Mode"
+                                                                        aria-label="@row.Name @field.Label row setting">
+                                                                    <option value="@EquipmentColumnOverrideModes.Default" selected="@(overrideMode == EquipmentColumnOverrideModes.Default)">Use default</option>
+                                                                    <option value="@EquipmentColumnOverrideModes.Required" selected="@(overrideMode == EquipmentColumnOverrideModes.Required)">Required</option>
+                                                                    <option value="@EquipmentColumnOverrideModes.Optional" selected="@(overrideMode == EquipmentColumnOverrideModes.Optional)">Optional</option>
+                                                                    <option value="@EquipmentColumnOverrideModes.NotApplicable" selected="@(overrideMode == EquipmentColumnOverrideModes.NotApplicable)">N/A for this row</option>
+                                                                </select>
+                                                            </label>
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                                <div class="axis-subitem-list" data-equipment-subitem-list>
+                                                    @for (var subIndex = 0; subIndex < row.SubItems.Count; subIndex++)
+                                                    {
+                                                        var subItem = row.SubItems[subIndex];
+                                                        <div class="axis-table-row equipment-axis-row equipment-subitem-row" role="row" style="@sectionMatrixGridStyle" data-equipment-subitem>
+                                                            <div class="axis-item-cell" role="rowheader">
+                                                                <div class="axis-cell-toolbar subitem-toolbar">
+                                                                    <span>Subitem @(subIndex + 1)</span>
+                                                                    <div>
+                                                                        <button type="button" data-action="move-equipment-subitem-up">Up</button>
+                                                                        <button type="button" data-action="move-equipment-subitem-down">Down</button>
+                                                                        <button type="button" data-action="remove-equipment-subitem">Remove</button>
+                                                                    </div>
+                                                                </div>
+                                                                <label>
+                                                                    Subitem name
+                                                                    <input data-subitem-name="Name" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].Name" value="@subItem.Name" placeholder="SpO2 sensor, cable, 4 lead ECG" />
+                                                                </label>
+                                                                <label>
+                                                                    Equipment type
+                                                                    <input data-subitem-name="EquipmentType" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].EquipmentType" value="@subItem.EquipmentType" placeholder="Monitor accessory, cable, sensor" />
+                                                                </label>
+                                                                <label>
+                                                                    Model / variant
+                                                                    <input data-subitem-name="Model" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].Model" value="@subItem.Model" placeholder="Optional" />
+                                                                </label>
+                                                                <div class="field-rule-row compact-rule-row">
+                                                                    <label><input type="checkbox" data-subitem-name="IsRequired" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].IsRequired" value="true" checked="@subItem.IsRequired" /> Required</label>
+                                                                    <label><input type="checkbox" data-subitem-name="IsReadinessCritical" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].IsReadinessCritical" value="true" checked="@subItem.IsReadinessCritical" /> Readiness</label>
+                                                                    <label><input type="checkbox" data-subitem-name="AllowsSameAsPrevious" name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].AllowsSameAsPrevious" value="true" checked="@subItem.AllowsSameAsPrevious" /> Previous</label>
+                                                                </div>
+                                                            </div>
+
+                                                            @for (var columnIndex = 0; columnIndex < checklistSection.MatrixColumns.Count; columnIndex++)
+                                                            {
+                                                                var field = checklistSection.MatrixColumns[columnIndex];
+                                                                var overrideMode = Model.GetColumnOverrideMode(subItem.ColumnOverrides, columnIndex);
+                                                                <div class="axis-check-cell" role="cell">
+                                                                    <span>@field.Label</span>
+                                                                    <strong>@field.Type</strong>
+                                                                    <small>@(string.IsNullOrWhiteSpace(field.Source) ? "Fresh entry" : field.Source)</small>
+                                                                    <input type="hidden"
+                                                                           data-column-override-name="ColumnIndex"
+                                                                           name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].ColumnOverrides[@columnIndex].ColumnIndex"
+                                                                           value="@columnIndex" />
+                                                                    <label class="column-override-label">
+                                                                        Row setting
+                                                                        <select data-column-override-name="Mode"
+                                                                                name="VehicleChecklistSections[@sectionIndex].MatrixRows[@rowIndex].SubItems[@subIndex].ColumnOverrides[@columnIndex].Mode"
+                                                                                aria-label="@subItem.Name @field.Label row setting">
+                                                                            <option value="@EquipmentColumnOverrideModes.Default" selected="@(overrideMode == EquipmentColumnOverrideModes.Default)">Use default</option>
+                                                                            <option value="@EquipmentColumnOverrideModes.Required" selected="@(overrideMode == EquipmentColumnOverrideModes.Required)">Required</option>
+                                                                            <option value="@EquipmentColumnOverrideModes.Optional" selected="@(overrideMode == EquipmentColumnOverrideModes.Optional)">Optional</option>
+                                                                            <option value="@EquipmentColumnOverrideModes.NotApplicable" selected="@(overrideMode == EquipmentColumnOverrideModes.NotApplicable)">N/A for this row</option>
+                                                                        </select>
+                                                                    </label>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
                                             </div>
-                                        </div>
+                                        }
+                                    </div>
+                                </div>
 
-                                        <div class="field-editor-grid">
-                                            <label>
-                                                Field label
-                                                <input value="@field.Label" aria-label="@field.Label label" />
+                                <div class="axis-scroll-proxy" data-axis-scroll-proxy aria-label="Equipment checklist horizontal scroll">
+                                    <div class="axis-scroll-proxy-track" data-axis-scroll-track tabindex="0">
+                                        <div class="axis-scroll-proxy-spacer" data-axis-scroll-spacer></div>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+                            else
+                            {
+                                <div class="field-axis-table" data-field-list role="table" aria-label="@checklistSection.Title field builder">
+                                    <div class="field-axis-row field-axis-header" role="row">
+                                        <span role="columnheader">Y Axis: Vehicle Field</span>
+                                        <span role="columnheader">Input Type</span>
+                                        <span role="columnheader">Source</span>
+                                        <span role="columnheader">Rules</span>
+                                        <span role="columnheader">Actions</span>
+                                    </div>
+                                    @for (var fieldIndex = 0; fieldIndex < checklistSection.Fields.Count; fieldIndex++)
+                                    {
+                                        var field = checklistSection.Fields[fieldIndex];
+                                        var isSchematicField = field.Type.Contains("Schematic", StringComparison.OrdinalIgnoreCase) || field.Label.Contains("Unit Schematic", StringComparison.OrdinalIgnoreCase);
+                                        var selectedSchematicKey = string.IsNullOrWhiteSpace(field.UnitSchematicKey) ? Model.DefaultUnitSchematicKey : field.UnitSchematicKey;
+                                        <div class="field-axis-row @(field.IsSystemLinked ? "system-linked" : string.Empty)" data-field-row role="row">
+                                            <label role="cell">
+                                                Field name
+                                                <input data-field-name="Label"
+                                                       name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].Label"
+                                                       value="@field.Label"
+                                                       aria-label="@field.Label label" />
                                             </label>
-                                            <label>
+
+                                            <label role="cell">
                                                 Input type
-                                                <select aria-label="@field.Label type">
+                                                <select data-field-name="Type"
+                                                        name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].Type"
+                                                        aria-label="@field.Label type">
                                                     <option selected>@field.Type</option>
                                                     <option>Text</option>
                                                     <option>Number</option>
@@ -240,85 +463,221 @@
                                                     <option>Permissioned Action</option>
                                                 </select>
                                             </label>
-                                        </div>
 
-                                        <div class="field-rule-row">
-                                            <label><input type="checkbox" checked="@field.IsRequired" /> Required</label>
-                                            <label><input type="checkbox" checked="@field.IsEditable" /> Editable</label>
-                                            @if (field.IsSystemLinked)
-                                            {
-                                                <span>Linked to registration</span>
-                                            }
+                                            <div class="field-source-cell" role="cell">
+                                                <input type="hidden"
+                                                       data-field-name="Source"
+                                                       name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].Source"
+                                                       value="@field.Source" />
+                                                <select data-field-source-select aria-label="@field.Label source">
+                                                    <option value="Fresh entry" selected="@(string.IsNullOrWhiteSpace(field.Source) || string.Equals(field.Source, "Fresh entry", StringComparison.OrdinalIgnoreCase))">Fresh entry</option>
+                                                    <option value="Vehicle register" selected="@(string.Equals(field.Source, "Vehicle register", StringComparison.OrdinalIgnoreCase))">Vehicle register</option>
+                                                    <option value="Equipment register" selected="@(string.Equals(field.Source, "Equipment register", StringComparison.OrdinalIgnoreCase))">Equipment register</option>
+                                                    <option value="Stock register" selected="@(string.Equals(field.Source, "Stock register", StringComparison.OrdinalIgnoreCase))">Stock register</option>
+                                                    <option value="Medication register" selected="@(string.Equals(field.Source, "Medication register", StringComparison.OrdinalIgnoreCase))">Medication register</option>
+                                                    <option value="Staff register" selected="@(string.Equals(field.Source, "Staff register", StringComparison.OrdinalIgnoreCase))">Staff register</option>
+                                                    <option value="Unit Schematic library" selected="@(string.Equals(field.Source, "Unit Schematic library", StringComparison.OrdinalIgnoreCase) || string.Equals(field.Source, "Unit Schematic", StringComparison.OrdinalIgnoreCase))">Unit Schematic library</option>
+                                                    <option value="Senior setting" selected="@(string.Equals(field.Source, "Senior setting", StringComparison.OrdinalIgnoreCase))">Senior setting</option>
+                                                    <option value="Custom" selected="@(!string.IsNullOrWhiteSpace(field.Source) && !new[] { "Fresh entry", "Vehicle register", "Equipment register", "Stock register", "Medication register", "Staff register", "Unit Schematic library", "Unit Schematic", "Senior setting" }.Contains(field.Source, StringComparer.OrdinalIgnoreCase))">Custom</option>
+                                                </select>
+                                                <input class="custom-source-input"
+                                                       data-field-custom-source
+                                                       value="@field.Source"
+                                                       placeholder="Custom source"
+                                                       aria-label="@field.Label custom source"
+                                                       hidden="@((string.IsNullOrWhiteSpace(field.Source) || new[] { "Fresh entry", "Vehicle register", "Equipment register", "Stock register", "Medication register", "Staff register", "Unit Schematic library", "Unit Schematic", "Senior setting" }.Contains(field.Source, StringComparer.OrdinalIgnoreCase)) ? "hidden" : null)" />
+                                                <div class="schematic-component-config @(isSchematicField ? string.Empty : "is-hidden")" data-schematic-config>
+                                                    <label>
+                                                        Saved schematic set
+                                                        <select data-field-name="UnitSchematicKey" name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].UnitSchematicKey" aria-label="@field.Label saved schematic">
+                                                            <option value="" selected="@string.IsNullOrWhiteSpace(selectedSchematicKey)">No schematic selected</option>
+                                                            @foreach (var schematic in Model.PublishedUnitSchematics)
+                                                            {
+                                                                <option value="@schematic.Key" selected="@(string.Equals(selectedSchematicKey, schematic.Key, StringComparison.OrdinalIgnoreCase))">@schematic.DisplayName</option>
+                                                            }
+                                                        </select>
+                                                    </label>
+                                                    <div class="schematic-view-builder" aria-label="Unit schematic views">
+                                                        <div class="schematic-view-card">
+                                                            <strong>Left</strong>
+                                                            <span>Damage present, position, severity, notes, photo, readiness impact</span>
+                                                        </div>
+                                                        <div class="schematic-view-card">
+                                                            <strong>Right</strong>
+                                                            <span>Damage present, position, severity, notes, photo, readiness impact</span>
+                                                        </div>
+                                                        <div class="schematic-view-card">
+                                                            <strong>Front</strong>
+                                                            <span>Damage present, position, severity, notes, photo, readiness impact</span>
+                                                        </div>
+                                                        <div class="schematic-view-card">
+                                                            <strong>Rear</strong>
+                                                            <span>Damage present, position, severity, notes, photo, readiness impact</span>
+                                                        </div>
+                                                    </div>
+                                                    <p class="schematic-component-note">This single builder row saves as one Unit Schematic block with four crew-facing views.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="field-rule-row compact-rule-row" role="cell">
+                                                <label><input type="checkbox" data-field-name="IsRequired" name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].IsRequired" value="true" checked="@field.IsRequired" /> Required</label>
+                                                <label><input type="checkbox" data-field-name="IsEditable" name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].IsEditable" value="true" checked="@field.IsEditable" /> Editable</label>
+                                               <input type="hidden"
+                                                       data-field-name="IsSystemLinked"
+                                                       name="VehicleChecklistSections[@sectionIndex].Fields[@fieldIndex].IsSystemLinked"
+                                                       value="@field.IsSystemLinked.ToString().ToLowerInvariant()" />
+                                                <span data-field-link-status>@(field.IsSystemLinked ? "Linked source" : "Manual entry")</span>
+                                            </div>
+
+                                            <div class="field-row-actions" role="cell">
+                                                <div>
+                                                    <button type="button" data-action="move-field-up">Up</button>
+                                                    <button type="button" data-action="move-field-down">Down</button>
+                                                    <button type="button" data-action="remove-field">Remove</button>
+                                                </div>
+                                            </div>
                                         </div>
+                                    }
+                                </div>
+
+                                <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to @checklistSection.Title</button>
+                            }
+
+                            <div class="section-notes-builder" data-section-notes>
+                                <div class="section-notes-heading">
+                                    <div>
+                                        <strong>Section notes</strong>
+                                        <span>Free-text notes shown after this section, outside the row and column layout.</span>
                                     </div>
-                                }
+                                    <button class="small-action" type="button" data-action="add-section-note">Add Notes Field</button>
+                                </div>
+                                <div class="section-note-list" data-section-note-list>
+                                    @for (var noteIndex = 0; noteIndex < checklistSection.Notes.Count; noteIndex++)
+                                    {
+                                        var note = checklistSection.Notes[noteIndex];
+                                        <div class="section-note-config" data-section-note>
+                                            <label>
+                                                Notes label
+                                                <input data-note-name="Label"
+                                                       name="VehicleChecklistSections[@sectionIndex].Notes[@noteIndex].Label"
+                                                       value="@note.Label"
+                                                       placeholder="@checklistSection.Title notes" />
+                                            </label>
+                                            <span class="note-helper">Optional note only</span>
+                                            <button class="small-action" type="button" data-action="remove-section-note">Remove</button>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-
-                            <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to @checklistSection.Title</button>
-                        }
+                        </div>
                     </article>
                 }
-            </section>
+                @if (Model.VehicleChecklistSections.Count == 0)
+                {
+                    <div class="empty-builder-state">
+                        No checklist sections added yet. Use Add Section to create the first Vehicle, Equipment, Stock, Medication, or custom section.
+                    </div>
+                }
 
-            <section class="editor-section">
-                <div class="section-heading">Dropdown Options</div>
-                <div class="form-grid">
+                <div class="builder-add-section-panel">
                     <label>
-                        Dropdown field
-                        <select asp-for="DropdownField">
-                            <option>Fuel level</option>
-                            <option>Vehicle condition</option>
-                            <option>Lights</option>
-                            <option>Sirens</option>
-                            <option>Warning lights</option>
-                            <option>Tyres</option>
-                            <option>Ops radio connectivity</option>
-                            <option>Damage type</option>
-                            <option>Damage severity</option>
-                            <option>S/N / ID</option>
-                            <option>Battery</option>
-                            <option>Operational?</option>
+                        Section type
+                        <select data-add-section-name aria-label="Section type to add">
+                            <option>Vehicle</option>
+                            <option selected>Equipment</option>
+                            <option>Stock</option>
+                            <option>Medication</option>
+                            <option>Custom</option>
                         </select>
                     </label>
-
                     <label>
-                        Options
-                        <textarea asp-for="DropdownOptions" rows="5" placeholder="One option per line"></textarea>
+                        Custom section name
+                        <input data-add-section-custom-name placeholder="Select Custom to type a section name" disabled />
                     </label>
+                    <button class="small-action" type="button" data-action="add-matrix-section">Add Section</button>
                 </div>
-                <button class="small-action" type="button" data-action-confirmation data-confirmation-message="Dropdown options updated.">Add / Update Dropdown Options</button>
             </section>
 
             <section class="editor-section">
                 <div class="section-heading">Publish Controls</div>
                 <div class="form-grid">
-                    <label>
-                        Applies to
-                        <select asp-for="AppliesTo">
-                            <option>All staff</option>
-                            <option>Operational managers</option>
-                            <option>Specific base</option>
-                            <option>Specific vehicle category</option>
-                            <option>Specific vehicle registration</option>
+                    <label class="publish-scope-selector">
+                        Publish target type
+                        <select asp-for="AppliesTo" id="publishScopeSelect" data-skip-na>
+                            <option value="All operational areas">All areas and all eligible vehicles</option>
+                            <option value="Specific base">Specific base / operational area</option>
+                            <option value="Vehicle function / subtype">Vehicle function or subtype</option>
+                            <option value="Specific vehicle registration">Specific callsign / registration</option>
                         </select>
+                        <span class="field-hint">Choose the broad publish rule first, then choose the exact target below.</span>
                     </label>
 
+                    <label class="publish-target" data-publish-target="Specific base">
+                        Select exact base / operational area
+                        <select asp-for="PublishOperationalAreaId" asp-items="Model.PublishAreaOptions" data-skip-na>
+                            <option value="">Select base / area</option>
+                        </select>
+                        <span class="field-hint">Only vehicles and users linked to this area should receive this checklist.</span>
+                    </label>
+
+                    <label class="publish-target" data-publish-target="Vehicle function / subtype">
+                        Select exact function or subtype
+                        <select asp-for="PublishVehicleType" asp-items="Model.PublishVehicleTypeOptions" data-skip-na>
+                            <option value="">Select function / subtype</option>
+                        </select>
+                        <span class="field-hint">Examples: Ambulance, Response Vehicle, Ops Ambulance, Pickup RV.</span>
+                    </label>
+
+                    <label class="publish-target" data-publish-target="Specific vehicle registration">
+                        Select exact callsign / registration
+                        <select asp-for="PublishVehicleId" asp-items="Model.PublishVehicleOptions" data-skip-na>
+                            <option value="">Select callsign / registration</option>
+                        </select>
+                        <span class="field-hint">This overrides broader function, subtype, and area targeting for one registered unit.</span>
+                    </label>
+
+                    @if (!Model.CanApproveAndPublish)
+                    {
+                        <label>
+                            Submit to senior manager
+                            <select asp-for="SeniorApproverUserId" asp-items="Model.SeniorApproverOptions">
+                                <option value="">Select senior manager</option>
+                            </select>
+                        </label>
+                    }
+
                     <label>
-                        Publish note
+                        @(Model.CanApproveAndPublish ? "Publish note" : "Approval note")
                         <textarea asp-for="PublishNote" rows="5" placeholder="Reason for edit, approval note, or version note"></textarea>
                     </label>
                 </div>
 
                 <div class="publish-note">
-                    @(Model.IsSeniorChecklistPublisher
-                        ? "Senior management can approve this layout for live use."
-                        : "Operational management can draft this layout for senior review.")
+                    @(Model.CanApproveAndPublish
+                        ? "This login can approve and publish the checklist for the selected live-use target."
+                        : "Operational management can save drafts and submit checklist changes to a selected senior manager for approval.")
                 </div>
             </section>
 
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="submit-feedback" data-action-status data-submit-result>@Model.StatusMessage</div>
+            }
+
+            <div class="submit-feedback submit-feedback-pending" data-submit-progress hidden>
+                Submitting checklist approval request...
+            </div>
+
             <div class="action-row">
                 <button class="menu-btn vehicle-btn" type="submit" name="ActionType" value="save-draft">Save Draft</button>
-                <button class="menu-btn equipment-btn" type="submit" name="ActionType" value="approve-publish" disabled="@(!Model.IsSeniorChecklistPublisher)">Approve and Publish</button>
+                @if (Model.CanApproveAndPublish)
+                {
+                    <button class="menu-btn equipment-btn" type="submit" name="ActionType" value="approve-publish">Approve and Publish</button>
+                }
+                else
+                {
+                    <button class="menu-btn equipment-btn" type="submit" name="ActionType" value="submit-approval">Submit for Approval</button>
+                }
             </div>
         </form>
     </div>
@@ -340,27 +699,138 @@
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-grid label, .section-title-editor label, .field-editor-grid label, .previous-shift-editor label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
 .form-grid input, .form-grid select, .form-grid textarea, .section-title-editor input, .field-editor-grid input, .field-editor-grid select, .previous-shift-editor input { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 14px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.manual-entry-toggle { min-height: 44px; flex-direction: row !important; align-items: center; align-self: end; gap: 10px !important; padding: 0 12px; border: 1px solid rgba(14,94,122,.18); border-radius: 8px; background: rgba(14,94,122,.04); color: #0E5E7A !important; }
+.manual-entry-toggle input { width: 18px; min-height: 18px; padding: 0; }
+.manual-entry-field.is-hidden { display: none; }
+.publish-target.is-hidden { display: none !important; }
+.field-hint { color: #64748b; font-size: 11px; font-weight: 800; line-height: 1.35; }
 .form-grid textarea { padding-top: 12px; resize: vertical; }
 .template-note { margin-top: 12px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; }
 .builder-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .builder-toolbar p { margin: 0; color: #6b7280; font-size: 13px; font-weight: 700; }
 .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.small-action, .field-toolbar button, .section-controls button { min-height: 40px; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: #ffffff; color: #334155; font-weight: 800; padding: 0 12px; }
-.checklist-section-editor { margin-top: 14px; padding: 16px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; }
-.visual-section-heading { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; margin-bottom: 14px; }
-.visual-section-heading > span { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #334155; color: #ffffff; font-size: 14px; font-weight: 900; }
-.section-title-editor { display: grid; grid-template-columns: .8fr 1.2fr; gap: 12px; }
-.section-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.fixed-blocks-note span { min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid rgba(14,94,122,.22); border-radius: 8px; background: rgba(14,94,122,.06); color: #0E5E7A; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .7px; }
+.small-action, .field-toolbar button, .section-controls button { min-height: 30px; border: 1px solid rgba(66,84,102,.2); border-radius: 7px; background: #ffffff; color: #334155; font-size: 11px; font-weight: 800; padding: 0 9px; }
+.checklist-section-editor { margin-top: 8px; padding: 9px 10px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; }
+.visual-section-heading { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-bottom: 0; }
+.visual-section-heading > span { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; }
+.section-title-editor { display: grid; grid-template-columns: minmax(140px, .75fr) minmax(180px, 1.25fr); gap: 8px; }
+.section-title-editor label { gap: 4px; font-size: 11px; letter-spacing: .2px; }
+.section-title-editor input { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.section-controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.section-body { margin-top: 12px; }
+.checklist-section-editor.is-collapsed .section-body { display: none; }
+.empty-builder-state { margin-top: 10px; padding: 14px; border: 1px dashed rgba(66,84,102,.22); border-radius: 8px; background: rgba(255,255,255,.72); color: #64748b; font-size: 13px; font-weight: 850; text-align: center; }
+.builder-add-section-panel { margin-top: 10px; display: grid; grid-template-columns: minmax(160px, .8fr) minmax(180px, 1fr) auto; gap: 8px; align-items: end; padding: 10px; border: 1px dashed rgba(14,94,122,.28); border-radius: 8px; background: rgba(14,94,122,.035); }
+.builder-add-section-panel label { display: flex; flex-direction: column; gap: 5px; color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .3px; }
+.builder-add-section-panel input, .builder-add-section-panel select { width: 100%; min-height: 34px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; color: #1f2937; font-size: 13px; font-weight: 750; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.builder-add-section-panel input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+.section-notes-builder { margin-top: 12px; padding: 10px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: rgba(255,255,255,.72); }
+.section-notes-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; }
+.section-notes-heading strong { display: block; color: #334155; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.section-notes-heading span { display: block; margin-top: 2px; color: #64748b; font-size: 12px; font-weight: 750; }
+.section-note-list { display: grid; gap: 8px; }
+.section-note-config { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 8px; align-items: end; padding: 8px; border: 1px dashed rgba(14,94,122,.18); border-radius: 8px; background: rgba(14,94,122,.035); }
+.section-note-config label { display: flex; flex-direction: column; gap: 5px; color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .3px; }
+.section-note-config input[type="text"], .section-note-config input:not([type]) { width: 100%; min-height: 34px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; color: #1f2937; font-size: 13px; font-weight: 750; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.note-helper { align-self: center; color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .35px; white-space: nowrap; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .schematic-field-grid { grid-template-columns: minmax(0, 1fr); }
-.equipment-layout-preview { margin-bottom: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: #ffffff; }
-.equipment-preview-header, .equipment-preview-row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(160px, 1fr) minmax(110px, .7fr) minmax(110px, .7fr) minmax(100px, .55fr) minmax(160px, 1.1fr); }
+.unit-schematic-options { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.unit-schematic-options label { display: flex; flex-direction: column; gap: 8px; color: #52606d; font-size: 13px; font-weight: 800; }
+.unit-schematic-options select { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; background: #fff; color: #1f2937; font-size: 14px; box-sizing: border-box; }
+.unit-schematic-options p { margin: 0; color: #64748b; font-size: 12px; font-weight: 800; }
+.schematic-component-config { margin-top: 8px; padding: 8px; border: 1px solid rgba(14,94,122,.20); border-radius: 8px; background: rgba(14,94,122,.045); }
+.schematic-component-config.is-hidden { display: none; }
+.schematic-component-config label { display: flex; flex-direction: column; gap: 5px; color: #334155; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .35px; }
+.schematic-view-builder { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.schematic-view-card { min-width: 0; padding: 7px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
+.schematic-view-card strong { display: block; color: #0E5E7A; font-size: 12px; font-weight: 900; }
+.schematic-view-card span { display: block; margin-top: 2px; color: #64748b; font-size: 10px; font-weight: 800; line-height: 1.25; }
+.schematic-component-note { margin: 8px 0 0 0; color: #52606d; font-size: 11px; font-weight: 800; line-height: 1.35; }
+.field-axis-table { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: #ffffff; }
+.field-axis-row { display: grid; grid-template-columns: minmax(220px, 1.1fr) 160px minmax(170px, .9fr) minmax(190px, 1fr) 190px; align-items: stretch; border-top: 1px solid rgba(66,84,102,.12); }
+.field-axis-row:first-child { border-top: none; }
+.field-axis-header { background: #334155; color: #ffffff; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.field-axis-header span { padding: 12px; border-right: 1px solid rgba(255,255,255,.12); }
+.field-axis-row > label, .field-source-cell, .field-axis-row > .field-rule-row, .field-row-actions { min-width: 0; padding: 10px; border-right: 1px solid rgba(66,84,102,.1); }
+.field-axis-row > label { display: flex; flex-direction: column; gap: 7px; color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.field-axis-row input, .field-axis-row select { width: 100%; min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; color: #1f2937; font-size: 13px; font-weight: 750; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.field-source-cell { display: flex; flex-direction: column; gap: 8px; color: #64748b; font-size: 12px; font-weight: 800; }
+.field-source-cell strong { color: #0E5E7A; font-size: 12px; }
+.field-row-actions div { display: flex; gap: 6px; flex-wrap: wrap; }
+.field-row-actions button { min-height: 32px; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: #ffffff; color: #334155; font-size: 12px; font-weight: 800; padding: 0 9px; }
+.field-axis-row.system-linked { background: rgba(14,94,122,.035); }
+.axis-builder-note { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; padding: 8px 10px; border: 1px solid rgba(14,94,122,.2); border-radius: 8px; background: rgba(14,94,122,.06); color: #425466; font-size: 12px; font-weight: 800; }
+.axis-builder-note strong { color: #0E5E7A; font-size: 12px; letter-spacing: .8px; text-transform: uppercase; }
+.axis-builder-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.axis-table-shell { position: relative; padding-bottom: 24px; }
+.axis-table { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow-x: auto; overflow-y: hidden; background: #ffffff; }
+.axis-table-row { display: grid; }
+.axis-scroll-proxy { display: none; pointer-events: none; }
+.axis-scroll-proxy.is-active { display: block; position: fixed; z-index: 30; bottom: 78px; padding: 8px 10px; border: 1px solid rgba(66,84,102,.18); border-radius: 10px; background: rgba(248,250,252,.96); box-shadow: 0 10px 26px rgba(31,41,55,.18); pointer-events: auto; }
+.axis-scroll-proxy-track { width: 100%; height: 18px; overflow-x: auto; overflow-y: hidden; scrollbar-width: auto; }
+.axis-scroll-proxy-spacer { height: 1px; min-width: 100%; }
+.axis-header-row { background: #334155; color: #ffffff; }
+.axis-column-list { display: contents; }
+.axis-corner-cell, .axis-header-cell, .axis-item-cell, .axis-check-cell { min-width: 0; border-right: 1px solid rgba(66,84,102,.12); border-top: 1px solid rgba(66,84,102,.12); }
+.axis-corner-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 8px; border-top: none; border-color: rgba(255,255,255,.12); }
+.axis-corner-cell strong { font-size: 12px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; }
+.axis-corner-cell span { color: rgba(255,255,255,.76); font-size: 11px; font-weight: 800; }
+.axis-header-cell { padding: 7px; border-top: none; border-color: rgba(255,255,255,.12); background: #334155; color: #ffffff; }
+.axis-header-cell.system-linked { background: #2d4058; }
+.axis-header-cell label, .axis-item-cell label { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; color: inherit; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .35px; }
+.axis-header-cell input, .axis-header-cell select, .axis-item-cell input { width: 100%; min-height: 30px; border: 1px solid rgba(203,213,225,.9); border-radius: 7px; padding: 0 7px; background: #ffffff; color: #1f2937; font-size: 12px; font-weight: 750; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.axis-cell-toolbar { display: flex; justify-content: space-between; gap: 5px; align-items: center; }
+.axis-cell-toolbar span { color: inherit; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.axis-cell-toolbar div { display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; }
+.axis-cell-toolbar button { min-height: 24px; border: 1px solid rgba(255,255,255,.28); border-radius: 7px; background: rgba(255,255,255,.1); color: inherit; font-size: 10px; font-weight: 850; padding: 0 5px; }
+.axis-item-cell .axis-cell-toolbar button { border-color: rgba(66,84,102,.2); background: #ffffff; color: #334155; }
+.axis-item-cell { padding: 7px; background: #f8fafc; }
+.equipment-subitem-row .axis-item-cell { padding-left: 18px; background: rgba(14,94,122,.045); }
+.equipment-subitem-row .axis-cell-toolbar span { color: #0E5E7A; }
+.axis-check-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-height: 70px; padding: 7px; color: #334155; background: #ffffff; }
+.axis-check-cell span { color: #64748b; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .35px; }
+.axis-check-cell strong { color: #1f2937; font-size: 12px; font-weight: 900; }
+.axis-check-cell small { color: #64748b; font-size: 10px; font-weight: 750; line-height: 1.25; }
+.column-override-label { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; color: #52606d; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .3px; }
+.column-override-label select { width: 100%; min-height: 28px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 6px; background: #ffffff; color: #1f2937; font-size: 11px; font-weight: 750; box-sizing: border-box; text-transform: none; letter-spacing: 0; }
+.axis-subitem-list { display: block; }
+.compact-rule-row { gap: 5px; margin-top: 5px; font-size: 9px; }
+.compact-rule-row label { gap: 3px; align-items: center; }
+.compact-rule-row input[type="checkbox"] { width: 13px; height: 13px; min-height: 0; margin: 0; padding: 0; }
+.equipment-layout-preview { margin-bottom: 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow-x: auto; overflow-y: hidden; background: #ffffff; }
+.equipment-preview-header, .equipment-preview-row { display: grid; }
 .equipment-preview-header { background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 .equipment-preview-header span, .equipment-preview-row span { padding: 11px 12px; border-right: 1px solid rgba(66,84,102,.12); }
 .equipment-preview-header span { border-color: rgba(255,255,255,.12); }
 .equipment-preview-row { border-top: 1px solid rgba(66,84,102,.12); color: #334155; font-size: 13px; font-weight: 800; }
 .equipment-preview-row span:not(:first-child) { color: #64748b; }
+.equipment-preview-subitem { background: #f8fafc; color: #52606d; }
+.equipment-preview-subitem span:first-child { padding-left: 28px; color: #0E5E7A; }
 .equipment-preview-header span:last-child, .equipment-preview-row span:last-child { border-right: none; }
+.equipment-config-panel { margin-bottom: 14px; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); }
+.equipment-config-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.equipment-config-heading div { display: flex; flex-direction: column; gap: 3px; }
+.equipment-config-heading strong { color: #1f2937; font-size: 15px; font-weight: 900; }
+.equipment-config-heading span { color: #64748b; font-size: 12px; font-weight: 800; }
+.equipment-row-config-list { display: flex; flex-direction: column; gap: 10px; }
+.equipment-row-config { padding: 12px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #ffffff; }
+.row-config-toolbar { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; }
+.row-config-toolbar span { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+.row-config-toolbar div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.row-config-toolbar button { min-height: 32px; border: 1px solid rgba(66,84,102,.2); border-radius: 8px; background: #ffffff; color: #334155; font-size: 12px; font-weight: 800; padding: 0 9px; }
+.equipment-row-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.equipment-row-fields label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 800; color: #52606d; }
+.equipment-row-fields input { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 14px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.equipment-subitem-panel { margin-top: 12px; padding: 12px; border: 1px solid rgba(14,94,122,.14); border-radius: 8px; background: rgba(14,94,122,.04); }
+.equipment-subitem-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
+.equipment-subitem-heading div { display: flex; flex-direction: column; gap: 3px; }
+.equipment-subitem-heading strong { color: #1f2937; font-size: 14px; font-weight: 900; }
+.equipment-subitem-heading span { color: #64748b; font-size: 12px; font-weight: 800; }
+.equipment-subitem-list { display: flex; flex-direction: column; gap: 10px; }
+.equipment-subitem-config { padding: 12px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #ffffff; }
+.subitem-toolbar span { color: #0E5E7A; }
 .equipment-column-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .builder-field { padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
 .builder-field.system-linked { border-color: rgba(14,94,122,.26); background: rgba(14,94,122,.04); }
@@ -379,10 +849,14 @@
 .toggle-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px !important; color: #425466; }
 .toggle-row input { width: 18px; min-height: 18px; }
 .publish-note { margin-top: 14px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; }
+.submit-feedback { width: min(840px, 100%); margin: 0 auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-size: 14px; font-weight: 900; text-align: center; box-sizing: border-box; }
+.submit-feedback-pending { border-color: rgba(180,113,28,.26); background: rgba(180,113,28,.08); color: #8a4f10; }
+.submit-feedback[hidden] { display: none; }
+.editor-form.is-submitting .action-row button { pointer-events: none; opacity: .72; }
 .action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; position: sticky; bottom: 0; padding-top: 14px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 44%); }
 .action-row .menu-btn { width: 100%; border: none; }
 .action-row .menu-btn:disabled { cursor: not-allowed; opacity: .58; transform: none; filter: none; }
-@@media (max-width: 860px) { .form-grid, .builder-toolbar, .visual-section-heading, .section-title-editor, .field-grid, .field-editor-grid, .previous-shift-editor, .action-row, .equipment-preview-header, .equipment-preview-row { grid-template-columns: 1fr; } .toolbar-actions, .section-controls { justify-content: flex-start; } .equipment-preview-header { display: none; } .equipment-preview-row { border: 1px solid rgba(66,84,102,.14); } .equipment-preview-row + .equipment-preview-row { margin-top: 8px; } .equipment-preview-row span { border-right: none; border-top: 1px solid rgba(66,84,102,.1); } .equipment-preview-row span:first-child { border-top: none; background: #f8fafc; } }
+@@media (max-width: 860px) { .form-grid, .builder-toolbar, .visual-section-heading, .section-title-editor, .field-grid, .field-editor-grid, .previous-shift-editor, .action-row, .equipment-row-fields, .equipment-preview-header, .equipment-preview-row, .builder-add-section-panel, .section-note-config { grid-template-columns: 1fr; } .section-notes-heading { align-items: flex-start; flex-direction: column; } .toolbar-actions, .section-controls, .equipment-config-heading, .row-config-toolbar, .equipment-subitem-heading { justify-content: flex-start; } .equipment-config-heading, .row-config-toolbar, .equipment-subitem-heading { align-items: flex-start; flex-direction: column; } .equipment-preview-header { display: none; } .equipment-preview-row { border: 1px solid rgba(66,84,102,.14); } .equipment-preview-row + .equipment-preview-row { margin-top: 8px; } .equipment-preview-row span { border-right: none; border-top: 1px solid rgba(66,84,102,.1); } .equipment-preview-row span:first-child { border-top: none; background: #f8fafc; } .axis-scroll-proxy.is-active { bottom: 92px; padding: 10px; } .axis-scroll-proxy-track { height: 22px; } }
 </style>
 
 <script>
@@ -393,7 +867,140 @@
         const vehicleSameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
         const equipmentSameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
         const layoutBuilder = document.querySelector(".layout-builder");
+        const editorForm = document.querySelector("[data-checklist-editor-form]");
         const templateSelect = document.getElementById("templateSelect");
+        const manualEntryToggles = document.querySelectorAll("[data-manual-toggle]");
+        const publishScopeSelect = document.getElementById("publishScopeSelect");
+        const addSectionTypeSelect = document.querySelector("[data-add-section-name]");
+        const addSectionCustomInput = document.querySelector("[data-add-section-custom-name]");
+        const targetVehicleTypeValue = document.getElementById("targetVehicleTypeValue");
+        const targetVehicleFunctionSelect = document.getElementById("targetVehicleFunctionSelect");
+        const targetVehicleSubtypeSelect = document.getElementById("targetVehicleSubtypeSelect");
+        const useCustomTargetVehicleTypeToggle = document.getElementById("useCustomTargetVehicleTypeToggle");
+        const customTargetVehicleTypeInput = document.getElementById("customTargetVehicleTypeInput");
+        const publishedSchematics = @Html.Raw(JsonSerializer.Serialize(schematicOptions));
+        const defaultUnitSchematicKey = "@Model.DefaultUnitSchematicKey";
+
+        function syncTargetVehicleTypeValue() {
+            if (!targetVehicleTypeValue) {
+                return;
+            }
+
+            if (useCustomTargetVehicleTypeToggle?.checked) {
+                targetVehicleTypeValue.value = customTargetVehicleTypeInput?.value?.trim() || "All Vehicles";
+                return;
+            }
+
+            targetVehicleTypeValue.value =
+                targetVehicleSubtypeSelect?.value ||
+                targetVehicleFunctionSelect?.value ||
+                "All Vehicles";
+        }
+
+        function syncTargetSubtypeOptions() {
+            const selectedFunction = targetVehicleFunctionSelect?.value || "";
+            const selectedSubtype = targetVehicleSubtypeSelect?.value || "";
+            let selectedSubtypeVisible = !selectedSubtype;
+
+            targetVehicleSubtypeSelect?.querySelectorAll("option").forEach(function (option) {
+                const optionFunction = option.dataset.function || "";
+                const shouldShow = !option.value || !selectedFunction || optionFunction === selectedFunction;
+                option.hidden = !shouldShow;
+                option.disabled = !shouldShow;
+                if (shouldShow && option.value === selectedSubtype) {
+                    selectedSubtypeVisible = true;
+                }
+            });
+
+            if (!selectedSubtypeVisible && targetVehicleSubtypeSelect) {
+                targetVehicleSubtypeSelect.value = "";
+            }
+
+            syncTargetVehicleTypeValue();
+        }
+
+        function setManualEntryState(toggle) {
+            const group = toggle.dataset.manualToggle;
+            const isManual = toggle.checked;
+            const select = document.querySelector(`[data-manual-select="${group}"]`);
+            const fields = document.querySelectorAll(`[data-manual-field="${group}"]`);
+
+            if (select) {
+                select.disabled = isManual;
+            }
+
+            fields.forEach(function (field) {
+                field.classList.toggle("is-hidden", !isManual);
+                field.querySelectorAll("input, select, textarea").forEach(function (input) {
+                    input.disabled = !isManual;
+                    if (isManual && !input.value && select) {
+                        input.value = select.value;
+                    }
+                });
+            });
+        }
+
+        manualEntryToggles.forEach(function (toggle) {
+            setManualEntryState(toggle);
+            toggle.addEventListener("change", function () {
+                setManualEntryState(toggle);
+                syncTargetVehicleTypeValue();
+            });
+        });
+
+        syncTargetSubtypeOptions();
+        targetVehicleFunctionSelect?.addEventListener("change", syncTargetSubtypeOptions);
+        targetVehicleSubtypeSelect?.addEventListener("change", syncTargetVehicleTypeValue);
+        customTargetVehicleTypeInput?.addEventListener("input", syncTargetVehicleTypeValue);
+
+        function syncPublishTargets() {
+            const selectedScope = publishScopeSelect?.value || "All operational areas";
+            document.querySelectorAll("[data-publish-target]").forEach(function (target) {
+                target.classList.toggle("is-hidden", target.dataset.publishTarget !== selectedScope);
+            });
+        }
+
+        syncPublishTargets();
+        publishScopeSelect?.addEventListener("change", syncPublishTargets);
+
+        const submitResult = editorForm?.querySelector("[data-submit-result]");
+        if (submitResult) {
+            window.setTimeout(function () {
+                submitResult.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 120);
+        }
+
+        editorForm?.addEventListener("submit", function (event) {
+            const submitter = event.submitter;
+            const pending = editorForm.querySelector("[data-submit-progress]");
+            const action = submitter?.value || "";
+            if (pending) {
+                pending.textContent = action === "submit-approval"
+                    ? "Submitting checklist approval request..."
+                    : action === "approve-publish"
+                        ? "Publishing checklist for live use..."
+                        : "Saving checklist draft...";
+                pending.hidden = false;
+            }
+
+            editorForm.classList.add("is-submitting");
+            editorForm.querySelectorAll(".action-row button").forEach(function (button) {
+                button.setAttribute("aria-disabled", "true");
+            });
+        });
+
+        function syncAddSectionCustomName() {
+            const isCustom = addSectionTypeSelect?.value === "Custom";
+            if (addSectionCustomInput) {
+                addSectionCustomInput.disabled = !isCustom;
+                addSectionCustomInput.placeholder = isCustom
+                    ? "Type custom section name"
+                    : "Select Custom to type a section name";
+            }
+        }
+
+        syncAddSectionCustomName();
+        addSectionTypeSelect?.addEventListener("change", syncAddSectionCustomName);
 
         function renumberSections() {
             document.querySelectorAll(".checklist-section-editor").forEach(function (section, index) {
@@ -401,82 +1008,867 @@
                 if (number) {
                     number.textContent = String(index + 1);
                 }
+
+                section.querySelectorAll("[data-section-name]").forEach(function (input) {
+                    input.name = `VehicleChecklistSections[${index}].${input.dataset.sectionName}`;
+                });
+
+                renumberSectionFields(section, index);
+                renumberSectionNotes(section, index);
+                renumberEquipmentColumns(section, index);
+                renumberEquipmentRows(section, index);
+                syncSectionToggle(section);
+            });
+            syncEmptyBuilderState();
+        }
+
+        function syncEmptyBuilderState() {
+            const emptyState = layoutBuilder?.querySelector(".empty-builder-state");
+            if (!emptyState) {
+                return;
+            }
+
+            const hasSections = layoutBuilder.querySelector(".checklist-section-editor") !== null;
+            emptyState.hidden = hasSections;
+        }
+
+        function syncSectionToggle(section) {
+            const toggle = section?.querySelector('[data-action="toggle-section"]');
+            if (!toggle) {
+                return;
+            }
+
+            const isCollapsed = section.classList.contains("is-collapsed");
+            toggle.textContent = isCollapsed ? "Open Section" : "Close Section";
+            toggle.setAttribute("aria-expanded", String(!isCollapsed));
+        }
+
+        function renumberSectionFields(section, sectionIndex) {
+            section.querySelectorAll("[data-field-row]").forEach(function (fieldRow, fieldIndex) {
+                fieldRow.querySelectorAll("[data-field-name]").forEach(function (input) {
+                    input.name = `VehicleChecklistSections[${sectionIndex}].Fields[${fieldIndex}].${input.dataset.fieldName}`;
+                });
             });
         }
 
-        function createField() {
-            const field = document.createElement("div");
-            field.className = "builder-field";
-            field.innerHTML = `
-                <div class="field-toolbar">
-                    <span>Draft field</span>
+        function renumberSectionNotes(section, sectionIndex) {
+            section.querySelectorAll("[data-section-note]").forEach(function (noteRow, noteIndex) {
+                noteRow.querySelectorAll("[data-note-name]").forEach(function (input) {
+                    input.name = `VehicleChecklistSections[${sectionIndex}].Notes[${noteIndex}].${input.dataset.noteName}`;
+                });
+            });
+        }
+
+        function createChecklistFieldRow() {
+            const row = document.createElement("div");
+            row.className = "field-axis-row";
+            row.dataset.fieldRow = "";
+            row.setAttribute("role", "row");
+            row.innerHTML = `
+                <label role="cell">
+                    Field name
+                    <input data-field-name="Label" value="New field" aria-label="New field label" />
+                </label>
+                <label role="cell">
+                    Input type
+                    <select data-field-name="Type" aria-label="New field type">
+                        <option selected>Text</option>
+                        <option>Number</option>
+                        <option>Date</option>
+                        <option>Dropdown</option>
+                        <option>Checkbox</option>
+                        <option>Photo Upload</option>
+                        <option>Schematic Markup</option>
+                        <option>Permissioned Action</option>
+                    </select>
+                </label>
+                <div class="field-source-cell" role="cell">
+                    <input type="hidden" data-field-name="Source" value="Fresh entry" />
+                    <select data-field-source-select aria-label="New field source">
+                        <option selected>Fresh entry</option>
+                        <option>Vehicle register</option>
+                        <option>Equipment register</option>
+                        <option>Stock register</option>
+                        <option>Medication register</option>
+                        <option>Staff register</option>
+                        <option>Unit Schematic library</option>
+                        <option>Senior setting</option>
+                        <option>Custom</option>
+                    </select>
+                    <input class="custom-source-input" data-field-custom-source placeholder="Custom source" aria-label="New field custom source" hidden />
+                    ${createSchematicConfigHtml()}
+                </div>
+                <div class="field-rule-row compact-rule-row" role="cell">
+                    <label><input type="checkbox" data-field-name="IsRequired" value="true" /> Required</label>
+                    <label><input type="checkbox" data-field-name="IsEditable" value="true" checked /> Editable</label>
+                    <input type="hidden" data-field-name="IsSystemLinked" value="false" />
+                    <span data-field-link-status>Manual entry</span>
+                </div>
+                <div class="field-row-actions" role="cell">
                     <div>
                         <button type="button" data-action="move-field-up">Up</button>
                         <button type="button" data-action="move-field-down">Down</button>
                         <button type="button" data-action="remove-field">Remove</button>
                     </div>
-                </div>
-                <div class="field-editor-grid">
+                </div>`;
+            return row;
+        }
+
+        function createSectionNote() {
+            const note = document.createElement("div");
+            note.className = "section-note-config";
+            note.dataset.sectionNote = "";
+            note.innerHTML = `
+                <label>
+                    Notes label
+                    <input data-note-name="Label" placeholder="Section notes" />
+                </label>
+                <span class="note-helper">Optional note only</span>
+                <button class="small-action" type="button" data-action="remove-section-note">Remove</button>`;
+            return note;
+        }
+
+        function createSectionNotesBlock() {
+            return `
+                <div class="section-notes-builder" data-section-notes>
+                    <div class="section-notes-heading">
+                        <div>
+                            <strong>Section notes</strong>
+                            <span>Free-text notes shown after this section, outside the row and column layout.</span>
+                        </div>
+                        <button class="small-action" type="button" data-action="add-section-note">Add Notes Field</button>
+                    </div>
+                    <div class="section-note-list" data-section-note-list></div>
+                </div>`;
+        }
+
+        function isLinkedFieldSource(value) {
+            const normalized = (value || "").toLowerCase();
+            return normalized.includes("register") ||
+                normalized.includes("library") ||
+                normalized.includes("auto-filled") ||
+                normalized === "senior setting";
+        }
+
+        function syncFieldSource(fieldRow) {
+            if (!fieldRow) {
+                return;
+            }
+
+            const sourceSelect = fieldRow.querySelector("[data-field-source-select]");
+            const customSource = fieldRow.querySelector("[data-field-custom-source]");
+            const sourceInput = fieldRow.querySelector('[data-field-name="Source"]');
+            const systemLinkedInput = fieldRow.querySelector('[data-field-name="IsSystemLinked"]');
+            const status = fieldRow.querySelector("[data-field-link-status]");
+            const selectedSource = sourceSelect?.value || "Fresh entry";
+            const isCustom = selectedSource === "Custom";
+            const effectiveSource = isCustom
+                ? (customSource?.value?.trim() || "Custom")
+                : selectedSource;
+            const isLinked = isLinkedFieldSource(selectedSource);
+
+            if (customSource) {
+                customSource.hidden = !isCustom;
+                customSource.disabled = !isCustom;
+            }
+
+            if (sourceInput) {
+                sourceInput.value = effectiveSource || "Fresh entry";
+            }
+
+            if (systemLinkedInput) {
+                systemLinkedInput.value = String(isLinked);
+            }
+
+            if (status) {
+                status.textContent = isLinked ? "Linked source" : "Manual entry";
+            }
+
+            fieldRow.classList.toggle("system-linked", isLinked);
+        }
+
+        function syncAllFieldSources(root) {
+            (root || document).querySelectorAll("[data-field-row]").forEach(syncFieldSource);
+        }
+
+        function isSchematicType(value) {
+            return (value || "").toLowerCase().includes("schematic");
+        }
+
+        function schematicOptionsHtml(selectedKey) {
+            const selected = selectedKey || defaultUnitSchematicKey || "";
+            const blankOption = `<option value=""${selected ? "" : " selected"}>No schematic selected</option>`;
+            return blankOption + publishedSchematics.map(function (schematic) {
+                const isSelected = schematic.Key === selected ? " selected" : "";
+                return `<option value="${escapeHtml(schematic.Key)}"${isSelected}>${escapeHtml(schematic.DisplayName)}</option>`;
+            }).join("");
+        }
+
+        function createSchematicConfigHtml(selectedKey) {
+            return `
+                <div class="schematic-component-config is-hidden" data-schematic-config>
                     <label>
-                        Field label
-                        <input value="New field" aria-label="New field label" />
-                    </label>
-                    <label>
-                        Input type
-                        <select aria-label="New field type">
-                            <option selected>Text</option>
-                            <option>Number</option>
-                            <option>Date</option>
-                            <option>Dropdown</option>
-                            <option>Checkbox</option>
-                            <option>Photo Upload</option>
-                            <option>Schematic Markup</option>
-                            <option>Permissioned Action</option>
+                        Saved schematic set
+                        <select data-field-name="UnitSchematicKey" aria-label="Saved unit schematic">
+                            ${schematicOptionsHtml(selectedKey)}
                         </select>
                     </label>
-                </div>
-                <div class="field-rule-row">
-                    <label><input type="checkbox" /> Required</label>
-                    <label><input type="checkbox" checked /> Editable</label>
+                    <div class="schematic-view-builder" aria-label="Unit schematic views">
+                        <div class="schematic-view-card"><strong>Left</strong><span>Damage present, position, severity, notes, photo, readiness impact</span></div>
+                        <div class="schematic-view-card"><strong>Right</strong><span>Damage present, position, severity, notes, photo, readiness impact</span></div>
+                        <div class="schematic-view-card"><strong>Front</strong><span>Damage present, position, severity, notes, photo, readiness impact</span></div>
+                        <div class="schematic-view-card"><strong>Rear</strong><span>Damage present, position, severity, notes, photo, readiness impact</span></div>
+                    </div>
+                    <p class="schematic-component-note">This single builder row saves as one Unit Schematic block with four crew-facing views.</p>
                 </div>`;
-            return field;
+        }
+
+        function syncSchematicConfig(fieldRow) {
+            if (!fieldRow) {
+                return;
+            }
+
+            const typeSelect = fieldRow.querySelector('[data-field-name="Type"]');
+            const labelInput = fieldRow.querySelector('[data-field-name="Label"]');
+            const sourceSelect = fieldRow.querySelector("[data-field-source-select]");
+            const config = fieldRow.querySelector("[data-schematic-config]");
+            const isSchematic = isSchematicType(typeSelect?.value) ||
+                (labelInput?.value || "").toLowerCase().includes("unit schematic");
+
+            config?.classList.toggle("is-hidden", !isSchematic);
+
+            if (isSchematic) {
+                if (labelInput && (labelInput.value === "New field" || !labelInput.value.trim())) {
+                    labelInput.value = "Unit Schematic";
+                }
+
+                if (sourceSelect) {
+                    sourceSelect.value = "Unit Schematic library";
+                }
+            }
+
+            syncFieldSource(fieldRow);
+        }
+
+        function syncAllSchematicConfigs(root) {
+            (root || document).querySelectorAll("[data-field-row]").forEach(syncSchematicConfig);
         }
 
         function createSection(title, helperText) {
             const section = document.createElement("article");
-            section.className = "checklist-section-editor";
+            section.className = "checklist-section-editor is-collapsed";
+            section.dataset.sectionKind = "Fields";
             section.innerHTML = `
+                <input type="hidden" data-section-name="Kind" value="Fields" />
                 <div class="visual-section-heading">
                     <span></span>
                     <div class="section-title-editor">
                         <label>
                             Section heading
-                            <input value="${title}" aria-label="${title} heading" />
+                            <input data-section-name="Title" value="${title}" aria-label="${title} heading" />
                         </label>
                         <label>
                             Staff helper text
-                            <input value="${helperText}" aria-label="${title} helper text" />
+                            <input data-section-name="HelperText" value="${helperText}" aria-label="${title} helper text" />
                         </label>
                     </div>
                     <div class="section-controls" aria-label="${title} controls">
-                        <button type="button" data-action="move-section-up">Move Up</button>
-                        <button type="button" data-action="move-section-down">Move Down</button>
+                        <button type="button" data-action="move-section-up">Up</button>
+                        <button type="button" data-action="move-section-down">Down</button>
                         <button type="button" data-action="remove-section">Remove</button>
+                        <button type="button" data-action="toggle-section" aria-expanded="false">Open Section</button>
                     </div>
                 </div>
-                <div class="field-grid"></div>
-                <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to ${title}</button>`;
+                <div class="section-body" data-section-body>
+                    <div class="field-axis-table" data-field-list role="table" aria-label="${title} field builder">
+                        <div class="field-axis-row field-axis-header" role="row">
+                            <span role="columnheader">Y Axis: Vehicle Field</span>
+                            <span role="columnheader">Input Type</span>
+                            <span role="columnheader">Source</span>
+                            <span role="columnheader">Rules</span>
+                            <span role="columnheader">Actions</span>
+                        </div>
+                    </div>
+                    <button class="small-action inline-add" type="button" data-action="add-field-to-section">Add Field to ${title}</button>
+                    ${createSectionNotesBlock()}
+                </div>`;
             return section;
         }
 
+        function createMatrixSection(title, helperText) {
+            const safeTitle = escapeHtml(title);
+            const safeHelperText = escapeHtml(helperText);
+            const section = document.createElement("article");
+            section.className = "checklist-section-editor is-collapsed";
+            section.dataset.sectionKind = "EquipmentTable";
+            section.innerHTML = `
+                <input type="hidden" data-section-name="Kind" value="EquipmentTable" />
+                <div class="visual-section-heading">
+                    <span></span>
+                    <div class="section-title-editor">
+                        <label>
+                            Section heading
+                            <input data-section-name="Title" value="${safeTitle}" aria-label="${safeTitle} heading" />
+                        </label>
+                        <label>
+                            Staff helper text
+                            <input data-section-name="HelperText" value="${safeHelperText}" aria-label="${safeTitle} helper text" />
+                        </label>
+                    </div>
+                    <div class="section-controls" aria-label="${safeTitle} controls">
+                        <button type="button" data-action="move-section-up">Up</button>
+                        <button type="button" data-action="move-section-down">Down</button>
+                        <button type="button" data-action="remove-section">Remove</button>
+                        <button type="button" data-action="toggle-section" aria-expanded="false">Open Section</button>
+                    </div>
+                </div>
+                <div class="section-body" data-section-body>
+                    <div class="axis-builder-note">
+                        <strong>Builder axes</strong>
+                        <span>X axis = checklist columns. Y axis = items and subitems. Register links are optional per column.</span>
+                    </div>
+                    <div class="axis-builder-actions">
+                        <button class="small-action" type="button" data-action="add-equipment-row">Add Item Row</button>
+                        <button class="small-action" type="button" data-action="add-equipment-column">Add Column</button>
+                    </div>
+                    <div class="axis-table-shell" data-axis-table-shell>
+                        <div class="axis-table" data-axis-table role="table" aria-label="${safeTitle} checklist visual builder">
+                            <div class="axis-table-row axis-header-row" role="row">
+                                <div class="axis-corner-cell" role="columnheader">
+                                    <strong>Y Axis</strong>
+                                    <span>Item / subitem</span>
+                                </div>
+                                <div class="axis-column-list" data-equipment-column-list></div>
+                            </div>
+                            <div class="axis-row-list" data-equipment-row-list></div>
+                        </div>
+                        <div class="axis-scroll-proxy" data-axis-scroll-proxy aria-label="${safeTitle} horizontal scroll">
+                            <div class="axis-scroll-proxy-track" data-axis-scroll-track tabindex="0">
+                                <div class="axis-scroll-proxy-spacer" data-axis-scroll-spacer></div>
+                            </div>
+                        </div>
+                    </div>
+                    ${createSectionNotesBlock()}
+                </div>`;
+            return section;
+        }
+
+        function getSectionTitleForNewMatrix() {
+            const selected = document.querySelector("[data-add-section-name]")?.value || "Equipment";
+            const customName = document.querySelector("[data-add-section-custom-name]")?.value?.trim();
+            if (selected === "Custom" && customName) {
+                return customName;
+            }
+
+            return selected === "Custom" ? "Custom Section" : selected;
+        }
+
+        function getSectionHelperText(title) {
+            const normalized = (title || "").toLowerCase();
+            if (normalized.includes("stock")) {
+                return "Blank stock matrix. Add item rows, subitems, and the columns crews must complete.";
+            }
+
+            if (normalized.includes("medication")) {
+                return "Blank medication matrix. Add medication rows, subitems, and the columns crews must complete.";
+            }
+
+            if (normalized.includes("vehicle")) {
+                return "Blank vehicle matrix. Add rows and columns for the vehicle-specific checks required.";
+            }
+
+            return "Blank matrix section. Add item rows, subitems, and the columns crews must complete.";
+        }
+
         function addFieldToSection(section) {
-            const grid = section?.querySelector(".field-grid");
-            if (!grid) {
+            const fieldList = section?.querySelector("[data-field-list]");
+            if (!fieldList) {
                 return;
             }
 
-            grid.appendChild(createField());
+            fieldList.appendChild(createChecklistFieldRow());
+            renumberSections();
+            syncAllSchematicConfigs(section);
+            syncAllFieldSources(section);
         }
+
+        function escapeHtml(value) {
+            return String(value || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function createEquipmentRow() {
+            const row = document.createElement("div");
+            row.className = "equipment-axis-group";
+            row.dataset.equipmentRow = "";
+            row.innerHTML = `
+                <div class="axis-table-row equipment-axis-row" role="row">
+                    <div class="axis-item-cell" role="rowheader">
+                        <div class="axis-cell-toolbar">
+                            <span>Item</span>
+                            <div>
+                                <button type="button" data-action="move-equipment-row-up">Up</button>
+                                <button type="button" data-action="move-equipment-row-down">Down</button>
+                                <button type="button" data-action="remove-equipment-row">Remove</button>
+                            </div>
+                        </div>
+                        <label>
+                            Item name
+                            <input data-name="Name" placeholder="Item name" />
+                        </label>
+                        <label>
+                            Item type
+                            <input data-name="EquipmentType" placeholder="Monitor defibrillator, stock item, medication" />
+                        </label>
+                        <label>
+                            Model / variant
+                            <input data-name="Model" placeholder="Optional model, variant, or size" />
+                        </label>
+                        <div class="field-rule-row compact-rule-row">
+                            <label><input type="checkbox" data-name="IsRequired" value="true" checked /> Required</label>
+                            <label><input type="checkbox" data-name="IsReadinessCritical" value="true" checked /> Readiness</label>
+                            <label><input type="checkbox" data-name="AllowsSameAsPrevious" value="true" checked /> Previous</label>
+                        </div>
+                        <button class="small-action inline-add" type="button" data-action="add-equipment-subitem">Add Subitem</button>
+                    </div>
+                </div>
+                <div class="axis-subitem-list" data-equipment-subitem-list></div>`;
+            return row;
+        }
+
+        function createEquipmentSubItem() {
+            const subItem = document.createElement("div");
+            subItem.className = "axis-table-row equipment-axis-row equipment-subitem-row";
+            subItem.dataset.equipmentSubitem = "";
+            subItem.setAttribute("role", "row");
+            subItem.innerHTML = `
+                <div class="axis-item-cell" role="rowheader">
+                    <div class="axis-cell-toolbar subitem-toolbar">
+                        <span>Subitem</span>
+                        <div>
+                            <button type="button" data-action="move-equipment-subitem-up">Up</button>
+                            <button type="button" data-action="move-equipment-subitem-down">Down</button>
+                            <button type="button" data-action="remove-equipment-subitem">Remove</button>
+                        </div>
+                    </div>
+                        <label>
+                            Subitem name
+                            <input data-subitem-name="Name" placeholder="Subitem name" />
+                        </label>
+                        <label>
+                            Subitem type
+                            <input data-subitem-name="EquipmentType" placeholder="Accessory, batch, component, function" />
+                    </label>
+                    <label>
+                        Model / variant
+                        <input data-subitem-name="Model" placeholder="Optional" />
+                    </label>
+                    <div class="field-rule-row compact-rule-row">
+                        <label><input type="checkbox" data-subitem-name="IsRequired" value="true" checked /> Required</label>
+                        <label><input type="checkbox" data-subitem-name="IsReadinessCritical" value="true" checked /> Readiness</label>
+                        <label><input type="checkbox" data-subitem-name="AllowsSameAsPrevious" value="true" checked /> Previous</label>
+                    </div>
+                </div>`;
+            return subItem;
+        }
+
+        function createEquipmentColumn() {
+            const column = document.createElement("div");
+            column.className = "axis-header-cell";
+            column.dataset.equipmentColumn = "";
+            column.setAttribute("role", "columnheader");
+            column.innerHTML = `
+                <div class="axis-cell-toolbar">
+                    <span>X</span>
+                    <div>
+                        <button type="button" data-action="move-equipment-column-up">Left</button>
+                        <button type="button" data-action="move-equipment-column-down">Right</button>
+                        <button type="button" data-action="remove-equipment-column">Remove</button>
+                    </div>
+                </div>
+                <label>
+                    Column heading
+                    <input data-name="Label" placeholder="Column heading" aria-label="New column label" />
+                </label>
+                <label>
+                    Input type
+                    <select data-name="Type" aria-label="New column type">
+                        <option>Configured row</option>
+                        <option selected>Text</option>
+                        <option>Date</option>
+                        <option>Dropdown</option>
+                        <option>Checkbox</option>
+                        <option>Yes/No</option>
+                        <option>Photo Upload</option>
+                    </select>
+                </label>
+                <label>
+                    Data source
+                    <select data-name="Source" aria-label="New column source">
+                        <option selected>Fresh entry</option>
+                        <option>Vehicle register</option>
+                        <option>Equipment register</option>
+                        <option>Stock register</option>
+                        <option>Medication register</option>
+                        <option>Custom</option>
+                    </select>
+                    <input class="custom-source-input" data-custom-source placeholder="Custom source" aria-label="New column custom source" hidden />
+                    <input type="hidden" data-name="ResolvedSource" value="Fresh entry" />
+                </label>
+                <div class="field-rule-row compact-rule-row">
+                    <label><input type="checkbox" data-name="IsRequired" value="true" /> Required</label>
+                    <label><input type="checkbox" data-name="IsEditable" value="true" checked /> Editable</label>
+                    <label><input type="checkbox" data-name="IsSystemLinked" value="true" /> Register link</label>
+                    <label><input type="checkbox" data-name="AffectsReadiness" value="true" /> Readiness</label>
+                    <label><input type="checkbox" data-name="SameAsPreviousEligible" value="true" checked /> Previous</label>
+                    <label><input type="checkbox" data-name="RequiresNoteWhenNotNormal" value="true" /> Note</label>
+                </div>
+            `;
+            return column;
+        }
+
+        function readEquipmentColumns(section) {
+            return Array.from((section || document).querySelectorAll("[data-equipment-column]")).map(function (column, index) {
+                const label = column.querySelector('[data-name="Label"]')?.value || `Column ${index + 1}`;
+                const source = resolveColumnSource(column);
+                return {
+                    key: normalizeColumnKey(label),
+                    label,
+                    type: column.querySelector('[data-name="Type"]')?.value || "Text",
+                    source
+                };
+            });
+        }
+
+        function isRegisterSource(value) {
+            return ["Vehicle register", "Equipment register", "Stock register", "Medication register"]
+                .includes(value || "");
+        }
+
+        function resolveColumnSource(column) {
+            const sourceSelect = column.querySelector('[data-name="Source"]');
+            const customSource = column.querySelector("[data-custom-source]");
+            const sourceValue = sourceSelect?.value || "Fresh entry";
+            if (sourceValue === "Custom") {
+                return customSource?.value?.trim() || "Custom";
+            }
+
+            return sourceValue || "Fresh entry";
+        }
+
+        function syncColumnSource(column) {
+            if (!column) {
+                return;
+            }
+
+            const sourceSelect = column.querySelector('[data-name="Source"]');
+            const customSource = column.querySelector("[data-custom-source]");
+            const resolvedSource = column.querySelector('[data-name="ResolvedSource"]');
+            const registerLink = column.querySelector('[data-name="IsSystemLinked"]');
+            const selectedSource = sourceSelect?.value || "Fresh entry";
+            const isCustom = selectedSource === "Custom";
+            const effectiveSource = isCustom
+                ? (customSource?.value?.trim() || "Custom")
+                : selectedSource;
+
+            if (customSource) {
+                customSource.hidden = !isCustom;
+                customSource.disabled = !isCustom;
+            }
+
+            if (resolvedSource) {
+                resolvedSource.value = effectiveSource || "Fresh entry";
+            }
+
+            if (registerLink) {
+                if (isRegisterSource(selectedSource)) {
+                    registerLink.checked = true;
+                } else if (selectedSource === "Fresh entry") {
+                    registerLink.checked = false;
+                }
+            }
+        }
+
+        function syncAllColumnSources(root) {
+            (root || document).querySelectorAll("[data-equipment-column]").forEach(syncColumnSource);
+        }
+
+        function normalizeColumnKey(value) {
+            return (value || "")
+                .trim()
+                .toLowerCase()
+                .replace(/\//g, "")
+                .replace(/\?/g, "")
+                .replace(/\s+-\s+/g, "-")
+                .replace(/\s+/g, "-");
+        }
+
+        function createAxisCheckCell(column, overrideMode) {
+            const cell = document.createElement("div");
+            cell.className = "axis-check-cell";
+            cell.setAttribute("role", "cell");
+            cell.dataset.columnKey = column.key;
+            const label = document.createElement("span");
+            const type = document.createElement("strong");
+            const source = document.createElement("small");
+            const columnIndexInput = document.createElement("input");
+            const overrideLabel = document.createElement("label");
+            const overrideSelect = document.createElement("select");
+            label.textContent = column.label;
+            type.textContent = column.type;
+            source.textContent = column.source;
+            columnIndexInput.type = "hidden";
+            columnIndexInput.dataset.columnOverrideName = "ColumnIndex";
+            overrideLabel.className = "column-override-label";
+            overrideLabel.textContent = "Row setting";
+            overrideSelect.dataset.columnOverrideName = "Mode";
+            [
+                ["Default", "Use default"],
+                ["Required", "Required"],
+                ["Optional", "Optional"],
+                ["NotApplicable", "N/A for this row"]
+            ].forEach(function (optionDefinition) {
+                const option = document.createElement("option");
+                option.value = optionDefinition[0];
+                option.textContent = optionDefinition[1];
+                option.selected = option.value === (overrideMode || "Default");
+                overrideSelect.appendChild(option);
+            });
+            overrideLabel.appendChild(overrideSelect);
+            cell.append(label, type, source, columnIndexInput, overrideLabel);
+            return cell;
+        }
+
+        let isSyncingAxisScroll = false;
+
+        function getAxisShells() {
+            return Array.from(document.querySelectorAll("[data-axis-table-shell]"));
+        }
+
+        function updateAxisScrollProxy(shell) {
+            const table = shell.querySelector("[data-axis-table]");
+            const proxy = shell.querySelector("[data-axis-scroll-proxy]");
+            const track = shell.querySelector("[data-axis-scroll-track]");
+            const spacer = shell.querySelector("[data-axis-scroll-spacer]");
+            if (!table || !proxy || !track || !spacer) {
+                return;
+            }
+
+            const hasHorizontalOverflow = table.scrollWidth > table.clientWidth + 2;
+            const rect = shell.getBoundingClientRect();
+            const sectionIsActive = hasHorizontalOverflow && rect.top < window.innerHeight - 106 && rect.bottom > 112;
+            if (!sectionIsActive) {
+                proxy.classList.remove("is-active");
+                return;
+            }
+
+            const left = Math.max(12, rect.left);
+            const right = Math.min(window.innerWidth - 12, rect.right);
+            proxy.style.left = `${left}px`;
+            proxy.style.width = `${Math.max(180, right - left)}px`;
+            spacer.style.width = `${table.scrollWidth}px`;
+            proxy.classList.add("is-active");
+
+            if (Math.abs(track.scrollLeft - table.scrollLeft) > 1) {
+                track.scrollLeft = table.scrollLeft;
+            }
+        }
+
+        function updateAxisScrollProxies() {
+            getAxisShells().forEach(updateAxisScrollProxy);
+        }
+
+        function bindAxisScrollProxies() {
+            getAxisShells().forEach(function (shell) {
+                if (shell.dataset.axisScrollBound === "true") {
+                    return;
+                }
+
+                const table = shell.querySelector("[data-axis-table]");
+                const track = shell.querySelector("[data-axis-scroll-track]");
+                if (!table || !track) {
+                    return;
+                }
+
+                shell.dataset.axisScrollBound = "true";
+
+                table.addEventListener("scroll", function () {
+                    if (isSyncingAxisScroll) {
+                        return;
+                    }
+
+                    isSyncingAxisScroll = true;
+                    track.scrollLeft = table.scrollLeft;
+                    isSyncingAxisScroll = false;
+                    updateAxisScrollProxy(shell);
+                }, { passive: true });
+
+                track.addEventListener("scroll", function () {
+                    if (isSyncingAxisScroll) {
+                        return;
+                    }
+
+                    isSyncingAxisScroll = true;
+                    table.scrollLeft = track.scrollLeft;
+                    isSyncingAxisScroll = false;
+                }, { passive: true });
+            });
+
+            updateAxisScrollProxies();
+        }
+
+        function syncAxisTable(section) {
+            const targetSections = section
+                ? [section]
+                : Array.from(document.querySelectorAll(".checklist-section-editor[data-section-kind='EquipmentTable']"));
+
+            targetSections.forEach(function (matrixSection) {
+            const columns = readEquipmentColumns(matrixSection);
+            const columnCount = Math.max(columns.length, 1);
+            const gridTemplate = `minmax(190px, 1fr) repeat(${columnCount}, minmax(118px, .9fr))`;
+            const minWidth = `${190 + columnCount * 118}px`;
+
+            matrixSection.querySelectorAll(".axis-table-row").forEach(function (row) {
+                row.style.gridTemplateColumns = gridTemplate;
+                row.style.minWidth = minWidth;
+            });
+
+            matrixSection.querySelectorAll(".equipment-axis-row").forEach(function (row) {
+                const overrideModesByKey = new Map();
+                const overrideModesByIndex = [];
+
+                Array.from(row.querySelectorAll(".axis-check-cell")).forEach(function (cell, index) {
+                    const mode = cell.querySelector('[data-column-override-name="Mode"]')?.value || "Default";
+                    const key = cell.dataset.columnKey || normalizeColumnKey(cell.querySelector("span")?.textContent);
+                    if (key) {
+                        overrideModesByKey.set(key, mode);
+                    }
+                    overrideModesByIndex[index] = mode;
+                });
+
+                row.querySelectorAll(".axis-check-cell").forEach(function (cell) {
+                    cell.remove();
+                });
+
+                columns.forEach(function (column, index) {
+                    row.appendChild(createAxisCheckCell(
+                        column,
+                        overrideModesByKey.get(column.key) || overrideModesByIndex[index] || "Default"));
+                });
+            });
+
+            renumberSections();
+            });
+            bindAxisScrollProxies();
+        }
+
+        function renumberColumnOverrides(axisRow, prefix) {
+            if (!axisRow) {
+                return;
+            }
+
+            Array.from(axisRow.children)
+                .filter(function (child) {
+                    return child.classList.contains("axis-check-cell");
+                })
+                .forEach(function (cell, columnIndex) {
+                    cell.querySelectorAll("[data-column-override-name]").forEach(function (input) {
+                        const property = input.dataset.columnOverrideName;
+                        input.name = `${prefix}[${columnIndex}].${property}`;
+                        if (property === "ColumnIndex") {
+                            input.value = String(columnIndex);
+                        }
+                    });
+                });
+        }
+
+        function renumberEquipmentRows(section, sectionIndex) {
+            const targetSections = section
+                ? [{ section, sectionIndex }]
+                : Array.from(document.querySelectorAll(".checklist-section-editor")).map(function (item, index) {
+                    return { section: item, sectionIndex: index };
+                });
+
+            targetSections.forEach(function (target) {
+            if (target.section?.dataset.sectionKind !== "EquipmentTable") {
+                return;
+            }
+
+            target.section.querySelectorAll("[data-equipment-row]").forEach(function (row, index) {
+                const label = row.querySelector(".axis-cell-toolbar span");
+                if (label) {
+                    label.textContent = `Item ${index + 1}`;
+                }
+
+                row.querySelectorAll("[data-name]").forEach(function (input) {
+                    input.name = `VehicleChecklistSections[${target.sectionIndex}].MatrixRows[${index}].${input.dataset.name}`;
+                });
+
+                renumberColumnOverrides(
+                    Array.from(row.children).find(function (child) {
+                        return child.classList.contains("equipment-axis-row");
+                    }),
+                    `VehicleChecklistSections[${target.sectionIndex}].MatrixRows[${index}].ColumnOverrides`);
+
+                row.querySelectorAll("[data-equipment-subitem]").forEach(function (subItem, subIndex) {
+                    const subItemLabel = subItem.querySelector(".subitem-toolbar span");
+                    if (subItemLabel) {
+                        subItemLabel.textContent = `Subitem ${subIndex + 1}`;
+                    }
+
+                    subItem.querySelectorAll("[data-subitem-name]").forEach(function (input) {
+                        input.name = `VehicleChecklistSections[${target.sectionIndex}].MatrixRows[${index}].SubItems[${subIndex}].${input.dataset.subitemName}`;
+                    });
+
+                    renumberColumnOverrides(
+                        subItem,
+                        `VehicleChecklistSections[${target.sectionIndex}].MatrixRows[${index}].SubItems[${subIndex}].ColumnOverrides`);
+                });
+            });
+            });
+        }
+
+        function renumberEquipmentColumns(section, sectionIndex) {
+            const targetSections = section
+                ? [{ section, sectionIndex }]
+                : Array.from(document.querySelectorAll(".checklist-section-editor")).map(function (item, index) {
+                    return { section: item, sectionIndex: index };
+                });
+
+            targetSections.forEach(function (target) {
+            if (target.section?.dataset.sectionKind !== "EquipmentTable") {
+                return;
+            }
+
+            target.section.querySelectorAll("[data-equipment-column]").forEach(function (column, index) {
+                const label = column.querySelector(".axis-cell-toolbar span");
+                if (label) {
+                    label.textContent = `X ${index + 1}`;
+                }
+
+                column.querySelectorAll("[data-name]").forEach(function (input) {
+                    const propertyName = input.dataset.name === "ResolvedSource" ? "Source" : input.dataset.name;
+                    if (input.dataset.name === "Source") {
+                        input.removeAttribute("name");
+                        return;
+                    }
+                    input.name = `VehicleChecklistSections[${target.sectionIndex}].MatrixColumns[${index}].${propertyName}`;
+                });
+            });
+            });
+        }
+
+        renumberSections();
+        syncAllSchematicConfigs();
+        syncAllFieldSources();
+        renumberEquipmentRows();
+        renumberEquipmentColumns();
+        syncAllColumnSources();
+        syncAxisTable();
 
         if (vehicleToggle && !vehicleToggle.disabled) {
             localStorage.setItem(vehicleSameShiftSettingKey, String(vehicleToggle.checked));
@@ -497,11 +1889,14 @@
         }
 
         templateSelect?.addEventListener("change", function () {
+            const url = new URL(window.location.href);
             if (!templateSelect.value) {
+                url.searchParams.delete("templateId");
+                url.searchParams.set("mode", "build");
+                window.location.href = url.toString();
                 return;
             }
 
-            const url = new URL(window.location.href);
             url.searchParams.set("templateId", templateSelect.value);
             window.location.href = url.toString();
         });
@@ -514,30 +1909,155 @@
 
             const action = button.dataset.action;
             const section = button.closest(".checklist-section-editor");
-            const field = button.closest(".builder-field");
+            const field = button.closest("[data-field-row], .builder-field");
 
-            if (action === "add-section" || action === "add-heading") {
-                const newSection = createSection(
-                    action === "add-section" ? "New Section" : "New Heading",
-                    action === "add-section" ? "Describe what staff should complete here." : "Use this to separate checklist content."
-                );
-                layoutBuilder.appendChild(newSection);
-                if (action === "add-section") {
-                    addFieldToSection(newSection);
-                }
+            if (action === "toggle-section") {
+                section?.classList.toggle("is-collapsed");
+                syncSectionToggle(section);
+                updateAxisScrollProxies();
+                return;
+            }
+
+            if (action === "add-section-note") {
+                const noteList = section?.querySelector("[data-section-note-list]");
+                noteList?.appendChild(createSectionNote());
                 renumberSections();
                 return;
             }
 
+            if (action === "remove-section-note") {
+                button.closest("[data-section-note]")?.remove();
+                renumberSections();
+                return;
+            }
+
+            if (action === "add-matrix-section") {
+                const title = getSectionTitleForNewMatrix();
+                const newSection = createMatrixSection(title, getSectionHelperText(title));
+                const addPanel = layoutBuilder.querySelector(".builder-add-section-panel");
+                layoutBuilder.insertBefore(newSection, addPanel);
+                renumberSections();
+                syncAxisTable(newSection);
+                if (window.VectorInitializeChecklistCollapsibles) {
+                    window.VectorInitializeChecklistCollapsibles(newSection);
+                }
+                if (window.VectorEnsureUniversalNaControls) {
+                    window.VectorEnsureUniversalNaControls();
+                }
+                return;
+            }
+
             if (action === "add-field") {
-                const sections = layoutBuilder.querySelectorAll(".checklist-section-editor .field-grid");
+                const sections = layoutBuilder.querySelectorAll(".checklist-section-editor [data-field-list]");
                 const targetGrid = sections[sections.length - 1];
-                targetGrid?.appendChild(createField());
+                targetGrid?.appendChild(createChecklistFieldRow());
+                renumberSections();
                 return;
             }
 
             if (action === "add-field-to-section") {
+                if (section?.dataset.sectionKind === "EquipmentTable") {
+                    const columnList = section.querySelector("[data-equipment-column-list]");
+                    columnList?.appendChild(createEquipmentColumn());
+                    renumberSections();
+                    syncAllColumnSources(section);
+                    syncAxisTable(section);
+                    if (window.VectorEnsureUniversalNaControls) {
+                        window.VectorEnsureUniversalNaControls();
+                    }
+                    return;
+                }
+
                 addFieldToSection(section);
+                return;
+            }
+
+            if (action === "add-equipment-row") {
+                section?.querySelector("[data-equipment-row-list]")?.appendChild(createEquipmentRow());
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "add-equipment-subitem") {
+                button.closest("[data-equipment-row]")?.querySelector("[data-equipment-subitem-list]")?.appendChild(createEquipmentSubItem());
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "add-equipment-column") {
+                section?.querySelector("[data-equipment-column-list]")?.appendChild(createEquipmentColumn());
+                renumberSections();
+                syncAllColumnSources(section);
+                syncAxisTable(section);
+                return;
+            }
+
+            const equipmentRow = button.closest("[data-equipment-row]");
+            const equipmentSubItem = button.closest("[data-equipment-subitem]");
+            const equipmentColumn = button.closest("[data-equipment-column]");
+
+            if (action === "remove-equipment-subitem") {
+                equipmentSubItem?.remove();
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-subitem-up" && equipmentSubItem?.previousElementSibling?.matches("[data-equipment-subitem]")) {
+                equipmentSubItem.parentNode.insertBefore(equipmentSubItem, equipmentSubItem.previousElementSibling);
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-subitem-down" && equipmentSubItem?.nextElementSibling?.matches("[data-equipment-subitem]")) {
+                equipmentSubItem.parentNode.insertBefore(equipmentSubItem.nextElementSibling, equipmentSubItem);
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "remove-equipment-row") {
+                equipmentRow?.remove();
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-row-up" && equipmentRow?.previousElementSibling?.matches("[data-equipment-row]")) {
+                equipmentRow.parentNode.insertBefore(equipmentRow, equipmentRow.previousElementSibling);
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-row-down" && equipmentRow?.nextElementSibling?.matches("[data-equipment-row]")) {
+                equipmentRow.parentNode.insertBefore(equipmentRow.nextElementSibling, equipmentRow);
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "remove-equipment-column") {
+                equipmentColumn?.remove();
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-column-up" && equipmentColumn?.previousElementSibling?.matches("[data-equipment-column]")) {
+                equipmentColumn.parentNode.insertBefore(equipmentColumn, equipmentColumn.previousElementSibling);
+                renumberSections();
+                syncAxisTable(section);
+                return;
+            }
+
+            if (action === "move-equipment-column-down" && equipmentColumn?.nextElementSibling?.matches("[data-equipment-column]")) {
+                equipmentColumn.parentNode.insertBefore(equipmentColumn.nextElementSibling, equipmentColumn);
+                renumberSections();
+                syncAxisTable(section);
                 return;
             }
 
@@ -561,17 +2081,59 @@
 
             if (action === "remove-field") {
                 field?.remove();
+                renumberSections();
                 return;
             }
 
-            if (action === "move-field-up" && field?.previousElementSibling?.classList.contains("builder-field")) {
+            if (action === "move-field-up" && field?.previousElementSibling?.matches("[data-field-row], .builder-field")) {
                 field.parentNode.insertBefore(field, field.previousElementSibling);
+                renumberSections();
                 return;
             }
 
-            if (action === "move-field-down" && field?.nextElementSibling?.classList.contains("builder-field")) {
+            if (action === "move-field-down" && field?.nextElementSibling?.matches("[data-field-row], .builder-field")) {
                 field.parentNode.insertBefore(field.nextElementSibling, field);
+                renumberSections();
             }
         });
+
+        layoutBuilder?.addEventListener("input", function (event) {
+            const matrixSection = event.target.closest(".checklist-section-editor[data-section-kind='EquipmentTable']");
+            const matrixColumn = event.target.closest("[data-equipment-column]");
+            const fieldRow = event.target.closest("[data-field-row]");
+            if (event.target.matches("[data-field-custom-source]")) {
+                syncFieldSource(fieldRow);
+            }
+            if (event.target.matches('[data-field-name="Label"]')) {
+                syncSchematicConfig(fieldRow);
+            }
+            if (event.target.matches("[data-custom-source]")) {
+                syncColumnSource(matrixColumn);
+            }
+            if (event.target.closest("[data-equipment-column]")) {
+                syncAxisTable(matrixSection);
+            }
+        });
+
+        layoutBuilder?.addEventListener("change", function (event) {
+            const matrixSection = event.target.closest(".checklist-section-editor[data-section-kind='EquipmentTable']");
+            const matrixColumn = event.target.closest("[data-equipment-column]");
+            const fieldRow = event.target.closest("[data-field-row]");
+            if (event.target.matches("[data-field-source-select]")) {
+                syncFieldSource(fieldRow);
+            }
+            if (event.target.matches('[data-field-name="Type"], [data-field-name="Label"]')) {
+                syncSchematicConfig(fieldRow);
+            }
+            if (event.target.matches('[data-name="Source"]')) {
+                syncColumnSource(matrixColumn);
+            }
+            if (event.target.closest("[data-equipment-column]")) {
+                syncAxisTable(matrixSection);
+            }
+        });
+
+        window.addEventListener("scroll", updateAxisScrollProxies, { passive: true });
+        window.addEventListener("resize", updateAxisScrollProxies);
     })();
 </script>

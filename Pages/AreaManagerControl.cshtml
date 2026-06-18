@@ -1,0 +1,193 @@
+@page
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Area / Manager Control";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">System Setup</div>
+        <h2 class="page-title">Area / Manager Control</h2>
+        <p class="page-subtitle">Create operating areas, assign managers, and issue access from one control point.</p>
+
+        <section class="control-grid" aria-label="Area and manager setup options">
+            <article class="control-card">
+                <div>
+                    <span class="control-kicker">Areas / bases</span>
+                    <h3>Operational Areas</h3>
+                    <p>Create and maintain bases, stations, stores, workshops, event sites, and operating regions used across movement, checks, reports, and dashboards.</p>
+                </div>
+                <a class="control-action primary" href="/OperationalAreas">Open Areas</a>
+            </article>
+
+            <article class="control-card">
+                <div>
+                    <span class="control-kicker">Manager scope</span>
+                    <h3>Manager Areas</h3>
+                    <p>Link operational managers to the areas they are responsible for so dashboards, reports, issues, and staff views respect their scope.</p>
+                </div>
+                <a class="control-action primary" href="/ManagerAreas">Assign Managers</a>
+            </article>
+
+            <article class="control-card access-card">
+                <div>
+                    <span class="control-kicker">Login access</span>
+                    <h3>Access Setup</h3>
+                    <p>View every user, their current access permission, assigned area, and manager scope. Edit access from the staff register source of truth.</p>
+                </div>
+                <a class="control-action primary" href="/CreateManagerAccess">Access Register</a>
+            </article>
+        </section>
+    </div>
+</div>
+
+<style>
+.module-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.module-inner {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.page-logo {
+    width: 300px;
+    max-width: 72%;
+    max-height: 170px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 32px;
+    font-weight: 900;
+    color: #1f2937;
+}
+
+.page-subtitle {
+    margin: 0 auto 28px auto;
+    max-width: 780px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.control-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    text-align: left;
+}
+
+.control-card {
+    min-height: 270px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-top: 6px solid #126C84;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    box-sizing: border-box;
+}
+
+.control-kicker {
+    display: block;
+    margin-bottom: 10px;
+    color: #52606d;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.control-card h3 {
+    margin: 0 0 10px 0;
+    color: #102a3a;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.control-card p {
+    margin: 0;
+    color: #52606d;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.control-action {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #24364a;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.control-action:hover {
+    background: #eef3f8;
+    color: #111827;
+}
+
+.control-action.primary {
+    border-color: #126C84;
+    background: #126C84;
+    color: #ffffff;
+}
+
+@@media (max-width: 900px) {
+    .control-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .control-card {
+        min-height: 0;
+    }
+}
+</style>

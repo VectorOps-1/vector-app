@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Equipment";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="module-screen">
@@ -14,42 +15,27 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Equipment</h2>
-        <p class="page-subtitle">Equipment register, movement, servicing, compliance, allocation, and issue workflows</p>
+        <p class="page-subtitle">Choose the exact equipment action from one place.</p>
 
         <div class="module-grid">
-            <a class="module-card primary" href="/EquipmentRegister">
-                <strong>Search Equipment</strong>
-                <span>Find equipment by name, serial number, status, location, or allocation</span>
-            </a>
-
-            <a class="module-card" href="/EquipmentRegister">
+            <a class="module-card primary" href="/EquipmentRegister?view=register">
                 <strong>Equipment Register</strong>
-                <span>Open all equipment with service, location, movement, and vehicle allocation details</span>
+                <span>Open the grouped register. Use the search field inside the register for name, S/N / asset ID, model, location, vehicle, movement, or status.</span>
             </a>
 
-            <a class="module-card" href="/DailyVehicleChecklist">
-                <strong>Vehicle-Carried Checks</strong>
-                <span>Daily equipment checks are completed inside the vehicle readiness report</span>
-            </a>
-
-            <a class="module-card" href="/AddItem?type=equipment">
+            <a class="module-card primary" href="/AddItem?type=equipment">
                 <strong>Add New Equipment</strong>
                 <span>Add one equipment item into the register</span>
             </a>
 
             <a class="module-card" href="/MoveAsset?asset=equipment" data-move-asset="equipment">
                 <strong>Move / Reallocate</strong>
-                <span>Update equipment location, vehicle allocation, or base assignment</span>
+                <span>Move equipment between vehicles, bases, stores, or operational areas</span>
             </a>
 
             <a class="module-card" href="/EquipmentService">
-                <strong>Service / Maintenance</strong>
-                <span>Record servicing, repairs, maintenance dates, and status changes</span>
-            </a>
-
-            <a class="module-card" href="#">
-                <strong>Expiry / Compliance Tracking</strong>
-                <span>Review expiry, calibration, and compliance status</span>
+                <strong>Update Service Dates</strong>
+                <span>Update next service dates after maintenance, repairs, or returned service items</span>
             </a>
 
             <a class="module-card danger" href="/ReportIssue?module=equipment">

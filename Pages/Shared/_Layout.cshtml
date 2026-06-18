@@ -1,9 +1,24 @@
 @using vector_app_local.Services
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
-    var showPageIndex = !string.Equals(currentPage, "/Index", StringComparison.OrdinalIgnoreCase);
-    var showNotifications = showPageIndex && !string.Equals(currentPage, "/RoleLogin", StringComparison.OrdinalIgnoreCase);
     var currentAccessView = Context.Session.GetString(CurrentUserService.AccessViewSessionKey);
+    var hasCompanySession = Context.Session.GetInt32(CurrentUserService.CompanyIdSessionKey).HasValue;
+    var currentUserId = Context.Session.GetInt32(CurrentUserService.UserIdSessionKey);
+    var hasAccessLogin = currentUserId.HasValue
+        && !string.IsNullOrWhiteSpace(currentAccessView);
+    var hideHomeNavPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "/Index",
+        "/Workspace",
+        "/CompanyLogin",
+        "/AccessLogin",
+        "/Access",
+        "/RoleLogin",
+        "/LoginSplash"
+    };
+    var showHomeNav = hasAccessLogin && !hideHomeNavPages.Contains(currentPage);
+    var showPageIndex = hasAccessLogin && !hideHomeNavPages.Contains(currentPage);
+    var showNotifications = showPageIndex && !string.Equals(currentPage, "/RoleLogin", StringComparison.OrdinalIgnoreCase);
     var currentClientRole = string.IsNullOrWhiteSpace(currentAccessView)
         ? null
         : CurrentUserService.AccessViewToClientRole(currentAccessView);
@@ -66,10 +81,14 @@
         }
 
         .page-index-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 260px;
+            display: grid;
+            grid-template-columns: auto minmax(150px, 0.85fr) minmax(170px, 1fr) minmax(220px, 1.15fr);
+            align-items: end;
+            gap: 8px;
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow-x: auto;
+            padding-bottom: 2px;
         }
 
         .page-index-label {
@@ -79,19 +98,36 @@
             text-transform: uppercase;
             color: #52606d;
             white-space: nowrap;
+            padding-bottom: 9px;
+        }
+
+        .page-index-field {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            margin: 0;
+        }
+
+        .page-index-field span {
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            color: #64748b;
         }
 
         .page-index-select {
-            min-width: 220px;
-            max-width: 320px;
-            height: 40px;
+            width: 100%;
+            min-width: 0;
+            height: 34px;
             border: 1px solid rgba(66, 84, 102, 0.24);
             border-radius: 8px;
             background: #ffffff;
             color: #1f2937;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            padding: 0 12px;
+            padding: 0 10px;
         }
 
         .top-nav {
@@ -113,9 +149,37 @@
             opacity: 0.65;
         }
 
+        .app-footer {
+            position: fixed;
+            right: 22px;
+            bottom: 18px;
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 12px;
+            border: 1px solid rgba(66, 84, 102, 0.14);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(8px);
+        }
+
+        .app-footer a {
+            color: #52606d;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .app-footer a:hover {
+            color: #0E5E7A;
+        }
+
         .page-shell {
             min-height: 100vh;
             padding-top: 70px;
+            padding-bottom: 56px;
             box-sizing: border-box;
         }
 
@@ -141,7 +205,11 @@
         }
 
         .task-notification,
-        .issue-notification {
+        .issue-notification,
+        .variance-notification,
+        .readiness-alert-notification,
+        .expiry-notification,
+        .scoring-notification {
             position: relative;
             width: 58px;
             height: 58px;
@@ -164,8 +232,32 @@
             box-shadow: 0 16px 34px rgba(155, 44, 44, 0.3);
         }
 
+        .variance-notification {
+            background: #B4711C;
+            box-shadow: 0 16px 34px rgba(180, 113, 28, 0.28);
+        }
+
+        .readiness-alert-notification {
+            background: #C2410C;
+            box-shadow: 0 16px 34px rgba(194, 65, 12, 0.28);
+        }
+
+        .expiry-notification {
+            background: #7A5A12;
+            box-shadow: 0 16px 34px rgba(122, 90, 18, 0.28);
+        }
+
+        .scoring-notification {
+            background: #17624f;
+            box-shadow: 0 16px 34px rgba(23, 98, 79, 0.28);
+        }
+
         .task-notification.visible,
-        .issue-notification.visible {
+        .issue-notification.visible,
+        .variance-notification.visible,
+        .readiness-alert-notification.visible,
+        .expiry-notification.visible,
+        .scoring-notification.visible {
             display: flex;
         }
 
@@ -183,8 +275,40 @@
             box-shadow: 0 20px 40px rgba(155, 44, 44, 0.38);
         }
 
+        .variance-notification:hover {
+            color: #ffffff;
+            background: #935d17;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(180, 113, 28, 0.36);
+        }
+
+        .readiness-alert-notification:hover {
+            color: #ffffff;
+            background: #9A3412;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(194, 65, 12, 0.36);
+        }
+
+        .expiry-notification:hover {
+            color: #ffffff;
+            background: #60460E;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(122, 90, 18, 0.36);
+        }
+
+        .scoring-notification:hover {
+            color: #ffffff;
+            background: #115040;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(23, 98, 79, 0.36);
+        }
+
         .task-notification svg,
-        .issue-notification svg {
+        .issue-notification svg,
+        .variance-notification svg,
+        .readiness-alert-notification svg,
+        .expiry-notification svg,
+        .scoring-notification svg {
             width: 26px;
             height: 26px;
             fill: none;
@@ -201,7 +325,11 @@
         }
 
         .task-count,
-        .issue-count {
+        .issue-count,
+        .variance-count,
+        .readiness-alert-count,
+        .expiry-count,
+        .scoring-count {
             position: absolute;
             top: -4px;
             right: -4px;
@@ -221,6 +349,26 @@
         .issue-count {
             background: #ffffff;
             color: #7f1d1d;
+        }
+
+        .variance-count {
+            background: #ffffff;
+            color: #935d17;
+        }
+
+        .readiness-alert-count {
+            background: #ffffff;
+            color: #9A3412;
+        }
+
+        .expiry-count {
+            background: #ffffff;
+            color: #60460E;
+        }
+
+        .scoring-count {
+            background: #ffffff;
+            color: #115040;
         }
 
         .action-confirmation {
@@ -282,7 +430,7 @@
                 min-height: 70px;
                 align-items: stretch;
                 flex-direction: column;
-                padding: 12px 16px;
+                padding: 10px 14px;
             }
 
             .top-bar.no-page-index {
@@ -292,26 +440,32 @@
             .page-index-wrap {
                 width: 100%;
                 min-width: 0;
+                grid-template-columns: auto minmax(150px, 0.85fr) minmax(170px, 1fr) minmax(220px, 1.15fr);
             }
 
-            .page-index-select {
-                width: 100%;
-                min-width: 0;
-                max-width: none;
+            .page-index-label {
+                padding-bottom: 0;
             }
 
             .top-nav {
                 width: 100%;
                 justify-content: space-between;
-                gap: 14px;
+                gap: 12px;
+                flex-wrap: wrap;
             }
 
             .top-bar.no-page-index .top-nav {
-                width: auto;
+                width: 100%;
+            }
+
+            .top-nav a {
+                font-size: 15px;
+                line-height: 1.2;
             }
 
             .page-shell {
                 padding-top: 124px;
+                padding-bottom: 92px;
             }
 
             .top-bar.no-page-index + .page-shell {
@@ -328,14 +482,27 @@
 
             .notification-stack {
                 left: 16px;
-                bottom: 16px;
+                bottom: 72px;
                 gap: 10px;
             }
 
             .task-notification,
-            .issue-notification {
+            .issue-notification,
+            .variance-notification,
+            .readiness-alert-notification,
+            .expiry-notification,
+            .scoring-notification {
                 width: 54px;
                 height: 54px;
+            }
+
+            .app-footer {
+                left: 16px;
+                right: 16px;
+                bottom: 12px;
+                gap: 10px;
+                justify-content: flex-end;
+                flex-wrap: wrap;
             }
         }
     </style>
@@ -345,90 +512,34 @@
         @if (showPageIndex)
         {
             <div class="page-index-wrap">
-                <label class="page-index-label" for="pageIndex">Page Index</label>
-                <select id="pageIndex" class="page-index-select" aria-label="Page index">
-                    <option value="">Go to page...</option>
-
-                    <option value="/Index" data-access="all">Access Level</option>
-                    <option value="/Home" data-access="all">Home</option>
-                    <option value="/Privacy" data-access="all">Privacy</option>
-
-                    <option value="/TaskInbox" data-access="staff,manager,senior">My Tasks</option>
-                    <option value="/CompleteChecklist" data-access="staff,manager,senior">Operational Checklists</option>
-                    <option value="/DailyChecklist" data-access="staff,manager,senior">Daily Readiness Entry</option>
-                    <option value="/DailyVehicleChecklist" data-access="staff,manager,senior">Daily Vehicle Readiness</option>
-                    <option value="/MonthlyChecklist" data-access="staff,manager,senior">Monthly Checklist</option>
-                    <option value="/TaskFeedback" data-access="staff,manager,senior">Task Feedback</option>
-                    <option value="/PersonalDocuments" data-access="staff,manager,senior">Personal Documents</option>
-                    <option value="/ReportIssue?module=general" data-access="staff,manager,senior">Report Issue</option>
-
-                    <option value="/Vehicles" data-access="manager,senior">Vehicles</option>
-                    <option value="/ReadinessDashboard" data-access="manager,senior">Readiness Dashboard</option>
-                    <option value="/VehicleRegister" data-access="manager,senior">Search Vehicles</option>
-                    <option value="/VehicleRegister" data-access="manager,senior">Vehicle Register</option>
-                    <option value="/MoveAsset?asset=vehicle" data-access="manager,senior">Move Vehicle</option>
-                    <option value="/Equipment" data-access="manager,senior">Equipment</option>
-                    <option value="/EquipmentRegister" data-access="manager,senior">Search Equipment</option>
-                    <option value="/EquipmentRegister" data-access="manager,senior">Equipment Register</option>
-                    <option value="/EquipmentService" data-access="manager,senior">Update Equipment Service Dates</option>
-                    <option value="/MoveAsset?asset=equipment" data-access="manager,senior">Move Equipment</option>
-                    <option value="/Stock" data-access="manager,senior">Stock</option>
-                    <option value="/StockRegister" data-access="manager,senior">Search Stock</option>
-                    <option value="/StockRegister" data-access="manager,senior">Stock Register</option>
-                    <option value="/StockOrders" data-access="manager,senior">Stock Orders</option>
-                    <option value="/PlaceStockOrder" data-access="manager,senior">Place Stock Order</option>
-                    <option value="/SupplierConfirmations" data-access="manager,senior">Supplier Confirmations</option>
-                    <option value="/EnterStockRegister" data-access="manager,senior">Enter Stock Into Register</option>
-                    <option value="/AllocateStock" data-access="manager,senior">Allocate Stock</option>
-                    <option value="/MoveAsset?asset=stock" data-access="manager,senior">Move Stock</option>
-                    <option value="/Staff" data-access="manager,senior">Staff Records</option>
-                    <option value="/StaffRegister" data-access="manager,senior">Staff Register</option>
-                    <option value="/StaffFiles" data-access="manager,senior">Staff Files & Folders</option>
-                    <option value="/Medication" data-access="manager,senior">Medication</option>
-                    <option value="/MedicationRegister" data-access="manager,senior">Search Medication</option>
-                    <option value="/MedicationRegister" data-access="manager,senior">Medication Register</option>
-                    <option value="/MoveAsset?asset=medication" data-access="manager,senior">Move Medication</option>
-                    <option value="/SendTask" data-access="manager,senior">Send Task</option>
-                    <option value="/IssueInbox" data-access="manager,senior">My Assigned Issues</option>
-                    <option value="/IssueReports" data-access="manager,senior">All Open Issues</option>
-                    <option value="/EditChecklist" data-access="manager,senior">Checklist Builder</option>
-                    <option value="/EditVehicleChecklist?checklist=daily-vehicle" data-access="manager,senior">Daily Readiness Checklist Setup</option>
-                    <option value="/EditVehicleChecklist?checklist=monthly-vehicle" data-access="manager,senior">Edit Monthly Vehicle Checklist</option>
-                    <option value="/EditEquipmentChecklist" data-access="manager,senior">Edit Equipment Checklist</option>
-                    <option value="/AddItem?type=vehicle" data-access="manager,senior">Add Vehicle</option>
-                    <option value="/AddItem?type=equipment" data-access="manager,senior">Add Equipment</option>
-                    <option value="/AddItem?type=stock" data-access="manager,senior">Add Stock Item</option>
-                    <option value="/AddItem?type=medication" data-access="manager,senior">Add Medication</option>
-                    <option value="/UploadStaffFiles" data-access="manager,senior">Upload Staff Files</option>
-                    <option value="/StaffRecordsSearch" data-access="manager,senior">Search Staff Records</option>
-
-                    <option value="/MasterSetup" data-access="senior">Master Setup</option>
-                    <option value="/OperationalAreas" data-access="senior">Operational Areas / Bases</option>
-                    <option value="/ManagerAreas" data-access="senior">Manager Area Assignment</option>
-                    <option value="/CompanyProfile" data-access="senior">Company Profile</option>
-                    <option value="/CompanyName" data-access="senior">Company Name</option>
-                    <option value="/LogoUpload" data-access="senior">Logo Upload</option>
-                    <option value="/SupplierDetails" data-access="senior">Supplier Details</option>
-                    <option value="/EditChecklist" data-access="senior">Checklist Builder</option>
-                    <option value="/VehicleRegister" data-access="senior">Vehicle Register</option>
-                    <option value="/VehicleSchematicLibrary" data-access="senior">Vehicle Schematic Library</option>
-                    <option value="/EquipmentRegister" data-access="senior">Equipment Register</option>
-                    <option value="/StockRegister" data-access="senior">Stock Register</option>
-                    <option value="/MedicationRegister" data-access="senior">Medication Register</option>
-                    <option value="/CreateManagerAccess" data-access="senior">Create Manager Access</option>
-                    <option value="/CreateOperationalStaffAccess" data-access="senior">Create Staff Access</option>
-                    <option value="/TaskCommunicationSetup" data-access="senior">Task Communication Setup</option>
-                    <option value="/AuditLog" data-access="senior">Audit Log</option>
-                    <option value="/Onboarding" data-access="senior">Onboarding</option>
-                    <option value="/CompanyLogin" data-access="senior">Company Login</option>
-                </select>
+                <div class="page-index-label">Page Index</div>
+                <label class="page-index-field" for="pageIndexMain">
+                    <span>1 Home</span>
+                    <select id="pageIndexMain" class="page-index-select" aria-label="Home entry" autocomplete="off" data-skip-na disabled>
+                        <option value="0" selected>Home</option>
+                    </select>
+                </label>
+                <label class="page-index-field" for="pageIndexSub">
+                    <span>2 Module</span>
+                    <select id="pageIndexSub" class="page-index-select" aria-label="Module inside Home" autocomplete="off" data-skip-na disabled>
+                        <option value="">Select module...</option>
+                    </select>
+                </label>
+                <label class="page-index-field action-field" for="pageIndexAction">
+                    <span>3 Action</span>
+                    <select id="pageIndexAction" class="page-index-select action-select" aria-label="Action" autocomplete="off" data-skip-na disabled>
+                        <option value="">Select action...</option>
+                    </select>
+                </label>
             </div>
         }
 
         <nav class="top-nav">
             <a href="javascript:history.back()">Back</a>
-            <a asp-area="" asp-page="/Index">Home</a>
-            <a asp-area="" asp-page="/Privacy">Privacy</a>
+            @if (showHomeNav)
+            {
+                <a asp-area="" asp-page="/Home" onclick="try { sessionStorage.setItem('acuityopsSplashShown', 'true'); } catch (e) { }">Home</a>
+            }
         </nav>
     </header>
 
@@ -439,6 +550,14 @@
             </main>
         </div>
     </div>
+
+    <footer class="app-footer" aria-label="Application footer">
+        @if (hasCompanySession)
+        {
+            <a asp-area="" asp-page="/AccessLogin" onclick="try { sessionStorage.setItem('acuityopsSplashShown', 'true'); sessionStorage.removeItem('vectorAccessRole'); } catch (e) { }">Access Login Page</a>
+        }
+        <a asp-area="" asp-page="/Privacy">Privacy</a>
+    </footer>
 
     @if (showNotifications)
     {
@@ -462,6 +581,54 @@
                     <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
                 </svg>
                 <span id="issueCount" class="issue-count"></span>
+            </a>
+
+            <a id="varianceNotification" class="variance-notification" href="/ChecklistVarianceAlerts" aria-label="Open checklist variance alerts" title="Open checklist variance alerts">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 7h10" />
+                    <path d="m14 4 3 3-3 3" />
+                    <path d="M17 17H7" />
+                    <path d="m10 14-3 3 3 3" />
+                    <path d="M12 11v2" />
+                    <path d="M12 16h.01" />
+                </svg>
+                <span id="varianceCount" class="variance-count"></span>
+            </a>
+
+            <a id="readinessAlertNotification" class="readiness-alert-notification" href="/ReadinessAlerts" aria-label="Open readiness alerts" title="Open readiness alerts">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3a9 9 0 1 0 9 9" />
+                    <path d="M12 8v4" />
+                    <path d="M12 16h.01" />
+                    <path d="m16 8 3-3" />
+                    <path d="M19 5v4" />
+                    <path d="M15 5h4" />
+                </svg>
+                <span id="readinessAlertCount" class="readiness-alert-count"></span>
+            </a>
+
+            <a id="expiryNotification" class="expiry-notification" href="/ExpiryNotifications" aria-label="Open expiry and service notifications" title="Open expiry and service notifications">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 2v4" />
+                    <path d="M16 2v4" />
+                    <path d="M3 10h18" />
+                    <path d="M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+                    <path d="M12 14v3" />
+                    <path d="M12 19h.01" />
+                </svg>
+                <span id="expiryCount" class="expiry-count"></span>
+            </a>
+
+            <a id="scoringNotification" class="scoring-notification" href="/ReadinessEngine" aria-label="Open readiness scoring requests" title="Open readiness scoring requests">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h16" />
+                    <path d="M4 17h16" />
+                    <path d="M8 4v6" />
+                    <path d="M16 14v6" />
+                    <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                    <path d="M16 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                </svg>
+                <span id="scoringCount" class="scoring-count"></span>
             </a>
         </div>
     }
@@ -573,35 +740,306 @@
                     sessionStorage.setItem("vectorAccessRole", role);
                 }
 
-                const select = document.getElementById("pageIndex");
-                const currentRole = serverRole || sessionStorage.getItem("vectorAccessRole");
+                const mainSelect = document.getElementById("pageIndexMain");
+                const subSelect = document.getElementById("pageIndexSub");
+                const actionSelect = document.getElementById("pageIndexAction");
+                const myProfileUrl = @Json.Serialize(currentUserId.HasValue ? $"/StaffRecordsSearch?staffUserId={currentUserId.Value}" : "/MyProfile");
+                function normalizeRole(role) {
+                    if (!role) {
+                        return null;
+                    }
 
-                if (select) {
-                    const options = Array.from(select.options);
+                    const value = String(role).toLowerCase();
+                    if (value.includes("senior") || value.includes("owner")) {
+                        return "senior";
+                    }
 
-                    options.forEach(function (option) {
-                        const access = option.dataset.access;
-                        if (!access || access === "all") {
+                    if (value.includes("staff")) {
+                        return "staff";
+                    }
+
+                    if (value.includes("manager") || value.includes("operational")) {
+                        return "manager";
+                    }
+
+                    return value;
+                }
+
+                const currentRole = normalizeRole(serverRole || sessionStorage.getItem("vectorAccessRole"));
+
+                const pageTree = [
+                    {
+                        module: "Home",
+                        areas: [
+                            { name: "Dashboard", actions: [
+                                { label: "Home Dashboard", url: "/Home", access: "all" },
+                                { label: "Button And Term Guide", url: "/AppGuide", access: "staff,manager,senior" }
+                            ] },
+                            { name: "Daily Work", actions: [
+                                { label: "Daily Vehicle & Equipment Check", url: "/DailyVehicleChecklist", access: "staff,manager,senior" },
+                                { label: "Equipment Check Section", url: "/DailyEquipmentChecklist", access: "staff,manager,senior" },
+                                { label: "My Profile", url: myProfileUrl, access: "staff,manager,senior" }
+                            ] },
+                            { name: "Tasks & Issues", actions: [
+                                { label: "My Tasks", url: "/TaskInbox", access: "staff,manager,senior" },
+                                { label: "Task Feedback", url: "/TaskFeedback", access: "staff,manager,senior" },
+                                { label: "Send Task", url: "/SendTask", access: "manager,senior" },
+                                { label: "Report Issue", url: "/ReportIssue?module=general", access: "staff,manager,senior" },
+                                { label: "My Assigned Issues", url: "/IssueInbox", access: "manager,senior" },
+                                { label: "All Open Issues", url: "/IssueReports", access: "manager,senior" }
+                            ] },
+                            { name: "Readiness", actions: [
+                                { label: "Shift Readiness Dashboard", url: "/ReadinessDashboard", access: "manager,senior" },
+                                { label: "Readiness Alerts", url: "/ReadinessAlerts", access: "manager,senior" },
+                                { label: "Expiry Notifications", url: "/ExpiryNotifications", access: "staff,manager,senior" },
+                                { label: "Variance Alerts", url: "/ChecklistVarianceAlerts", access: "manager,senior" },
+                                { label: "Operational Reports", url: "/OperationsReports", access: "manager,senior" },
+                                { label: "Readiness Engine", url: "/ReadinessEngine", access: "manager,senior" }
+                            ] },
+                            { name: "Checklist Management", actions: [
+                                { label: "Checklist Management", url: "/EditChecklist", access: "manager,senior" },
+                                { label: "Checklist Register", url: "/EditChecklist?view=register", access: "manager,senior" },
+                                { label: "Build New Checklist", url: "/EditVehicleChecklist?checklist=daily-vehicle&mode=build", access: "manager,senior" },
+                                { label: "Publish Checklist", url: "/EditChecklist?view=register", access: "senior" },
+                                { label: "Checklist Reports", url: "/ChecklistReports", access: "manager,senior" },
+                                { label: "Upload Existing Checklist", url: "/UploadChecklist", access: "senior" },
+                                { label: "Unit Schematic Library", url: "/VehicleSchematicLibrary", access: "senior" }
+                            ] },
+                            { name: "Vehicles", actions: [
+                                { label: "Vehicle Module", url: "/Vehicles", access: "manager,senior" },
+                                { label: "Vehicle Register", url: "/VehicleRegister", access: "manager,senior" },
+                                { label: "Add Vehicle", url: "/AddItem?type=vehicle", access: "manager,senior" },
+                                { label: "Reassign Callsign", url: "/ReassignVehicleCallsign", access: "manager,senior" },
+                                { label: "Move / Reallocate Vehicle", url: "/MoveAsset?asset=vehicle", access: "manager,senior" },
+                                { label: "Report Vehicle Issue", url: "/ReportIssue?module=vehicle", access: "staff,manager,senior" }
+                            ] },
+                            { name: "Equipment", actions: [
+                                { label: "Equipment Module", url: "/Equipment", access: "manager,senior" },
+                                { label: "Equipment Register", url: "/EquipmentRegister?view=register", access: "manager,senior" },
+                                { label: "Add Equipment", url: "/AddItem?type=equipment", access: "manager,senior" },
+                                { label: "Update Service Dates", url: "/EquipmentService", access: "manager,senior" },
+                                { label: "Move / Reallocate Equipment", url: "/MoveAsset?asset=equipment", access: "manager,senior" },
+                                { label: "Report Equipment Issue", url: "/ReportIssue?module=equipment", access: "staff,manager,senior" }
+                            ] },
+                            { name: "Staff", actions: [
+                                { label: "Staff Module", url: "/Staff", access: "manager,senior" },
+                                { label: "Staff Register", url: "/StaffRegister", access: "manager,senior" },
+                                { label: "Add Staff Profile", url: "/AddItem?type=staff", access: "manager,senior" }
+                            ] },
+                            { name: "Stock", actions: [
+                                { label: "Stock Module", url: "/Stock", access: "manager,senior" },
+                                { label: "Stock Register", url: "/StockRegister?view=register", access: "manager,senior" },
+                                { label: "Stock Orders & Distribution", url: "/StockOrders", access: "manager,senior" },
+                                { label: "Add Stock Item", url: "/AddItem?type=stock", access: "manager,senior" },
+                                { label: "Move / Reallocate Stock", url: "/MoveAsset?asset=stock", access: "manager,senior" },
+                                { label: "Report Stock Issue", url: "/ReportIssue?module=stock", access: "staff,manager,senior" }
+                            ] },
+                            { name: "Medication", actions: [
+                                { label: "Medication Module", url: "/Medication", access: "manager,senior" },
+                                { label: "Medication Register", url: "/MedicationRegister?view=register", access: "manager,senior" },
+                                { label: "Add Medication", url: "/AddItem?type=medication", access: "manager,senior" },
+                                { label: "Move / Reallocate Medication", url: "/MoveAsset?asset=medication", access: "manager,senior" },
+                                { label: "Report Medication Issue", url: "/ReportIssue?module=medication", access: "staff,manager,senior" }
+                            ] },
+                            { name: "System Setup", actions: [
+                                { label: "Master Setup", url: "/MasterSetup", access: "senior" },
+                                { label: "Company Profile", url: "/CompanyProfile", access: "senior" },
+                                { label: "Area / Manager Control", url: "/AreaManagerControl", access: "senior", aliases: ["/OperationalAreas", "/ManagerAreas", "/CreateManagerAccess", "/CreateOperationalStaffAccess"] },
+                                { label: "Task Communication", url: "/TaskCommunicationSetup", access: "senior" },
+                                { label: "Audit Log", url: "/AuditLog", access: "senior" }
+                            ] }
+                        ]
+                    }
+                ];
+
+                function canUse(action) {
+                    if (!action.access || action.access === "all") {
+                        return true;
+                    }
+
+                    return currentRole && action.access.split(",").includes(currentRole);
+                }
+
+                function cleanTree(tree) {
+                    return tree.map(function (module) {
+                        const areas = module.areas.map(function (area) {
+                            return {
+                                name: area.name,
+                                actions: area.actions.filter(canUse)
+                            };
+                        }).filter(function (area) {
+                            return area.actions.length > 0;
+                        });
+
+                        return {
+                            module: module.module,
+                            areas: areas
+                        };
+                    }).filter(function (module) {
+                        return module.areas.length > 0;
+                    });
+                }
+
+                const visibleTree = cleanTree(pageTree);
+
+                function resetSelect(select, placeholder) {
+                    select.innerHTML = "";
+                    const option = document.createElement("option");
+                    option.value = "";
+                    option.textContent = placeholder;
+                    select.appendChild(option);
+                    select.disabled = true;
+                }
+
+                function addOption(select, value, label) {
+                    const option = document.createElement("option");
+                    option.value = value;
+                    option.textContent = label;
+                    select.appendChild(option);
+                }
+
+                function populateMain() {
+                    mainSelect.innerHTML = "";
+                    addOption(mainSelect, "0", visibleTree[0]?.module || "Home");
+                    mainSelect.value = "0";
+                    mainSelect.disabled = true;
+                }
+
+                function populateSub(moduleIndex) {
+                    resetSelect(subSelect, "Select module...");
+                    resetSelect(actionSelect, "Select action...");
+
+                    const module = visibleTree[moduleIndex];
+                    if (!module) {
+                        return;
+                    }
+
+                    module.areas.forEach(function (area, areaIndex) {
+                        addOption(subSelect, String(areaIndex), area.name);
+                    });
+                    subSelect.disabled = false;
+                }
+
+                function populateActions(moduleIndex, areaIndex) {
+                    resetSelect(actionSelect, "Select action...");
+
+                    const area = visibleTree[moduleIndex]?.areas[areaIndex];
+                    if (!area) {
+                        return;
+                    }
+
+                    area.actions.forEach(function (action, actionIndex) {
+                        addOption(actionSelect, String(actionIndex), action.label);
+                    });
+                    actionSelect.disabled = false;
+                }
+
+                function scoreUrl(actionUrl, currentUrl) {
+                    let optionUrl;
+                    try {
+                        optionUrl = new URL(actionUrl, window.location.origin);
+                    } catch {
+                        return -1;
+                    }
+
+                    if (optionUrl.pathname.toLowerCase() !== currentUrl.pathname.toLowerCase()) {
+                        return -1;
+                    }
+
+                    let paramsMatch = true;
+                    let score = 1;
+                    optionUrl.searchParams.forEach(function (value, key) {
+                        if (currentUrl.searchParams.get(key) !== value) {
+                            paramsMatch = false;
+                        }
+                        score += 10;
+                    });
+
+                    if (!paramsMatch) {
+                        return -1;
+                    }
+
+                    if (optionUrl.search === currentUrl.search) {
+                        score += 100;
+                    }
+
+                    return score;
+                }
+
+                function scoreAction(action, currentUrl) {
+                    const candidateUrls = [action.url].concat(action.aliases || []);
+                    return candidateUrls.reduce(function (bestScore, candidateUrl) {
+                        return Math.max(bestScore, scoreUrl(candidateUrl, currentUrl));
+                    }, -1);
+                }
+
+                function selectCurrentPage() {
+                    const currentUrl = new URL(window.location.href);
+                    let best = null;
+                    let bestScore = -1;
+
+                    visibleTree.forEach(function (module, moduleIndex) {
+                        module.areas.forEach(function (area, areaIndex) {
+                            area.actions.forEach(function (action, actionIndex) {
+                                const score = scoreAction(action, currentUrl);
+                                if (score > bestScore) {
+                                    best = { moduleIndex, areaIndex, actionIndex };
+                                    bestScore = score;
+                                }
+                            });
+                        });
+                    });
+
+                    if (!best || bestScore < 0) {
+                        mainSelect.value = "0";
+                        populateSub(0);
+                        resetSelect(actionSelect, "Select action...");
+                        return;
+                    }
+
+                    mainSelect.value = String(best.moduleIndex);
+                    populateSub(best.moduleIndex);
+                    subSelect.value = String(best.areaIndex);
+                    populateActions(best.moduleIndex, best.areaIndex);
+                    actionSelect.value = String(best.actionIndex);
+                }
+
+                if (mainSelect && subSelect && actionSelect) {
+                    populateMain();
+                    populateSub(0);
+                    resetSelect(actionSelect, "Select action...");
+                    selectCurrentPage();
+                    window.requestAnimationFrame(selectCurrentPage);
+                    window.setTimeout(selectCurrentPage, 80);
+                    window.addEventListener("pageshow", selectCurrentPage);
+
+                    mainSelect.addEventListener("change", function () {
+                        if (mainSelect.value === "") {
+                            resetSelect(subSelect, "Select module...");
+                            resetSelect(actionSelect, "Select action...");
                             return;
                         }
 
-                        const allowedRoles = access.split(",");
-                        if (!currentRole || !allowedRoles.includes(currentRole)) {
-                            option.remove();
-                        }
+                        populateSub(Number(mainSelect.value));
                     });
 
-                    const currentPath = window.location.pathname.toLowerCase();
-                    Array.from(select.options).forEach(function (option) {
-                        const optionPath = (option.value || "").split("?")[0].toLowerCase();
-                        if (optionPath && optionPath === currentPath) {
-                            select.value = option.value;
+                    subSelect.addEventListener("change", function () {
+                        if (mainSelect.value === "" || subSelect.value === "") {
+                            resetSelect(actionSelect, "Select action...");
+                            return;
                         }
+
+                        populateActions(Number(mainSelect.value), Number(subSelect.value));
                     });
 
-                    select.addEventListener("change", function () {
-                        if (select.value) {
-                            window.location.href = select.value;
+                    actionSelect.addEventListener("change", function () {
+                        if (mainSelect.value === "" || subSelect.value === "" || actionSelect.value === "") {
+                            return;
+                        }
+
+                        const action = visibleTree[Number(mainSelect.value)]?.areas[Number(subSelect.value)]?.actions[Number(actionSelect.value)];
+                        if (action?.url) {
+                            window.location.href = action.url;
                         }
                     });
                 }

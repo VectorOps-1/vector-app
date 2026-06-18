@@ -4,8 +4,11 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Task Feedback";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var isTaskMode = Model.SelectedMode == TaskFeedbackModel.TaskFeedbackMode;
+    var isGeneralMode = Model.SelectedMode == TaskFeedbackModel.GeneralFeedbackMode;
 }
 
 <div class="feedback-screen">
@@ -14,61 +17,142 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Task Confirmation</div>
         <h2 class="page-title">Task Feedback</h2>
-        <p class="page-subtitle">Confirm the result of the assigned action so the task can be closed and recorded.</p>
+        <p class="page-subtitle">Submit general feedback, or respond to a specific task received inside the app.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        <form id="taskFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
-            <input asp-for="TaskId" type="hidden" />
+        <div class="feedback-mode-grid" aria-label="Feedback options">
+            <a class="feedback-mode-card @(isTaskMode ? "active" : string.Empty)" href="/TaskFeedback?mode=task">
+                <strong>Specific Task Feedback</strong>
+                <span>Respond to one open task assigned to you. Submitting feedback closes that task.</span>
+                <small>@Model.OpenTaskOptions.Count open task@(Model.OpenTaskOptions.Count == 1 ? string.Empty : "s") available</small>
+            </a>
 
+            <a class="feedback-mode-card @(isGeneralMode ? "active" : string.Empty)" href="/TaskFeedback?mode=general">
+                <strong>General Feedback</strong>
+                <span>Send feedback about completed work or operational action that is not linked to a task.</span>
+                <small>Recorded against your signed-in profile</small>
+            </a>
+        </div>
+
+        @if (isTaskMode)
+        {
             <section class="feedback-panel">
-                <div class="section-label">Received Task</div>
-                <div class="task-summary">
-                    <div><strong>Task:</strong> @(Model.TaskDetails?.ActionType ?? "No open task")</div>
-                    <div><strong>Access:</strong> Task-only</div>
-                    <div><strong>Status:</strong> Awaiting feedback</div>
-                    <div><strong>Expiry:</strong> @(Model.TaskDetails?.ExpiresAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Manager-selected expiry")</div>
-                </div>
-                <div class="task-message">@(Model.TaskDetails?.InstructionMessage ?? "No instruction entered.")</div>
+                <div class="section-label">Select Received Task</div>
+                @if (!Model.OpenTaskOptions.Any())
+                {
+                    <div class="empty-panel">No open tasks are currently assigned to you.</div>
+                }
+                else
+                {
+                    <form method="get" class="task-select-form">
+                        <input type="hidden" name="mode" value="task" />
+                        <label>
+                            Open task
+                            <select asp-for="TaskId" asp-items="Model.TaskSelectOptions"></select>
+                        </label>
+                        <button class="menu-btn equipment-btn select-task-btn" type="submit">Open Task Feedback</button>
+                    </form>
+                }
             </section>
 
-            <section class="feedback-panel">
-                <div class="section-label">Feedback</div>
-                <div class="form-grid">
-                    <label>
-                        Task outcome
-                        <select asp-for="Outcome">
-                            <option value="">Select outcome</option>
-                            <option>Completed</option>
-                            <option>Unable to complete</option>
-                            <option>More information required</option>
-                            <option>Issue reported</option>
-                        </select>
+            @if (Model.TaskDetails is not null)
+            {
+                <form id="taskFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
+                    <input asp-for="TaskId" type="hidden" />
+                    <input name="FeedbackMode" type="hidden" value="@TaskFeedbackModel.TaskFeedbackMode" />
+
+                    <section class="feedback-panel">
+                        <div class="section-label">Received Task</div>
+                        <div class="task-summary">
+                            <div><strong>Task:</strong> @Model.TaskDetails.ActionType</div>
+                            <div><strong>From:</strong> @Model.TaskDetails.AssignedByName</div>
+                            <div><strong>Status:</strong> Awaiting feedback</div>
+                            <div><strong>Expiry:</strong> @(Model.TaskDetails.ExpiresAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Manager-selected expiry")</div>
+                        </div>
+                        <div class="task-message">@(Model.TaskDetails.InstructionMessage ?? "No instruction entered.")</div>
+                    </section>
+
+                    <section class="feedback-panel">
+                        <div class="section-label">Task Feedback</div>
+                        <div class="form-grid">
+                            <label>
+                                Task outcome
+                                <select asp-for="Outcome">
+                                    <option value="">Select outcome</option>
+                                    <option>Completed</option>
+                                    <option>Unable to complete</option>
+                                    <option>More information required</option>
+                                    <option>Issue reported</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                Related item
+                                <input asp-for="RelatedItem" type="text" placeholder="Vehicle, equipment, stock item, or medication" />
+                            </label>
+                        </div>
+
+                        <label class="notes-field">
+                            Feedback message
+                            <textarea asp-for="FeedbackMessage" rows="5" placeholder="Provide feedback or explain what was completed"></textarea>
+                        </label>
+
+                        <label class="upload-box" for="TaskEvidenceFiles">
+                            <span class="upload-title">Attach Evidence</span>
+                            <span class="upload-help">Accepted: photos, PDF, Word, Excel, CSV, TXT</span>
+                            <input id="TaskEvidenceFiles" asp-for="EvidenceFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.doc,.docx,.xls,.xlsx,.csv,.txt" />
+                        </label>
+                    </section>
+
+                    <button class="menu-btn staff-btn submit-btn" type="submit">Submit Task Feedback</button>
+                </form>
+            }
+        }
+        else if (isGeneralMode)
+        {
+            <form id="generalFeedbackForm" method="post" enctype="multipart/form-data" class="feedback-form">
+                <input name="FeedbackMode" type="hidden" value="@TaskFeedbackModel.GeneralFeedbackMode" />
+
+                <section class="feedback-panel">
+                    <div class="section-label">General Feedback</div>
+                    <div class="form-grid">
+                        <label>
+                            Feedback type
+                            <select asp-for="Outcome">
+                                <option value="">Select feedback type</option>
+                                <option>Completed work</option>
+                                <option>Operational update</option>
+                                <option>Unable to complete work</option>
+                                <option>More information required</option>
+                                <option>Issue already reported</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Related item
+                            <input asp-for="RelatedItem" type="text" placeholder="Vehicle, equipment, stock item, medication, base, or person" />
+                        </label>
+                    </div>
+
+                    <label class="notes-field">
+                        Feedback message
+                        <textarea asp-for="FeedbackMessage" rows="5" placeholder="Provide feedback or explain what was done"></textarea>
                     </label>
 
-                    <label>
-                        Related item
-                        <input asp-for="RelatedItem" type="text" placeholder="Vehicle, equipment, stock item, or medication" />
+                    <label class="upload-box" for="GeneralEvidenceFiles">
+                        <span class="upload-title">Attach Evidence</span>
+                        <span class="upload-help">Accepted: photos, PDF, Word, Excel, CSV, TXT</span>
+                        <input id="GeneralEvidenceFiles" asp-for="EvidenceFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.doc,.docx,.xls,.xlsx,.csv,.txt" />
                     </label>
-                </div>
+                </section>
 
-                <label class="notes-field">
-                    Feedback message
-                    <textarea asp-for="FeedbackMessage" rows="5" placeholder="Provide feedback or explain what was completed"></textarea>
-                </label>
-
-                <label class="upload-box" for="EvidenceFiles">
-                    <span class="upload-title">Attach Evidence</span>
-                    <span class="upload-help">Accepted: photos, PDF, Word, Excel, CSV, TXT</span>
-                    <input id="EvidenceFiles" asp-for="EvidenceFiles" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.doc,.docx,.xls,.xlsx,.csv,.txt" />
-                </label>
-            </section>
-
-            <button class="menu-btn staff-btn submit-btn" type="submit">Submit Feedback</button>
-        </form>
+                <button class="menu-btn staff-btn submit-btn" type="submit">Submit General Feedback</button>
+            </form>
+        }
     </div>
 </div>
 
@@ -81,9 +165,20 @@
 .page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
 .page-subtitle { width: min(680px, 94%); margin: 0 auto 24px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
 .status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(14,94,122,.24); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 700; }
+.feedback-mode-grid { width: min(820px, 94%); margin: 0 auto 22px auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; text-align: left; }
+.feedback-mode-card { display: flex; min-height: 132px; flex-direction: column; justify-content: center; gap: 8px; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-top: 5px solid #334155; border-radius: 8px; background: rgba(255,255,255,.72); color: #1f2937; text-decoration: none; box-sizing: border-box; }
+.feedback-mode-card:hover, .feedback-mode-card.active { color: #1f2937; border-top-color: #0E5E7A; box-shadow: 0 14px 28px rgba(15,23,42,.08); }
+.feedback-mode-card strong { font-size: 18px; font-weight: 900; }
+.feedback-mode-card span { color: #52606d; font-size: 13px; font-weight: 700; line-height: 1.35; }
+.feedback-mode-card small { color: #0E5E7A; font-size: 12px; font-weight: 900; }
 .feedback-form { display: flex; flex-direction: column; align-items: center; gap: 22px; }
 .feedback-panel { width: min(820px, 94%); padding: 20px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); box-sizing: border-box; text-align: left; }
 .section-label { margin-bottom: 14px; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.task-select-form { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 12px; align-items: end; }
+.task-select-form label { display: flex; flex-direction: column; gap: 8px; color: #52606d; font-size: 13px; font-weight: 800; }
+.task-select-form select { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.select-task-btn { min-width: 0; border: none; }
+.empty-panel { padding: 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #52606d; font-size: 13px; font-weight: 800; text-align: center; }
 .task-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; color: #425466; font-weight: 700; }
 .task-message { margin-top: 12px; font-size: 14px; font-weight: 700; color: #52606d; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -96,5 +191,5 @@
 .upload-help { font-size: 14px; font-weight: 600; color: #6b7280; }
 .upload-box input { margin-top: 10px; max-width: 100%; }
 .submit-btn { width: min(360px, 94%); border: none; }
-@@media (max-width: 700px) { .task-summary, .form-grid { grid-template-columns: 1fr; } }
+@@media (max-width: 700px) { .feedback-mode-grid, .task-summary, .form-grid, .task-select-form { grid-template-columns: 1fr; } }
 </style>

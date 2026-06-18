@@ -1,0 +1,137 @@
+@page
+@model ReadinessMetricDetailModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="detail-screen">
+    <div class="detail-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Readiness Source</div>
+        <h2 class="page-title">@Model.PageTitle</h2>
+
+        @if (Model.Source is null)
+        {
+            <div class="empty-panel">This readiness source is not available to your current management view.</div>
+        }
+        else
+        {
+            <section class="source-panel">
+                <div class="section-label">Vehicle</div>
+                <div class="detail-grid">
+                    <div><strong>Callsign:</strong> @Model.Source.Callsign</div>
+                    <div><strong>Registration:</strong> @Model.Source.RegistrationNumber</div>
+                    <div><strong>Vehicle type:</strong> @Model.Source.VehicleType</div>
+                    <div><strong>Area:</strong> @Model.Source.AreaName</div>
+                    <div><strong>Assigned manager:</strong> @Model.Source.AssignedManager</div>
+                    <div><strong>Trigger:</strong> @Model.Source.TriggerType</div>
+                </div>
+            </section>
+
+            @if (Model.Source.Issue is not null)
+            {
+                <section class="source-panel">
+                    <div class="section-label">Issue Source</div>
+                    <div class="detail-grid">
+                        <div><strong>Status:</strong> @Model.Source.Issue.Status</div>
+                        <div><strong>Issue type:</strong> @Model.Source.Issue.IssueType</div>
+                        <div><strong>Severity:</strong> @Model.Source.Issue.Severity</div>
+                        <div><strong>Assigned to:</strong> @Model.Source.Issue.AssignedToName</div>
+                        <div><strong>Related item:</strong> @Model.Source.Issue.RelatedItem</div>
+                        <div><strong>Created:</strong> @Model.Source.Issue.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                    </div>
+                    <div class="source-note">@Model.Source.Issue.Description</div>
+                    <a class="action-link" href="/IssueReportAction?issueId=@Model.Source.Issue.Id&pool=true">Open Issue</a>
+                </section>
+            }
+            else if (Model.Source.Report is not null)
+            {
+                <section class="source-panel">
+                    <div class="section-label">Checklist Source</div>
+                    <div class="detail-grid">
+                        <div><strong>Workflow:</strong> @Model.Source.Report.WorkflowStatus</div>
+                        <div><strong>Readiness:</strong> @Model.Source.Report.ReadinessStatus</div>
+                        <div><strong>Performed by:</strong> @Model.Source.Report.PerformedByName</div>
+                        <div><strong>Recorded:</strong> @Model.Source.Report.RecordedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                        <div><strong>Critical issues:</strong> @Model.Source.Report.CriticalIssueCount</div>
+                        <div><strong>Warnings:</strong> @Model.Source.Report.WarningIssueCount</div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Source.Report.Notes))
+                    {
+                        <div class="section-label">Checklist Evidence</div>
+                        <div class="source-note">@Model.Source.Report.Notes</div>
+                    }
+                </section>
+
+                <section class="source-panel">
+                    <div class="section-label">Equipment Rows</div>
+                    @if (Model.Source.Report.EquipmentRows.Count == 0)
+                    {
+                        <div class="empty-panel compact">No equipment rows were collected on this checklist.</div>
+                    }
+                    else
+                    {
+                        <div class="equipment-table">
+                            <div class="equipment-header">
+                                <span>Item</span>
+                                <span>S/N / ID</span>
+                                <span>Battery</span>
+                                <span>Operational</span>
+                                <span>Issue notes</span>
+                            </div>
+                            @foreach (var item in Model.Source.Report.EquipmentRows)
+                            {
+                                <div class="equipment-row">
+                                    <span>@item.EquipmentName</span>
+                                    <span>@item.SerialOrAssetId</span>
+                                    <span>@item.BatteryStatus</span>
+                                    <span>@(item.IsOperational ? "Yes" : "No")</span>
+                                    <span>@item.IssueNotes</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+            }
+            else
+            {
+                <section class="source-panel">
+                    <div class="section-label">Missing Checklist</div>
+                    <div class="source-note">No readiness checklist has been submitted for this vehicle in the current 12-hour shift window. This is why it is affecting the readiness score.</div>
+                </section>
+            }
+        }
+
+        <a class="back-link" asp-page="/ReadinessMetric" asp-route-metric="@Model.Metric" asp-route-operationalAreaId="@Model.OperationalAreaId">Back: @Model.BackLabel</a>
+    </div>
+</div>
+
+<style>
+.detail-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.detail-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 24px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.source-panel, .empty-panel { width: min(900px, 100%); margin: 0 auto 18px auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); box-sizing: border-box; text-align: left; }
+.empty-panel { color: #52606d; font-weight: 900; text-align: center; }
+.empty-panel.compact { width: 100%; margin-bottom: 0; padding: 12px; }
+.section-label { margin-bottom: 14px; color: #52606d; font-size: 12px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; }
+.detail-grid, .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; color: #425466; font-size: 14px; font-weight: 700; }
+.status-grid { margin-top: 14px; }
+.source-note { margin-top: 14px; color: #1f2937; font-size: 14px; font-weight: 750; line-height: 1.45; }
+.action-link, .back-link { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; margin-top: 14px; padding: 0 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: #fff; color: #0E5E7A; font-weight: 900; text-decoration: none; }
+.back-link { margin-top: 4px; }
+.action-link:hover, .back-link:hover { background: #eef3f8; color: #0b4b61; }
+.equipment-table { border: 1px solid rgba(66,84,102,.14); border-radius: 8px; overflow: hidden; }
+.equipment-header, .equipment-row { display: grid; grid-template-columns: 1.1fr 1fr .8fr .8fr 1.5fr; gap: 10px; align-items: center; padding: 11px 12px; }
+.equipment-header { background: #334155; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.equipment-row { border-top: 1px solid rgba(66,84,102,.12); color: #1f2937; font-size: 13px; font-weight: 800; }
+@@media (max-width: 760px) { .detail-grid, .status-grid, .equipment-header, .equipment-row { grid-template-columns: 1fr; } .equipment-header { display: none; } }
+</style>

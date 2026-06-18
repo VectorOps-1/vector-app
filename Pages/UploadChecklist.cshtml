@@ -4,17 +4,18 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Upload Existing Checklist";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="upload-screen">
     <div class="upload-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Master Setup</div>
+        <div class="home-label">Checklist Management</div>
         <h2 class="page-title">Upload Existing Checklist</h2>
-        <p class="page-subtitle">Upload an Excel checklist to generate an AcuityOps checklist template</p>
+        <p class="page-subtitle">Store an existing checklist for reference. Guided template import is a Pro workflow.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -24,11 +25,11 @@
         <form method="post" enctype="multipart/form-data" class="upload-form">
             <label class="upload-box" for="checklistFile">
                 <span class="upload-title">Select Excel File</span>
-                <span class="upload-help">Accepted now: .xlsx or .xls</span>
-                <input id="checklistFile" asp-for="ChecklistFile" type="file" accept=".xlsx,.xls" />
+                <span class="upload-help">Accepted now: .xlsx, .xls, or .csv</span>
+                <input id="checklistFile" asp-for="ChecklistFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
-            <button class="menu-btn equipment-btn continue-btn" type="submit">Generate Checklist Preview</button>
+            <button class="menu-btn equipment-btn continue-btn" type="submit">Upload and Preview File</button>
         </form>
     </div>
 </div>

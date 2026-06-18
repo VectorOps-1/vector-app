@@ -18,12 +18,30 @@ public class Vehicle
     [MaxLength(120)]
     public string VehicleType { get; set; } = string.Empty;
 
+    [MaxLength(80)]
+    public string? VehicleFunction { get; set; }
+
+    [MaxLength(120)]
+    public string? VehicleSubtype { get; set; }
+
     [MaxLength(120)]
     public string? QualificationLevel { get; set; }
 
     [MaxLength(120)]
     public string? SchematicType { get; set; }
 
+    [MaxLength(120)]
+    public string? VinNumber { get; set; }
+
+    [MaxLength(120)]
+    public string? ChassisNumber { get; set; }
+
+    [MaxLength(120)]
+    public string? LicenseNumber { get; set; }
+
+    public DateTime? LicenseDiscExpiryDate { get; set; }
+
+    public DateTime? LastServiceDate { get; set; }
     public DateTime? NextServiceDate { get; set; }
 
     [MaxLength(80)]

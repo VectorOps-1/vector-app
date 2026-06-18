@@ -1,0 +1,177 @@
+@page
+@model EditStaffProfileModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Staff Profile";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var profileUrl = $"/StaffRecordsSearch?staffUserId={Model.StaffUserId}";
+    var backUrl = !string.IsNullOrWhiteSpace(Model.ReturnUrl) && Model.ReturnUrl.StartsWith("/") && !Model.ReturnUrl.StartsWith("//")
+        ? Model.ReturnUrl
+        : profileUrl;
+}
+
+<div class="edit-staff-screen">
+    <div class="edit-staff-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Staff Profile</div>
+        <h2 class="page-title">Edit Staff Profile</h2>
+        <p class="page-subtitle">Staff can update their own personal profile details. Managers can update register-controlled fields for staff in their scope.</p>
+        <div class="scope-pill">@Model.ScopeLabel</div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-transient-action-feedback>@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="edit-form">
+            <input type="hidden" asp-for="StaffUserId" />
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <section class="form-section">
+                <div class="section-label">Personal Profile</div>
+                <div class="form-grid">
+                    <label>
+                        Full name
+                        <input asp-for="FullName" type="text" />
+                        <span asp-validation-for="FullName"></span>
+                    </label>
+                    <label>
+                        Email
+                        <input asp-for="Email" type="email" />
+                        <span asp-validation-for="Email"></span>
+                    </label>
+                    <label>
+                        Cell number
+                        <input asp-for="CellNumber" type="tel" />
+                    </label>
+                    <label>
+                        National ID
+                        <input asp-for="NationalId" type="text" />
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-section">
+                <div class="section-heading">
+                    <div>
+                        <div class="section-label">Register Controls</div>
+                        <p>Clinical qualification/scope, practitioner number, licensing, CPD, staff ID, assigned area, and status are manager-controlled source-of-truth fields.</p>
+                    </div>
+                    @if (!Model.CanEditManagerFields)
+                    {
+                        <span class="locked-pill">Manager controlled</span>
+                    }
+                </div>
+
+                <div class="form-grid">
+                    <label>
+                        Staff ID
+                        <input asp-for="StaffIdentifier" type="text" readonly="@(!Model.CanEditManagerFields)" />
+                    </label>
+                    <label>
+                        Clinical qualification / scope
+                        <input asp-for="QualificationFunction" type="text" list="clinicalScopeOptions" readonly="@(!Model.CanEditManagerFields)" placeholder="Example: ECP, CCA, AEA, ILS, BLS" />
+                    </label>
+                    <label>
+                        Practitioner Number
+                        <input asp-for="PractitionerNumber" type="text" readonly="@(!Model.CanEditManagerFields)" placeholder="Professional council / practitioner number" />
+                    </label>
+                    <label>
+                        Annual licence expiry
+                        <input asp-for="AnnualLicenseExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" />
+                    </label>
+                    <label>
+                        CPD compliance
+                        @if (Model.CanEditManagerFields)
+                        {
+                            <select asp-for="CpdComplianceStatus" asp-items="Model.CpdStatusOptions"></select>
+                        }
+                        else
+                        {
+                            <select asp-for="CpdComplianceStatus" asp-items="Model.CpdStatusOptions" disabled></select>
+                        }
+                    </label>
+                    <label>
+                        CPD valid until
+                        <input asp-for="CpdComplianceExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" />
+                    </label>
+                    <label>
+                        Assigned area
+                        @if (Model.CanEditManagerFields)
+                        {
+                            <select asp-for="AssignedOperationalAreaId" asp-items="Model.AreaOptions"></select>
+                        }
+                        else
+                        {
+                            <select asp-for="AssignedOperationalAreaId" asp-items="Model.AreaOptions" disabled></select>
+                        }
+                    </label>
+                    <label>
+                        Status
+                        @if (Model.CanEditManagerFields)
+                        {
+                            <select asp-for="Status" asp-items="Model.StatusOptions"></select>
+                        }
+                        else
+                        {
+                            <select asp-for="Status" asp-items="Model.StatusOptions" disabled></select>
+                        }
+                    </label>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <a class="menu-btn vehicle-btn" href="@backUrl">Back</a>
+                <button class="menu-btn equipment-btn" type="submit">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<datalist id="clinicalScopeOptions">
+    <option value="N/A - non-clinical"></option>
+    <option value="Emergency Care Practitioner (ECP)"></option>
+    <option value="Critical Care Assistant (CCA)"></option>
+    <option value="Advanced Life Support (ALS)"></option>
+    <option value="Advanced Emergency Assistant (AEA)"></option>
+    <option value="Intermediate Life Support (ILS)"></option>
+    <option value="Basic Life Support (BLS)"></option>
+    <option value="Basic Ambulance Assistant (BAA)"></option>
+    <option value="Emergency Care Technician (ECT)"></option>
+    <option value="Registered Nurse"></option>
+    <option value="Driver / support"></option>
+    <option value="Dispatcher / control room"></option>
+</datalist>
+
+<style>
+.edit-staff-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.edit-staff-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 12px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.scope-pill { width: fit-content; max-width: 100%; margin: 0 auto 20px auto; padding: 8px 12px; border: 1px solid rgba(14,94,122,.2); border-radius: 8px; background: rgba(14,94,122,.07); color: #0E5E7A; font-size: 12px; font-weight: 900; }
+.status-message { width: min(760px, 100%); margin: 0 auto 18px auto; padding: 14px 16px; border: 1px solid rgba(31,111,91,.2); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-weight: 900; }
+.edit-form { display: grid; gap: 16px; text-align: left; }
+.form-section { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.76); }
+.section-label { margin-bottom: 12px; font-size: 13px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #52606d; }
+.section-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.section-heading p { margin: -6px 0 14px 0; color: #6b7280; font-size: 13px; font-weight: 800; }
+.locked-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: #f3f4f6; color: #64748b; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+label { display: flex; flex-direction: column; gap: 7px; color: #425466; font-size: 13px; font-weight: 900; }
+input, select { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 12px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+input[readonly], select:disabled { background: #f3f6f9; color: #64748b; cursor: not-allowed; }
+span[data-valmsg-for], .field-validation-error { color: #8F3A3A; font-size: 12px; font-weight: 900; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; position: sticky; bottom: 0; padding-top: 12px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 44%); }
+.action-row .menu-btn { width: 100%; border: 1px solid rgba(66,84,102,.18); }
+@@media (max-width: 760px) {
+    .form-grid, .action-row { grid-template-columns: 1fr; }
+    .section-heading { flex-direction: column; }
+}
+</style>

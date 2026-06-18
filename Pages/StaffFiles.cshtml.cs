@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
+using vector_app_local.Models;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
@@ -35,19 +36,7 @@ public class StaffFilesModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        StaffMembers = await _db.AppUsers
-            .Include(user => user.AppRole)
-            .Where(user => user.CompanyId == currentUser.CompanyId)
-            .OrderBy(user => user.FullName)
-            .Select(user => new StaffFileMember
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                RoleName = user.AppRole == null ? "Unassigned" : user.AppRole.Name,
-                Status = user.Status
-            })
-            .ToListAsync();
+        StaffMembers = await LoadScopedStaffMembersAsync(currentUser);
 
         SelectedStaff = StaffUserId.HasValue
             ? StaffMembers.FirstOrDefault(staff => staff.Id == StaffUserId.Value)
@@ -101,7 +90,7 @@ public class StaffFilesModel : PageModel
                 file.CompanyId == currentUser.CompanyId &&
                 file.LinkedEntityType == "Staff");
 
-        if (storedFile is null)
+        if (storedFile is null || !await CanAccessStaffAsync(currentUser, storedFile.LinkedEntityId))
         {
             return RedirectToPage("/StaffFiles");
         }
@@ -110,11 +99,90 @@ public class StaffFilesModel : PageModel
         return File(stream, storedFile.ContentType, storedFile.OriginalFileName);
     }
 
+    private async Task<List<StaffFileMember>> LoadScopedStaffMembersAsync(AppUser currentUser)
+    {
+        var query = await BuildScopedStaffQueryAsync(currentUser);
+
+        return await query
+            .OrderBy(user => user.FullName)
+            .Select(user => new StaffFileMember
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                StaffIdentifier = user.StaffIdentifier,
+                CellNumber = user.CellNumber,
+                PractitionerNumber = user.PractitionerNumber,
+                AnnualLicenseExpiryDate = user.AnnualLicenseExpiryDate,
+                CpdComplianceStatus = user.CpdComplianceStatus,
+                CpdComplianceExpiryDate = user.CpdComplianceExpiryDate,
+                AssignedArea = user.AssignedOperationalArea == null ? "Unassigned" : user.AssignedOperationalArea.Name,
+                RoleName = user.AppRole == null ? "Unassigned" : user.AppRole.Name,
+                Status = user.Status
+            })
+            .ToListAsync();
+    }
+
+    private async Task<bool> CanAccessStaffAsync(AppUser currentUser, int staffUserId)
+    {
+        var query = await BuildScopedStaffQueryAsync(currentUser);
+        return await query.AnyAsync(user => user.Id == staffUserId);
+    }
+
+    private async Task<IQueryable<AppUser>> BuildScopedStaffQueryAsync(AppUser currentUser)
+    {
+        var query = _db.AppUsers
+            .AsNoTracking()
+            .Include(user => user.AppRole)
+            .Include(user => user.AssignedOperationalArea)
+            .Where(user => user.CompanyId == currentUser.CompanyId && user.Status != "Deleted");
+
+        if (CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return query;
+        }
+
+        var assignedAreaIds = await LoadAssignedAreaIdsAsync(currentUser);
+
+        return assignedAreaIds.Count == 0
+            ? query.Where(user => user.Id == currentUser.Id)
+            : query.Where(user =>
+                user.Id == currentUser.Id ||
+                (user.AssignedOperationalAreaId.HasValue && assignedAreaIds.Contains(user.AssignedOperationalAreaId.Value)));
+    }
+
+    private async Task<List<int>> LoadAssignedAreaIdsAsync(AppUser currentUser)
+    {
+        var assignedAreaIds = await _db.ManagerOperationalAreaAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.CompanyId == currentUser.CompanyId &&
+                assignment.ManagerUserId == currentUser.Id &&
+                assignment.Status == "Active")
+            .Select(assignment => assignment.OperationalAreaId)
+            .ToListAsync();
+
+        if (currentUser.AssignedOperationalAreaId.HasValue &&
+            !assignedAreaIds.Contains(currentUser.AssignedOperationalAreaId.Value))
+        {
+            assignedAreaIds.Add(currentUser.AssignedOperationalAreaId.Value);
+        }
+
+        return assignedAreaIds;
+    }
+
     public class StaffFileMember
     {
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? StaffIdentifier { get; set; }
+        public string? CellNumber { get; set; }
+        public string? PractitionerNumber { get; set; }
+        public DateTime? AnnualLicenseExpiryDate { get; set; }
+        public string? CpdComplianceStatus { get; set; }
+        public DateTime? CpdComplianceExpiryDate { get; set; }
+        public string AssignedArea { get; set; } = string.Empty;
         public string RoleName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
     }

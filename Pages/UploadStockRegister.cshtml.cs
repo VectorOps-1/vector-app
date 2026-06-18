@@ -1,10 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class UploadStockRegisterModel : PageModel
 {
+    private readonly SetupUploadService _setupUploads;
+
+    public UploadStockRegisterModel(SetupUploadService setupUploads)
+    {
+        _setupUploads = setupUploads;
+    }
+
     [BindProperty]
     public IFormFile? StockRegisterFile { get; set; }
 
@@ -12,11 +20,23 @@ public class UploadStockRegisterModel : PageModel
 
     public IActionResult OnGet()
     {
-        return RedirectToPage("/StockRegister");
+        return Page();
     }
 
-    public IActionResult OnPost()
+    public async Task<IActionResult> OnPostAsync()
     {
-        return RedirectToPage("/StockRegister");
+        var result = await _setupUploads.SaveRegisterUploadAsync(StockRegisterFile, "Stock Register");
+        if (result.IsNotSignedIn)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        if (!result.IsSaved)
+        {
+            StatusMessage = result.ErrorMessage;
+            return Page();
+        }
+
+        return RedirectToPage("/StockRegisterPreview", new { sourceFileId = result.FileId });
     }
 }

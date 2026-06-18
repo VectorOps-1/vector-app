@@ -1,21 +1,22 @@
 @page
-@model MonthlyVehicleChecklistModel
+@model FullAuditEquipmentChecklistModel
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Monthly Vehicle Checklist";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Full Audit";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="checklist-screen">
     <div class="checklist-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Monthly Checklist</div>
-        <h2 class="page-title">Vehicle Checklist</h2>
-        <p class="page-subtitle">Monthly vehicle checklist template placeholder. Final fields will come from uploaded client checklist templates.</p>
-        <a class="menu-btn vehicle-btn" href="/DailyVehicleChecklist">Use Current Vehicle Checklist Structure</a>
+        <div class="home-label">Full Audit</div>
+        <h2 class="page-title">Full Audit</h2>
+        <p class="page-subtitle">Full audit checklist flow for lower-frequency equipment and vehicle inspection work.</p>
+        <a class="menu-btn equipment-btn" href="/DailyVehicleChecklist?frequency=full-audit">Start Full Audit</a>
     </div>
 </div>
 

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
 using vector_app_local.Models;
@@ -23,7 +22,7 @@ public class SendTaskModel : PageModel
     public int AssignedToUserId { get; set; }
 
     [BindProperty]
-    public string ActionType { get; set; } = "Daily Vehicle Readiness";
+    public string ActionType { get; set; } = "Daily Vehicle & Equipment Check";
 
     [BindProperty]
     public DateTime? ExpiresAtLocal { get; set; }
@@ -31,20 +30,26 @@ public class SendTaskModel : PageModel
     [BindProperty]
     public string? InstructionMessage { get; set; }
 
-    public List<SelectListItem> Recipients { get; set; } = new();
+    public List<TaskRecipientOption> Recipients { get; set; } = new();
+    public List<TaskActionOption> TaskActions { get; set; } = new();
 
     public string? SuccessMessage { get; set; }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
         SuccessMessage = TempData["SuccessMessage"] as string;
-        await LoadRecipientsAsync();
+        var assignedBy = await LoadFormOptionsAsync();
+        if (assignedBy is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(string submitAction)
     {
-        await LoadRecipientsAsync();
-        var assignedBy = await _currentUser.GetCurrentUserAsync();
+        var assignedBy = await LoadFormOptionsAsync();
         if (assignedBy is null)
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
@@ -70,13 +75,21 @@ public class SendTaskModel : PageModel
             return Page();
         }
 
-        var recipientExists = await _db.AppUsers.AnyAsync(user =>
+        var recipient = await _db.AppUsers
+            .Include(user => user.AppRole)
+            .FirstOrDefaultAsync(user =>
             user.Id == AssignedToUserId &&
             user.CompanyId == assignedBy.CompanyId &&
             user.Status == "Active");
-        if (!recipientExists)
+        if (recipient is null)
         {
             ModelState.AddModelError(nameof(AssignedToUserId), "Select an active recipient in the signed-in user's company.");
+            return Page();
+        }
+
+        if (!TaskActionCatalog.IsAllowedForSenderAndRecipient(ActionType, _currentUser.CurrentAccessView, recipient.AppRole?.Name))
+        {
+            ModelState.AddModelError(nameof(ActionType), "Select an action allowed for the sender and the selected recipient's access level.");
             return Page();
         }
 
@@ -127,24 +140,42 @@ public class SendTaskModel : PageModel
         return RedirectToPage();
     }
 
-    private async Task LoadRecipientsAsync()
+    private async Task<AppUser?> LoadFormOptionsAsync()
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
         if (currentUser is null)
         {
-            Recipients = new List<SelectListItem>();
-            return;
+            Recipients = new List<TaskRecipientOption>();
+            TaskActions = new List<TaskActionOption>();
+            return null;
         }
 
-        Recipients = await _db.AppUsers
+        TaskActions = TaskActionCatalog
+            .GetActionsForSender(_currentUser.CurrentAccessView)
+            .ToList();
+
+        var users = await _db.AppUsers
             .Include(u => u.AppRole)
             .Where(u => u.CompanyId == currentUser.CompanyId && u.Status == "Active")
             .OrderBy(u => u.FullName)
-            .Select(u => new SelectListItem
-            {
-                Value = u.Id.ToString(),
-                Text = u.AppRole == null ? u.FullName : $"{u.FullName} ({u.AppRole.Name})"
-            })
             .ToListAsync();
+
+        Recipients = users
+            .Select(user => new TaskRecipientOption
+            {
+                Id = user.Id,
+                DisplayName = user.AppRole == null ? user.FullName : $"{user.FullName} ({user.AppRole.Name})",
+                AccessView = TaskActionCatalog.AccessViewForRoleName(user.AppRole?.Name)
+            })
+            .ToList();
+
+        return currentUser;
+    }
+
+    public class TaskRecipientOption
+    {
+        public int Id { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string AccessView { get; set; } = CurrentUserService.StaffAccess;
     }
 }

@@ -15,6 +15,12 @@ public class Company
     [MaxLength(40)]
     public string SubscriptionTier { get; set; } = SubscriptionTiers.Base;
 
+    [MaxLength(120)]
+    public string? WorkspaceSlug { get; set; }
+
+    [MaxLength(120)]
+    public string? WorkspaceAccessCode { get; set; }
+
     [MaxLength(260)]
     public string? LogoStoragePath { get; set; }
 
@@ -38,7 +44,15 @@ public class Company
     public ICollection<DailyVehicleReadinessReport> DailyVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
     public ICollection<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks { get; set; } = new List<DailyVehicleEquipmentCheck>();
     public ICollection<ChecklistTemplate> ChecklistTemplates { get; set; } = new List<ChecklistTemplate>();
+    public ICollection<CatalogueItem> CatalogueItems { get; set; } = new List<CatalogueItem>();
+    public ICollection<CustomDropdownOption> CustomDropdownOptions { get; set; } = new List<CustomDropdownOption>();
+    public ICollection<ChecklistVarianceAlert> ChecklistVarianceAlerts { get; set; } = new List<ChecklistVarianceAlert>();
+    public ICollection<ReadinessAlert> ReadinessAlerts { get; set; } = new List<ReadinessAlert>();
+    public ICollection<ReadinessEngineVersion> ReadinessEngineVersions { get; set; } = new List<ReadinessEngineVersion>();
+    public ICollection<ReadinessEngineRule> ReadinessEngineRules { get; set; } = new List<ReadinessEngineRule>();
+    public ICollection<ReadinessScoringChangeRequest> ReadinessScoringChangeRequests { get; set; } = new List<ReadinessScoringChangeRequest>();
     public ICollection<AssetFile> AssetFiles { get; set; } = new List<AssetFile>();
+    public ICollection<AppUserAccessPermission> AppUserAccessPermissions { get; set; } = new List<AppUserAccessPermission>();
     public ICollection<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

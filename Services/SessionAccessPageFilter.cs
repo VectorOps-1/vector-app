@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Data;
+using vector_app_local.Models;
 
 namespace vector_app_local.Services;
 
@@ -34,21 +35,33 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/DailyChecklist"] = AllSignedInAccess,
         ["/DailyVehicleChecklist"] = AllSignedInAccess,
         ["/DailyEquipmentChecklist"] = AllSignedInAccess,
-        ["/MonthlyChecklist"] = AllSignedInAccess,
-        ["/MonthlyVehicleChecklist"] = AllSignedInAccess,
-        ["/MonthlyEquipmentChecklist"] = AllSignedInAccess,
+        ["/FullAudit"] = AllSignedInAccess,
+        ["/FullAuditVehicleChecklist"] = AllSignedInAccess,
+        ["/FullAuditEquipmentChecklist"] = AllSignedInAccess,
+        ["/MyProfile"] = AllSignedInAccess,
         ["/PersonalDocuments"] = AllSignedInAccess,
+        ["/StaffRecordsSearch"] = AllSignedInAccess,
+        ["/EditStaffProfile"] = AllSignedInAccess,
         ["/ReportIssue"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
+        ["/ReassignVehicleCallsign"] = ManagementAccess,
         ["/ReadinessDashboard"] = ManagementAccess,
+        ["/ReadinessEngine"] = ManagementAccess,
+        ["/ReadinessMetric"] = ManagementAccess,
+        ["/ReadinessMetricDetail"] = ManagementAccess,
+        ["/OperationsReports"] = ManagementAccess,
+        ["/ChecklistReports"] = ManagementAccess,
+        ["/ChecklistReportDetail"] = ManagementAccess,
+        ["/ChecklistTemplateView"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
         ["/EquipmentRegister"] = ManagementAccess,
         ["/EquipmentService"] = ManagementAccess,
         ["/MoveAsset"] = ManagementAccess,
         ["/Stock"] = ManagementAccess,
         ["/StockRegister"] = ManagementAccess,
+        ["/EditStockItem"] = ManagementAccess,
         ["/StockOrders"] = ManagementAccess,
         ["/PlaceStockOrder"] = ManagementAccess,
         ["/StockOrderAction"] = ManagementAccess,
@@ -60,18 +73,23 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/StaffFiles"] = ManagementAccess,
         ["/Medication"] = ManagementAccess,
         ["/MedicationRegister"] = ManagementAccess,
+        ["/EditMedicationItem"] = ManagementAccess,
         ["/SendTask"] = ManagementAccess,
         ["/IssueInbox"] = ManagementAccess,
+        ["/ChecklistVarianceAlerts"] = ManagementAccess,
+        ["/ReadinessAlerts"] = ManagementAccess,
         ["/IssueReports"] = ManagementAccess,
         ["/IssueReportAction"] = ManagementAccess,
         ["/EditChecklist"] = ManagementAccess,
+        ["/PublishChecklist"] = ManagementAccess,
         ["/EditVehicleChecklist"] = ManagementAccess,
         ["/EditEquipmentChecklist"] = ManagementAccess,
         ["/AddItem"] = ManagementAccess,
         ["/UploadStaffFiles"] = ManagementAccess,
-        ["/StaffRecordsSearch"] = ManagementAccess,
 
         ["/MasterSetup"] = SeniorAccess,
+        ["/AreaManagerControl"] = SeniorAccess,
+        ["/ChecklistApproval"] = SeniorAccess,
         ["/OperationalAreas"] = SeniorAccess,
         ["/ManagerAreas"] = SeniorAccess,
         ["/CompanyProfile"] = SeniorAccess,
@@ -79,10 +97,16 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/LogoUpload"] = SeniorAccess,
         ["/SupplierDetails"] = SeniorAccess,
         ["/UploadChecklist"] = SeniorAccess,
+        ["/ChecklistPreview"] = SeniorAccess,
         ["/UploadVehicleRegister"] = SeniorAccess,
+        ["/VehicleRegisterPreview"] = SeniorAccess,
         ["/VehicleSchematicLibrary"] = SeniorAccess,
         ["/UploadEquipmentRegister"] = SeniorAccess,
+        ["/EquipmentRegisterPreview"] = SeniorAccess,
+        ["/UploadStaffRegister"] = SeniorAccess,
+        ["/StaffRegisterPreview"] = SeniorAccess,
         ["/UploadStockRegister"] = SeniorAccess,
+        ["/StockRegisterPreview"] = SeniorAccess,
         ["/UploadMedicationRegister"] = SeniorAccess,
         ["/MedicationRegisterPreview"] = SeniorAccess,
         ["/CreateManagerAccess"] = SeniorAccess,
@@ -96,9 +120,19 @@ public class SessionAccessPageFilter : IAsyncPageFilter
     {
         "/AddItem",
         "/EquipmentService",
-        "/Stock",
-        "/MoveAsset"
+        "/MoveAsset",
+        "/EnterStockRegister",
+        "/AllocateStock",
+        "/StockRegister"
     };
+
+    private sealed record PermissionRequirement(
+        IReadOnlyCollection<string> AllOf,
+        IReadOnlyCollection<string> AnyOf)
+    {
+        public static PermissionRequirement All(params string[] keys) => new(keys, Array.Empty<string>());
+        public static PermissionRequirement Any(params string[] keys) => new(Array.Empty<string>(), keys);
+    }
 
     public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
     {
@@ -126,7 +160,11 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         if (allowedAccessViews.Contains(accessView))
         {
-            await next();
+            if (await HasRequiredActionPermissionAsync(context, pagePath))
+            {
+                await next();
+            }
+
             return;
         }
 
@@ -140,9 +178,264 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
     }
 
+    private static async Task<bool> HasRequiredActionPermissionAsync(PageHandlerExecutingContext context, string pagePath)
+    {
+        var requirement = await ResolvePermissionRequirementAsync(context, pagePath);
+        if (requirement is null)
+        {
+            return true;
+        }
+
+        var currentUserService = context.HttpContext.RequestServices.GetRequiredService<CurrentUserService>();
+        var currentUser = await currentUserService.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            context.Result = new RedirectToPageResult("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+            return false;
+        }
+
+        var permissionService = context.HttpContext.RequestServices.GetRequiredService<IUserActionPermissionService>();
+        var hasAll = requirement.AllOf.Count == 0 ||
+            await permissionService.HasAllPermissionsAsync(currentUser, requirement.AllOf, context.HttpContext.RequestAborted);
+        var hasAny = requirement.AnyOf.Count == 0 ||
+            await permissionService.HasAnyPermissionAsync(currentUser, requirement.AnyOf, context.HttpContext.RequestAborted);
+
+        if (hasAll && hasAny)
+        {
+            return true;
+        }
+
+        context.Result = new RedirectToPageResult("/Home", new { permissionDenied = "true" });
+        return false;
+    }
+
+    private static async Task<PermissionRequirement?> ResolvePermissionRequirementAsync(PageHandlerExecutingContext context, string pagePath)
+    {
+        var request = context.HttpContext.Request;
+        var handlerName = context.HandlerMethod?.Name ?? string.Empty;
+        var isPost = string.Equals(request.Method, "POST", StringComparison.OrdinalIgnoreCase);
+        var isDeleteHandler = handlerName.Contains("Delete", StringComparison.OrdinalIgnoreCase);
+
+        if (isDeleteHandler && TryResolveRegisterEditPermission(pagePath, out var deleteRegisterPermission))
+        {
+            return PermissionRequirement.All(UserActionPermissions.RegistersDelete, deleteRegisterPermission);
+        }
+
+        if (pagePath == "/AddItem")
+        {
+            var type = await GetRequestValueAsync(request, "Type") ?? request.Query["type"].ToString();
+            return PermissionRequirement.All(RegisterEditPermissionForType(type));
+        }
+
+        if (pagePath == "/EditStaffProfile")
+        {
+            var targetUserValue = await GetRequestValueAsync(request, "StaffUserId");
+            var currentUserId = context.HttpContext.Session.GetInt32(CurrentUserService.UserIdSessionKey);
+            if (int.TryParse(targetUserValue, out var targetUserId) &&
+                currentUserId.HasValue &&
+                targetUserId != currentUserId.Value)
+            {
+                return PermissionRequirement.All(UserActionPermissions.RegistersStaffEdit);
+            }
+
+            return null;
+        }
+
+        if (pagePath == "/EditVehicleChecklist")
+        {
+            if (isPost)
+            {
+                var actionType = await GetRequestValueAsync(request, "ActionType");
+                if (string.Equals(actionType, "approve-publish", StringComparison.OrdinalIgnoreCase))
+                {
+                    return PermissionRequirement.All(UserActionPermissions.ChecklistsPublish);
+                }
+
+                return PermissionRequirement.Any(UserActionPermissions.ChecklistsBuild, UserActionPermissions.ChecklistsEdit);
+            }
+
+            var mode = request.Query["mode"].ToString();
+            var hasTemplateId = !string.IsNullOrWhiteSpace(request.Query["templateId"].ToString());
+            if (string.Equals(mode, "build", StringComparison.OrdinalIgnoreCase) && !hasTemplateId)
+            {
+                return PermissionRequirement.All(UserActionPermissions.ChecklistsBuild);
+            }
+
+            if (hasTemplateId || string.Equals(mode, "edit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PermissionRequirement.All(UserActionPermissions.ChecklistsEdit);
+            }
+
+            return PermissionRequirement.Any(UserActionPermissions.ChecklistsBuild, UserActionPermissions.ChecklistsEdit);
+        }
+
+        if (pagePath == "/EditChecklist")
+        {
+            return isDeleteHandler
+                ? PermissionRequirement.All(UserActionPermissions.ChecklistsEdit)
+                : PermissionRequirement.Any(
+                    UserActionPermissions.ChecklistsBuild,
+                    UserActionPermissions.ChecklistsEdit,
+                    UserActionPermissions.ChecklistsPublish,
+                    UserActionPermissions.ChecklistsReports);
+        }
+
+        if (pagePath == "/TaskInbox" && isDeleteHandler)
+        {
+            return PermissionRequirement.All(UserActionPermissions.TasksManage);
+        }
+
+        if (pagePath == "/IssueInbox" && isDeleteHandler)
+        {
+            return PermissionRequirement.All(UserActionPermissions.IssuesManage);
+        }
+
+        return pagePath switch
+        {
+            "/DailyVehicleChecklist" or "/DailyEquipmentChecklist" or "/FullAudit" or "/FullAuditVehicleChecklist" or "/FullAuditEquipmentChecklist"
+                => PermissionRequirement.All(UserActionPermissions.DailyChecksComplete),
+
+            "/Vehicles" or "/VehicleRegister" or "/Equipment" or "/EquipmentRegister" or "/Stock" or "/StockRegister" or "/Medication" or "/MedicationRegister" or "/Staff" or "/StaffRegister"
+                => PermissionRequirement.All(UserActionPermissions.RegistersView),
+
+            "/EditVehicle" or "/ReassignVehicleCallsign"
+                => PermissionRequirement.All(UserActionPermissions.RegistersVehicleEdit),
+
+            "/EditEquipmentItem"
+                => PermissionRequirement.All(UserActionPermissions.RegistersEquipmentEdit),
+
+            "/EditStockItem" or "/PlaceStockOrder" or "/StockOrders" or "/StockOrderAction" or "/SupplierConfirmations" or "/EnterStockRegister" or "/AllocateStock"
+                => PermissionRequirement.All(UserActionPermissions.RegistersStockEdit),
+
+            "/EditMedicationItem"
+                => PermissionRequirement.All(UserActionPermissions.RegistersMedicationEdit),
+
+            "/MoveAsset"
+                => PermissionRequirement.All(UserActionPermissions.AssetsMove),
+
+            "/EquipmentService" or "/ExpiryNotifications"
+                => PermissionRequirement.All(UserActionPermissions.AssetsServiceUpdate),
+
+            "/SendTask"
+                => PermissionRequirement.All(UserActionPermissions.TasksSend),
+
+            "/TaskFeedback"
+                => PermissionRequirement.All(UserActionPermissions.TasksFeedback),
+
+            "/ReportIssue"
+                => PermissionRequirement.All(UserActionPermissions.IssuesReport),
+
+            "/IssueInbox" or "/IssueReports" or "/IssueReportAction"
+                => PermissionRequirement.All(UserActionPermissions.IssuesManage),
+
+            "/ReadinessDashboard" or "/ReadinessMetric" or "/ReadinessMetricDetail" or "/ReadinessAlerts"
+                => PermissionRequirement.All(UserActionPermissions.DashboardReadiness),
+
+            "/OperationsReports"
+                => PermissionRequirement.All(UserActionPermissions.ReportsOperations),
+
+            "/ReadinessEngine"
+                => PermissionRequirement.All(UserActionPermissions.ReadinessEngine),
+
+            "/ChecklistReports" or "/ChecklistReportDetail"
+                => PermissionRequirement.All(UserActionPermissions.ChecklistsReports),
+
+            "/ChecklistTemplateView"
+                => PermissionRequirement.Any(UserActionPermissions.ChecklistsReports, UserActionPermissions.ChecklistsEdit, UserActionPermissions.ChecklistsPublish),
+
+            "/ChecklistVarianceAlerts"
+                => PermissionRequirement.All(UserActionPermissions.ChecklistsVarianceReview),
+
+            "/PublishChecklist" or "/ChecklistApproval"
+                => PermissionRequirement.All(UserActionPermissions.ChecklistsPublish),
+
+            "/UploadChecklist" or "/ChecklistPreview"
+                => PermissionRequirement.All(UserActionPermissions.ChecklistsUpload),
+
+            "/VehicleSchematicLibrary"
+                => PermissionRequirement.All(UserActionPermissions.ChecklistsEdit),
+
+            "/UploadVehicleRegister" or "/VehicleRegisterPreview"
+                => PermissionRequirement.All(UserActionPermissions.RegistersVehicleEdit),
+
+            "/UploadEquipmentRegister" or "/EquipmentRegisterPreview"
+                => PermissionRequirement.All(UserActionPermissions.RegistersEquipmentEdit),
+
+            "/UploadStockRegister" or "/StockRegisterPreview"
+                => PermissionRequirement.All(UserActionPermissions.RegistersStockEdit),
+
+            "/UploadMedicationRegister" or "/MedicationRegisterPreview"
+                => PermissionRequirement.All(UserActionPermissions.RegistersMedicationEdit),
+
+            "/UploadStaffRegister" or "/StaffRegisterPreview" or "/UploadStaffFiles" or "/StaffFiles"
+                => PermissionRequirement.All(UserActionPermissions.RegistersStaffEdit),
+
+            "/AreaManagerControl"
+                => PermissionRequirement.Any(UserActionPermissions.SetupAreas, UserActionPermissions.SetupAccess),
+
+            "/OperationalAreas" or "/ManagerAreas"
+                => PermissionRequirement.All(UserActionPermissions.SetupAreas),
+
+            "/CreateManagerAccess" or "/CreateOperationalStaffAccess"
+                => PermissionRequirement.All(UserActionPermissions.SetupAccess),
+
+            "/CompanyProfile" or "/CompanyName" or "/LogoUpload" or "/SupplierDetails"
+                => PermissionRequirement.All(UserActionPermissions.SetupCompany),
+
+            "/AuditLog"
+                => PermissionRequirement.All(UserActionPermissions.SetupAudit),
+
+            _ => null
+        };
+    }
+
+    private static bool TryResolveRegisterEditPermission(string pagePath, out string permissionKey)
+    {
+        permissionKey = pagePath switch
+        {
+            "/VehicleRegister" => UserActionPermissions.RegistersVehicleEdit,
+            "/EquipmentRegister" => UserActionPermissions.RegistersEquipmentEdit,
+            "/StockRegister" => UserActionPermissions.RegistersStockEdit,
+            "/MedicationRegister" => UserActionPermissions.RegistersMedicationEdit,
+            _ => string.Empty
+        };
+
+        return !string.IsNullOrWhiteSpace(permissionKey);
+    }
+
+    private static string RegisterEditPermissionForType(string? itemType)
+    {
+        return itemType?.Trim().ToLowerInvariant() switch
+        {
+            "vehicle" => UserActionPermissions.RegistersVehicleEdit,
+            "stock" => UserActionPermissions.RegistersStockEdit,
+            "medication" => UserActionPermissions.RegistersMedicationEdit,
+            "staff" => UserActionPermissions.RegistersStaffEdit,
+            _ => UserActionPermissions.RegistersEquipmentEdit
+        };
+    }
+
+    private static async Task<string?> GetRequestValueAsync(HttpRequest request, string key)
+    {
+        var queryValue = request.Query[key].ToString();
+        if (!string.IsNullOrWhiteSpace(queryValue))
+        {
+            return queryValue;
+        }
+
+        if (!request.HasFormContentType)
+        {
+            return null;
+        }
+
+        var form = await request.ReadFormAsync();
+        var formValue = form[key].ToString();
+        return string.IsNullOrWhiteSpace(formValue) ? null : formValue;
+    }
+
     private static async Task<bool> HasValidTaskAccessAsync(PageHandlerExecutingContext context, string pagePath, int currentUserId)
     {
-        if (!TaskAccessibleManagementPages.Contains(pagePath))
+        if (!TaskAccessibleManagementPages.Contains(pagePath) && !TaskActionCatalog.CanBeOpenedWithTaskAccess(pagePath))
         {
             return false;
         }
@@ -182,51 +475,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return false;
         }
 
-        return TaskAllowsPage(task.ActionType, pagePath, request.Query);
-    }
-
-    private static bool TaskAllowsPage(string actionType, string pagePath, IQueryCollection query)
-    {
-        return actionType switch
-        {
-            "Add New Vehicle" => IsAddItemRequest(pagePath, query, "vehicle"),
-            "Add New Equipment" => IsAddItemRequest(pagePath, query, "equipment"),
-            "Update Equipment Service Dates" => IsEquipmentServiceRequest(pagePath),
-            "Service / Maintenance" => IsEquipmentServiceRequest(pagePath),
-            "Add New Stock Item" => IsAddItemRequest(pagePath, query, "stock"),
-            "Add Medication" => IsAddItemRequest(pagePath, query, "medication"),
-            "Move / Reallocate Vehicle" => IsMoveAssetRequest(pagePath, query, "vehicle"),
-            "Move / Reallocate Equipment" => IsMoveAssetRequest(pagePath, query, "equipment"),
-            "Move / Reallocate Stock" => IsMoveAssetRequest(pagePath, query, "stock"),
-            "Move / Reallocate Medication" => IsMoveAssetRequest(pagePath, query, "medication"),
-            "Receive Stock" => IsStockRequest(pagePath),
-            "Issue / Allocate Stock" => IsStockRequest(pagePath),
-            "Batch Number Tracking" => IsStockRequest(pagePath),
-            "Expiry / Compliance Check" => IsStockRequest(pagePath),
-            _ => false
-        };
-    }
-
-    private static bool IsEquipmentServiceRequest(string pagePath)
-    {
-        return string.Equals(pagePath, "/EquipmentService", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsAddItemRequest(string pagePath, IQueryCollection query, string itemType)
-    {
-        return string.Equals(pagePath, "/AddItem", StringComparison.OrdinalIgnoreCase)
-            && QueryEquals(query, "type", itemType);
-    }
-
-    private static bool IsStockRequest(string pagePath)
-    {
-        return string.Equals(pagePath, "/Stock", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsMoveAssetRequest(string pagePath, IQueryCollection query, string assetType)
-    {
-        return string.Equals(pagePath, "/MoveAsset", StringComparison.OrdinalIgnoreCase)
-            && QueryEquals(query, "asset", assetType);
+        return TaskActionCatalog.AllowsPage(task.ActionType, pagePath, request.Query);
     }
 
     private static bool QueryEquals(IQueryCollection query, string key, string expectedValue)

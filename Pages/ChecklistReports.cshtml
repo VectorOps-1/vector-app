@@ -1,0 +1,219 @@
+@page
+@model ChecklistReportsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Reports";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="checklist-report-screen">
+    <div class="checklist-report-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Checklist Management</div>
+        <h2 class="page-title">Checklist Reports</h2>
+        <p class="page-subtitle">
+            Search submitted checklist evidence. Results are grouped by date, area, and vehicle callsign.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form class="checklist-report-filter" method="get">
+            <input class="filter-input" asp-for="FromDate" type="date" />
+            <input class="filter-input" asp-for="ToDate" type="date" />
+
+            @if (Model.IsSeniorOverview)
+            {
+                <select class="filter-input" asp-for="OperationalAreaId" asp-items="Model.AreaOptions"></select>
+            }
+
+            <select class="filter-input" asp-for="WorkflowStatus" asp-items="Model.WorkflowOptions"></select>
+            <select class="filter-input" asp-for="ReadinessStatus" asp-items="Model.ReadinessOptions"></select>
+            <select class="filter-input" asp-for="VehicleType" asp-items="Model.VehicleTypeOptions"></select>
+            <select class="filter-input" asp-for="SearchField" asp-items="Model.SearchFieldOptions" data-report-search-field></select>
+            <select class="filter-input" asp-for="SearchValue" asp-items="Model.SearchValueOptions"></select>
+            <button class="menu-btn equipment-btn filter-btn" type="submit">Search Reports</button>
+        </form>
+
+        <div class="scope-line">
+            Scope: @Model.ScopeLabel | Date range: @Model.FromDate?.ToString("yyyy-MM-dd") to @Model.ToDate?.ToString("yyyy-MM-dd")
+        </div>
+
+        <section class="summary-strip" aria-label="Checklist report summary">
+            <div><strong>@Model.Summary.TotalChecks</strong><span>Total</span></div>
+            <div><strong>@Model.Summary.SubmittedChecks</strong><span>Saved/submitted</span></div>
+            <div><strong>@Model.Summary.DraftChecks</strong><span>Drafts</span></div>
+            <div><strong>@Model.Summary.CriticalIssues</strong><span>Critical</span></div>
+            <div><strong>@Model.Summary.WarningIssues</strong><span>Warnings</span></div>
+            <div><strong>@Model.Summary.EquipmentIssues</strong><span>Equipment</span></div>
+        </section>
+
+        <section class="quick-links">
+            <a class="report-link primary" href="/EditChecklist">Checklist Management</a>
+            <a class="report-link" href="/ReadinessDashboard">Readiness Dashboard</a>
+            <a class="report-link" href="/ChecklistVarianceAlerts">Variance Alerts</a>
+        </section>
+
+        <section class="report-section">
+            <div class="section-heading">
+                <h3>Report Dates</h3>
+                <span>@Model.ReportDateGroups.Count date@(Model.ReportDateGroups.Count == 1 ? string.Empty : "s")</span>
+            </div>
+
+            @if (Model.ReportDateGroups.Count == 0)
+            {
+                <div class="empty-panel">No checklist records match the current filters.</div>
+            }
+            else
+            {
+                <div class="report-register date-register" role="table" aria-label="Checklist report dates">
+                    <div class="register-row register-header" role="row">
+                        <span>Date</span>
+                        <span>Reports</span>
+                        <span>Areas</span>
+                        <span>Callsigns</span>
+                        <span>Saved/submitted</span>
+                        <span>Drafts</span>
+                        <span>Issues</span>
+                    </div>
+
+                    @foreach (var dateGroup in Model.ReportDateGroups)
+                    {
+                        var selectedClass = Model.SelectedReportDate.HasValue && Model.SelectedReportDate.Value.Date == dateGroup.Date.Date
+                            ? "selected-register-item"
+                            : string.Empty;
+
+                        <a class="register-row register-item @selectedClass" role="row" href="@Model.BuildDateSelectionUrl(dateGroup.Date)">
+                            <span role="cell"><strong>@dateGroup.DateLabel</strong></span>
+                            <span role="cell">@dateGroup.TotalReports</span>
+                            <span role="cell">@dateGroup.AreaCount</span>
+                            <span role="cell">@dateGroup.CallsignCount</span>
+                            <span role="cell">@dateGroup.SubmittedChecks</span>
+                            <span role="cell">@dateGroup.DraftChecks</span>
+                            <span role="cell">Critical @dateGroup.CriticalIssues | Warning @dateGroup.WarningIssues | Equipment @dateGroup.EquipmentIssues</span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="report-section">
+            <div class="section-heading">
+                <h3>Checklist Entries@(string.IsNullOrWhiteSpace(Model.SelectedReportDateLabel) ? string.Empty : $" - {Model.SelectedReportDateLabel}")</h3>
+                <span>@Model.SelectedReportRows.Count report@(Model.SelectedReportRows.Count == 1 ? string.Empty : "s")</span>
+            </div>
+
+            @if (!Model.SelectedReportDate.HasValue)
+            {
+                <div class="empty-panel">Select a date above to view the individual checklist entries.</div>
+            }
+            else if (Model.SelectedReportRows.Count == 0)
+            {
+                <div class="empty-panel">No checklist entries found for the selected date.</div>
+            }
+            else
+            {
+                <div class="report-register entry-register" role="table" aria-label="Checklist entries for selected date">
+                    <div class="register-row register-header" role="row">
+                        <span>Time</span>
+                        <span>Area</span>
+                        <span>Callsign</span>
+                        <span>Reg</span>
+                        <span>Type</span>
+                        <span>Submitted by</span>
+                        <span>Status</span>
+                        <span>Issues</span>
+                    </div>
+
+                    @foreach (var row in Model.SelectedReportRows)
+                    {
+                        <a class="register-row register-item" role="row" href="/ChecklistReportDetail?id=@row.Id">
+                            <span role="cell">@row.RecordedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                            <span role="cell">@row.AreaName</span>
+                            <span role="cell"><strong>@row.Callsign</strong></span>
+                            <span role="cell">@row.RegistrationNumber</span>
+                            <span role="cell">@row.VehicleType</span>
+                            <span role="cell">@row.PerformedByName</span>
+                            <span role="cell"><mark class="status-chip @row.ReadinessStatusClass">@row.ReadinessStatus</mark></span>
+                            <span role="cell">@row.IssueSummary</span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<style>
+.checklist-report-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.checklist-report-inner { width: 100%; max-width: 1240px; margin: 0 auto; padding: 40px 20px; text-align: center; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { width: min(920px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(920px, 94%); margin: 0 auto 18px auto; padding: 12px 16px; border: 1px solid rgba(155, 59, 59, .18); border-radius: 8px; background: rgba(155, 59, 59, .08); color: #7f2f2f; font-weight: 800; }
+.checklist-report-filter { width: min(1120px, 100%); margin: 0 auto 12px auto; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
+.filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66, 84, 102, .24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+.wide-filter { grid-column: span 2; }
+.filter-btn { min-width: 0; border: none; }
+.scope-line { margin-bottom: 16px; color: #52606d; font-size: 13px; font-weight: 900; }
+.summary-strip { width: min(1120px, 100%); margin: 0 auto 18px auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.summary-strip div { min-height: 64px; padding: 10px; border: 1px solid rgba(66, 84, 102, .14); border-radius: 8px; background: rgba(255, 255, 255, .76); text-align: left; box-sizing: border-box; }
+.summary-strip strong { display: block; color: #102a3a; font-size: 22px; font-weight: 900; }
+.summary-strip span { display: block; margin-top: 3px; color: #52606d; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.quick-links { width: min(720px, 100%); margin: 0 auto 20px auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.report-link { display: flex; min-height: 42px; align-items: center; justify-content: center; border: 1px solid rgba(66, 84, 102, .18); border-radius: 8px; background: #f8fafc; color: #24364a; font-size: 14px; font-weight: 900; text-decoration: none; }
+.report-link.primary { background: #126C84; border-color: #126C84; color: #fff; }
+.report-section { width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 10px; border: 1px solid rgba(66, 84, 102, .14); border-radius: 6px; background: rgba(255, 255, 255, .72); box-shadow: none; text-align: left; box-sizing: border-box; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.section-heading h3 { margin: 0; color: #1f2937; font-size: 18px; font-weight: 900; }
+.section-heading span { color: #52606d; font-size: 13px; font-weight: 900; }
+.empty-panel { padding: 16px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; color: #52606d; font-size: 13px; font-weight: 900; text-align: center; }
+.report-register { width: 100%; border: 1px solid rgba(66, 84, 102, .14); border-radius: 6px; overflow-x: auto; background: #fff; }
+.register-row { display: grid; align-items: center; min-width: 1040px; }
+.date-register .register-row { grid-template-columns: 140px 90px 80px 90px 140px 80px minmax(250px, 1fr); }
+.entry-register .register-row { grid-template-columns: 70px 110px 88px 92px minmax(150px, 1fr) minmax(150px, 1fr) 96px minmax(190px, 1.2fr); }
+.register-header { min-height: 34px; background: #334155; color: #fff; }
+.register-header span { padding: 0 9px; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+.register-item { min-height: 34px; border-top: 1px solid rgba(66, 84, 102, .1); color: #1f2937; text-decoration: none; }
+.register-item:hover { background: rgba(18, 108, 132, .06); color: #1f2937; }
+.selected-register-item { background: rgba(18, 108, 132, .08); box-shadow: inset 4px 0 0 #126C84; }
+.register-item span { padding: 0 9px; color: #52606d; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.register-item strong { color: #102a3a; font-size: 12px; font-weight: 900; }
+.status-chip { display: inline-flex; min-height: 22px; align-items: center; justify-content: center; width: fit-content; max-width: 100%; padding: 0 7px; border-radius: 6px; font-size: 10px; font-weight: 900; font-style: normal; }
+.status-ok { background: rgba(32, 129, 96, .12); color: #146c4d; }
+.status-warning { background: rgba(138, 90, 19, .14); color: #8A5A13; }
+.status-danger { background: rgba(155, 59, 59, .12); color: #8A2C2C; }
+@@media (max-width: 1100px) {
+    .report-register { overflow-x: auto; }
+}
+@@media (max-width: 780px) {
+    .checklist-report-filter, .summary-strip { grid-template-columns: 1fr 1fr; }
+    .wide-filter { grid-column: span 2; }
+    .date-register .register-row { min-width: 820px; grid-template-columns: 122px 74px 70px 82px 124px 70px 220px; }
+    .entry-register .register-row { min-width: 900px; grid-template-columns: 62px 96px 76px 88px 140px 140px 86px 165px; }
+}
+@@media (max-width: 520px) {
+    .checklist-report-filter, .summary-strip { grid-template-columns: 1fr; }
+    .wide-filter { grid-column: span 1; }
+    .section-heading { align-items: flex-start; flex-direction: column; }
+}
+</style>
+
+<script>
+    document.querySelector("[data-report-search-field]")?.addEventListener("change", (event) => {
+        const form = event.target.closest("form");
+        const valueSelect = form?.querySelector("[name='SearchValue']");
+        if (valueSelect) {
+            valueSelect.value = "";
+        }
+        form?.submit();
+    });
+</script>

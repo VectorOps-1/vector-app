@@ -1,0 +1,158 @@
+@page
+@model ExpiryNotificationsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Expiry Notifications";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var assetOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Vehicle service"] = 0,
+        ["Vehicle licence disc"] = 1,
+        ["Equipment service"] = 2,
+        ["Stock expiry"] = 3,
+        ["Medication expiry"] = 4,
+        ["Staff licence"] = 5,
+        ["Staff CPD"] = 6
+    };
+    var groupedRows = Model.Rows
+        .GroupBy(row => row.AssetType)
+        .OrderBy(group => assetOrder.TryGetValue(group.Key, out var order) ? order : 999)
+        .ThenBy(group => group.Key)
+        .ToList();
+}
+
+<div class="expiry-screen">
+    <div class="expiry-inner">
+        <img class="page-logo" src="@branding.LogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @branding.ClientName</div>
+        <div class="home-label">Register Notifications</div>
+        <h2 class="page-title">Expiry & Service Notifications</h2>
+        <p class="page-subtitle">Dates pulled directly from the current registers. Blank or N/A dates are ignored.</p>
+
+        <form class="expiry-filter" method="get">
+            <input class="filter-input" asp-for="SearchTerm" type="text" placeholder="Search asset, person, batch, location, status, or source" />
+            <button class="menu-btn equipment-btn filter-btn" type="submit">Search</button>
+            @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+            {
+                <a class="clear-link" href="/ExpiryNotifications">Clear</a>
+            }
+        </form>
+
+        <div class="scope-line">Scope: @Model.ScopeLabel | Window: overdue and next @ExpiryPressureService.DefaultLookAheadDays days</div>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <section class="empty-panel">No expiry or service pressure currently collected for this scope.</section>
+        }
+        else
+        {
+            @foreach (var group in groupedRows)
+            {
+                var overdueCount = group.Count(row => row.DaysUntilDue < 0);
+                var darkOrangeCount = group.Count(row => row.DaysUntilDue >= 0 && row.DaysUntilDue <= 15);
+                var orangeCount = group.Count(row => row.DaysUntilDue > 15 && row.DaysUntilDue <= 30);
+                var amberCount = group.Count(row => row.DaysUntilDue > 30 && row.DaysUntilDue <= 60);
+                <section class="expiry-group">
+                    <div class="group-heading">
+                        <h3>@group.Key</h3>
+                        <span>
+                            @group.Count() item@(group.Count() == 1 ? string.Empty : "s")
+                            @if (overdueCount > 0)
+                            {
+                                <strong class="group-alert vector-date-red">@overdueCount overdue</strong>
+                            }
+                            @if (darkOrangeCount > 0)
+                            {
+                                <strong class="group-alert vector-date-dark-orange">@darkOrangeCount within 15 days</strong>
+                            }
+                            @if (orangeCount > 0)
+                            {
+                                <strong class="group-alert vector-date-orange">@orangeCount within 30 days</strong>
+                            }
+                            @if (amberCount > 0)
+                            {
+                                <strong class="group-alert vector-date-amber">@amberCount within 60 days</strong>
+                            }
+                        </span>
+                    </div>
+
+                    <div class="expiry-list">
+                        <div class="expiry-list-header">
+                            <span>Due date</span>
+                            <span>Item</span>
+                            <span>Source</span>
+                            <span>Location</span>
+                            <span>Status / action</span>
+                        </div>
+                        @foreach (var row in group.OrderBy(row => row.DueAtUtc).ThenBy(row => row.AssetLabel))
+                        {
+                            var alertClass = row.DaysUntilDue < 0
+                                ? "vector-date-red"
+                                : row.DaysUntilDue <= 15
+                                    ? "vector-date-dark-orange"
+                                    : row.DaysUntilDue <= 30
+                                        ? "vector-date-orange"
+                                        : "vector-date-amber";
+                            <a class="expiry-list-row @alertClass" href="@row.DetailUrl">
+                                <span>
+                                    <strong>@row.DueAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</strong>
+                                    <small class="expiry-status @alertClass">@row.AlertBand</small>
+                                </span>
+                                <span>
+                                    <strong>@row.AssetLabel</strong>
+                                    <small>@row.Source</small>
+                                </span>
+                                <span>@row.Source</span>
+                                <span>@row.Location</span>
+                                <span>
+                                    <strong>@row.ActionState</strong>
+                                    <small>@row.OwnerName</small>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                </section>
+            }
+        }
+    </div>
+</div>
+
+<style>
+.expiry-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.expiry-inner { width: 100%; max-width: 1160px; margin: 0 auto; padding: 40px 20px; text-align: center; box-sizing: border-box; }
+.page-logo { width: 260px; max-width: 72%; max-height: 150px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.expiry-filter { width: min(920px, 100%); margin: 0 auto 12px auto; display: grid; grid-template-columns: minmax(220px, 1fr) 150px auto; gap: 12px; align-items: center; }
+.filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+.filter-btn { min-width: 0; border: none; }
+.clear-link { color: #126C84; font-size: 13px; font-weight: 900; text-decoration: none; }
+.scope-line { margin-bottom: 18px; color: #52606d; font-size: 13px; font-weight: 900; }
+.empty-panel { width: min(920px, 100%); margin: 0 auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.78); color: #52606d; font-size: 14px; font-weight: 900; box-sizing: border-box; }
+.expiry-group { width: min(1080px, 100%); margin: 0 auto 18px auto; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.78); box-shadow: 0 12px 24px rgba(15,23,42,.06); overflow: hidden; text-align: left; }
+.group-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-bottom: 1px solid rgba(66,84,102,.12); }
+.group-heading h3 { margin: 0; color: #1f2937; font-size: 20px; font-weight: 900; }
+.group-heading span { color: #52606d; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.group-alert { display: inline-flex; margin-left: 8px; padding: 4px 7px; border-radius: 999px; font-size: 10px; font-weight: 900; line-height: 1; letter-spacing: .4px; }
+.expiry-list { overflow-x: auto; }
+.expiry-list-header, .expiry-list-row { display: grid; grid-template-columns: 130px minmax(230px, 1.25fr) 170px minmax(170px, .95fr) minmax(190px, 1fr); align-items: center; min-width: 920px; }
+.expiry-list-header { background: #2f4056; color: #fff; }
+.expiry-list-header span { padding: 10px 12px; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.expiry-list-row { color: #1f2937; text-decoration: none; border-top: 1px solid rgba(66,84,102,.12); background: #fff; }
+.expiry-list-row.vector-date-red { box-shadow: inset 5px 0 0 #9B2C2C; background: #FFF7F7; }
+.expiry-list-row.vector-date-dark-orange { box-shadow: inset 5px 0 0 #C2410C; background: #FFF3EA; }
+.expiry-list-row.vector-date-orange { box-shadow: inset 5px 0 0 #F97316; background: #FFF7ED; }
+.expiry-list-row.vector-date-amber { box-shadow: inset 5px 0 0 #D97706; background: #FFFBEB; }
+.expiry-list-row:hover, .expiry-list-row:focus-visible { background: rgba(18,108,132,.06); outline: none; }
+.expiry-list-row > span { padding: 10px 12px; color: #24364a; font-size: 12px; font-weight: 800; line-height: 1.35; }
+.expiry-list-row strong { display: block; color: #102a3a; font-size: 13px; font-weight: 900; }
+.expiry-list-row small { display: block; margin-top: 2px; color: #66758a; font-size: 11px; font-weight: 800; line-height: 1.35; }
+.expiry-status { display: inline-flex !important; width: fit-content; margin-top: 5px !important; padding: 4px 7px; border-radius: 999px; font-size: 10px !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: .4px; }
+@@media (max-width: 780px) {
+    .expiry-filter { grid-template-columns: 1fr; }
+    .expiry-inner { padding: 28px 12px; }
+}
+</style>

@@ -1,0 +1,790 @@
+@page
+@model ReadinessEngineModel
+@using vector_app_local.Models
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Readiness Engine";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="engine-screen">
+    <div class="engine-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Master Setup</div>
+        <h2 class="page-title">Readiness Engine</h2>
+        <p class="page-subtitle">Control how checklist findings, register gaps, issues, and asset problems reduce live operational readiness.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message transient-confirmation">@Model.StatusMessage</div>
+        }
+
+        <div class="term-reference-wrap">
+            <button class="engine-btn secondary term-reference-toggle" type="button" data-term-reference-toggle aria-expanded="false" aria-controls="termReferencePanel">
+                What Every Term Means
+            </button>
+            <button class="engine-btn secondary term-reference-toggle" type="button" data-score-reference-toggle aria-expanded="false" aria-controls="scoreReferencePanel">
+                How Readiness Scores Are Compiled
+            </button>
+            @if (Model.IsSeniorManager)
+            {
+                <button class="engine-btn secondary term-reference-toggle request-summary-link" type="button" data-request-queue-toggle aria-expanded="false" aria-controls="scoringRequests">
+                    Pending Requests (@Model.PendingRequests.Count)
+                </button>
+            }
+        </div>
+
+        <section id="termReferencePanel" class="term-reference-panel" hidden>
+            <div class="panel-head">
+                <div>
+                    <span>Plain-English reference</span>
+                    <h3>Readiness engine terms</h3>
+                </div>
+            </div>
+            <dl class="term-list">
+                <div><dt>Active engine</dt><dd>The currently published scoring setup used by the live readiness dashboard.</dd></div>
+                <div><dt>Editable draft</dt><dd>The senior manager working copy. Changes only affect live scoring after publishing.</dd></div>
+                <div><dt>Rule</dt><dd>One scoring instruction: when this thing happens, reduce readiness by this amount.</dd></div>
+                <div><dt>On</dt><dd>Whether this rule is active. Untick it to keep the rule saved but stop it affecting readiness.</dd></div>
+                <div><dt>Asset</dt><dd>The broad area this rule belongs to, such as Vehicle, Equipment, Stock, Medication, or Issue Report.</dd></div>
+                <div><dt>Source area</dt><dd>Where the information comes from, such as a checklist section, register, issue report, or daily readiness flow.</dd></div>
+                <div><dt>Item / area</dt><dd>The exact item or operational area being scored, such as tyres, monitor, morphine, gloves, or missing daily check.</dd></div>
+                <div><dt>Checklist field</dt><dd>The exact field or column watched by the rule, such as Battery, Operational, Quantity, Expiry, Next Service, or Status.</dd></div>
+                <div><dt>Trigger</dt><dd>The value or event that activates the rule, such as Missing, No, Expired, Low, Failed, or Service overdue.</dd></div>
+                <div><dt>Applies to</dt><dd>Where the rule applies: all vehicles, a specific vehicle type, one area, one checklist, or another defined target.</dd></div>
+                <div><dt>Readiness scope</dt><dd>Whether this item affects active shift readiness or is only stored for tracking, reserve, training, or reference.</dd></div>
+                <div><dt>Severity</dt><dd>The plain-language seriousness band. It automatically sets the suggested default score reduction.</dd></div>
+                <div><dt>Default %</dt><dd>The standard readiness reduction for this severity. This is the normal score impact if the rule triggers.</dd></div>
+                <div><dt>Manual %</dt><dd>An optional senior manager override. If entered, it replaces the default score for that rule.</dd></div>
+                <div><dt>Hard blocker</dt><dd>A critical finding that can make the vehicle or operation not ready even if other items are fine.</dd></div>
+                <div><dt>Manager alert</dt><dd>Whether this rule should raise attention for managers when it is triggered.</dd></div>
+                <div><dt>Notes</dt><dd>Internal explanation for why the rule exists or how managers should interpret it.</dd></div>
+                <div><dt>Order</dt><dd>The display order of rules in this editor.</dd></div>
+                <div><dt>Source</dt><dd>Whether the rule came from AcuityOps defaults, company registers, or was manually created.</dd></div>
+                <div><dt>Auto-populate from registers</dt><dd>Adds suggested scoring rules from the vehicles, equipment, stock, and medication already in the company register.</dd></div>
+                <div><dt>Publish Engine</dt><dd>Makes the editable draft become the live scoring engine used by dashboards and reports.</dd></div>
+                <div><dt>Manager requests</dt><dd>Operational manager suggestions for scoring changes. Senior management can approve, reject, or delete them.</dd></div>
+            </dl>
+        </section>
+
+        <section id="scoreReferencePanel" class="term-reference-panel" hidden>
+            <div class="panel-head">
+                <div>
+                    <span>Plain-English scoring logic</span>
+                    <h3>How the readiness score is compiled</h3>
+                </div>
+            </div>
+            <div class="score-explainer">
+                <p>The readiness score is not a guess and it is not a black-box decision. It creates a practical picture of the operation by checking every active rule that senior management has published.</p>
+                <ol>
+                    <li>The score starts from 100%.</li>
+                    <li>AcuityOps looks only at rules that are switched on.</li>
+                    <li>Each rule watches a real source: checklist answers, vehicle registers, equipment registers, stock levels, medication registers, open issues, and missing required checks.</li>
+                    <li>If something matches a rule, the score is reduced by that rule's Default %, unless a Manual % has been set.</li>
+                    <li>Severity gives the rule a plain-English label. The percentage is the actual score impact.</li>
+                    <li>A hard blocker means the finding can make a vehicle or shift not ready, even if other checks look fine.</li>
+                    <li>Readiness scope decides whether the item affects the active shift. Storeroom, reserve, training, and reference-only items can be tracked without reducing shift readiness.</li>
+                    <li>The published engine is the only version used by live dashboards. Draft changes do not affect live scores until senior management publishes them.</li>
+                </ol>
+                <p>In simple terms: the dashboard is a live operational picture made from all active rules, not one isolated finding. A cracked light, missing monitor, expired medication, and missing daily check do not carry the same weight unless senior management chooses that.</p>
+            </div>
+        </section>
+
+        <section class="engine-summary">
+            <div>
+                <span>Active engine</span>
+                <strong>@(Model.ActiveVersion?.Name ?? "Not published")</strong>
+                <small>Version @(Model.ActiveVersion?.VersionNumber ?? "-")</small>
+            </div>
+            <div>
+                <span>Current view</span>
+                <strong>@(Model.IsSeniorManager ? "Editable draft" : "Published engine")</strong>
+                <small>@Model.CurrentUserLabel</small>
+            </div>
+            <div>
+                <span>Rules</span>
+                <strong>@Model.RuleRows.Count</strong>
+                <small>@Model.RuleRows.Count(rule => rule.IsActive) active</small>
+            </div>
+        </section>
+
+        @if (Model.IsSeniorManager)
+        {
+            <section id="scoringRequests" class="engine-panel compact-panel request-queue-panel" hidden>
+                <div class="panel-head">
+                    <div>
+                        <span>Manager requests</span>
+                        <h3>Scoring change approval queue</h3>
+                    </div>
+                </div>
+                @if (Model.PendingRequests.Count == 0)
+                {
+                    <div class="empty-state">No pending scoring change requests.</div>
+                }
+                else
+                {
+                    <div class="request-list">
+                        @foreach (var request in Model.PendingRequests)
+                        {
+                            <article class="request-row">
+                                <div>
+                                    <strong>@request.RuleLabel</strong>
+                                    <span>@request.RequestedBy requested @request.ProposedSetting</span>
+                                    <small>@request.Reason</small>
+                                </div>
+                                <form method="post" asp-page-handler="ReviewRequest" asp-route-approve="true">
+                                    <input type="hidden" name="RequestId" value="@request.Id" />
+                                    <input name="DecisionNote" placeholder="Decision note" />
+                                    <button class="engine-btn primary" type="submit">Approve</button>
+                                </form>
+                                <form method="post" asp-page-handler="ReviewRequest" asp-route-approve="false">
+                                    <input type="hidden" name="RequestId" value="@request.Id" />
+                                    <input name="DecisionNote" placeholder="Reason rejected" />
+                                    <button class="engine-btn danger" type="submit">Reject</button>
+                                </form>
+                                <form method="post" asp-page-handler="DeleteRequest" data-confirm-message="Delete this scoring change request?">
+                                    <input type="hidden" name="RequestId" value="@request.Id" />
+                                    <input name="DecisionNote" placeholder="Delete note" />
+                                    <button class="icon-action danger" type="submit">Delete</button>
+                                </form>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="engine-actions">
+                <form method="post" asp-page-handler="Autopopulate">
+                    <input type="hidden" asp-for="VersionId" />
+                    <button class="engine-btn secondary" type="submit">Auto-populate from registers</button>
+                </form>
+                <form method="post" asp-page-handler="Publish" data-confirm-message="Publish this readiness engine for live dashboard scoring?">
+                    <input type="hidden" asp-for="VersionId" />
+                    <button class="engine-btn primary" type="submit">Publish Engine</button>
+                </form>
+            </section>
+
+            <form id="saveRulesForm" method="post" asp-page-handler="Save">
+                <input type="hidden" asp-for="VersionId" />
+            </form>
+
+            <section class="engine-panel scoring-engine-panel">
+                <div class="panel-head">
+                    <div>
+                        <span>Scoring table</span>
+                        <h3>Editable readiness rules</h3>
+                    </div>
+                    <button class="engine-btn primary" type="submit" form="saveRulesForm">Save Rules</button>
+                </div>
+
+                <div class="engine-table-shell scoring-table-shell">
+                    <table class="engine-table scoring-table">
+                        <colgroup>
+                            <col class="rule-col-on" />
+                            <col class="rule-col-asset" />
+                            <col class="rule-col-section" />
+                            <col class="rule-col-item" />
+                            <col class="rule-col-field" />
+                            <col class="rule-col-trigger" />
+                            <col class="rule-col-applies" />
+                            <col class="rule-col-scope" />
+                            <col class="rule-col-severity" />
+                            <col class="rule-col-percent" />
+                            <col class="rule-col-percent" />
+                            <col class="rule-col-check" />
+                            <col class="rule-col-check" />
+                            <col class="rule-col-notes" />
+                            <col class="rule-col-order" />
+                            <col class="rule-col-source" />
+                            <col class="rule-col-actions" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>On</th>
+                                <th>Asset</th>
+                                <th>Source area</th>
+                                <th>Item / area</th>
+                                <th>Checklist field</th>
+                                <th>Trigger</th>
+                                <th>Applies to</th>
+                                <th>Readiness scope</th>
+                                <th>Severity</th>
+                                <th>Default %</th>
+                                <th>Manual %</th>
+                                <th>Blocker</th>
+                                <th>Alert</th>
+                                <th>Notes</th>
+                                <th>Order</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @for (var i = 0; i < Model.Rules.Count; i++)
+                        {
+                            var rule = Model.RuleRows[i];
+                            <tr>
+                                <td>
+                                    <input form="saveRulesForm" type="hidden" name="Rules[@i].Id" value="@Model.Rules[i].Id" />
+                                    <input form="saveRulesForm" type="hidden" name="Rules[@i].IsActive" value="false" />
+                                    <input form="saveRulesForm" class="compact-check" type="checkbox" name="Rules[@i].IsActive" value="true" @(Model.Rules[i].IsActive ? "checked" : null) />
+                                </td>
+                                <td>
+                                    <select form="saveRulesForm" name="Rules[@i].AssetType">
+                                        @foreach (var assetType in Model.AssetTypeOptions)
+                                        {
+                                            <option value="@assetType" selected="@(assetType == Model.Rules[i].AssetType ? "selected" : null)">@assetType</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input form="saveRulesForm" name="Rules[@i].Section" value="@Model.Rules[i].Section" /></td>
+                                <td><input form="saveRulesForm" name="Rules[@i].ItemName" value="@Model.Rules[i].ItemName" /></td>
+                                <td><input form="saveRulesForm" name="Rules[@i].FieldKey" value="@Model.Rules[i].FieldKey" /></td>
+                                <td><input form="saveRulesForm" name="Rules[@i].TriggerValue" value="@Model.Rules[i].TriggerValue" /></td>
+                                <td>
+                                    <input form="saveRulesForm" name="Rules[@i].AppliesTo" value="@Model.Rules[i].AppliesTo" />
+                                    <input form="saveRulesForm" class="sub-input" name="Rules[@i].TargetVehicleType" value="@Model.Rules[i].TargetVehicleType" placeholder="Vehicle type / optional" />
+                                </td>
+                                <td>
+                                    <select form="saveRulesForm" name="Rules[@i].ReadinessScope">
+                                        @foreach (var scope in Model.ReadinessScopeOptions)
+                                        {
+                                            <option value="@scope" selected="@(scope == Model.Rules[i].ReadinessScope ? "selected" : null)">@scope</option>
+                                        }
+                                    </select>
+                                    <small>@(ReadinessRuleScope.AffectsShiftReadiness(Model.Rules[i].ReadinessScope) ? "can affect shift readiness" : "stored only / no score impact")</small>
+                                </td>
+                                <td>
+                                    <select class="severity-select" form="saveRulesForm" name="Rules[@i].Severity">
+                                        @foreach (var severity in Model.SeverityOptions)
+                                        {
+                                            <option value="@severity" selected="@(severity == Model.Rules[i].Severity ? "selected" : null)">@severity</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input form="saveRulesForm" class="percent-input default-impact-input" type="number" min="0" max="100" name="Rules[@i].DefaultImpactPercent" value="@Model.Rules[i].DefaultImpactPercent" /></td>
+                                <td><input form="saveRulesForm" class="percent-input" type="number" min="0" max="100" name="Rules[@i].ManualImpactPercent" value="@Model.Rules[i].ManualImpactPercent" /></td>
+                                <td>
+                                    <input form="saveRulesForm" type="hidden" name="Rules[@i].IsHardBlocker" value="false" />
+                                    <input form="saveRulesForm" class="compact-check hard-blocker-input" type="checkbox" name="Rules[@i].IsHardBlocker" value="true" @(Model.Rules[i].IsHardBlocker ? "checked" : null) />
+                                </td>
+                                <td>
+                                    <input form="saveRulesForm" type="hidden" name="Rules[@i].ManagerAlert" value="false" />
+                                    <input form="saveRulesForm" class="compact-check" type="checkbox" name="Rules[@i].ManagerAlert" value="true" @(Model.Rules[i].ManagerAlert ? "checked" : null) />
+                                </td>
+                                <td><input form="saveRulesForm" name="Rules[@i].Notes" value="@Model.Rules[i].Notes" /></td>
+                                <td><input form="saveRulesForm" class="order-input" type="number" name="Rules[@i].SortOrder" value="@Model.Rules[i].SortOrder" /></td>
+                                <td>
+                                    <span class="source-pill @(rule.IsAutoPopulated ? "auto-pill" : null)">@rule.SourceType</span>
+                                    <small>@(rule.IsAutoPopulated ? "register suggested" : "editable")</small>
+                                </td>
+                                <td class="row-actions">
+                                    <form method="post" asp-page-handler="Duplicate">
+                                        <input type="hidden" name="RuleId" value="@rule.Id" />
+                                        <button class="icon-action" type="submit">Copy</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" data-confirm-message="Delete this readiness scoring rule?">
+                                        <input type="hidden" name="RuleId" value="@rule.Id" />
+                                        <button class="icon-action danger" type="submit">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="engine-panel compact-panel">
+                <div class="panel-head">
+                    <div>
+                        <span>Add custom rule</span>
+                        <h3>New scoring row</h3>
+                    </div>
+                </div>
+                <form class="new-rule-grid" method="post" asp-page-handler="Add">
+                    <input type="hidden" asp-for="VersionId" />
+                    <label class="new-rule-field">
+                        <span>Asset</span>
+                        <select asp-for="NewRule.AssetType">
+                            @foreach (var assetType in Model.AssetTypeOptions)
+                            {
+                                <option value="@assetType">@assetType</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Source area</span>
+                        <input asp-for="NewRule.Section" placeholder="Checklist, register, issue report" />
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Item / area</span>
+                        <input asp-for="NewRule.ItemName" placeholder="Monitor, tyres, morphine, gloves" />
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Checklist field</span>
+                        <input asp-for="NewRule.FieldKey" placeholder="Battery, operational, quantity, expiry" />
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Trigger</span>
+                        <input asp-for="NewRule.TriggerValue" placeholder="No, missing, expired, low, any issue" />
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Applies to</span>
+                        <input asp-for="NewRule.AppliesTo" placeholder="All, vehicle type, area" value="All" />
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Readiness scope</span>
+                        <select asp-for="NewRule.ReadinessScope">
+                            @foreach (var scope in Model.ReadinessScopeOptions)
+                            {
+                                <option value="@scope">@scope</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="new-rule-field">
+                        <span>Severity</span>
+                        <select class="severity-select" asp-for="NewRule.Severity">
+                            @foreach (var severity in Model.SeverityOptions)
+                            {
+                                <option value="@severity">@severity</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="new-rule-field compact-number">
+                        <span>Default %</span>
+                        <input class="default-impact-input" asp-for="NewRule.DefaultImpactPercent" type="number" min="0" max="100" placeholder="10" />
+                    </label>
+                    <label class="new-rule-field compact-number">
+                        <span>Manual %</span>
+                        <input asp-for="NewRule.ManualImpactPercent" type="number" min="0" max="100" placeholder="Optional" />
+                    </label>
+                    <label class="new-rule-check">
+                        <input type="hidden" name="NewRule.IsHardBlocker" value="false" />
+                        <input class="hard-blocker-input" type="checkbox" name="NewRule.IsHardBlocker" value="true" />
+                        <span>Hard blocker</span>
+                    </label>
+                    <label class="new-rule-check">
+                        <input type="hidden" name="NewRule.ManagerAlert" value="false" />
+                        <input type="checkbox" name="NewRule.ManagerAlert" value="true" checked />
+                        <span>Manager alert</span>
+                    </label>
+                    <label class="new-rule-field wide-field">
+                        <span>Notes</span>
+                        <input asp-for="NewRule.Notes" placeholder="Why this rule exists or how it should be interpreted" />
+                    </label>
+                    <label class="new-rule-field compact-number">
+                        <span>Order</span>
+                        <input asp-for="NewRule.SortOrder" type="number" placeholder="Auto" />
+                    </label>
+                    <button class="engine-btn primary" type="submit">Add Rule</button>
+                </form>
+            </section>
+
+        }
+        else if (Model.IsOperationalManager)
+        {
+            <section class="engine-panel">
+                <div class="panel-head">
+                    <div>
+                        <span>Published engine</span>
+                        <h3>Request a scoring alteration</h3>
+                    </div>
+                </div>
+                <div class="engine-table-shell">
+                    <table class="engine-table ops-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Asset</th>
+                                <th>Item / trigger</th>
+                                <th>Scope</th>
+                                <th>Severity</th>
+                                <th>Impact</th>
+                                <th>Request change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var rule in Model.RuleRows)
+                        {
+                            <tr>
+                                <td><span class="source-pill @(rule.IsActive ? "auto-pill" : null)">@(rule.IsActive ? "Active" : "Inactive")</span></td>
+                                <td>@rule.AssetType<br /><small>@rule.Section</small></td>
+                                <td><strong>@rule.ItemName</strong><br /><small>@rule.TriggerValue</small></td>
+                                <td>@rule.ReadinessScope</td>
+                                <td>@rule.Severity</td>
+                                <td>-@rule.EffectiveImpactPercent%</td>
+                                <td>
+                                    <form class="request-form" method="post" asp-page-handler="RequestChange">
+                                        <input type="hidden" name="RuleId" value="@rule.Id" />
+                                        <select name="ProposedSeverity">
+                                            @foreach (var severity in Model.SeverityOptions)
+                                            {
+                                                <option value="@severity" selected="@(severity == rule.Severity ? "selected" : null)">@severity</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="0" max="100" name="ProposedImpactPercent" value="@rule.EffectiveImpactPercent" />
+                                        <label class="inline-check">
+                                            <input type="checkbox" name="ProposedActive" value="true" @(rule.IsActive ? "checked" : null) />
+                                            Active
+                                        </label>
+                                        <input name="RequestReason" placeholder="Reason for senior management" />
+                                        <button class="engine-btn secondary" type="submit">Request</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="engine-panel compact-panel">
+                <div class="panel-head">
+                    <div>
+                        <span>My requests</span>
+                        <h3>Recent scoring requests</h3>
+                    </div>
+                </div>
+                @if (Model.OwnRequests.Count == 0)
+                {
+                    <div class="empty-state">No scoring change requests sent yet.</div>
+                }
+                else
+                {
+                    <div class="request-list">
+                        @foreach (var request in Model.OwnRequests)
+                        {
+                            <article class="request-row simple">
+                                <div>
+                                    <strong>@request.RuleLabel</strong>
+                                    <span>@request.Status - @request.ProposedSetting</span>
+                                    <small>@request.Reason</small>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+.engine-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.engine-inner { width: 100%; max-width: 1240px; margin: 0 auto; padding: 38px 18px; text-align: center; box-sizing: border-box; }
+.page-logo { width: 260px; max-width: 70%; max-height: 145px; object-fit: contain; display: block; margin: 0 auto 10px auto; }
+.client-line { margin-bottom: 12px; font-size: 12px; font-weight: 800; color: #6b7280; }
+.home-label { margin-bottom: 8px; color: #5f6b7a; font-size: 12px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+.page-title { margin: 0 0 8px 0; color: #1f2937; font-size: 30px; font-weight: 900; }
+.page-subtitle { width: min(860px, 94%); margin: 0 auto 18px auto; color: #5f6b7a; font-size: 15px; font-weight: 700; }
+.status-message { width: min(860px, 100%); margin: 0 auto 16px auto; padding: 12px 16px; border: 1px solid rgba(32,122,99,.24); border-radius: 8px; background: rgba(32,122,99,.10); color: #17624f; font-weight: 900; text-align: left; }
+.term-reference-wrap { width: min(1080px, 100%); margin: 0 auto 12px auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.term-reference-toggle { min-width: 220px; }
+.request-summary-link { text-decoration: none; }
+.term-reference-panel { width: min(1080px, 100%); margin: 0 auto 16px auto; padding: 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.9); text-align: left; box-shadow: 0 10px 22px rgba(15,23,42,.05); box-sizing: border-box; }
+.term-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; }
+.term-list div { padding: 10px 12px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #fff; }
+.term-list dt { margin: 0 0 4px 0; color: #102a3a; font-size: 13px; font-weight: 900; }
+.term-list dd { margin: 0; color: #52606d; font-size: 12px; font-weight: 750; line-height: 1.4; }
+.score-explainer { color: #425466; font-size: 14px; font-weight: 750; line-height: 1.5; }
+.score-explainer p { margin: 0 0 12px 0; }
+.score-explainer ol { display: grid; gap: 8px; margin: 0 0 12px 20px; padding: 0; }
+.score-explainer li { padding-left: 4px; }
+.engine-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: min(1080px, 100%); margin: 0 auto 16px auto; }
+.engine-summary div { padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; text-align: left; box-shadow: 0 10px 22px rgba(15,23,42,.05); }
+.engine-summary span, .panel-head span { display: block; color: #5f6b7a; font-size: 11px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; }
+.engine-summary strong { display: block; margin-top: 5px; color: #102a3a; font-size: 18px; font-weight: 900; }
+.engine-summary small { display: block; margin-top: 3px; color: #64748b; font-weight: 800; }
+.engine-actions { width: min(1080px, 100%); margin: 0 auto 14px auto; display: flex; justify-content: flex-end; gap: 10px; }
+.engine-panel { width: 100%; margin: 0 auto 16px auto; padding: 16px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.82); text-align: left; box-sizing: border-box; }
+.compact-panel { width: min(1080px, 100%); }
+.request-queue-panel { scroll-margin-top: 88px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.scoring-engine-panel { display: flex; max-height: calc(100vh - 86px); flex-direction: column; overflow: hidden; }
+.scoring-engine-panel > .panel-head { flex: 0 0 auto; margin: -16px -16px 12px -16px; padding: 14px 16px 12px 16px; border-bottom: 1px solid rgba(66,84,102,.12); border-radius: 8px 8px 0 0; background: rgba(255,255,255,.97); }
+.panel-head h3 { margin: 4px 0 0 0; color: #102a3a; font-size: 18px; font-weight: 900; }
+.engine-table-shell { width: 100%; overflow-x: auto; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #fff; }
+.scoring-table-shell { flex: 1 1 auto; min-height: 360px; overflow: auto; }
+.engine-scroll-proxy { display: none; pointer-events: none; }
+.engine-scroll-proxy.is-active { display: block; position: fixed; z-index: 40; bottom: 78px; padding: 8px 10px; border: 1px solid rgba(66,84,102,.18); border-radius: 10px; background: rgba(248,250,252,.96); box-shadow: 0 10px 26px rgba(31,41,55,.18); pointer-events: auto; }
+.engine-scroll-track { width: 100%; height: 18px; overflow-x: auto; overflow-y: hidden; scrollbar-width: auto; }
+.engine-scroll-spacer { height: 1px; min-width: 100%; }
+.engine-table { width: 1500px; border-collapse: collapse; table-layout: fixed; }
+.scoring-table { width: 2520px; }
+.rule-col-on { width: 56px; }
+.rule-col-asset { width: 150px; }
+.rule-col-section { width: 160px; }
+.rule-col-item { width: 230px; }
+.rule-col-field { width: 180px; }
+.rule-col-trigger { width: 220px; }
+.rule-col-applies { width: 240px; }
+.rule-col-scope { width: 160px; }
+.rule-col-severity { width: 140px; }
+.rule-col-percent { width: 96px; }
+.rule-col-check { width: 78px; }
+.rule-col-notes { width: 250px; }
+.rule-col-order { width: 82px; }
+.rule-col-source { width: 150px; }
+.rule-col-actions { width: 160px; }
+.engine-table th { position: sticky; top: 0; z-index: 3; padding: 9px 8px; background: #334155; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; text-align: left; }
+.engine-table td { padding: 7px 8px; border-top: 1px solid rgba(66,84,102,.12); vertical-align: top; }
+.engine-table input, .engine-table select, .new-rule-grid input, .new-rule-grid select, .request-form input, .request-form select, .request-row input { width: 100%; min-height: 34px; padding: 7px 8px; border: 1px solid rgba(66,84,102,.22); border-radius: 7px; background: #fff; color: #102a3a; font-size: 12px; font-weight: 800; box-sizing: border-box; }
+.engine-table .sub-input { margin-top: 5px; }
+.engine-table .compact-check { width: 18px; height: 18px; min-height: 18px; padding: 0; accent-color: #126C84; }
+.percent-input, .order-input { max-width: 82px; }
+.source-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 26px; padding: 0 8px; border-radius: 999px; background: #eef2f7; color: #334155; font-size: 11px; font-weight: 900; }
+.auto-pill { background: rgba(18,108,132,.12); color: #0e5e7a; }
+.engine-table small, .request-row small { display: block; margin-top: 4px; color: #64748b; font-weight: 800; }
+.row-actions { display: flex; gap: 6px; }
+.row-actions form { display: inline; }
+.engine-btn, .icon-action { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 7px 12px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #fff; color: #102a3a; font-size: 12px; font-weight: 900; text-decoration: none; cursor: pointer; }
+.engine-btn.primary { background: #126C84; border-color: #126C84; color: #fff; }
+.engine-btn.secondary { background: #f8fafc; color: #0e5e7a; }
+.engine-btn.danger, .icon-action.danger { background: #f9eeee; border-color: rgba(155,59,59,.26); color: #8a2c2c; }
+.new-rule-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.new-rule-field { display: grid; gap: 5px; margin: 0; color: #52606d; font-size: 11px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
+.new-rule-field span, .new-rule-check span { color: #52606d; }
+.new-rule-check { display: flex; min-height: 34px; align-items: center; gap: 8px; margin: 0; padding: 7px 8px; border: 1px solid rgba(66,84,102,.22); border-radius: 7px; background: #fff; color: #102a3a; font-size: 12px; font-weight: 900; box-sizing: border-box; }
+.new-rule-check input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; accent-color: #126C84; }
+.new-rule-field.wide-field { grid-column: span 2; }
+.compact-number input { max-width: 100%; }
+.new-rule-grid .engine-btn { min-height: 34px; }
+.request-list { display: grid; gap: 10px; }
+.request-row { display: grid; grid-template-columns: minmax(260px, 1fr) 260px 220px 180px; gap: 10px; align-items: start; padding: 12px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #fff; }
+.request-row.simple { grid-template-columns: 1fr; }
+.request-row strong { display: block; color: #102a3a; font-weight: 900; }
+.request-row span { display: block; margin-top: 3px; color: #52606d; font-weight: 800; }
+.request-form { display: grid; grid-template-columns: 160px 86px 90px minmax(220px, 1fr) 96px; gap: 8px; align-items: center; }
+.inline-check { display: flex; align-items: center; gap: 6px; color: #52606d; font-size: 12px; font-weight: 900; }
+.inline-check input { width: 16px; min-height: 16px; }
+.empty-state { padding: 18px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; color: #64748b; font-weight: 900; text-align: center; }
+.ops-table { width: 1320px; }
+@@media (max-width: 960px) {
+    .engine-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .term-list { grid-template-columns: 1fr; }
+    .new-rule-grid, .request-row, .request-form { grid-template-columns: 1fr; }
+    .new-rule-field.wide-field { grid-column: auto; }
+    .engine-actions { justify-content: stretch; flex-direction: column; }
+    .engine-actions .engine-btn { width: 100%; }
+}
+@@media (max-width: 620px) {
+    .engine-summary { grid-template-columns: 1fr; }
+    .term-reference-wrap { justify-content: stretch; }
+    .term-reference-toggle { width: 100%; }
+    .panel-head { align-items: stretch; flex-direction: column; }
+    .panel-head .engine-btn { width: 100%; }
+    .scoring-engine-panel { max-height: calc(100vh - 70px); }
+    .scoring-table-shell { min-height: 320px; }
+    .engine-scroll-proxy.is-active { bottom: 92px; padding: 10px; }
+    .engine-scroll-track { height: 22px; }
+}
+</style>
+
+<script>
+    (() => {
+        const toggle = document.querySelector("[data-term-reference-toggle]");
+        const panel = document.getElementById("termReferencePanel");
+        if (!toggle || !panel) {
+            return;
+        }
+
+        toggle.addEventListener("click", function () {
+            const willOpen = panel.hidden;
+            panel.hidden = !willOpen;
+            toggle.setAttribute("aria-expanded", String(willOpen));
+            toggle.textContent = willOpen ? "Hide Term Meanings" : "What Every Term Means";
+        });
+    })();
+
+    (() => {
+        const toggle = document.querySelector("[data-score-reference-toggle]");
+        const panel = document.getElementById("scoreReferencePanel");
+        if (!toggle || !panel) {
+            return;
+        }
+
+        toggle.addEventListener("click", function () {
+            const willOpen = panel.hidden;
+            panel.hidden = !willOpen;
+            toggle.setAttribute("aria-expanded", String(willOpen));
+            toggle.textContent = willOpen ? "Hide Score Explanation" : "How Readiness Scores Are Compiled";
+        });
+    })();
+
+    (() => {
+        const toggle = document.querySelector("[data-request-queue-toggle]");
+        const panel = document.getElementById("scoringRequests");
+        if (!toggle || !panel) {
+            return;
+        }
+
+        const closedText = toggle.textContent.trim();
+        toggle.addEventListener("click", function () {
+            const willOpen = panel.hidden;
+            panel.hidden = !willOpen;
+            toggle.setAttribute("aria-expanded", String(willOpen));
+            toggle.textContent = willOpen ? "Hide Pending Requests" : closedText;
+
+            if (willOpen) {
+                panel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
+    })();
+
+    (() => {
+        const severityToPercent = {
+            "No impact": 0,
+            "Minor": 2,
+            "Moderate": 10,
+            "Major": 20,
+            "Critical": 40,
+            "Hard blocker": 100
+        };
+
+        function severityFromPercent(value) {
+            const percent = Math.max(0, Math.min(100, Number(value || 0)));
+            if (percent <= 0) {
+                return "No impact";
+            }
+            if (percent >= 100) {
+                return "Hard blocker";
+            }
+            if (percent >= 40) {
+                return "Critical";
+            }
+            if (percent >= 20) {
+                return "Major";
+            }
+            if (percent >= 10) {
+                return "Moderate";
+            }
+            return "Minor";
+        }
+
+        function findRuleContainer(element) {
+            return element.closest("tr, .new-rule-grid");
+        }
+
+        function syncHardBlocker(container, severity) {
+            const hardBlockerInput = container?.querySelector(".hard-blocker-input");
+            if (hardBlockerInput) {
+                hardBlockerInput.checked = severity === "Hard blocker";
+            }
+        }
+
+        document.addEventListener("change", function (event) {
+            const severity = event.target.closest(".severity-select");
+            if (severity) {
+                const container = findRuleContainer(severity);
+                const defaultImpact = container?.querySelector(".default-impact-input");
+                const suggested = severityToPercent[severity.value];
+                if (defaultImpact && suggested !== undefined) {
+                    defaultImpact.value = String(suggested);
+                    syncHardBlocker(container, severity.value);
+                }
+                return;
+            }
+
+            const defaultImpact = event.target.closest(".default-impact-input");
+            if (defaultImpact) {
+                const container = findRuleContainer(defaultImpact);
+                const severitySelect = container?.querySelector(".severity-select");
+                const severityValue = severityFromPercent(defaultImpact.value);
+                if (severitySelect) {
+                    severitySelect.value = severityValue;
+                }
+                syncHardBlocker(container, severityValue);
+            }
+        });
+    })();
+
+    (() => {
+        const shells = Array.from(document.querySelectorAll(".engine-table-shell"));
+        if (!shells.length) {
+            return;
+        }
+
+        let activeShell = null;
+        let isSyncing = false;
+
+        const proxy = document.createElement("div");
+        proxy.className = "engine-scroll-proxy";
+        proxy.setAttribute("aria-label", "Readiness engine horizontal scroll");
+
+        const track = document.createElement("div");
+        track.className = "engine-scroll-track";
+        track.tabIndex = 0;
+
+        const spacer = document.createElement("div");
+        spacer.className = "engine-scroll-spacer";
+
+        track.appendChild(spacer);
+        proxy.appendChild(track);
+        document.body.appendChild(proxy);
+
+        function visibleShell() {
+            return shells.find((shell) => {
+                const hasOverflow = shell.scrollWidth > shell.clientWidth + 2;
+                const rect = shell.getBoundingClientRect();
+                return hasOverflow && rect.top < window.innerHeight - 106 && rect.bottom > 112;
+            }) || null;
+        }
+
+        function updateProxy() {
+            const shell = visibleShell();
+            activeShell = shell;
+
+            if (!shell) {
+                proxy.classList.remove("is-active");
+                return;
+            }
+
+            const rect = shell.getBoundingClientRect();
+            const left = Math.max(12, rect.left);
+            const right = Math.min(window.innerWidth - 12, rect.right);
+
+            proxy.style.left = `${left}px`;
+            proxy.style.width = `${Math.max(180, right - left)}px`;
+            spacer.style.width = `${shell.scrollWidth}px`;
+            proxy.classList.add("is-active");
+
+            if (Math.abs(track.scrollLeft - shell.scrollLeft) > 1) {
+                track.scrollLeft = shell.scrollLeft;
+            }
+        }
+
+        shells.forEach((shell) => {
+            shell.addEventListener("scroll", () => {
+                if (isSyncing) {
+                    return;
+                }
+
+                isSyncing = true;
+                if (activeShell === shell) {
+                    track.scrollLeft = shell.scrollLeft;
+                }
+                isSyncing = false;
+                updateProxy();
+            }, { passive: true });
+        });
+
+        track.addEventListener("scroll", () => {
+            if (isSyncing || !activeShell) {
+                return;
+            }
+
+            isSyncing = true;
+            activeShell.scrollLeft = track.scrollLeft;
+            isSyncing = false;
+        }, { passive: true });
+
+        window.addEventListener("scroll", updateProxy, { passive: true });
+        window.addEventListener("resize", updateProxy);
+        updateProxy();
+    })();
+</script>

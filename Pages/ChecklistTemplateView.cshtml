@@ -1,0 +1,192 @@
+@page
+@model ChecklistTemplateViewModel
+@using Microsoft.AspNetCore.Html
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Crew View";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var template = Model.Template!;
+}
+
+<div class="crew-preview-screen">
+    <div class="crew-preview-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Crew View Preview</div>
+        <h2 class="page-title">@Model.TemplateDisplayName</h2>
+        <p class="page-subtitle">@template.TargetVehicleType - Version @template.Version - @(template.IsPublished ? "Published" : template.Status)</p>
+
+        <div class="preview-actions">
+            <a class="source-secondary-btn" href="/EditChecklist?view=register">Back: Checklist Register</a>
+            <a class="source-upload-btn" href="/EditVehicleChecklist?checklist=@Model.ChecklistRoute&mode=edit&templateId=@template.Id">Edit Checklist</a>
+        </div>
+
+        @if (Model.Sections.Count == 0)
+        {
+            <div class="empty-template-state">This checklist has no saved crew-facing sections yet.</div>
+        }
+        else
+        {
+            @foreach (var previewSection in Model.Sections)
+            {
+                <section class="crew-section">
+                    <div class="section-heading">@previewSection.Name</div>
+
+                    @if (previewSection.IsEquipmentTable)
+                    {
+                        var columns = previewSection.Items
+                            .SelectMany(item => item.Columns)
+                            .GroupBy(column => column.Heading)
+                            .Select(group => group.First())
+                            .ToList();
+                        var columnCount = Math.Max(columns.Count, 1);
+                        var tableStyle = $"grid-template-columns: minmax(170px, 1fr) repeat({columnCount}, minmax(118px, .85fr)); min-width: {170 + columnCount * 118}px;";
+
+                        <div class="crew-table-shell">
+                            <div class="crew-table">
+                                <div class="crew-row crew-header-row" style="@tableStyle">
+                                    <div>Name/item</div>
+                                    @foreach (var column in columns)
+                                    {
+                                        <div>@column.Heading</div>
+                                    }
+                                </div>
+
+                                @foreach (var item in previewSection.Items)
+                                {
+                                    <div class="crew-row" style="@tableStyle">
+                                        <div class="crew-item-name">@item.Prompt</div>
+                                        @foreach (var column in columns)
+                                        {
+                                            <div>@RenderCrewControl(column)</div>
+                                        }
+                                    </div>
+
+                                    @foreach (var subItem in item.SubItems)
+                                    {
+                                        <div class="crew-row crew-subitem-row" style="@tableStyle">
+                                            <div class="crew-item-name">- @subItem.Prompt</div>
+                                            @foreach (var column in columns)
+                                            {
+                                                <div>@RenderCrewControl(column)</div>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="crew-field-grid">
+                            @foreach (var item in previewSection.Items)
+                            {
+                                if (item.IsSchematicBlock)
+                                {
+                                    <div class="crew-schematic-block">
+                                        <div class="crew-schematic-heading">
+                                            <strong>@item.Prompt</strong>
+                                            <span>Four vehicle views captured from the saved unit schematic.</span>
+                                        </div>
+                                        <div class="crew-schematic-views">
+                                            @foreach (var view in item.SubItems)
+                                            {
+                                                <div class="crew-schematic-view">
+                                                    <strong>@view.Prompt</strong>
+                                                    <span>Damage present</span>
+                                                    <span>Mark position</span>
+                                                    <span>Severity / notes / photo</span>
+                                                    <span>Readiness impact</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <label class="crew-field">
+                                        <span>@item.Prompt</span>
+                                        @RenderCrewControl(item.Columns.FirstOrDefault() ?? new ChecklistColumnPreview(item.Prompt, item.ResponseType, null, item.IsRequired, true, false, item.IsReadinessCritical))
+                                    </label>
+                                }
+                            }
+                        </div>
+                    }
+                </section>
+            }
+        }
+    </div>
+</div>
+
+@functions {
+    private IHtmlContent RenderCrewControl(ChecklistColumnPreview column)
+    {
+        var responseType = column.ResponseType ?? "Text";
+        var source = string.IsNullOrWhiteSpace(column.RegisterSource) ? "Fresh entry" : column.RegisterSource;
+        var required = column.IsRequired ? " required" : string.Empty;
+        var linked = column.PullsFromRegister ? " register-linked" : string.Empty;
+        var cssClass = $"preview-control{required}{linked}";
+
+        if (responseType.Contains("Date", StringComparison.OrdinalIgnoreCase))
+        {
+            return new HtmlString($"<input class=\"{cssClass}\" type=\"date\" disabled />");
+        }
+
+        if (responseType.Contains("Dropdown", StringComparison.OrdinalIgnoreCase) ||
+            responseType.Contains("Yes", StringComparison.OrdinalIgnoreCase) ||
+            responseType.Contains("Schematic", StringComparison.OrdinalIgnoreCase) ||
+            responseType.Contains("Configured", StringComparison.OrdinalIgnoreCase))
+        {
+            return new HtmlString($"<select class=\"{cssClass}\" disabled><option>{System.Net.WebUtility.HtmlEncode(source)}</option></select>");
+        }
+
+        if (responseType.Contains("Photo", StringComparison.OrdinalIgnoreCase))
+        {
+            return new HtmlString($"<input class=\"{cssClass}\" type=\"file\" disabled />");
+        }
+
+        return new HtmlString($"<input class=\"{cssClass}\" type=\"text\" placeholder=\"{System.Net.WebUtility.HtmlEncode(source)}\" disabled />");
+    }
+}
+
+<style>
+.crew-preview-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.crew-preview-inner { width: 100%; max-width: 1080px; margin: 0 auto; text-align: center; padding: 40px 20px 50px 20px; box-sizing: border-box; }
+.page-logo { width: 260px; max-width: 72%; max-height: 150px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 900; color: #1f2937; }
+.page-subtitle { margin: 0 0 22px 0; font-size: 15px; font-weight: 700; color: #6b7280; }
+.preview-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
+.source-upload-btn { padding: 12px 16px; border-radius: 8px; background: #0E5E7A; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 900; white-space: nowrap; }
+.source-secondary-btn { padding: 12px 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; color: #0E5E7A; text-decoration: none; font-size: 13px; font-weight: 900; white-space: nowrap; }
+.empty-template-state { padding: 16px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; background: rgba(248,250,252,.8); color: #64748b; font-size: 13px; font-weight: 800; text-align: center; }
+.crew-section { margin: 16px 0; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.74); text-align: left; }
+.section-heading { margin-bottom: 14px; color: #334155; font-size: 14px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.crew-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.crew-field { display: grid; gap: 7px; color: #334155; font-size: 13px; font-weight: 900; }
+.crew-schematic-block { grid-column: 1 / -1; padding: 12px; border: 1px solid rgba(14,94,122,.22); border-radius: 8px; background: rgba(14,94,122,.045); }
+.crew-schematic-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
+.crew-schematic-heading strong { color: #0f172a; font-size: 15px; font-weight: 900; }
+.crew-schematic-heading span { color: #64748b; font-size: 12px; font-weight: 800; }
+.crew-schematic-views { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.crew-schematic-view { padding: 10px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
+.crew-schematic-view strong { display: block; margin-bottom: 5px; color: #0E5E7A; font-size: 13px; font-weight: 900; }
+.crew-schematic-view span { display: block; color: #64748b; font-size: 11px; font-weight: 800; line-height: 1.35; }
+.preview-control { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: #f8fafc; color: #0f172a; font-size: 13px; font-weight: 800; box-sizing: border-box; opacity: 1; }
+.preview-control.required { border-color: rgba(14,94,122,.34); }
+.preview-control.register-linked { background: rgba(14,94,122,.06); }
+.crew-table-shell { overflow-x: auto; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #ffffff; }
+.crew-table { min-width: 100%; }
+.crew-row { display: grid; align-items: stretch; border-top: 1px solid rgba(66,84,102,.12); }
+.crew-row > div { padding: 10px; border-left: 1px solid rgba(66,84,102,.10); }
+.crew-row > div:first-child { border-left: none; }
+.crew-header-row { border-top: none; background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.crew-item-name { display: flex; align-items: center; color: #0f172a; font-size: 13px; font-weight: 900; }
+.crew-subitem-row { background: rgba(248,250,252,.8); }
+.crew-subitem-row .crew-item-name { padding-left: 24px; color: #475569; }
+@@media (max-width: 760px) { .crew-field-grid { grid-template-columns: 1fr; } .crew-schematic-heading { align-items: flex-start; flex-direction: column; } .crew-schematic-views { grid-template-columns: repeat(2, minmax(0, 1fr)); } .source-upload-btn, .source-secondary-btn { flex: 1 1 100%; text-align: center; } }
+</style>

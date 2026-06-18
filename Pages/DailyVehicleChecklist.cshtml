@@ -1,11 +1,17 @@
 @page
 @model DailyVehicleChecklistModel
+@using System.Text.Json
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = Model.InspectionTitle;
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var schematicReferenceImagesJson = JsonSerializer.Serialize(
+        VehicleSchematicLibrary.Published.ToDictionary(
+            schematic => schematic.Key,
+            schematic => schematic.Views.ToDictionary(view => view.Key, view => view.AssetPath)));
 }
 
 <div class="inspection-screen">
@@ -27,18 +33,19 @@
             <input asp-for="Frequency" type="hidden" />
             <input asp-for="SameAsPreviousShift" id="sameAsPreviousShiftInput" type="hidden" />
             <input asp-for="PreviousVehicleReportId" id="previousVehicleReportIdInput" type="hidden" />
+            <input asp-for="SchematicMarkData" id="schematicMarkDataInput" type="hidden" />
             <div id="vehicleDraftStatus" class="draft-status" aria-live="polite"></div>
 
             <section class="inspection-section">
                 <div class="section-heading">
                     <span>1</span>
                     <div>
-                        <h3>Vehicle Details</h3>
-                        <p>Select the vehicle and capture readiness values.</p>
+                        <h3>Select Vehicle</h3>
+                        <p>Select the registration first. The callsign is pulled from the register but can be adjusted for this check.</p>
                     </div>
                 </div>
 
-                <div class="vehicle-register-grid">
+                <div class="vehicle-register-grid vehicle-selection-grid">
                     <label class="registration-field">
                         Registration number
                         <select asp-for="Registration" id="registrationSelect">
@@ -51,122 +58,279 @@
                                         data-schematic-name="@vehicle.SchematicName"
                                         data-schematic-key="@vehicle.SchematicKey"
                                         data-next-service="@vehicle.NextServiceDate"
+                                        data-license-number="@vehicle.LicenseNumber"
                                         data-template-id="@vehicle.PublishedChecklistTemplateId"
                                         data-template-name="@vehicle.PublishedChecklistTemplateName"
+                                        data-template-configured="@vehicle.PublishedChecklistHasConfiguredContent.ToString().ToLowerInvariant()"
                                         data-previous-report-id="@vehicle.PreviousSourceReportId"
-                                        data-previous-performer="@vehicle.PreviousSourcePerformer"
-                                        data-previous-kilometres="@vehicle.PreviousKilometres"
-                                        data-previous-fuel-level="@vehicle.PreviousFuelLevel"
-                                        data-previous-vehicle-status="@vehicle.PreviousVehicleStatus"
-                                        data-previous-lights-status="@vehicle.PreviousLightsStatus"
-                                        data-previous-siren-status="@vehicle.PreviousSirenStatus"
-                                        data-previous-warning-lights-status="@vehicle.PreviousWarningLightsStatus"
-                                        data-previous-tyres-status="@vehicle.PreviousTyresStatus"
-                                        data-previous-ops-radio-status="@vehicle.PreviousOpsRadioStatus"
-                                        data-previous-damage-type="@vehicle.PreviousDamageType"
-                                        data-previous-damage-severity="@vehicle.PreviousDamageSeverity"
-                                        data-previous-damage-notes="@vehicle.PreviousDamageNotes"
-                                        data-previous-checklist-notes="@vehicle.PreviousChecklistNotes">
+                                        data-previous-performer="@vehicle.PreviousSourcePerformer">
                                     @vehicle.Registration - @vehicle.Callsign
                                 </option>
                             }
                         </select>
                     </label>
-                    <label>Vehicle / callsign<input asp-for="Callsign" id="callsignInput" type="text" placeholder="Assigned callsign" /></label>
-                    <label>Vehicle type<input asp-for="VehicleType" id="vehicleTypeInput" type="text" placeholder="Vehicle type" /></label>
-                    <label>Next service date<input asp-for="NextServiceDate" id="nextServiceDateInput" type="date" /></label>
+                    <label>Callsign<input asp-for="Callsign" id="callsignInput" type="text" placeholder="Assigned callsign" /></label>
                 </div>
 
-                <div id="checklistTemplateName" class="template-loaded-note">Select a registration to load the published checklist template for that vehicle type.</div>
+                <div class="vehicle-selection-actions">
+                    <button id="selectVehicleButton" class="menu-btn vehicle-btn select-vehicle-btn" type="button">Select Vehicle</button>
+                </div>
+
+                @if (Model.HasSelectedVehicle)
+                {
+                    <input asp-for="VehicleType" id="vehicleTypeInput" type="hidden" />
+                    <input asp-for="LicenseNumber" id="licenseNumberInput" type="hidden" />
+                    <input asp-for="NextServiceDate" id="nextServiceDateInput" type="hidden" />
+                    @if (Model.HasAssignedChecklist && Model.AssignedChecklistHasConfiguredContent)
+                    {
+                        <div id="checklistTemplateName" class="template-loaded-note">Loaded checklist template: @Model.AssignedChecklistName.</div>
+                    }
+                    else if (Model.HasAssignedChecklist)
+                    {
+                        <div id="checklistTemplateName" class="template-loaded-note unavailable">Assigned checklist has no configured fields yet.</div>
+                    }
+                    else
+                    {
+                        <div id="checklistTemplateName" class="template-loaded-note unavailable">No assigned checklist available for this vehicle.</div>
+                    }
+                }
+                else
+                {
+                    <div id="checklistTemplateName" class="template-loaded-note">Select a registration, confirm the callsign, then select the vehicle to load the active checklist.</div>
+                }
             </section>
 
-            <div class="previous-shift-panel">
-                <button id="sameAsPreviousShiftButton"
-                        class="same-shift-button"
-                        type="button"
-                        data-default-allowed="@Model.AllowSameAsPreviousVehicleInspection.ToString().ToLowerInvariant()">
-                    Same as previous shift
-                </button>
-                <p id="sameAsPreviousShiftStatus">Fresh inspection is the default. Use this only when the last checklist for this vehicle by another profile is unchanged.</p>
-            </div>
-
-            <section class="inspection-section">
-                <div class="section-heading">
-                    <span>2</span>
-                    <div>
-                        <h3>Operational Checks</h3>
-                        <p>Complete these fields fresh unless Same as previous shift is selected.</p>
+            @if (Model.HasSelectedVehicle && Model.HasAssignedChecklist && Model.AssignedChecklistHasConfiguredContent)
+            {
+                <section class="inspection-section live-checklist-panel">
+                    <div class="section-heading">
+                        <span>2</span>
+                        <div>
+                            <h3>Assigned Checklist</h3>
+                            <p>These fields are loaded from the published checklist register template only.</p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="operational-grid">
-                    <label>Current kilometres<input asp-for="Kilometres" id="kilometresInput" type="number" min="0" placeholder="Enter current odometer reading" inputmode="numeric" /></label>
-                    <label>Fuel level<select asp-for="FuelLevel" id="fuelLevelInput"><option value="">Select fuel level</option><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label>
-                    <label>Vehicle condition<select asp-for="VehicleStatus" id="vehicleStatusInput"><option value="">Select condition</option><option>Operational</option><option>Operational with notes</option><option>Out of service</option></select></label>
-                    <label>Lights<select asp-for="LightsStatus" id="lightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Sirens<select asp-for="SirenStatus" id="sirenStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Warning lights<select asp-for="WarningLightsStatus" id="warningLightsStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Tyres<select asp-for="TyresStatus" id="tyresStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                    <label>Ops radio connectivity<select asp-for="OpsRadioStatus" id="opsRadioStatusInput"><option value="">Select status</option><option>Pass</option><option>Issue</option><option>Fail</option><option>N/A</option></select></label>
-                </div>
-            </section>
+                    @foreach (var checklistSection in Model.AssignedChecklistSections)
+                    {
+                        <div class="live-checklist-section">
+                            <div class="live-checklist-section-title">@checklistSection.Name</div>
+                            @foreach (var item in checklistSection.Items.Where(row => !row.IsSchematicView))
+                            {
+                                if (item.IsSchematicBlock)
+                                {
+                                    var schematic = Model.ResolveSchematicForItem(item);
+                                    var schematicViews = schematic?.Views ?? Array.Empty<VehicleSchematicViewDefinition>();
+                                    var firstSchematicView = schematicViews.FirstOrDefault();
+                                    var schematicViewItems = checklistSection.Items
+                                        .Where(row => row.ParentChecklistItemId == item.Id && row.IsSchematicView)
+                                        .ToList();
+                                    <div class="live-checklist-schematic-block">
+                                        <div class="live-schematic-heading">
+                                            <div>
+                                                <strong>@item.Prompt</strong>
+                                                <span id="schematicName">@(schematic is null ? "No unit schematic assigned to this vehicle." : $"Loaded schematic: {schematic.DisplayName}")</span>
+                                            </div>
+                                        </div>
 
-            <section class="inspection-section schematic-section">
-                <div class="section-heading">
-                    <span>3</span>
-                    <div>
-                        <h3>Vehicle Schematic</h3>
-                        <p>Mark damage against the correct vehicle view.</p>
+                                        @if (schematicViews.Count > 0)
+                                        {
+                                            <div class="schematic-tabs" role="tablist" aria-label="Unit schematic views">
+                                                @foreach (var view in schematicViews)
+                                                {
+                                                    var isActive = firstSchematicView is not null && view.Key == firstSchematicView.Key;
+                                                    <button class="schematic-tab @(isActive ? "active" : string.Empty)" type="button" data-schematic-view="@view.Key" aria-selected="@isActive.ToString().ToLowerInvariant()">@view.Label</button>
+                                                }
+                                            </div>
+                                        }
+
+                                        <div class="schematic-workspace">
+                                            <div id="vehicleSchematic"
+                                                 class="vehicle-schematic @(schematic is null ? "missing-reference" : "has-reference")"
+                                                 data-schematic="@(schematic?.Key ?? string.Empty)"
+                                                 data-view="@(firstSchematicView?.Key ?? "left")">
+                                                <img id="schematicReferenceImage"
+                                                     class="schematic-reference-image"
+                                                     src="@(firstSchematicView?.AssetPath ?? string.Empty)"
+                                                     alt="@(schematic is null ? "No unit schematic" : $"{schematic.DisplayName} {firstSchematicView?.Label} view")" />
+                                                <canvas id="schematicMarkCanvas" class="schematic-mark-canvas"></canvas>
+                                                <div class="schematic-placeholder-message">No unit schematic is assigned to this vehicle. Assign one in the Unit Schematic Library.</div>
+                                            </div>
+                                            <div class="schematic-mark-actions">
+                                                <span>Mark damage directly on the selected vehicle view. Use a mouse, finger, or device pen.</span>
+                                                <div>
+                                                    <button id="undoSchematicMarkButton" type="button">Undo Mark</button>
+                                                    <button id="clearSchematicMarksButton" type="button">Clear View</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        @if (schematicViewItems.Count > 0)
+                                        {
+                                            <div class="schematic-view-response-list">
+                                                @foreach (var viewItem in schematicViewItems)
+                                                {
+                                                    var responseViewKey = viewItem.Prompt.Trim().ToLowerInvariant();
+                                                    var isActiveResponseView = firstSchematicView is not null
+                                                        && string.Equals(responseViewKey, firstSchematicView.Key, StringComparison.OrdinalIgnoreCase);
+                                                    <details class="schematic-view-response"
+                                                             data-schematic-response-view="@responseViewKey"
+                                                             @(isActiveResponseView ? "open" : string.Empty)
+                                                             @(isActiveResponseView ? string.Empty : "hidden")>
+                                                        <summary>@viewItem.Prompt view checks</summary>
+                                                        <div class="live-checklist-fields">
+                                                            @foreach (var field in viewItem.Fields)
+                                                            {
+                                                                var currentValue = Model.ChecklistResponses.TryGetValue(field.ResponseKey, out var savedResponse)
+                                                                    ? savedResponse
+                                                                    : string.Empty;
+                                                                var responseType = field.ResponseType ?? string.Empty;
+                                                                <label class="live-checklist-field">
+                                                                    <span>
+                                                                        @field.Heading
+                                                                        @if (field.IsRequired)
+                                                                        {
+                                                                            <strong>Required</strong>
+                                                                        }
+                                                                    </span>
+                                                                    @if (field.IsSchematicMarkup)
+                                                                    {
+                                                                        <input name="ChecklistResponses[@field.ResponseKey]" type="hidden" value="@currentValue" />
+                                                                        <span class="schematic-field-hint">Use the image above to mark this view.</span>
+                                                                    }
+                                                                    else if (responseType.Contains("Date", StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        <input name="ChecklistResponses[@field.ResponseKey]" type="date" value="@currentValue" />
+                                                                    }
+                                                                    else if (responseType.Contains("Number", StringComparison.OrdinalIgnoreCase) ||
+                                                                             responseType.Contains("Numeric", StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        <input name="ChecklistResponses[@field.ResponseKey]" type="number" value="@currentValue" inputmode="numeric" />
+                                                                    }
+                                                                    else if (responseType.Contains("Text", StringComparison.OrdinalIgnoreCase) ||
+                                                                             responseType.Contains("Note", StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        <textarea name="ChecklistResponses[@field.ResponseKey]" rows="2">@currentValue</textarea>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <select name="ChecklistResponses[@field.ResponseKey]">
+                                                                            <option value="">Select</option>
+                                                                            @foreach (var option in Model.GetChecklistResponseOptions(field))
+                                                                            {
+                                                                                if (string.Equals(currentValue, option, StringComparison.OrdinalIgnoreCase))
+                                                                                {
+                                                                                    <option value="@option" selected>@option</option>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <option value="@option">@option</option>
+                                                                                }
+                                                                            }
+                                                                        </select>
+                                                                    }
+                                                                </label>
+                                                            }
+                                                        </div>
+                                                    </details>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    continue;
+                                }
+                                <div class="live-checklist-row @(item.IsSubItem ? "subitem-row" : string.Empty)">
+                                    <div class="live-checklist-item-name">@item.Prompt</div>
+                                    <div class="live-checklist-fields">
+                                        @foreach (var field in item.Fields)
+                                        {
+                                            var currentValue = Model.ChecklistResponses.TryGetValue(field.ResponseKey, out var savedResponse)
+                                                ? savedResponse
+                                                : string.Empty;
+                                            var responseType = field.ResponseType ?? string.Empty;
+                                            <label class="live-checklist-field">
+                                                <span>
+                                                    @field.Heading
+                                                    @if (field.IsRequired)
+                                                    {
+                                                        <strong>Required</strong>
+                                                    }
+                                                </span>
+                                                @if (field.IsSchematicMarkup)
+                                                {
+                                                    <input name="ChecklistResponses[@field.ResponseKey]" type="hidden" value="@currentValue" />
+                                                    <span class="schematic-field-hint">Use the unit schematic drawing area for this response.</span>
+                                                }
+                                                else if (responseType.Contains("Date", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <input name="ChecklistResponses[@field.ResponseKey]" type="date" value="@currentValue" />
+                                                }
+                                                else if (responseType.Contains("Number", StringComparison.OrdinalIgnoreCase) ||
+                                                         responseType.Contains("Numeric", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <input name="ChecklistResponses[@field.ResponseKey]" type="number" value="@currentValue" inputmode="numeric" />
+                                                }
+                                                else if (responseType.Contains("Text", StringComparison.OrdinalIgnoreCase) ||
+                                                         responseType.Contains("Note", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <textarea name="ChecklistResponses[@field.ResponseKey]" rows="2">@currentValue</textarea>
+                                                }
+                                                else
+                                                {
+                                                    <select name="ChecklistResponses[@field.ResponseKey]">
+                                                        <option value="">Select</option>
+                                                        @foreach (var option in Model.GetChecklistResponseOptions(field))
+                                                        {
+                                                            if (string.Equals(currentValue, option, StringComparison.OrdinalIgnoreCase))
+                                                            {
+                                                                <option value="@option" selected>@option</option>
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="@option">@option</option>
+                                                            }
+                                                        }
+                                                    </select>
+                                                }
+                                            </label>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <div class="save-bar">
+                    <button class="menu-btn vehicle-btn save-btn" type="submit">Save Daily Check</button>
+                </div>
+            }
+            else if (Model.HasSelectedVehicle && Model.HasAssignedChecklist)
+            {
+                <section class="inspection-section unavailable-checklist-panel">
+                    <div class="section-heading">
+                        <span>2</span>
+                        <div>
+                            <h3>Assigned Checklist Has No Configured Fields</h3>
+                            <p>The selected vehicle has a published checklist shell, but no saved rows or fields.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="schematic-tabs" role="tablist" aria-label="Vehicle views">
-                    <button type="button" class="schematic-tab active">Left</button>
-                    <button type="button" class="schematic-tab">Right</button>
-                    <button type="button" class="schematic-tab">Front</button>
-                    <button type="button" class="schematic-tab">Rear</button>
-                    <button type="button" class="schematic-tab">Top</button>
-                </div>
-
-                <div class="schematic-workspace">
-                    <div id="vehicleSchematic" class="vehicle-schematic" data-schematic="operational-ambulance" aria-label="Vehicle outline placeholder">
-                        <div class="schematic-roof"></div>
-                        <div class="schematic-body"></div>
-                        <div class="schematic-cab"></div>
-                        <div class="schematic-window front-window"></div>
-                        <div class="schematic-window rear-window"></div>
-                        <div class="schematic-wheel front-wheel"></div>
-                        <div class="schematic-wheel rear-wheel"></div>
-                        <div class="damage-marker marker-one"></div>
-                        <div class="damage-marker marker-two"></div>
+                    <p>Open Checklist Management, add the required checklist rows/items, and publish again before this vehicle can be checked.</p>
+                </section>
+            }
+            else if (Model.HasSelectedVehicle)
+            {
+                <section class="inspection-section unavailable-checklist-panel">
+                    <div class="section-heading">
+                        <span>2</span>
+                        <div>
+                            <h3>No Assigned Checklist Available</h3>
+                            <p>This vehicle has no live published checklist assigned to its vehicle type, area, or callsign.</p>
+                        </div>
                     </div>
-                    <p id="schematicName" class="schematic-note">Select a registration to load the published vehicle schematic.</p>
-                </div>
-
-                <div class="damage-grid">
-                    <label>Damage type<select asp-for="DamageType" id="damageTypeInput"><option value="">Select damage type</option><option>Dent</option><option>Scratch</option><option>Crack</option><option>Missing item</option><option>Fluid leak</option><option>Other</option></select></label>
-                    <label>Damage severity<select asp-for="DamageSeverity" id="damageSeverityInput"><option value="">Select severity</option><option>Minor</option><option>Moderate</option><option>Severe</option></select></label>
-                </div>
-
-                <label class="notes-field">Damage notes<textarea asp-for="DamageNotes" id="damageNotesInput" rows="4" placeholder="Describe location and details of visible damage"></textarea></label>
-            </section>
-
-            <section class="inspection-section">
-                <div class="section-heading">
-                    <span>4</span>
-                    <div>
-                        <h3>Notes / Issue</h3>
-                        <p>Record anything that requires follow-up.</p>
-                    </div>
-                </div>
-
-                <label class="notes-field wide-notes">Inspection notes<textarea asp-for="ChecklistNotes" id="checklistNotesInput" rows="5" placeholder="Additional notes, issues, or action required"></textarea></label>
-            </section>
-
-            <div class="save-bar two-actions">
-                <button class="menu-btn vehicle-btn save-btn" type="submit">Save Vehicle Section</button>
-                <a class="menu-btn equipment-btn save-btn" href="@Model.EquipmentChecklistUrl">Next: Equipment Section</a>
-            </div>
+                    <p>Ask senior management to publish a checklist in Checklist Management before this vehicle can be checked.</p>
+                </section>
+            }
         </form>
     </div>
 </div>
@@ -190,43 +354,167 @@
 .section-heading p { margin: 0; font-size: 13px; font-weight: 600; color: #6b7280; }
 .vehicle-register-grid, .damage-grid, .operational-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .registration-field { grid-column: 1 / -1; }
+.vehicle-selection-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.select-vehicle-btn { min-width: 220px; border: none; text-align: center; }
 .vehicle-register-grid label, .damage-grid label, .operational-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 800; color: #52606d; }
 .vehicle-register-grid input, .vehicle-register-grid select, .damage-grid select, .operational-grid input, .operational-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #ffffff; color: #1f2937; box-sizing: border-box; }
 .template-loaded-note { margin-top: 14px; padding: 10px 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); color: #52606d; font-size: 13px; font-weight: 800; text-align: left; }
+.template-loaded-note.unavailable,
+.unavailable-checklist-panel { border-color: rgba(155, 59, 59, 0.22); background: rgba(155, 59, 59, 0.07); color: #7f2f2f; }
+.unavailable-checklist-panel p { margin: 0; color: #7f2f2f; font-size: 14px; font-weight: 800; text-align: left; }
+.live-checklist-panel { display: flex; flex-direction: column; gap: 12px; }
+.live-checklist-section { border: 1px solid rgba(66, 84, 102, 0.14); border-radius: 8px; overflow: hidden; background: #ffffff; }
+.live-checklist-section-title { padding: 10px 12px; background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; text-align: left; }
+.live-checklist-row { display: grid; grid-template-columns: minmax(170px, 240px) minmax(0, 1fr); gap: 12px; align-items: stretch; padding: 10px 12px; border-top: 1px solid rgba(66, 84, 102, 0.12); }
+.live-checklist-row:first-of-type { border-top: 0; }
+.live-checklist-row.subitem-row .live-checklist-item-name { padding-left: 18px; color: #52606d; }
+.live-checklist-item-name { display: flex; align-items: center; min-height: 42px; color: #1f2937; font-size: 14px; font-weight: 900; text-align: left; }
+.live-checklist-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.live-checklist-field { display: flex; flex-direction: column; gap: 6px; text-align: left; color: #52606d; font-size: 12px; font-weight: 900; }
+.live-checklist-field span { display: flex; align-items: center; gap: 8px; min-height: 18px; }
+.live-checklist-field strong { display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border-radius: 999px; background: rgba(155, 59, 59, .1); color: #7f2f2f; font-size: 10px; text-transform: uppercase; }
+.live-checklist-field input,
+.live-checklist-field select,
+.live-checklist-field textarea { width: 100%; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; box-sizing: border-box; background: #ffffff; color: #1f2937; font-size: 14px; font-weight: 700; }
+.live-checklist-field textarea { padding-top: 10px; resize: vertical; }
 .notes-field textarea { padding-top: 12px; resize: vertical; }
-.schematic-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.live-checklist-schematic-block { padding: 12px; border-top: 1px solid rgba(66, 84, 102, 0.12); background: #ffffff; }
+.live-schematic-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; text-align: left; }
+.live-schematic-heading strong { display: block; color: #1f2937; font-size: 15px; font-weight: 900; }
+.live-schematic-heading span { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 800; }
+.schematic-view-response-list { display: grid; gap: 8px; margin-top: 12px; }
+.schematic-view-response { border: 1px solid rgba(66, 84, 102, 0.14); border-radius: 8px; background: #f8fafc; overflow: hidden; }
+.schematic-view-response summary { display: flex; align-items: center; min-height: 38px; padding: 0 12px; color: #334155; cursor: default; list-style: none; font-size: 13px; font-weight: 900; }
+.schematic-view-response summary::-webkit-details-marker { display: none; }
+.schematic-view-response summary::after { content: "Selected view"; margin-left: auto; color: #0E5E7A; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.schematic-view-response[open] summary { border-bottom: 1px solid rgba(66, 84, 102, 0.12); }
+.schematic-view-response[open] summary::after { content: "Selected view"; }
+.schematic-view-response .live-checklist-fields { padding: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.schematic-field-hint { min-height: 42px; display: flex !important; align-items: center; padding: 0 12px; border: 1px dashed rgba(14,94,122,.28); border-radius: 8px; background: rgba(14,94,122,.06); color: #0E5E7A !important; font-size: 12px !important; font-weight: 900 !important; }
+.schematic-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .schematic-tab { min-height: 38px; border: 1px solid rgba(66, 84, 102, 0.18); border-radius: 8px; background: #ffffff; color: #334155; font-size: 13px; font-weight: 800; }
 .schematic-tab.active { background: #0E5E7A; color: #ffffff; border-color: #0E5E7A; }
 .schematic-workspace { border: 1px dashed rgba(66, 84, 102, 0.34); border-radius: 8px; background: #f8fafc; padding: 16px; margin-bottom: 16px; }
-.vehicle-schematic { position: relative; height: 240px; border-radius: 8px; background: #ffffff; border: 1px solid rgba(66, 84, 102, 0.16); overflow: hidden; }
-.schematic-body { position: absolute; left: 9%; right: 8%; bottom: 64px; height: 70px; border: 4px solid #334155; border-radius: 24px 18px 16px 16px; }
-.schematic-roof { position: absolute; left: 22%; right: 24%; bottom: 132px; height: 44px; border: 4px solid #334155; border-bottom: 0; border-radius: 34px 34px 0 0; }
-.schematic-cab { position: absolute; right: 13%; bottom: 96px; width: 18%; height: 72px; border-left: 4px solid #334155; transform: skewX(-18deg); }
-.schematic-window { position: absolute; bottom: 116px; height: 36px; border: 3px solid #52606d; border-radius: 8px; }
+.vehicle-schematic { position: relative; height: 300px; border-radius: 8px; background: #ffffff; border: 1px solid rgba(66, 84, 102, 0.16); overflow: hidden; touch-action: none; }
+.schematic-reference-image { position: absolute; inset: 8px; z-index: 1; width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain; object-position: center; display: none; pointer-events: none; }
+.schematic-mark-canvas { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.vehicle-schematic.has-reference .schematic-reference-image { display: block; }
+.schematic-placeholder-message { position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center; padding: 18px; color: #64748b; font-size: 14px; font-weight: 900; text-align: center; box-sizing: border-box; }
+.vehicle-schematic.missing-reference .schematic-placeholder-message { display: flex; }
+.vehicle-schematic.missing-reference .schematic-mark-canvas { pointer-events: none; }
+.vehicle-schematic.has-reference .schematic-body,
+.vehicle-schematic.has-reference .schematic-roof,
+.vehicle-schematic.has-reference .schematic-cab,
+.vehicle-schematic.has-reference .schematic-hood,
+.vehicle-schematic.has-reference .schematic-bed,
+.vehicle-schematic.has-reference .schematic-lightbar,
+.vehicle-schematic.has-reference .schematic-panel,
+.vehicle-schematic.has-reference .schematic-bumper,
+.vehicle-schematic.has-reference .schematic-window,
+.vehicle-schematic.has-reference .schematic-wheel,
+.vehicle-schematic.missing-reference .schematic-body,
+.vehicle-schematic.missing-reference .schematic-roof,
+.vehicle-schematic.missing-reference .schematic-cab,
+.vehicle-schematic.missing-reference .schematic-hood,
+.vehicle-schematic.missing-reference .schematic-bed,
+.vehicle-schematic.missing-reference .schematic-lightbar,
+.vehicle-schematic.missing-reference .schematic-panel,
+.vehicle-schematic.missing-reference .schematic-bumper,
+.vehicle-schematic.missing-reference .schematic-window,
+.vehicle-schematic.missing-reference .schematic-wheel { display: none; }
+.schematic-body,
+.schematic-roof,
+.schematic-cab,
+.schematic-hood,
+.schematic-bed,
+.schematic-lightbar,
+.schematic-panel,
+.schematic-bumper,
+.schematic-window,
+.schematic-wheel { position: absolute; box-sizing: border-box; pointer-events: none; }
+.schematic-body { left: 9%; right: 8%; bottom: 64px; height: 70px; border: 4px solid #334155; border-radius: 24px 18px 16px 16px; background: #ffffff; }
+.schematic-roof { left: 22%; right: 24%; bottom: 132px; height: 44px; border: 4px solid #334155; border-bottom: 0; border-radius: 34px 34px 0 0; }
+.schematic-cab { right: 13%; bottom: 96px; width: 18%; height: 72px; border-left: 4px solid #334155; transform: skewX(-18deg); }
+.schematic-window { bottom: 116px; height: 36px; border: 3px solid #52606d; border-radius: 8px; background: #ffffff; }
 .front-window { right: 18%; width: 15%; transform: skewX(-14deg); }
 .rear-window { left: 28%; width: 27%; }
-.schematic-wheel { position: absolute; bottom: 38px; width: 44px; height: 44px; border: 5px solid #1f2937; border-radius: 50%; background: #ffffff; }
+.schematic-wheel { bottom: 38px; width: 44px; height: 44px; border: 5px solid #1f2937; border-radius: 50%; background: #ffffff; }
 .front-wheel { right: 18%; }
 .rear-wheel { left: 18%; }
-.damage-marker { position: absolute; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #8F3A3A; background: rgba(143, 58, 58, 0.14); }
-.marker-one { left: 42%; bottom: 104px; }
-.marker-two { right: 28%; bottom: 88px; }
+.schematic-lightbar { left: 44%; bottom: 178px; width: 60px; height: 9px; border: 2px solid #52606d; border-radius: 999px; background: #ffffff; }
+.schematic-panel { border-color: #52606d; }
+.schematic-bumper { bottom: 72px; width: 28px; height: 12px; border: 3px solid #334155; border-radius: 7px; background: #ffffff; }
+.front-bumper { right: 6%; }
+.rear-bumper { left: 5%; }
 .schematic-note { margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-weight: 700; text-align: center; }
-.vehicle-schematic[data-schematic="ift-ambulance"] .schematic-roof { left: 27%; right: 30%; height: 38px; }
-.vehicle-schematic[data-schematic="icu-ambulance"] .schematic-body { left: 7%; right: 6%; height: 82px; }
-.vehicle-schematic[data-schematic="icu-ambulance"] .schematic-roof { left: 18%; right: 20%; height: 50px; }
-.vehicle-schematic[data-schematic="response-pickup"] .schematic-body { left: 16%; right: 14%; bottom: 72px; height: 54px; border-radius: 34px 34px 18px 18px; }
-.vehicle-schematic[data-schematic="response-pickup"] .schematic-roof { left: 34%; right: 31%; bottom: 126px; height: 38px; border-radius: 24px 24px 0 0; }
-.vehicle-schematic[data-schematic="response-pickup"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 56px; }
-.vehicle-schematic[data-schematic="response-pickup"] .rear-window { left: 38%; width: 18%; }
-.vehicle-schematic[data-schematic="response-pickup"] .front-window { right: 25%; width: 12%; }
-.vehicle-schematic[data-schematic="response-sedan"] .schematic-body { left: 16%; right: 14%; bottom: 76px; height: 48px; border-radius: 34px 34px 18px 18px; }
-.vehicle-schematic[data-schematic="response-sedan"] .schematic-roof { left: 33%; right: 30%; bottom: 124px; height: 36px; border-radius: 24px 24px 0 0; }
-.vehicle-schematic[data-schematic="response-sedan"] .schematic-cab { right: 20%; bottom: 100px; width: 16%; height: 54px; }
-.vehicle-schematic[data-schematic="response-sedan"] .rear-window { left: 37%; width: 18%; }
-.vehicle-schematic[data-schematic="response-sedan"] .front-window { right: 25%; width: 12%; }
-.vehicle-schematic[data-schematic="rescue-vehicle"] .schematic-body { left: 8%; right: 8%; height: 86px; border-radius: 12px; }
-.vehicle-schematic[data-schematic="rescue-vehicle"] .schematic-roof { left: 14%; right: 16%; height: 48px; border-radius: 8px 8px 0 0; }
+.schematic-mark-actions { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 10px; }
+.schematic-mark-actions span { color: #64748b; font-size: 12px; font-weight: 800; text-align: left; }
+.schematic-mark-actions div { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.schematic-mark-actions button { min-height: 34px; padding: 0 10px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #ffffff; color: #334155; font-size: 12px; font-weight: 900; cursor: pointer; }
+.schematic-mark-actions button:hover { background: rgba(14,94,122,.07); border-color: rgba(14,94,122,.28); color: #0E5E7A; }
+.vehicle-schematic[data-schematic="pickup-rv"] .schematic-body { left: 13%; right: 11%; bottom: 70px; height: 60px; border-radius: 30px 28px 16px 16px; }
+.vehicle-schematic[data-schematic="pickup-rv"] .schematic-roof { left: 36%; right: 33%; bottom: 132px; height: 42px; border-radius: 24px 24px 0 0; }
+.vehicle-schematic[data-schematic="pickup-rv"] .schematic-cab { right: 23%; bottom: 102px; width: 18%; height: 62px; transform: skewX(-14deg); }
+.vehicle-schematic[data-schematic="pickup-rv"] .front-window { right: 28%; bottom: 122px; width: 13%; height: 30px; }
+.vehicle-schematic[data-schematic="pickup-rv"] .rear-window { left: 43%; bottom: 122px; width: 14%; height: 30px; }
+.vehicle-schematic[data-schematic="pickup-rv"] .front-wheel { right: 18%; }
+.vehicle-schematic[data-schematic="pickup-rv"] .rear-wheel { left: 18%; }
+.vehicle-schematic[data-schematic="pickup-rv"] .schematic-lightbar { left: 47%; bottom: 176px; }
+.vehicle-schematic[data-schematic="pickup-rv"] .front-door-panel { left: 56%; bottom: 78px; width: 13%; height: 54px; border-left: 2px solid #52606d; border-right: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"] .rear-door-panel { left: 42%; bottom: 78px; width: 14%; height: 54px; border-left: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"] .bed-panel { left: 14%; bottom: 82px; width: 28%; height: 45px; border-top: 2px solid #52606d; border-right: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"] .bonnet-panel { right: 12%; bottom: 106px; width: 18%; height: 28px; border-top: 2px solid #52606d; border-left: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"] .tailgate-panel { left: 13%; bottom: 82px; width: 2px; height: 45px; background: #52606d; }
+.vehicle-schematic[data-view="right"] .schematic-cab { left: 13%; right: auto; border-left: 0; border-right: 4px solid #334155; transform: skewX(18deg); }
+.vehicle-schematic[data-view="right"] .front-window { left: 18%; right: auto; transform: skewX(14deg); }
+.vehicle-schematic[data-view="right"] .rear-window { left: auto; right: 28%; }
+.vehicle-schematic[data-view="right"] .front-wheel { left: 18%; right: auto; }
+.vehicle-schematic[data-view="right"] .rear-wheel { left: auto; right: 18%; }
+.vehicle-schematic[data-view="right"] .front-bumper { left: 6%; right: auto; }
+.vehicle-schematic[data-view="right"] .rear-bumper { left: auto; right: 5%; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .schematic-cab { left: 23%; right: auto; transform: skewX(14deg); }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .front-window { left: 28%; right: auto; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .rear-window { left: auto; right: 43%; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .schematic-lightbar { left: auto; right: 47%; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .front-door-panel { left: auto; right: 56%; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .rear-door-panel { left: auto; right: 42%; border-left: 0; border-right: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .bed-panel { left: auto; right: 14%; border-right: 0; border-left: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .bonnet-panel { left: 12%; right: auto; border-left: 0; border-right: 2px solid #52606d; }
+.vehicle-schematic[data-schematic="pickup-rv"][data-view="right"] .tailgate-panel { left: auto; right: 13%; }
+.vehicle-schematic[data-view="front"] .schematic-body,
+.vehicle-schematic[data-view="rear"] .schematic-body { left: 33%; right: 33%; bottom: 38px; height: 142px; border-radius: 18px; }
+.vehicle-schematic[data-view="front"] .schematic-roof,
+.vehicle-schematic[data-view="rear"] .schematic-roof { left: 38%; right: 38%; bottom: 130px; height: 42px; border: 3px solid #52606d; border-radius: 10px; background: #ffffff; }
+.vehicle-schematic[data-view="front"] .schematic-cab,
+.vehicle-schematic[data-view="rear"] .schematic-cab { display: none; }
+.vehicle-schematic[data-view="front"] .schematic-window,
+.vehicle-schematic[data-view="rear"] .schematic-window { bottom: 96px; height: 34px; width: 8%; transform: none; }
+.vehicle-schematic[data-view="front"] .front-window,
+.vehicle-schematic[data-view="rear"] .front-window { left: 38%; right: auto; }
+.vehicle-schematic[data-view="front"] .rear-window,
+.vehicle-schematic[data-view="rear"] .rear-window { left: auto; right: 38%; }
+.vehicle-schematic[data-view="front"] .schematic-wheel,
+.vehicle-schematic[data-view="rear"] .schematic-wheel { bottom: 40px; width: 30px; height: 30px; }
+.vehicle-schematic[data-view="front"] .front-wheel,
+.vehicle-schematic[data-view="rear"] .front-wheel { left: 30%; right: auto; }
+.vehicle-schematic[data-view="front"] .rear-wheel,
+.vehicle-schematic[data-view="rear"] .rear-wheel { left: auto; right: 30%; }
+.vehicle-schematic[data-view="front"] .schematic-lightbar,
+.vehicle-schematic[data-view="rear"] .schematic-lightbar { left: calc(50% - 30px); bottom: 182px; }
+.vehicle-schematic[data-view="front"] .front-door-panel,
+.vehicle-schematic[data-view="rear"] .front-door-panel { left: 34%; bottom: 54px; width: 0; height: 118px; border-left: 2px solid #52606d; }
+.vehicle-schematic[data-view="front"] .rear-door-panel,
+.vehicle-schematic[data-view="rear"] .rear-door-panel { right: 34%; bottom: 54px; width: 0; height: 118px; border-right: 2px solid #52606d; }
+.vehicle-schematic[data-view="front"] .bed-panel,
+.vehicle-schematic[data-view="rear"] .bed-panel { display: none; }
+.vehicle-schematic[data-view="front"] .bonnet-panel { left: 39%; right: 39%; bottom: 72px; height: 52px; border: 2px solid #52606d; border-radius: 8px; }
+.vehicle-schematic[data-view="front"] .tailgate-panel { display: none; }
+.vehicle-schematic[data-view="rear"] .bonnet-panel { display: none; }
+.vehicle-schematic[data-view="rear"] .tailgate-panel { left: 38%; right: 38%; bottom: 62px; width: auto; height: 72px; border: 2px solid #52606d; border-radius: 8px; background: transparent; }
+.vehicle-schematic[data-view="front"] .front-bumper,
+.vehicle-schematic[data-view="front"] .rear-bumper,
+.vehicle-schematic[data-view="rear"] .front-bumper,
+.vehicle-schematic[data-view="rear"] .rear-bumper { left: calc(50% - 72px); right: auto; bottom: 36px; width: 144px; height: 12px; }
 .previous-shift-panel { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid rgba(66, 84, 102, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
 .same-shift-button { min-height: 44px; border: 1px solid rgba(14, 94, 122, 0.28); border-radius: 8px; background: #ffffff; color: #0E5E7A; font-size: 14px; font-weight: 900; }
 .same-shift-button:hover:not(:disabled) { background: rgba(14, 94, 122, 0.08); }
@@ -237,37 +525,40 @@
 .save-bar { position: sticky; bottom: 0; z-index: 10; padding: 14px 0 0 0; background: linear-gradient(180deg, rgba(244, 247, 251, 0), #F4F7FB 42%); }
 .two-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .save-btn { width: 100%; border: none; text-align: center; }
-@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .vehicle-register-grid, .damage-grid, .operational-grid, .two-actions, .previous-shift-panel { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .vehicle-schematic { height: 210px; } .inspection-section { padding: 14px; } }
+.disabled-link { pointer-events: none; opacity: .58; filter: grayscale(.2); }
+@@media (max-width: 760px) { .inspection-inner { padding: 24px 14px 120px 14px; } .page-title { font-size: 24px; } .vehicle-register-grid, .damage-grid, .operational-grid, .two-actions, .previous-shift-panel, .live-checklist-row { grid-template-columns: 1fr; } .live-checklist-fields { grid-template-columns: 1fr; } .schematic-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .vehicle-schematic { height: 240px; } .schematic-mark-actions { align-items: stretch; flex-direction: column; } .schematic-mark-actions div { justify-content: stretch; } .schematic-mark-actions button { flex: 1 1 auto; } .inspection-section { padding: 14px; } }
 </style>
 
 <script>
     (function () {
         const registrationSelect = document.getElementById("registrationSelect");
+        const selectVehicleButton = document.getElementById("selectVehicleButton");
+        const frequencyInput = document.querySelector("input[name='Frequency']");
         const callsignInput = document.getElementById("callsignInput");
         const vehicleTypeInput = document.getElementById("vehicleTypeInput");
-        const kilometresInput = document.getElementById("kilometresInput");
-        const fuelLevelInput = document.getElementById("fuelLevelInput");
+        const licenseNumberInput = document.getElementById("licenseNumberInput");
         const nextServiceDateInput = document.getElementById("nextServiceDateInput");
         const checklistTemplateName = document.getElementById("checklistTemplateName");
-        const vehicleStatusInput = document.getElementById("vehicleStatusInput");
-        const lightsStatusInput = document.getElementById("lightsStatusInput");
-        const sirenStatusInput = document.getElementById("sirenStatusInput");
-        const warningLightsStatusInput = document.getElementById("warningLightsStatusInput");
-        const tyresStatusInput = document.getElementById("tyresStatusInput");
-        const opsRadioStatusInput = document.getElementById("opsRadioStatusInput");
         const vehicleSchematic = document.getElementById("vehicleSchematic");
+        const schematicReferenceImage = document.getElementById("schematicReferenceImage");
+        const schematicMarkCanvas = document.getElementById("schematicMarkCanvas");
+        const schematicMarkDataInput = document.getElementById("schematicMarkDataInput");
+        const undoSchematicMarkButton = document.getElementById("undoSchematicMarkButton");
+        const clearSchematicMarksButton = document.getElementById("clearSchematicMarksButton");
         const schematicName = document.getElementById("schematicName");
+        const schematicTabs = document.querySelectorAll(".schematic-tab[data-schematic-view]");
         const sameAsPreviousShiftButton = document.getElementById("sameAsPreviousShiftButton");
         const sameAsPreviousShiftStatus = document.getElementById("sameAsPreviousShiftStatus");
         const sameAsPreviousShiftInput = document.getElementById("sameAsPreviousShiftInput");
         const previousVehicleReportIdInput = document.getElementById("previousVehicleReportIdInput");
         const previousShiftPanel = sameAsPreviousShiftButton?.closest(".previous-shift-panel");
-        const damageTypeInput = document.getElementById("damageTypeInput");
-        const damageSeverityInput = document.getElementById("damageSeverityInput");
-        const damageNotesInput = document.getElementById("damageNotesInput");
-        const checklistNotesInput = document.getElementById("checklistNotesInput");
+        const equipmentSectionLink = document.getElementById("equipmentSectionLink");
         const sameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
         const legacySameShiftSettingKey = "vectorAllowSameAsPreviousShift";
+        let schematicMarks = {};
+        let activeSchematicStroke = null;
+        let schematicIsDrawing = false;
+        const schematicReferenceImages = @Html.Raw(schematicReferenceImagesJson);
 
         function setValue(input, value, force) {
             if (!input || !value) {
@@ -279,25 +570,288 @@
             }
         }
 
+        function syncSchematicResponsePanel(view) {
+            const normalizedView = (view || "").toLowerCase();
+            document.querySelectorAll(".schematic-view-response[data-schematic-response-view]").forEach(function (panel) {
+                const isActive = panel.dataset.schematicResponseView === normalizedView;
+                panel.hidden = !isActive;
+                panel.open = isActive;
+            });
+        }
+
+        function setSchematicView(view) {
+            if (!vehicleSchematic || !view) {
+                return;
+            }
+
+            vehicleSchematic.dataset.view = view;
+            schematicTabs.forEach(function (tab) {
+                const isActive = tab.dataset.schematicView === view;
+                tab.classList.toggle("active", isActive);
+                tab.setAttribute("aria-selected", String(isActive));
+            });
+            updateSchematicReference();
+            resizeSchematicCanvas();
+            drawSchematicMarks();
+            syncSchematicResponsePanel(view);
+        }
+
+        function updateSchematicReference() {
+            if (!vehicleSchematic || !schematicReferenceImage) {
+                return;
+            }
+
+            const schematicKey = vehicleSchematic.dataset.schematic || "";
+            const view = vehicleSchematic.dataset.view || "left";
+            const imagePath = schematicReferenceImages[schematicKey]?.[view];
+
+            if (imagePath) {
+                schematicReferenceImage.src = imagePath;
+                vehicleSchematic.classList.add("has-reference");
+                vehicleSchematic.classList.remove("missing-reference");
+                resizeSchematicCanvas();
+                drawSchematicMarks();
+                return;
+            }
+
+            schematicReferenceImage.removeAttribute("src");
+            vehicleSchematic.classList.remove("has-reference");
+            vehicleSchematic.classList.add("missing-reference");
+            resizeSchematicCanvas();
+            drawSchematicMarks();
+        }
+
+        function currentSchematicMarkKey() {
+            const registration = registrationSelect?.value || "unselected";
+            const schematicKey = vehicleSchematic?.dataset.schematic || "unknown";
+            const view = vehicleSchematic?.dataset.view || "left";
+            return `${registration}:${schematicKey}:${view}`;
+        }
+
+        function loadSchematicMarksFromInput() {
+            if (!schematicMarkDataInput?.value) {
+                schematicMarks = {};
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(schematicMarkDataInput.value);
+                schematicMarks = parsed && typeof parsed === "object" ? parsed : {};
+            } catch {
+                schematicMarks = {};
+            }
+        }
+
+        function saveSchematicMarks() {
+            if (!schematicMarkDataInput) {
+                return;
+            }
+
+            schematicMarkDataInput.value = JSON.stringify(schematicMarks);
+        }
+
+        function resizeSchematicCanvas() {
+            if (!schematicMarkCanvas || !vehicleSchematic) {
+                return;
+            }
+
+            const rect = vehicleSchematic.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) {
+                return;
+            }
+
+            const ratio = window.devicePixelRatio || 1;
+            const width = Math.round(rect.width * ratio);
+            const height = Math.round(rect.height * ratio);
+            if (schematicMarkCanvas.width !== width || schematicMarkCanvas.height !== height) {
+                schematicMarkCanvas.width = width;
+                schematicMarkCanvas.height = height;
+                schematicMarkCanvas.style.width = `${rect.width}px`;
+                schematicMarkCanvas.style.height = `${rect.height}px`;
+            }
+
+            const context = schematicMarkCanvas.getContext("2d");
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+
+        function pointFromPointer(event) {
+            const rect = schematicMarkCanvas.getBoundingClientRect();
+            return {
+                x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
+                y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height))
+            };
+        }
+
+        function drawStroke(context, stroke, rect) {
+            if (!stroke?.points?.length) {
+                return;
+            }
+
+            context.strokeStyle = "#b4232c";
+            context.fillStyle = "rgba(180, 35, 44, 0.14)";
+            context.lineWidth = 3;
+            context.lineCap = "round";
+            context.lineJoin = "round";
+
+            if (stroke.points.length === 1) {
+                const point = stroke.points[0];
+                const x = point.x * rect.width;
+                const y = point.y * rect.height;
+                context.beginPath();
+                context.arc(x, y, 9, 0, Math.PI * 2);
+                context.fill();
+                context.stroke();
+                return;
+            }
+
+            context.beginPath();
+            stroke.points.forEach(function (point, index) {
+                const x = point.x * rect.width;
+                const y = point.y * rect.height;
+                if (index === 0) {
+                    context.moveTo(x, y);
+                } else {
+                    context.lineTo(x, y);
+                }
+            });
+            context.stroke();
+        }
+
+        function drawSchematicMarks(extraStroke) {
+            if (!schematicMarkCanvas || !vehicleSchematic) {
+                return;
+            }
+
+            resizeSchematicCanvas();
+            const rect = schematicMarkCanvas.getBoundingClientRect();
+            const context = schematicMarkCanvas.getContext("2d");
+            context.clearRect(0, 0, rect.width, rect.height);
+
+            const marks = schematicMarks[currentSchematicMarkKey()] || [];
+            marks.forEach(function (stroke) {
+                drawStroke(context, stroke, rect);
+            });
+
+            if (extraStroke) {
+                drawStroke(context, extraStroke, rect);
+            }
+        }
+
+        function beginSchematicMark(event) {
+            if (!schematicMarkCanvas) {
+                return;
+            }
+
+            event.preventDefault();
+            schematicIsDrawing = true;
+            activeSchematicStroke = { points: [pointFromPointer(event)] };
+            schematicMarkCanvas.setPointerCapture?.(event.pointerId);
+            drawSchematicMarks(activeSchematicStroke);
+        }
+
+        function continueSchematicMark(event) {
+            if (!schematicIsDrawing || !activeSchematicStroke) {
+                return;
+            }
+
+            event.preventDefault();
+            activeSchematicStroke.points.push(pointFromPointer(event));
+            drawSchematicMarks(activeSchematicStroke);
+        }
+
+        function finishSchematicMark(event) {
+            if (!schematicIsDrawing || !activeSchematicStroke) {
+                return;
+            }
+
+            event.preventDefault();
+            const key = currentSchematicMarkKey();
+            schematicMarks[key] = schematicMarks[key] || [];
+            schematicMarks[key].push(activeSchematicStroke);
+            activeSchematicStroke = null;
+            schematicIsDrawing = false;
+            saveSchematicMarks();
+            drawSchematicMarks();
+            markManualInspectionChange();
+        }
+
+        function undoSchematicMark() {
+            const key = currentSchematicMarkKey();
+            if (!schematicMarks[key]?.length) {
+                return;
+            }
+
+            schematicMarks[key].pop();
+            if (schematicMarks[key].length === 0) {
+                delete schematicMarks[key];
+            }
+            saveSchematicMarks();
+            drawSchematicMarks();
+            markManualInspectionChange();
+        }
+
+        function clearSchematicMarksForView() {
+            const key = currentSchematicMarkKey();
+            if (!schematicMarks[key]?.length) {
+                return;
+            }
+
+            delete schematicMarks[key];
+            saveSchematicMarks();
+            drawSchematicMarks();
+            markManualInspectionChange();
+        }
+
         function applyVehicle(option, force) {
             if (!option || !option.value) {
+                updateEquipmentLink(null);
                 return;
             }
 
             setValue(callsignInput, option.dataset.callsign, force);
             setValue(vehicleTypeInput, option.dataset.type, force);
+            setValue(licenseNumberInput, option.dataset.licenseNumber, force);
             setValue(nextServiceDateInput, option.dataset.nextService, force);
-            if (vehicleSchematic && option.dataset.schematicKey) {
-                vehicleSchematic.dataset.schematic = option.dataset.schematicKey;
+            if (vehicleSchematic) {
+                vehicleSchematic.dataset.schematic = option.dataset.schematicKey || "";
+                updateSchematicReference();
+                drawSchematicMarks();
             }
             if (schematicName && option.dataset.schematicName) {
                 schematicName.textContent = "Loaded schematic: " + option.dataset.schematicName;
             }
             if (checklistTemplateName) {
-                checklistTemplateName.textContent = option.dataset.templateName
-                    ? "Loaded checklist template: " + option.dataset.templateName + " for " + (option.dataset.type || "selected vehicle type")
-                    : "No published checklist template is currently assigned to this vehicle type.";
+                if (!option.dataset.templateName) {
+                    checklistTemplateName.textContent = "No assigned checklist available for this vehicle.";
+                    checklistTemplateName.classList.add("unavailable");
+                } else if (option.dataset.templateConfigured !== "true") {
+                    checklistTemplateName.textContent = "Assigned checklist has no configured fields yet.";
+                    checklistTemplateName.classList.add("unavailable");
+                } else {
+                    checklistTemplateName.textContent = "Loaded checklist template: " + option.dataset.templateName + ".";
+                    checklistTemplateName.classList.remove("unavailable");
+                }
             }
+            updateEquipmentLink(option);
+        }
+
+        function updateEquipmentLink(option) {
+            if (!equipmentSectionLink) {
+                return;
+            }
+
+            if (!option || !option.value) {
+                equipmentSectionLink.href = "#";
+                equipmentSectionLink.classList.add("disabled-link");
+                equipmentSectionLink.setAttribute("aria-disabled", "true");
+                return;
+            }
+
+            const callsign = callsignInput?.value || option.dataset.callsign || "";
+            const registration = option.value || "";
+            equipmentSectionLink.href = `/DailyEquipmentChecklist?callsign=${encodeURIComponent(callsign)}&registration=${encodeURIComponent(registration)}`;
+            equipmentSectionLink.classList.remove("disabled-link");
+            equipmentSectionLink.setAttribute("aria-disabled", "false");
         }
 
         function clearPreviousShiftSelection() {
@@ -312,23 +866,8 @@
         }
 
         function clearInspectionCarryForwardFields() {
-            [
-                kilometresInput,
-                fuelLevelInput,
-                vehicleStatusInput,
-                lightsStatusInput,
-                sirenStatusInput,
-                warningLightsStatusInput,
-                tyresStatusInput,
-                opsRadioStatusInput,
-                damageTypeInput,
-                damageSeverityInput,
-                damageNotesInput,
-                checklistNotesInput
-            ].forEach(function (input) {
-                if (input) {
-                    input.value = "";
-                }
+            document.querySelectorAll("input[name^='ChecklistResponses'], select[name^='ChecklistResponses'], textarea[name^='ChecklistResponses']").forEach(function (input) {
+                input.value = "";
             });
         }
 
@@ -375,19 +914,6 @@
                 return;
             }
 
-            setValue(kilometresInput, option.dataset.previousKilometres, true);
-            setValue(fuelLevelInput, option.dataset.previousFuelLevel, true);
-            setValue(vehicleStatusInput, option.dataset.previousVehicleStatus, true);
-            setValue(lightsStatusInput, option.dataset.previousLightsStatus, true);
-            setValue(sirenStatusInput, option.dataset.previousSirenStatus, true);
-            setValue(warningLightsStatusInput, option.dataset.previousWarningLightsStatus, true);
-            setValue(tyresStatusInput, option.dataset.previousTyresStatus, true);
-            setValue(opsRadioStatusInput, option.dataset.previousOpsRadioStatus, true);
-            setValue(damageTypeInput, option.dataset.previousDamageType, true);
-            setValue(damageSeverityInput, option.dataset.previousDamageSeverity, true);
-            setValue(damageNotesInput, option.dataset.previousDamageNotes, true);
-            setValue(checklistNotesInput, option.dataset.previousChecklistNotes, true);
-
             if (sameAsPreviousShiftInput) {
                 sameAsPreviousShiftInput.value = "true";
             }
@@ -397,13 +923,28 @@
 
             previousShiftPanel?.classList.add("applied");
             if (sameAsPreviousShiftStatus) {
-                sameAsPreviousShiftStatus.textContent = "Previous checklist values from " + (option.dataset.previousPerformer || "another profile") + " have been applied. Edit any field if something changed.";
+                sameAsPreviousShiftStatus.textContent = "Previous checklist from " + (option.dataset.previousPerformer || "another profile") + " is linked to this submission. Complete only fields that changed.";
             }
         }
 
         if (!registrationSelect) {
             return;
         }
+
+        selectVehicleButton?.addEventListener("click", function () {
+            const option = registrationSelect.selectedOptions[0];
+            if (!option || !option.value) {
+                if (checklistTemplateName) {
+                    checklistTemplateName.textContent = "Select a registration before loading the checklist.";
+                }
+                return;
+            }
+
+            setValue(callsignInput, option.dataset.callsign, false);
+            const frequency = frequencyInput?.value || "daily";
+            const callsign = callsignInput?.value || option.dataset.callsign || "";
+            window.location.href = `/DailyVehicleChecklist?frequency=${encodeURIComponent(frequency)}&registration=${encodeURIComponent(option.value)}&callsign=${encodeURIComponent(callsign)}`;
+        });
 
         registrationSelect.addEventListener("change", function () {
             applyVehicle(registrationSelect.selectedOptions[0], true);
@@ -413,34 +954,53 @@
                 sameAsPreviousShiftStatus.textContent = "Fresh inspection started for this registration.";
             }
         });
+        callsignInput?.addEventListener("input", function () {
+            updateEquipmentLink(registrationSelect.selectedOptions[0]);
+        });
 
         sameAsPreviousShiftButton?.addEventListener("click", applyPreviousShift);
-        [
-            kilometresInput,
-            fuelLevelInput,
-            vehicleStatusInput,
-            lightsStatusInput,
-            sirenStatusInput,
-            warningLightsStatusInput,
-            tyresStatusInput,
-            opsRadioStatusInput,
-            damageTypeInput,
-            damageSeverityInput,
-            damageNotesInput,
-            checklistNotesInput
-        ].forEach(function (input) {
+        schematicTabs.forEach(function (tab) {
+            tab.addEventListener("click", function () {
+                setSchematicView(tab.dataset.schematicView);
+            });
+        });
+        schematicMarkCanvas?.addEventListener("pointerdown", beginSchematicMark);
+        schematicMarkCanvas?.addEventListener("pointermove", continueSchematicMark);
+        schematicMarkCanvas?.addEventListener("pointerup", finishSchematicMark);
+        schematicMarkCanvas?.addEventListener("pointercancel", finishSchematicMark);
+        schematicMarkCanvas?.addEventListener("pointerleave", finishSchematicMark);
+        undoSchematicMarkButton?.addEventListener("click", undoSchematicMark);
+        clearSchematicMarksButton?.addEventListener("click", clearSchematicMarksForView);
+        document.querySelectorAll(".schematic-view-response summary").forEach(function (summary) {
+            summary.addEventListener("click", function (event) {
+                event.preventDefault();
+            });
+        });
+        schematicReferenceImage?.addEventListener("load", function () {
+            resizeSchematicCanvas();
+            drawSchematicMarks();
+        });
+        window.addEventListener("resize", function () {
+            resizeSchematicCanvas();
+            drawSchematicMarks();
+        });
+        document.querySelectorAll("input[name^='ChecklistResponses'], select[name^='ChecklistResponses'], textarea[name^='ChecklistResponses']").forEach(function (input) {
             input?.addEventListener("change", markManualInspectionChange);
             input?.addEventListener("input", markManualInspectionChange);
         });
 
         configurePreviousShiftButton();
+        loadSchematicMarksFromInput();
+        setSchematicView(vehicleSchematic?.dataset.view || "left");
         applyVehicle(registrationSelect.selectedOptions[0], false);
         const bindVehicleDraft = function () {
             window.VectorShiftDrafts?.bindForm(document.querySelector(".inspection-form"), {
                 key: @Json.Serialize(Model.DraftStorageKey),
                 statusElement: document.getElementById("vehicleDraftStatus"),
                 onAfterRestore: function () {
+                    loadSchematicMarksFromInput();
                     applyVehicle(registrationSelect.selectedOptions[0], false);
+                    drawSchematicMarks();
                 }
             });
         };

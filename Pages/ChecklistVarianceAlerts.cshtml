@@ -1,0 +1,110 @@
+@page
+@model ChecklistVarianceAlertsModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Checklist Variance Alerts";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="variance-screen">
+    <div class="variance-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Readiness Review</div>
+        <h2 class="page-title">Checklist Variance Alerts</h2>
+        <p class="page-subtitle">
+            Variances are listed by checklist date and callsign, so the source checklist is clear.
+        </p>
+
+        @if (!Model.Alerts.Any())
+        {
+            <div class="empty-panel">No open checklist variance alerts.</div>
+        }
+        else
+        {
+            <div class="variance-register" role="table" aria-label="Checklist variance alerts">
+                <div class="variance-row variance-header" role="row">
+                    <span>Date</span>
+                    <span>Callsign</span>
+                    <span>Reg</span>
+                    <span>Area</span>
+                    <span>Item</span>
+                    <span>Field</span>
+                    <span>Previous</span>
+                    <span>Current</span>
+                    <span>Register</span>
+                    <span>Detected by</span>
+                    <span>Source</span>
+                    <span>Review</span>
+                    <span>Action</span>
+                </div>
+
+                @foreach (var alert in Model.Alerts)
+                {
+                    <form class="variance-row variance-item" method="post" asp-page-handler="Review" role="row">
+                        <input type="hidden" name="alertId" value="@alert.Id" />
+                        <span role="cell">@alert.SourceDateUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                        <span role="cell"><strong>@alert.Callsign</strong></span>
+                        <span role="cell">@alert.RegistrationNumber</span>
+                        <span role="cell">@alert.AreaName</span>
+                        <span role="cell" title="@alert.AssetLabel">@alert.AssetLabel</span>
+                        <span role="cell" title="@alert.FieldKey">@alert.FieldKey</span>
+                        <span role="cell" title="@(alert.PreviousValue ?? "N/A")">@(alert.PreviousValue ?? "N/A")</span>
+                        <span role="cell" title="@(alert.NewValue ?? "N/A")">@(alert.NewValue ?? "N/A")</span>
+                        <span role="cell" title="@(alert.RegisterValue ?? "N/A")">@(alert.RegisterValue ?? "N/A")</span>
+                        <span role="cell">@alert.DetectedForName</span>
+                        <span role="cell"><a class="source-link" href="/ChecklistReportDetail?id=@alert.ReportId">Report</a></span>
+                        <span role="cell"><input class="review-input" name="reviewNote" placeholder="Review note" /></span>
+                        <span class="action-cell" role="cell">
+                            <button class="approve-btn" type="submit" name="decision" value="approve">Approve</button>
+                            <button class="reject-btn" type="submit" name="decision" value="reject">Reject</button>
+                        </span>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.variance-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.variance-inner { width: 100%; max-width: 1240px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
+.variance-register { width: min(1180px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.14); border-radius: 6px; overflow-x: auto; background: #fff; text-align: left; }
+.variance-row { display: grid; grid-template-columns: 135px 86px 95px 110px minmax(145px, 1fr) 100px 105px 105px 105px 140px 76px 150px 140px; align-items: center; min-width: 1480px; }
+.variance-header { min-height: 34px; background: #334155; color: #fff; }
+.variance-header span { padding: 0 8px; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+.variance-item { min-height: 36px; margin: 0; border-top: 1px solid rgba(66,84,102,.1); color: #1f2937; }
+.variance-item:nth-child(even) { background: rgba(248,250,252,.72); }
+.variance-item span { padding: 0 8px; color: #52606d; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.variance-item strong { color: #102a3a; font-size: 12px; font-weight: 900; }
+.source-link { color: #126C84; font-weight: 900; text-decoration: none; }
+.source-link:hover { color: #0E5E7A; text-decoration: underline; }
+.review-input { width: 100%; min-height: 28px; border: 1px solid rgba(66,84,102,.22); border-radius: 6px; padding: 0 8px; color: #1f2937; font-size: 12px; font-weight: 800; box-sizing: border-box; }
+.action-cell { display: flex; gap: 6px; align-items: center; }
+.approve-btn, .reject-btn { min-height: 28px; padding: 0 8px; border: 0; border-radius: 6px; color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; }
+.approve-btn { background: #1f6f5b; }
+.reject-btn { background: #943939; }
+@@media (max-width: 780px) {
+    .variance-row { min-width: 1360px; grid-template-columns: 126px 78px 90px 100px 130px 92px 96px 96px 96px 128px 70px 140px 132px; }
+}
+</style>
+
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.SuccessMessage),
+            redirectUrl: "/ChecklistVarianceAlerts",
+            delay: 1200
+        });
+    </script>
+}

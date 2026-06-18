@@ -1,0 +1,157 @@
+@page
+@model EditVehicleModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Vehicle";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var returnUrl = string.IsNullOrWhiteSpace(Model.ReturnUrl) ? "/VehicleRegister" : Model.ReturnUrl;
+}
+
+<div class="edit-vehicle-screen">
+    <div class="edit-vehicle-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Vehicle Register</div>
+        <h2 class="page-title">Edit Vehicle</h2>
+        <p class="page-subtitle">Update the register source of truth for this vehicle. Function and subtype drive the next schematic and checklist assignment layer.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-action-status data-confirmation-duration="1800">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="edit-form">
+            <input asp-for="VehicleId" type="hidden" />
+            <input asp-for="ReturnUrl" type="hidden" />
+
+            <section class="form-section">
+                <div class="section-label">Identity</div>
+                <div class="form-grid">
+                    <label>Registration number<input asp-for="RegistrationNumber" type="text" /></label>
+                    <label>Callsign<input asp-for="Callsign" type="text" /></label>
+                    <label>
+                        Function
+                        <select asp-for="VehicleFunction" id="vehicleFunctionSelect">
+                            <option value="">Select function</option>
+                            <option value="@VehicleTaxonomyService.AmbulanceFunction">Ambulance</option>
+                            <option value="@VehicleTaxonomyService.ResponseVehicleFunction">Response Vehicle</option>
+                        </select>
+                    </label>
+                    <label>
+                        Subtype
+                        <select asp-for="VehicleSubtype" id="vehicleSubtypeSelect">
+                            <option value="">Select subtype</option>
+                            @foreach (var option in Model.VehicleSubtypeOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                            <option value="@EditVehicleModel.CustomSubtypeValue">Create custom subtype</option>
+                        </select>
+                    </label>
+                    <label class="custom-subtype-field @(Model.VehicleSubtype == EditVehicleModel.CustomSubtypeValue ? "" : "is-hidden")" data-custom-subtype-field>
+                        Custom subtype
+                        <input asp-for="CustomVehicleSubtype" id="customVehicleSubtypeInput" type="text" placeholder="Example: Primary Ops Ambulance, IFT Ambulance, ALS RV" />
+                    </label>
+                    <label>Qualification level<input asp-for="QualificationLevel" type="text" placeholder="Optional" /></label>
+                    <label>
+                        Unit Schematic
+                        <select asp-for="UnitSchematicKey">
+                            <option value="">No schematic assigned</option>
+                            @foreach (var schematic in Model.PublishedUnitSchematics)
+                            {
+                                <option value="@schematic.Key">@schematic.Category - @schematic.DisplayName</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-section">
+                <div class="section-label">Register Details</div>
+                <div class="form-grid">
+                    <label>
+                        Assigned area
+                        <select asp-for="Location" asp-items="Model.LocationOptions">
+                            <option value="">Unallocated</option>
+                        </select>
+                    </label>
+                    <label>Status<select asp-for="Status"><option>Active</option><option>Operational</option><option>Operational with notes</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
+                    <label>VIN Number<input asp-for="VinNumber" type="text" /></label>
+                    <label>Chassis Number<input asp-for="ChassisNumber" type="text" /></label>
+                    <label>Vehicle licence number<input asp-for="LicenseNumber" type="text" /></label>
+                    <label>Licence disc expiry<input asp-for="LicenseDiscExpiryDate" type="date" /></label>
+                    <label>Last service date<input asp-for="LastServiceDate" type="date" /></label>
+                    <label>Next service date<input asp-for="NextServiceDate" type="date" /></label>
+                </div>
+            </section>
+
+            <label class="notes-field">Notes<textarea asp-for="Notes" rows="5" placeholder="Vehicle notes, service notes, allocation notes, or manager instruction"></textarea></label>
+
+            <div class="form-actions">
+                <a class="secondary-btn" href="@returnUrl">Back to Register</a>
+                <button class="primary-btn" type="submit">Save Vehicle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.edit-vehicle-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.edit-vehicle-inner { width: 100%; max-width: 1040px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(760px, 94%); margin: 0 auto 20px auto; padding: 12px 16px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: rgba(14,94,122,.08); color: #0E5E7A; font-weight: 800; }
+.edit-form { display: flex; flex-direction: column; align-items: stretch; gap: 18px; }
+.form-section { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); text-align: left; }
+.section-label { margin-bottom: 14px; color: #52606d; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; color: #52606d; font-size: 13px; font-weight: 800; }
+.form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.is-hidden { display: none !important; }
+.notes-field textarea { padding-top: 12px; resize: vertical; }
+.form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.primary-btn, .secondary-btn { min-height: 50px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 900; text-decoration: none; }
+.primary-btn { border: none; background: #126C84; color: #fff; }
+.secondary-btn { border: 1px solid rgba(47,128,168,.24); background: #fff; color: #126C84; }
+@@media (max-width: 760px) { .form-grid, .form-actions { grid-template-columns: 1fr; } .form-section { padding: 14px; } }
+</style>
+
+<script>
+    (function () {
+        const subtypeSelect = document.getElementById("vehicleSubtypeSelect");
+        const customField = document.querySelector("[data-custom-subtype-field]");
+        const customInput = document.getElementById("customVehicleSubtypeInput");
+        if (!subtypeSelect || !customField || !customInput) {
+            return;
+        }
+
+        function syncCustomSubtype() {
+            const isCustom = subtypeSelect.value === @Json.Serialize(EditVehicleModel.CustomSubtypeValue);
+            customField.classList.toggle("is-hidden", !isCustom);
+            customInput.disabled = !isCustom;
+            if (!isCustom) {
+                customInput.value = "";
+            }
+        }
+
+        subtypeSelect.addEventListener("change", syncCustomSubtype);
+        syncCustomSubtype();
+    })();
+</script>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Vehicle register updated."),
+            redirectUrl: @Json.Serialize(returnUrl),
+            delay: 1300
+        });
+    </script>
+}

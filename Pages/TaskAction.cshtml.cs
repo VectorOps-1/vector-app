@@ -40,6 +40,7 @@ public class TaskActionModel : PageModel
             {
                 Id = t.Id,
                 ActionType = t.ActionType,
+                RelatedItemReference = t.RelatedItemReference,
                 InstructionMessage = t.InstructionMessage,
                 AssignedByName = t.AssignedByUser == null ? "Manager" : t.AssignedByUser.FullName,
                 AssignedToName = t.AssignedToUser == null ? "Current user" : t.AssignedToUser.FullName,
@@ -59,6 +60,7 @@ public class TaskActionModel : PageModel
     {
         public int Id { get; set; }
         public string ActionType { get; set; } = string.Empty;
+        public string? RelatedItemReference { get; set; }
         public string? InstructionMessage { get; set; }
         public string AssignedByName { get; set; } = string.Empty;
         public string AssignedToName { get; set; } = string.Empty;

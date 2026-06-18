@@ -4,32 +4,11 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Assigned Task";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
     var task = Model.TaskDetails;
-    var actionUrl = task?.ActionType switch
-    {
-        "Daily Vehicle Readiness" => "/DailyVehicleChecklist",
-        "Complete Checklist" => "/CompleteChecklist",
-        "Report Issue" => "/ReportIssue?module=general",
-        "Upload Personal Documents" => "/PersonalDocuments",
-        "Add New Vehicle" => "/AddItem?type=vehicle",
-        "Add New Equipment" => "/AddItem?type=equipment",
-        "Update Equipment Service Dates" => "/EquipmentService",
-        "Service / Maintenance" => "/EquipmentService",
-        "Add New Stock Item" => "/AddItem?type=stock",
-        "Add Medication" => "/AddItem?type=medication",
-        "Move / Reallocate Vehicle" => "/MoveAsset?asset=vehicle",
-        "Move / Reallocate Equipment" => "/MoveAsset?asset=equipment",
-        "Move / Reallocate Stock" => "/MoveAsset?asset=stock",
-        "Move / Reallocate Medication" => "/MoveAsset?asset=medication",
-        "Receive Stock" => "/Stock",
-        "Issue / Allocate Stock" => "/Stock",
-        "Batch Number Tracking" => "/Stock",
-        "Expiry / Compliance Check" => "/Stock",
-        _ => "/TaskFeedback"
-    };
-    var separator = actionUrl.Contains('?') ? "&" : "?";
+    var actionUrl = task is null ? null : TaskActionCatalog.BuildTaskUrl(task.ActionType, task.Id, task.RelatedItemReference);
 }
 
 <div class="task-action-screen">
@@ -62,7 +41,7 @@
         @if (task is not null)
         {
             <div class="action-row">
-                <a class="menu-btn equipment-btn" href="@(actionUrl + separator + "taskId=" + task.Id + "&taskAccess=true")">Open Assigned Action</a>
+                <a class="menu-btn equipment-btn" href="@actionUrl">Open Assigned Action</a>
                 <a class="menu-btn staff-btn" href="/TaskFeedback?taskId=@task.Id">Submit Feedback / Confirmation</a>
             </div>
         }

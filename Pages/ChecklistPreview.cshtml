@@ -4,22 +4,23 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Checklist Preview";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="preview-screen">
     <div class="preview-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Generated Checklist Preview</div>
-        <h2 class="page-title">Review Checklist Template</h2>
+        <div class="home-label">Uploaded Checklist Preview</div>
+        <h2 class="page-title">Review Uploaded Checklist</h2>
         <p class="page-subtitle">Source file: @Model.FileName</p>
 
         <div class="preview-layout">
             <section class="template-panel">
                 <label class="field-label" for="checklistName">Checklist name</label>
-                <input id="checklistName" class="text-input" type="text" value="Daily Vehicle Checklist" />
+                <input id="checklistName" class="text-input" type="text" value="Daily Vehicle & Equipment Check" />
 
                 <div class="section-card">
                     <div class="section-header">
@@ -67,18 +68,17 @@
             </section>
 
             <aside class="mapping-panel">
-                <div class="mapping-title">Detected structure</div>
-                <div class="mapping-item">Worksheet: Daily Vehicle Readiness</div>
-                <div class="mapping-item">Sections: 2</div>
-                <div class="mapping-item">Checkbox fields: 4</div>
-                <div class="mapping-item">Number fields: 1</div>
-                <div class="mapping-item">Text fields: 1</div>
+                <div class="mapping-title">Import status</div>
+                <div class="mapping-item">File stored for setup reference</div>
+                <div class="mapping-item">Manual checklist building is available in Base</div>
+                <div class="mapping-item">Guided column mapping is Pro</div>
+                <div class="mapping-item">AI-assisted generation is Premium</div>
             </aside>
         </div>
 
         <div class="action-row">
             <a class="menu-btn vehicle-btn" href="/UploadChecklist">Upload Different File</a>
-            <button class="menu-btn equipment-btn" type="button" data-action-confirmation data-confirmation-message="Checklist template saved.">Save Checklist Template</button>
+            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build Checklist Manually</a>
         </div>
     </div>
 </div>

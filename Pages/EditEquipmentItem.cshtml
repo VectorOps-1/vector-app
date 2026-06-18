@@ -1,0 +1,139 @@
+@page
+@model EditEquipmentItemModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Edit Equipment Item";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var returnUrl = string.IsNullOrWhiteSpace(Model.ReturnUrl) ? "/EquipmentRegister?view=register" : Model.ReturnUrl;
+}
+
+<div class="edit-equipment-screen">
+    <div class="edit-equipment-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Equipment Register</div>
+        <h2 class="page-title">Edit Equipment Item</h2>
+        <p class="page-subtitle">Update the equipment register source of truth for this item, serial number, service date, battery flag, and current location.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-action-status data-confirmation-duration="2200">@Model.StatusMessage</div>
+        }
+
+        <form method="post" class="edit-form">
+            <input type="hidden" asp-for="EquipmentItemId" />
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <section class="form-panel">
+                <div class="section-label">Equipment Details</div>
+                <div class="field-grid">
+                    <label>
+                        Name / item
+                        <input asp-for="Name" required />
+                    </label>
+                    <label>
+                        Equipment type
+                        <input asp-for="EquipmentType" placeholder="e.g. Monitor defibrillator, ventilator, syringe driver" />
+                    </label>
+                    <label>
+                        Model
+                        <input asp-for="Model" placeholder="e.g. LP15, Oxylog, LUCAS" />
+                    </label>
+                    <label>
+                        S/N / Asset ID
+                        <input asp-for="SerialOrAssetId" />
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Service And Operational Flags</div>
+                <div class="field-grid">
+                    <label>
+                        Next service date
+                        <input asp-for="NextServiceDate" type="date" />
+                    </label>
+                    <label>
+                        Status
+                        <select asp-for="Status">
+                            <option>N/A</option>
+                            <option>Active</option>
+                            <option>Operational</option>
+                            <option>In storage</option>
+                            <option>Assigned</option>
+                            <option>Out of service</option>
+                            <option>Quarantined</option>
+                            <option>Inactive</option>
+                        </select>
+                    </label>
+                    <label class="check-field">
+                        <input asp-for="BatteryRequired" />
+                        Battery check required
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-panel">
+                <div class="section-label">Allocation</div>
+                <div class="field-grid">
+                    <label>
+                        Assigned base / store / vehicle
+                        <select asp-for="Location" asp-items="Model.LocationOptions">
+                            <option value="">N/A</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="wide-field">
+                    Notes
+                    <textarea asp-for="Notes" rows="4" placeholder="Equipment note, service concern, allocation note, or manager instruction"></textarea>
+                </label>
+            </section>
+
+            <div class="action-row">
+                <a class="menu-btn vehicle-btn" href="@returnUrl">Back To Register</a>
+                <button class="menu-btn equipment-btn" type="submit">Save Equipment Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.edit-equipment-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.edit-equipment-inner { width: 100%; max-width: 1120px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.status-message { width: min(980px, 100%); box-sizing: border-box; margin: 0 auto 16px auto; padding: 12px 16px; border: 1px solid rgba(32,122,99,.24); border-radius: 8px; background: rgba(32,122,99,.10); color: #1f6f5b; font-size: 14px; font-weight: 900; text-align: left; }
+.edit-form { width: min(980px, 100%); margin: 0 auto; display: grid; gap: 14px; text-align: left; }
+.form-panel { padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.78); }
+.section-label { margin-bottom: 12px; color: #52606d; font-size: 13px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+label { display: grid; gap: 8px; color: #425466; font-size: 13px; font-weight: 900; }
+input, select, textarea { width: 100%; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #fff; color: #1f2937; font: inherit; box-sizing: border-box; }
+input, select { min-height: 46px; padding: 0 14px; }
+textarea { padding: 12px 14px; resize: vertical; }
+.check-field { min-height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #fff; }
+.check-field input { width: 18px; height: 18px; min-height: 0; padding: 0; }
+.wide-field { margin-top: 14px; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { min-height: 52px; border: none; }
+@@media (max-width: 720px) {
+    .field-grid, .action-row { grid-template-columns: 1fr; }
+}
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Equipment item updated."),
+            redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
+            delay: 1300
+        });
+    </script>
+}

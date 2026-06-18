@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Report Issue";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="issue-screen">
@@ -55,7 +56,16 @@
                 </label>
 
                 <label>Module<select asp-for="Module"><option>General</option><option>Vehicle</option><option>Equipment</option><option>Stock</option><option>Medication</option><option>Staff</option><option>Checklist</option></select></label>
-                <label>Issue type<select asp-for="IssueType"><option value="">Select issue type</option><option>Damage</option><option>Fault / failure</option><option>Missing item</option><option>Expired item</option><option>Low stock</option><option>Incorrect allocation</option><option>Safety concern</option><option>Other</option></select></label>
+                <label>
+                    Issue type
+                    <select asp-for="IssueType" asp-items="Model.IssueTypeOptions" data-other-select="issue-type">
+                        <option value="">Select issue type</option>
+                    </select>
+                </label>
+                <label class="other-option-field is-hidden" data-other-field="issue-type" hidden>
+                    Name this issue type
+                    <input asp-for="IssueTypeOther" type="text" placeholder="Example: Hygiene concern" />
+                </label>
                 <label>Related asset / item<input asp-for="RelatedItem" type="text" placeholder="Callsign, asset ID, stock item, medication, or staff name" /></label>
                 <label>
                     Location

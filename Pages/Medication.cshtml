@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Medication";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="module-screen">
@@ -14,31 +15,26 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Operations Module</div>
         <h2 class="page-title">Medication</h2>
-        <p class="page-subtitle">Medication register, stock levels, dispensing, batch tracking, expiry, and issue control</p>
+        <p class="page-subtitle">Choose the exact medication action from one place.</p>
 
         <div class="module-grid">
-            <a class="module-card primary" href="/MedicationRegister">
-                <strong>Search Medication</strong>
-                <span>Find medication by name, schedule, batch, quantity, expiry, location, or allocation</span>
-            </a>
-
-            <a class="module-card" href="/MedicationRegister">
+            <a class="module-card primary" href="/MedicationRegister?view=register">
                 <strong>Medication Register</strong>
-                <span>All medication, batch, quantity, expiry, and location records</span>
+                <span>Open the full medication register by medicine, batch, quantity, location, and expiry. Use the search field inside the register when needed.</span>
             </a>
 
-            <a class="module-card" href="/AddItem?type=medication">
+            <a class="module-card primary" href="/AddItem?type=medication">
                 <strong>Add Medication</strong>
                 <span>Add one medication item into the register</span>
             </a>
 
             <a class="module-card" href="/MoveAsset?asset=medication" data-move-asset="medication">
-                <strong>Move / Reallocate Medication</strong>
-                <span>Move medication between bases, stores, vehicles, kits, or operating areas</span>
+                <strong>Move / Reallocate</strong>
+                <span>Move medication between stores, bases, vehicles, or operational areas</span>
             </a>
 
             <a class="module-card danger" href="/ReportIssue?module=medication">
-                <strong>Medication Issue</strong>
+                <strong>Report Issue</strong>
                 <span>Report missing, expired, damaged, or stock-related medication issues</span>
             </a>
 
@@ -47,71 +43,6 @@
                 <span>Send medication stock, batch, or expiry actions to a user</span>
             </a>
         </div>
-
-        <section class="medication-panel">
-            <div class="section-label">Dispensing Record Placeholder</div>
-            <div class="form-grid">
-                <div class="field-group">
-                    <label class="field-label">Medication name</label>
-                    <input class="text-input" type="text" placeholder="Medication name" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Medication class</label>
-                    <select class="text-input">
-                        <option>Controlled Medication</option>
-                        <option>Non-Controlled Medication</option>
-                    </select>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Batch number</label>
-                    <input class="text-input" type="text" placeholder="Batch number" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Expiry date</label>
-                    <input class="text-input" type="date" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Quantity dispensed</label>
-                    <input class="text-input" type="number" placeholder="Quantity" />
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Dispensed to</label>
-                    <select class="text-input">
-                        <option>Base</option>
-                        <option>Callsign</option>
-                        <option>Practitioner</option>
-                        <option>Crew</option>
-                    </select>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Destination / recipient detail</label>
-                    <select class="text-input">
-                        <option value="">Select destination / recipient location</option>
-                        @foreach (var location in Model.LocationOptions)
-                        {
-                            <option value="@location.Value">@location.Text</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Storage location</label>
-                    <select class="text-input">
-                        <option value="">Select storage location</option>
-                        @foreach (var location in Model.LocationOptions)
-                        {
-                            <option value="@location.Value">@location.Text</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        </section>
     </div>
 </div>
 
@@ -215,56 +146,8 @@
     border-top: 6px solid #126C84;
 }
 
-.medication-panel {
-    margin-top: 30px;
-    padding: 22px;
-    border: 1px solid rgba(66, 84, 102, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.58);
-    text-align: left;
-}
-
-.section-label {
-    margin-bottom: 16px;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px 24px;
-}
-
-.field-group {
-    text-align: left;
-}
-
-.field-label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #425466;
-}
-
-.text-input {
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid rgba(66, 84, 102, 0.24);
-    border-radius: 8px;
-    background: #ffffff;
-    font-size: 16px;
-    color: #111827;
-    box-sizing: border-box;
-}
-
 @@media (max-width: 780px) {
-    .module-grid,
-    .form-grid {
+    .module-grid {
         grid-template-columns: 1fr;
     }
 }

@@ -3,9 +3,15 @@
 @using vector_app_local.Services
 @inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Checklist Builder";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    ViewData["Title"] = "Checklist Management";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var showRegister = string.Equals(Model.ViewMode, "register", StringComparison.OrdinalIgnoreCase);
+    var pageTitle = showRegister ? "Checklist Register" : "Checklist Management";
+    var pageSubtitle = showRegister
+        ? "Open saved checklist templates by vehicle type and function."
+        : "Choose whether to build a new checklist or open the checklist register.";
 }
 
 <div class="checklist-type-screen">
@@ -13,46 +19,200 @@
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Management Action</div>
-        <h2 class="page-title">Checklist Builder</h2>
-        <p class="page-subtitle">Choose the operational checklist area to build or review.</p>
+        <h2 class="page-title">@pageTitle</h2>
+        <p class="page-subtitle">@pageSubtitle</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        <div class="type-grid">
-            <a class="type-card vehicle-card" href="/EditVehicleChecklist?checklist=daily-vehicle">
-                <span>Vehicle</span>
-                <strong>Daily Vehicle Readiness</strong>
-                <p>Vehicle details, operational checks, schematic section, carried equipment controls, and same-as-previous rules.</p>
-            </a>
+        @if (!showRegister)
+        {
+            <div class="checklist-path-grid" aria-label="Checklist management options">
+                <a class="path-card build-card" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">
+                    <span>Build New Checklist</span>
+                    <strong>Create Template</strong>
+                    <p>Build a new vehicle readiness checklist with sections, rows, columns, subitems, and register-linked fields.</p>
+                </a>
 
-            <a class="type-card equipment-card" href="/EditEquipmentChecklist">
-                <span>Equipment</span>
-                <strong>Standalone Equipment</strong>
-                <p>Non-vehicle equipment checks, servicing, maintenance, and compliance templates.</p>
-            </a>
-        </div>
+                <a class="path-card register-card" href="/EditChecklist?view=register">
+                    <span>Checklist Register</span>
+                    <strong>Checklist Register</strong>
+                    <p>Open saved templates by vehicle type and function, then review, edit, publish, upload, or view reports.</p>
+                </a>
+
+                <a class="path-card schematic-card" href="/VehicleSchematicLibrary">
+                    <span>Vehicle Schematics</span>
+                    <strong>Schematic Library</strong>
+                    <p>Assign published vehicle schematics to ambulance and response vehicle types used in live checks.</p>
+                </a>
+            </div>
+        }
+
+        @if (showRegister)
+        {
+        <section class="saved-template-panel" id="checklist-register">
+            <div class="source-header">
+                <div>
+                    <div class="source-label">Checklist Register</div>
+                    <div class="source-title">Checklist templates by vehicle type and function</div>
+                </div>
+                <div class="source-actions">
+                    <a class="source-secondary-btn" href="/VehicleSchematicLibrary">Unit Schematic Library</a>
+                    <a class="source-secondary-btn" href="/UploadChecklist">Upload Existing Checklist</a>
+                    <a class="source-secondary-btn" href="/ChecklistReports">Checklist Reports</a>
+                    <a class="source-upload-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build New Checklist</a>
+                </div>
+            </div>
+
+            @if (Model.SavedTemplates.Count == 0)
+            {
+                <div class="empty-template-state">
+                    No checklist register entries yet. Build a new checklist to create the first entry.
+                </div>
+            }
+            else
+            {
+                <div class="register-list" aria-label="Checklist register entries">
+                    @foreach (var template in Model.SavedTemplates)
+                    {
+                        <article class="register-item">
+                            <div class="register-main">
+                                <div class="register-kicker">@template.TargetVehicleType</div>
+                                <h3>@template.RegisterName</h3>
+                                <p>@template.DisplayName</p>
+                            </div>
+
+                            <div class="register-meta">
+                                <span><strong>Version</strong> @template.Version</span>
+                                <span><strong>Type</strong> @template.ChecklistType</span>
+                                <span><strong>Source</strong> @template.SourceType</span>
+                            </div>
+
+                            <div class="register-status">
+                                <mark class="template-status @(template.IsPublished ? "published" : "draft")">@template.StatusLabel</mark>
+                                <small>@template.ScopeLabel</small>
+                            </div>
+
+                            <div class="template-actions">
+                                <a class="primary-link" href="/ChecklistTemplateView?templateId=@template.Id">Open Crew View</a>
+                                <a href="/EditVehicleChecklist?checklist=@template.ChecklistRoute&mode=edit&templateId=@template.Id">Edit</a>
+                                @if (Model.CanPublishChecklist)
+                                {
+                                    <a href="/PublishChecklist?templateId=@template.Id">Publish</a>
+                                }
+                                @if (Model.CanDeleteChecklist)
+                                {
+                                    <form method="post" asp-page-handler="Delete" asp-route-templateId="@template.Id" class="template-delete-form">
+                                        <button class="template-delete" type="button" aria-label="Delete checklist" title="Delete checklist" data-checklist-delete-open>
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M3 6h18" />
+                                                <path d="M8 6V4h8v2" />
+                                                <path d="M19 6l-1 14H6L5 6" />
+                                                <path d="M10 11v5" />
+                                                <path d="M14 11v5" />
+                                            </svg>
+                                        </button>
+                                        <div class="template-delete-confirm" hidden>
+                                            <span>Delete this checklist?</span>
+                                            <div>
+                                                <button class="template-confirm-delete" type="submit">Confirm</button>
+                                                <button class="template-cancel-delete" type="button" data-checklist-delete-cancel>Cancel</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+        }
     </div>
 </div>
 
+<script>
+document.querySelectorAll("[data-checklist-delete-open]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        const form = button.closest(".template-delete-form");
+        const panel = form?.querySelector(".template-delete-confirm");
+        if (!panel) {
+            return;
+        }
+
+        button.hidden = true;
+        panel.hidden = false;
+    });
+});
+
+document.querySelectorAll("[data-checklist-delete-cancel]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        const form = button.closest(".template-delete-form");
+        const panel = form?.querySelector(".template-delete-confirm");
+        const deleteButton = form?.querySelector("[data-checklist-delete-open]");
+        if (!panel || !deleteButton) {
+            return;
+        }
+
+        panel.hidden = true;
+        deleteButton.hidden = false;
+    });
+});
+</script>
+
 <style>
 .checklist-type-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }
-.checklist-type-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px 50px 20px; box-sizing: border-box; }
+.checklist-type-inner { width: 100%; max-width: 1040px; margin: 0 auto; text-align: center; padding: 40px 20px 50px 20px; box-sizing: border-box; }
 .page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
 .client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1f2937; }
 .page-subtitle { margin: 0 0 26px 0; font-size: 16px; font-weight: 600; color: #6b7280; }
 .status-message { margin: 0 auto 22px auto; padding: 12px 16px; border: 1px solid rgba(31,111,91,.26); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-size: 14px; font-weight: 800; text-align: center; }
-.type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; text-align: left; }
-.type-card { display: flex; flex-direction: column; min-height: 210px; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); color: #1f2937; text-decoration: none; box-sizing: border-box; }
-.type-card:hover { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10); }
-.type-card span { margin-bottom: 28px; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
-.type-card strong { margin-bottom: 10px; font-size: 22px; font-weight: 900; }
-.type-card p { margin: 0; color: #52606d; font-size: 14px; line-height: 1.45; font-weight: 700; }
-.vehicle-card span { color: #0E5E7A; }
-.equipment-card span { color: #555B7A; }
-@@media (max-width: 760px) { .type-grid { grid-template-columns: 1fr; } .type-card { min-height: 180px; } }
+.checklist-path-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; text-align: left; }
+.path-card { display: flex; flex-direction: column; min-height: 156px; padding: 20px; border: 1px solid rgba(66,84,102,.16); border-top: 5px solid #0E5E7A; border-radius: 8px; background: rgba(255,255,255,.72); color: #1f2937; text-decoration: none; box-sizing: border-box; }
+.path-card:hover { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10); }
+.path-card span { margin-bottom: 18px; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: #0E5E7A; }
+.path-card strong { margin-bottom: 8px; font-size: 21px; font-weight: 900; }
+.path-card p { margin: 0; color: #52606d; font-size: 13px; line-height: 1.42; font-weight: 700; }
+.build-card { border-top-color: #1f6f5b; }
+.schematic-card { border-top-color: #7a5d0e; }
+.saved-template-panel { margin: 22px 0 0 0; padding: 20px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); text-align: left; scroll-margin-top: 88px; }
+.source-header { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; }
+.source-label { margin-bottom: 4px; color: #5f6b7a; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.source-title { color: #1f2937; font-size: 18px; font-weight: 900; }
+.source-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.source-upload-btn { padding: 12px 16px; border-radius: 8px; background: #0E5E7A; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 900; white-space: nowrap; }
+.source-secondary-btn { padding: 12px 14px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; color: #0E5E7A; text-decoration: none; font-size: 13px; font-weight: 900; white-space: nowrap; }
+.empty-template-state { padding: 16px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; background: rgba(248,250,252,.8); color: #64748b; font-size: 13px; font-weight: 800; text-align: center; }
+.register-list { display: grid; gap: 7px; }
+.register-item { display: grid; grid-template-columns: minmax(220px, 1.35fr) minmax(250px, 1.2fr) minmax(125px, .6fr) auto; gap: 10px; align-items: center; min-height: 58px; padding: 9px 10px 9px 12px; border: 1px solid rgba(66,84,102,.14); border-left: 4px solid #0E5E7A; border-radius: 8px; background: #ffffff; color: #334155; }
+.register-kicker { margin-bottom: 1px; color: #0E5E7A; font-size: 10px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.register-main h3 { margin: 0; color: #1f2937; font-size: 15px; line-height: 1.16; font-weight: 900; }
+.register-main p { margin: 2px 0 0 0; color: #64748b; font-size: 11px; line-height: 1.2; font-weight: 800; }
+.register-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: #425466; font-size: 11px; line-height: 1.2; font-weight: 800; }
+.register-meta strong { color: #64748b; font-size: 9px; letter-spacing: .7px; text-transform: uppercase; }
+.register-status { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
+.register-status small { color: #64748b; font-size: 10px; line-height: 1.15; font-weight: 800; }
+.template-status { display: inline-flex; align-items: center; min-height: 21px; padding: 0 8px; border-radius: 999px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.template-status.published { background: rgba(31,111,91,.12); color: #1f6f5b; }
+.template-status.draft { background: rgba(180,113,28,.12); color: #8a4f10; }
+.template-actions { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
+.template-actions form { margin: 0; }
+.template-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 0 9px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: #f8fafc; color: #0E5E7A; font-size: 11px; font-weight: 900; text-decoration: none; white-space: nowrap; }
+.template-actions a.primary-link { background: #0E5E7A; color: #ffffff; }
+.template-delete { width: 32px; min-height: 30px; border: 1px solid rgba(148,57,57,.22); border-radius: 8px; background: #ffffff; color: #943939; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.template-delete:hover { background: rgba(148,57,57,.08); border-color: rgba(148,57,57,.42); }
+.template-delete svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.template-delete-confirm { display: grid; gap: 6px; min-width: 176px; padding: 7px; border: 1px solid rgba(148,57,57,.22); border-radius: 8px; background: rgba(148,57,57,.06); color: #7f2f2f; font-size: 11px; font-weight: 900; }
+.template-delete-confirm[hidden] { display: none; }
+.template-delete-confirm div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.template-confirm-delete, .template-cancel-delete { min-height: 28px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 900; }
+.template-confirm-delete { border: 1px solid rgba(148,57,57,.36); background: #943939; color: #ffffff; }
+.template-cancel-delete { border: 1px solid rgba(66,84,102,.18); background: #ffffff; color: #425466; }
+@@media (max-width: 980px) { .register-item { grid-template-columns: 1fr; align-items: stretch; } .template-actions { justify-content: flex-start; flex-wrap: wrap; } }
+@@media (max-width: 900px) { .checklist-path-grid { grid-template-columns: 1fr; } }
+@@media (max-width: 760px) { .path-card { min-height: 140px; } .source-header { align-items: stretch; flex-direction: column; } .source-actions { flex-direction: column; justify-content: stretch; } .source-upload-btn, .source-secondary-btn { text-align: center; } }
 </style>

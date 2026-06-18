@@ -1,0 +1,122 @@
+@page
+@model StaffRegisterPreviewModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Staff Register Preview";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="preview-screen">
+    <div class="preview-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Generated Staff Register Preview</div>
+        <h2 class="page-title">Review Staff Records</h2>
+        <p class="page-subtitle">Source file: @Model.FileName</p>
+
+        <div class="preview-layout">
+            <section class="register-panel">
+                <div class="table-wrap">
+                    <table class="register-table">
+                        <thead>
+                            <tr>
+                                <th>Staff ID</th>
+                                <th>Full Name</th>
+                                <th>National ID</th>
+                                <th>Email</th>
+                                <th>Cell Number</th>
+                                <th>Access Role</th>
+                                <th>Clinical Scope</th>
+                                <th>Practitioner Number</th>
+                                <th>Annual Licence Expiry</th>
+                                <th>CPD Status</th>
+                                <th>CPD Valid Until</th>
+                                <th>Assigned Area</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input value="STF-001" /></td>
+                                <td><input value="Test Staff User" /></td>
+                                <td><input placeholder="National ID" /></td>
+                                <td><input value="staff@test.local" /></td>
+                                <td><input placeholder="Cell number" /></td>
+                                <td><select><option>Staff</option><option>Operational Management</option><option>Senior Management</option></select></td>
+                                <td><select><option>N/A - non-clinical</option><option>Emergency Care Practitioner (ECP)</option><option>Critical Care Assistant (CCA)</option><option>Advanced Emergency Assistant (AEA)</option><option>Intermediate Life Support (ILS)</option><option>Basic Life Support (BLS)</option></select></td>
+                                <td><input placeholder="Practitioner number" /></td>
+                                <td><input type="date" /></td>
+                                <td><select><option>N/A</option><option>Compliant</option><option>Pending</option><option>Non-compliant</option><option>Expired</option><option>Under review</option></select></td>
+                                <td><input type="date" /></td>
+                                <td><input placeholder="Select or map area" /></td>
+                                <td><select><option>Active</option><option>Inactive</option></select></td>
+                            </tr>
+                            <tr>
+                                <td><input value="OPS-001" /></td>
+                                <td><input value="Test Operational Manager" /></td>
+                                <td><input placeholder="National ID" /></td>
+                                <td><input value="ops@test.local" /></td>
+                                <td><input placeholder="Cell number" /></td>
+                                <td><select><option>Operational Management</option><option>Staff</option><option>Senior Management</option></select></td>
+                                <td><select><option>N/A - non-clinical</option><option>Critical Care Assistant (CCA)</option><option>Emergency Care Practitioner (ECP)</option><option>Advanced Emergency Assistant (AEA)</option><option>Intermediate Life Support (ILS)</option><option>Basic Life Support (BLS)</option></select></td>
+                                <td><input placeholder="Practitioner number" /></td>
+                                <td><input type="date" /></td>
+                                <td><select><option>N/A</option><option>Compliant</option><option>Pending</option><option>Non-compliant</option><option>Expired</option><option>Under review</option></select></td>
+                                <td><input type="date" /></td>
+                                <td><input placeholder="Select or map area" /></td>
+                                <td><select><option>Active</option><option>Inactive</option></select></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <aside class="mapping-panel">
+                <div class="mapping-title">Detected fields</div>
+                <div class="mapping-item">Staff ID</div>
+                <div class="mapping-item">Full Name</div>
+                <div class="mapping-item">National ID</div>
+                <div class="mapping-item">Email</div>
+                <div class="mapping-item">Cell Number</div>
+                <div class="mapping-item">Role / Access Level</div>
+                <div class="mapping-item">Clinical Qualification / Scope</div>
+                <div class="mapping-item">Practitioner Number</div>
+                <div class="mapping-item">Annual Licence Expiry</div>
+                <div class="mapping-item">CPD Compliance Status</div>
+                <div class="mapping-item">CPD Compliance Valid Until</div>
+                <div class="mapping-item">Assigned Area</div>
+                <div class="mapping-item">Status</div>
+            </aside>
+        </div>
+
+        <div class="action-row">
+            <a class="menu-btn vehicle-btn" href="/UploadStaffRegister">Upload Different File</a>
+            <a class="menu-btn equipment-btn" href="/StaffRegister">Open Staff Register</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.preview-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.preview-inner { width: 100%; max-width: 1180px; margin: 0 auto; text-align: center; padding: 40px 20px 30px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #2f2f2f; }
+.page-subtitle { margin: 0 0 28px 0; font-size: 16px; font-weight: 500; color: #6b7280; }
+.preview-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; text-align: left; }
+.register-panel, .mapping-panel { border: 1px solid rgba(66, 84, 102, 0.18); border-radius: 8px; background: rgba(255, 255, 255, 0.58); padding: 22px; }
+.table-wrap { overflow-x: auto; }
+.register-table { width: 100%; min-width: 1120px; border-collapse: collapse; }
+.register-table th { padding: 12px 10px; border-bottom: 1px solid rgba(66, 84, 102, 0.24); font-size: 13px; font-weight: 800; color: #425466; text-align: left; }
+.register-table td { padding: 12px 10px; border-bottom: 1px solid rgba(66, 84, 102, 0.12); }
+.register-table input, .register-table select { width: 100%; min-width: 120px; padding: 10px 12px; border: 1px solid rgba(66, 84, 102, 0.22); border-radius: 8px; font-size: 14px; color: #111827; box-sizing: border-box; }
+.mapping-title { margin-bottom: 14px; font-size: 13px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #5f6b7a; }
+.mapping-item { padding: 12px 0; border-bottom: 1px solid rgba(66, 84, 102, 0.14); font-size: 14px; font-weight: 700; color: #425466; }
+.action-row { display: flex; justify-content: center; gap: 24px; margin-top: 28px; flex-wrap: wrap; }
+.action-row .menu-btn { min-width: 260px; border: none; }
+@@media (max-width: 860px) { .preview-layout { grid-template-columns: 1fr; } }
+</style>

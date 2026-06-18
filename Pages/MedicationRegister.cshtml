@@ -4,90 +4,243 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Medication Register";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var encodedReturnUrl = Uri.EscapeDataString(Model.CurrentReturnUrl);
 }
 
 <div class="med-register-screen">
     <div class="med-register-inner">
         <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
         <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Medication Register</div>
-        <h2 class="page-title">All Medication</h2>
-        <p class="page-subtitle">Search every medication by name, schedule, quantity, batch number, location, last allocation, and expiry.</p>
+        <div class="home-label">@Model.PageHeading</div>
+        <h2 class="page-title">@Model.PageHeading</h2>
+        <p class="page-subtitle">@Model.PageSubtitle</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-action-status data-confirmation-duration="2200" role="status">@Model.StatusMessage</div>
+        }
 
         <form class="toolbar" method="get">
+            <input type="hidden" name="view" value="@Model.ViewMode" />
             <input class="search-input" asp-for="SearchTerm" placeholder="Search name, schedule, batch, location, allocation, or person" />
+            <select class="group-select" asp-for="GroupBy">
+                <option value="name">Group by medication name</option>
+                <option value="location">Group by location</option>
+            </select>
             <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
-            <a class="menu-btn staff-btn toolbar-btn" href="/MedicationRegister">All</a>
+            <a class="menu-btn staff-btn toolbar-btn" href="/MedicationRegister?view=register&GroupBy=@Model.GroupBy">All</a>
             <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=medication">Add Medication</a>
             <a class="menu-btn report-btn toolbar-btn" href="/ReportIssue?module=medication">Report Issue</a>
         </form>
 
-        @if (!Model.MedicationItems.Any())
+        @if (!Model.ShouldShowResults)
+        {
+            <div class="empty-panel">Enter a search term to find medication records.</div>
+        }
+        else if (!Model.MedicationItems.Any())
         {
             <div class="empty-panel">No medication records found.</div>
         }
         else
         {
-            <div class="register-table" role="table" aria-label="Medication register">
-                <div class="register-header" role="row">
-                    <div role="columnheader">Name</div>
-                    <div role="columnheader">Schedule</div>
-                    <div role="columnheader">Quantity</div>
-                    <div role="columnheader">Batch Number</div>
-                    <div role="columnheader">Location</div>
-                    <div role="columnheader">Last Allocation</div>
-                    <div role="columnheader">Expiry Date</div>
-                </div>
-
-                @foreach (var item in Model.MedicationItems)
+            <div class="register-list" aria-label="Medication register">
+                @foreach (var group in Model.MedicationGroups)
                 {
-                    <div class="register-row" role="row">
-                        <div class="med-identity" role="cell">
-                            <strong>@item.Name</strong>
-                            <span>@(item.MedicationType ?? "Type not set")</span>
+                    <details class="register-group" aria-label="@group.Label">
+                        <summary class="group-heading">
+                            <h3>@group.Label</h3>
+                            <span>@group.Items.Count item@(group.Items.Count == 1 ? string.Empty : "s")</span>
+                        </summary>
+
+                        <div class="group-body">
+                            <div class="register-header" role="row">
+                                <div role="columnheader">Medication / type</div>
+                                <div role="columnheader">Schedule</div>
+                                <div role="columnheader">Quantity</div>
+                                <div role="columnheader">Batch</div>
+                                <div role="columnheader">Expiry</div>
+                                <div role="columnheader">Location</div>
+                                <div role="columnheader">Status</div>
+                            </div>
+
+                            @foreach (var item in group.Items)
+                            {
+                                <details class="register-row">
+                                    <summary class="register-summary">
+                                        <span class="med-identity">
+                                            <strong>@item.Name</strong>
+                                            <small>@(item.MedicationType ?? "Type not set")</small>
+                                        </span>
+                                        <span>@(item.Schedule ?? "N/A")</span>
+                                        <span>@(item.Quantity?.ToString() ?? "Not set")</span>
+                                        <span>@(item.BatchNumber ?? "No batch")</span>
+                                        <span>@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                        <span>@(item.StorageLocation ?? "Not set")</span>
+                                        <span><mark class="status-pill">@item.Status</mark></span>
+                                    </summary>
+
+                                    <div class="register-details">
+                                        <div class="detail-grid">
+                                            <div>
+                                                <span>Medication name</span>
+                                                <strong>@item.Name</strong>
+                                            </div>
+                                            <div>
+                                                <span>Medication code</span>
+                                                <strong>@(item.MedicationCode ?? "Not set")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Type / form</span>
+                                                <strong>@(item.MedicationType ?? "Type not set")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Schedule</span>
+                                                <strong>@(item.Schedule ?? "N/A")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Quantity</span>
+                                                <strong>@(item.Quantity?.ToString() ?? "Not set")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Batch number</span>
+                                                <strong>@(item.BatchNumber ?? "No batch")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Expiry date</span>
+                                                <strong>@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Current location</span>
+                                                <strong>@(item.StorageLocation ?? "Not set")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Last allocation</span>
+                                                <strong>@(item.LastAllocationLocation ?? "No allocation recorded")</strong>
+                                                <small>@(item.LastAllocatedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No date")</small>
+                                            </div>
+                                            <div>
+                                                <span>Allocated by</span>
+                                                <strong>@(item.LastAllocatedByName ?? "No user")</strong>
+                                            </div>
+                                            <div>
+                                                <span>Created by</span>
+                                                <strong>@item.CreatedByName</strong>
+                                                <small>@item.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</small>
+                                            </div>
+                                            <div>
+                                                <span>Status</span>
+                                                <strong>@item.Status</strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="row-actions">
+                                            <a href="/EditMedicationItem?medicationItemId=@item.Id&returnUrl=@encodedReturnUrl">Edit</a>
+                                            <a href="/MoveAsset?asset=medication&assetId=@item.Id&returnUrl=@encodedReturnUrl">Move</a>
+                                            <a href="/ReportIssue?module=medication">Issue</a>
+                                            <form method="post" asp-page-handler="Delete" class="delete-row-form">
+                                                <input type="hidden" name="medicationItemId" value="@item.Id" />
+                                                <input type="hidden" name="returnUrl" value="@Model.CurrentReturnUrl" />
+                                                <button type="button" class="delete-row-btn" aria-label="Delete @item.Name" title="Delete">Delete</button>
+                                                <div class="delete-confirm-panel" hidden>
+                                                    <span>Delete this medication item?</span>
+                                                    <div class="delete-confirm-actions">
+                                                        <button type="submit" class="delete-confirm-btn">Confirm</button>
+                                                        <button type="button" class="delete-cancel-btn">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </details>
+                            }
                         </div>
-                        <div role="cell">@(item.Schedule ?? "Not set")</div>
-                        <div role="cell">@(item.Quantity?.ToString() ?? "Not set")</div>
-                        <div role="cell">@(item.BatchNumber ?? "No batch")</div>
-                        <div role="cell">@(item.StorageLocation ?? "Not set")</div>
-                        <div role="cell">
-                            <strong>@(item.LastAllocationLocation ?? "No allocation recorded")</strong>
-                            <span>@(item.LastAllocatedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "No date")</span>
-                            <span>@(item.LastAllocatedByName ?? "No user")</span>
-                        </div>
-                        <div role="cell">@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not set")</div>
-                    </div>
+                    </details>
                 }
             </div>
         }
     </div>
 </div>
 
+<script>
+document.addEventListener("click", function (event) {
+    const trigger = event.target.closest(".delete-row-btn");
+    if (trigger) {
+        const form = trigger.closest(".delete-row-form");
+        form.querySelector(".delete-confirm-panel").hidden = false;
+        trigger.hidden = true;
+        return;
+    }
+
+    const cancel = event.target.closest(".delete-cancel-btn");
+    if (cancel) {
+        const form = cancel.closest(".delete-row-form");
+        form.querySelector(".delete-confirm-panel").hidden = true;
+        form.querySelector(".delete-row-btn").hidden = false;
+    }
+});
+</script>
+
 <style>
 .med-register-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
-.med-register-inner { width: 100%; max-width: 1180px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.med-register-inner { width: 100%; max-width: 1220px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
 .page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
 .client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
-.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
-.toolbar { width: min(1120px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 130px 100px 150px 140px; gap: 12px; }
-.search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
+.page-subtitle { width: min(820px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.toolbar { width: min(1120px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) 210px 110px 90px 145px 130px; gap: 12px; }
+.search-input, .group-select { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
+.status-message { width: min(1120px, 100%); box-sizing: border-box; margin: 0 auto 16px auto; padding: 12px 16px; border: 1px solid rgba(32,122,99,.24); border-radius: 8px; background: rgba(32,122,99,.10); color: #1f6f5b; font-size: 14px; font-weight: 900; text-align: left; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.register-table { width: min(1120px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.register-header, .register-row { display: grid; grid-template-columns: minmax(190px, 1.2fr) 90px 90px minmax(130px, .8fr) minmax(140px, .8fr) minmax(200px, 1fr) 120px; gap: 14px; align-items: center; padding: 14px 16px; }
-.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
-.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
-.med-identity, .register-row [role="cell"]:nth-child(6) { display: flex; flex-direction: column; gap: 4px; }
-.med-identity strong, .register-row [role="cell"]:nth-child(6) strong { color: #1f2937; font-size: 15px; }
-.med-identity span, .register-row [role="cell"]:nth-child(6) span { color: #6b7280; font-size: 13px; }
-.status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
-@@media (max-width: 960px) {
-    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
-    .register-header { display: none; }
-    .register-row { gap: 8px; }
+.register-list { width: min(1120px, 100%); margin: 0 auto; display: grid; gap: 12px; text-align: left; }
+.register-group { border: 1px solid rgba(66,84,102,.16); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.78); }
+.group-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; min-height: 42px; padding: 7px 12px; border-left: 4px solid #0E5E7A; background: rgba(248,250,252,.9); cursor: pointer; list-style: none; }
+.group-heading::-webkit-details-marker { display: none; }
+.group-heading::before { content: "+"; display: inline-flex; width: 22px; height: 22px; margin-right: 8px; align-items: center; justify-content: center; border-radius: 50%; background: #334155; color: #fff; font-size: 14px; font-weight: 900; flex: 0 0 auto; }
+.register-group[open] > .group-heading::before { content: "-"; }
+.group-heading h3 { margin: 0; color: #1f2937; font-size: 15px; font-weight: 900; flex: 1; }
+.group-heading span { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .8px; }
+.group-body { overflow-x: auto; }
+.register-header, .register-summary { display: grid; grid-template-columns: minmax(180px, 1.2fr) 90px 90px minmax(110px, .75fr) 105px minmax(150px, .95fr) 90px; gap: 10px; align-items: center; }
+.register-header { min-width: 900px; padding: 7px 10px; background: #334155; color: #fff; font-size: 9px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.register-row { border-top: 1px solid rgba(66,84,102,.12); color: #425466; font-size: 13px; font-weight: 800; }
+.register-row[open] { background: rgba(248,250,252,.72); }
+.register-summary { min-width: 900px; min-height: 34px; padding: 5px 10px; cursor: pointer; list-style: none; }
+.register-summary::-webkit-details-marker { display: none; }
+.register-summary:hover { background: rgba(14,94,122,.045); }
+.register-summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.med-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.med-identity strong { color: #1f2937; font-size: 12px; line-height: 1.15; }
+.med-identity small { color: #64748b; font-size: 10px; line-height: 1.12; font-weight: 800; }
+.status-pill { display: inline-flex; min-height: 21px; align-items: center; padding: 0 7px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 10px; font-weight: 900; }
+.register-details { padding: 12px 14px 14px 14px; border-top: 1px solid rgba(66,84,102,.12); }
+.detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.detail-grid div { min-height: 50px; padding: 9px 10px; border: 1px solid rgba(66,84,102,.12); border-radius: 8px; background: #fff; box-sizing: border-box; }
+.detail-grid span { display: block; margin-bottom: 4px; color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.detail-grid strong { display: block; color: #1f2937; font-size: 13px; font-weight: 900; }
+.detail-grid small { display: block; margin-top: 3px; color: #64748b; font-size: 11px; font-weight: 800; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row-actions a, .delete-row-btn { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 900; text-decoration: none; cursor: pointer; }
+.row-actions a { border: 1px solid rgba(47,128,168,.24); background: #f8fafc; color: #126C84; }
+.row-actions a:hover { color: #0f5165; background: #eef3f8; }
+.delete-row-form { margin: 0; }
+.delete-row-btn { border: 1px solid rgba(155,59,59,.24); background: #fff; color: #7f2f2f; }
+.delete-row-btn:hover { background: rgba(155,59,59,.08); }
+.delete-confirm-panel { display: grid; gap: 7px; min-width: 206px; padding: 8px; border: 1px solid rgba(155,44,44,.18); border-radius: 8px; background: rgba(155,44,44,.06); color: #7f1d1d; font-size: 12px; font-weight: 900; }
+.delete-confirm-panel[hidden] { display: none; }
+.delete-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.delete-confirm-btn, .delete-cancel-btn { min-height: 30px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 900; }
+.delete-confirm-btn { border: 1px solid rgba(155,59,59,.28); background: #9B3B3B; color: #fff; }
+.delete-cancel-btn { border: 1px solid rgba(66,84,102,.18); background: #fff; color: #334155; }
+@@media (max-width: 1080px) {
+    .toolbar { grid-template-columns: 1fr 1fr; }
+    .detail-grid { grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width: 680px) {
+    .toolbar, .detail-grid { grid-template-columns: 1fr; }
 }
 </style>

@@ -27,11 +27,32 @@ public class ChecklistTemplate
     [MaxLength(80)]
     public string Status { get; set; } = "Draft";
 
+    [MaxLength(80)]
+    public string SourceType { get; set; } = "Built";
+
+    public int? ParentChecklistTemplateId { get; set; }
+    public ChecklistTemplate? ParentChecklistTemplate { get; set; }
+
+    public int? CreatedByUserId { get; set; }
+    public AppUser? CreatedByUser { get; set; }
+
+    public int? PublishedByUserId { get; set; }
+    public AppUser? PublishedByUser { get; set; }
+
     public bool IsPublished { get; set; }
     public DateTime? PublishedAtUtc { get; set; }
+
+    [MaxLength(260)]
+    public string? PublishScopeSummary { get; set; }
+
+    [MaxLength(1200)]
+    public string? PublishNotes { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAtUtc { get; set; }
 
     public ICollection<ChecklistSection> Sections { get; set; } = new List<ChecklistSection>();
     public ICollection<UploadedFile> UploadedFiles { get; set; } = new List<UploadedFile>();
+    public ICollection<ChecklistPublishScope> PublishScopes { get; set; } = new List<ChecklistPublishScope>();
+    public ICollection<ChecklistTemplate> ChildTemplates { get; set; } = new List<ChecklistTemplate>();
 }

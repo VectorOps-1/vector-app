@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Vehicle Register Preview";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="preview-screen">
@@ -24,28 +25,36 @@
                             <tr>
                                 <th>Callsign</th>
                                 <th>Registration</th>
-                                <th>Make / Model</th>
-                                <th>Location</th>
+                                <th>Vehicle Type</th>
+                                <th>Assigned Area</th>
+                                <th>VIN Number</th>
+                                <th>Chassis Number</th>
+                                <th>Vehicle Licence Number</th>
                                 <th>Status</th>
+                                <th>Last Service</th>
                                 <th>Next Service</th>
-                                <th>Published Schematic</th>
+                                <th>Published Unit Schematic</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td><input value="A101" /></td>
                                 <td><input value="123456" /></td>
-                                <td><input value="Toyota HiAce" /></td>
+                                <td><input value="Ops Ambulance" /></td>
                                 <td>
                                     <select>
-                                        <option value="">Select location</option>
+                                        <option value="">Select assigned area</option>
                                         @foreach (var location in Model.LocationOptions)
                                         {
                                             <option value="@location.Value">@location.Text</option>
                                         }
                                     </select>
                                 </td>
+                                <td><input value="VIN-TEST-001" /></td>
+                                <td><input value="CHASSIS-001" /></td>
+                                <td><input value="LIC-2026-001" /></td>
                                 <td><input value="Operational" /></td>
+                                <td><input type="date" /></td>
                                 <td><input type="date" /></td>
                                 <td>
                                     <select>
@@ -59,17 +68,21 @@
                             <tr>
                                 <td><input value="A102" /></td>
                                 <td><input value="654321" /></td>
-                                <td><input value="Toyota Land Cruiser" /></td>
+                                <td><input value="Pickup RV" /></td>
                                 <td>
                                     <select>
-                                        <option value="">Select location</option>
+                                        <option value="">Select assigned area</option>
                                         @foreach (var location in Model.LocationOptions)
                                         {
                                             <option value="@location.Value">@location.Text</option>
                                         }
                                     </select>
                                 </td>
+                                <td><input value="VIN-TEST-002" /></td>
+                                <td><input value="CHASSIS-002" /></td>
+                                <td><input value="LIC-2026-002" /></td>
                                 <td><input value="Maintenance" /></td>
+                                <td><input type="date" /></td>
                                 <td><input type="date" /></td>
                                 <td>
                                     <select>
@@ -89,17 +102,21 @@
                 <div class="mapping-title">Detected fields</div>
                 <div class="mapping-item">Callsign</div>
                 <div class="mapping-item">Registration</div>
-                <div class="mapping-item">Make / Model</div>
-                <div class="mapping-item">Location</div>
+                <div class="mapping-item">Vehicle Type</div>
+                <div class="mapping-item">Assigned Area</div>
+                <div class="mapping-item">VIN Number</div>
+                <div class="mapping-item">Chassis Number</div>
+                <div class="mapping-item">Vehicle Licence Number</div>
                 <div class="mapping-item">Status</div>
+                <div class="mapping-item">Last Service Date</div>
                 <div class="mapping-item">Next Service Date</div>
-                <div class="mapping-item">Linked Schematic</div>
+                <div class="mapping-item">Linked Unit Schematic</div>
             </aside>
         </div>
 
         <div class="action-row">
             <a class="menu-btn vehicle-btn" href="/UploadVehicleRegister">Upload Different File</a>
-            <button class="menu-btn equipment-btn" type="button" data-action-confirmation data-confirmation-message="Vehicle register saved.">Save Vehicle Register</button>
+            <a class="menu-btn equipment-btn" href="/VehicleRegister?view=register">Open Vehicle Register</a>
         </div>
     </div>
 </div>

@@ -4,8 +4,10 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Staff Register";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+    var hasSearchTerm = !string.IsNullOrWhiteSpace(Model.SearchTerm);
 }
 
 <div class="staff-register-screen">
@@ -14,12 +16,12 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Staff Register</div>
         <h2 class="page-title">All Staff</h2>
-        <p class="page-subtitle">Management overview of active staff, managers, roles, and staff record access.</p>
+        <p class="page-subtitle">Management overview of active staff, managers, access roles, clinical scope, and staff record access.</p>
+        <div class="scope-pill">@Model.ScopeLabel</div>
 
         <form class="toolbar" method="get">
-            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, email, or role" />
+            <input class="search-input" asp-for="SearchTerm" placeholder="Search name, staff ID, practitioner number, email, cell, clinical scope, CPD, area, or role" />
             <button class="menu-btn equipment-btn toolbar-btn" type="submit">Search</button>
-            <a class="menu-btn staff-btn toolbar-btn" href="/StaffFiles">Files & Folders</a>
             <a class="menu-btn vehicle-btn toolbar-btn" href="/AddItem?type=staff">Add Staff</a>
         </form>
 
@@ -29,30 +31,51 @@
         }
         else
         {
-            <div class="register-table" role="table" aria-label="Staff register">
-                <div class="register-header" role="row">
-                    <div role="columnheader">Staff Member</div>
-                    <div role="columnheader">Role</div>
-                    <div role="columnheader">Status</div>
-                    <div role="columnheader">Last Login</div>
-                    <div role="columnheader">Actions</div>
-                </div>
-
-                @foreach (var staff in Model.StaffMembers)
+            <div class="staff-groups" aria-label="Staff register grouped by clinical qualification and scope">
+                @foreach (var staffGroup in Model.StaffMembers
+                    .GroupBy(staff => string.IsNullOrWhiteSpace(staff.QualificationFunction) ? "Unassigned clinical qualification / scope" : staff.QualificationFunction)
+                    .OrderBy(group => group.Key))
                 {
-                    <div class="register-row" role="row">
-                        <div class="staff-identity" role="cell">
-                            <strong>@staff.FullName</strong>
-                            <span>@staff.Email</span>
+                    var groupItems = staffGroup
+                        .OrderBy(staff => staff.FullName)
+                        .ToList();
+
+                    <details class="staff-group" open="@hasSearchTerm">
+                        <summary>
+                            <span>@staffGroup.Key</span>
+                            <strong>@groupItems.Count profile@(groupItems.Count == 1 ? string.Empty : "s")</strong>
+                        </summary>
+
+                        <div class="staff-register-list" role="list" aria-label="@staffGroup.Key staff profiles">
+                            @foreach (var staff in groupItems)
+                            {
+                                <div class="staff-list-row" role="listitem">
+                                    <div class="staff-primary">
+                                        <strong>@staff.FullName</strong>
+                                        <span>@(string.IsNullOrWhiteSpace(staff.StaffIdentifier) ? "Staff ID not set" : staff.StaffIdentifier)</span>
+                                    </div>
+                                    <div class="staff-meta">
+                                        <span>@staff.RoleName</span>
+                                        <span>@staff.AssignedArea</span>
+                                        <span>@(string.IsNullOrWhiteSpace(staff.PractitionerNumber) ? "Practitioner no. not set" : $"Practitioner: {staff.PractitionerNumber}")</span>
+                                        <span>Licence: @(staff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                        <span>CPD: @(string.IsNullOrWhiteSpace(staff.CpdComplianceStatus) ? "N/A" : staff.CpdComplianceStatus) / @(staff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                    </div>
+                                    <div class="staff-contact">
+                                        <span>@staff.Email</span>
+                                        <span>@(string.IsNullOrWhiteSpace(staff.CellNumber) ? "No cell" : staff.CellNumber)</span>
+                                    </div>
+                                    <div class="staff-row-status">
+                                        <span class="status-pill">@staff.Status</span>
+                                    </div>
+                                    <div class="row-actions">
+                                        <a href="/StaffRecordsSearch?staffUserId=@staff.Id">Open</a>
+                                        <a href="/EditStaffProfile?staffUserId=@staff.Id&returnUrl=@Uri.EscapeDataString($"/StaffRegister?SearchTerm={Model.SearchTerm}")">Edit</a>
+                                    </div>
+                                </div>
+                            }
                         </div>
-                        <div role="cell">@staff.RoleName</div>
-                        <div role="cell"><span class="status-pill">@staff.Status</span></div>
-                        <div role="cell">@(staff.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not recorded")</div>
-                        <div class="row-actions" role="cell">
-                            <a href="/StaffRecordsSearch?searchTerm=@Uri.EscapeDataString(staff.FullName)">Records</a>
-                            <a href="/StaffFiles?staffUserId=@staff.Id">Files</a>
-                        </div>
-                    </div>
+                    </details>
                 }
             </div>
         }
@@ -66,25 +89,45 @@
 .client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
 .home-label { margin-bottom: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
 .page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: #1f2937; }
-.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
-.toolbar { width: min(1020px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 150px); gap: 12px; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 12px auto; font-size: 16px; font-weight: 600; color: #6b7280; }
+.scope-pill { width: fit-content; max-width: 100%; margin: 0 auto 20px auto; padding: 8px 12px; border: 1px solid rgba(14,94,122,.2); border-radius: 8px; background: rgba(14,94,122,.07); color: #0E5E7A; font-size: 12px; font-weight: 900; }
+.toolbar { width: min(1020px, 100%); margin: 0 auto 22px auto; display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, 150px); gap: 12px; }
 .search-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
 .empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.68); font-weight: 800; color: #52606d; }
-.register-table { width: min(1020px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.register-header, .register-row { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(160px, .8fr) 110px 150px minmax(150px, .7fr); gap: 14px; align-items: center; padding: 14px 16px; }
-.register-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
-.register-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
-.staff-identity { display: flex; flex-direction: column; gap: 4px; }
-.staff-identity strong { color: #1f2937; font-size: 15px; }
-.staff-identity span { color: #6b7280; font-size: 13px; }
+.staff-groups { width: min(1020px, 100%); margin: 0 auto; display: grid; gap: 10px; }
+.staff-group { border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.74); text-align: left; }
+.staff-group summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; cursor: pointer; color: #1f2937; font-size: 16px; font-weight: 900; list-style: none; }
+.staff-group summary::-webkit-details-marker { display: none; }
+.staff-group summary::after { content: "Open"; color: #0E5E7A; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.staff-group[open] summary { border-bottom: 1px solid rgba(66,84,102,.14); }
+.staff-group[open] summary::after { content: "Close"; }
+.staff-group summary strong { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.staff-register-list { display: grid; background: rgba(255,255,255,.72); }
+.staff-list-row { display: grid; grid-template-columns: minmax(190px, 1.2fr) minmax(180px, 1fr) minmax(190px, 1fr) 96px 148px; gap: 12px; align-items: center; min-height: 62px; padding: 10px 14px; border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 13px; font-weight: 800; }
+.staff-list-row:first-child { border-top: 0; }
+.staff-primary,
+.staff-meta,
+.staff-contact { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.staff-primary strong { color: #1f2937; font-size: 15px; font-weight: 900; }
+.staff-primary span,
+.staff-meta span,
+.staff-contact span { overflow: hidden; color: #6b7280; font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.staff-meta span:first-child { color: #425466; }
 .status-pill { display: inline-flex; min-height: 30px; align-items: center; padding: 0 10px; border-radius: 8px; background: rgba(31,111,91,.12); color: #1f6f5b; font-size: 12px; font-weight: 900; }
-.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
+.staff-row-status { display: flex; justify-content: flex-start; }
+.row-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.row-actions a { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
 .row-actions a:hover { color: #0f5165; background: #eef3f8; }
 @@media (max-width: 920px) {
-    .toolbar, .register-header, .register-row { grid-template-columns: 1fr; }
-    .register-header { display: none; }
-    .register-row { gap: 8px; }
+    .toolbar, .staff-list-row { grid-template-columns: 1fr; }
+    .staff-list-row { gap: 8px; align-items: stretch; }
+    .staff-primary span,
+    .staff-meta span,
+    .staff-contact span { white-space: normal; }
+    .staff-row-status,
+    .row-actions { justify-content: flex-start; }
+    .staff-group summary { align-items: flex-start; flex-direction: column; padding: 10px 14px; }
+    .staff-group summary strong { margin-left: 0; }
 }
 </style>

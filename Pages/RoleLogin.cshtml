@@ -7,8 +7,8 @@
 <div class="login-screen">
     <div class="login-inner">
         <div class="home-label">AcuityOps Login</div>
-        <img src="/acuityops-app-icon-light.png" class="login-logo" alt="AcuityOps" />
-        <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <img src="@Model.LogoPath" class="login-logo" alt="@Model.ClientName logo" />
+        <div class="home-context">Client: @Model.ClientName</div>
         <h2 class="page-title">@Model.RoleTitle</h2>
         <p class="page-subtitle">Enter authorised user details for this access level</p>
 
@@ -21,11 +21,11 @@
             <input type="hidden" name="access" value="@Model.AccessView" />
 
             <label class="field-label" asp-for="Email">Email or username</label>
-            <input class="text-input" asp-for="Email" type="text" placeholder="user@example.com" autocomplete="username" />
+            <input class="text-input" asp-for="Email" type="text" value="@Model.Email" placeholder="user@example.com" autocomplete="username" />
             <span class="field-error" asp-validation-for="Email"></span>
 
             <label class="field-label" asp-for="Password">Password</label>
-            <input class="text-input" asp-for="Password" type="password" placeholder="Password" autocomplete="current-password" />
+            <input class="text-input" asp-for="Password" type="password" value="@Model.Password" placeholder="Password" autocomplete="current-password" />
             <span class="field-error" asp-validation-for="Password"></span>
 
             <label class="toggle-row">
@@ -36,7 +36,7 @@
             <button class="menu-btn equipment-btn login-btn" type="submit">Continue</button>
         </form>
 
-        <div class="login-note">Prototype login uses active seeded users from the database. Password storage, MFA, and tenant enforcement will be added with the production security layer.</div>
+        <div class="login-note">Temporary test login is pre-filled for this access level. Password storage, MFA, and tenant enforcement will be added with the production security layer.</div>
     </div>
 </div>
 

@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Upload Medication Register";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="upload-screen">
@@ -24,8 +25,8 @@
         <form method="post" enctype="multipart/form-data" class="upload-form">
             <label class="upload-box" for="medicationRegisterFile">
                 <span class="upload-title">Select Medication Register</span>
-                <span class="upload-help">Accepted now: .xlsx or .xls</span>
-                <input id="medicationRegisterFile" asp-for="MedicationRegisterFile" type="file" accept=".xlsx,.xls" />
+                <span class="upload-help">Accepted now: .xlsx, .xls, or .csv</span>
+                <input id="medicationRegisterFile" asp-for="MedicationRegisterFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
             <button class="menu-btn stock-btn continue-btn" type="submit">Generate Medication Register Preview</button>

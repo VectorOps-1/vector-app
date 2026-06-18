@@ -2,23 +2,27 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Select Access";
+    var selectorScreenClass = Model.ShowSplash ? "selector-screen" : "selector-screen ready show";
 }
 
-<div id="splash">
-    <div class="splash-content">
-        <img src="/acuityops-app-icon-splash.png" alt="AcuityOps" />
-        <div class="splash-brand">AcuityOps</div>
-        <div class="splash-company">by Vector Ops Group Pty Ltd</div>
+@if (Model.ShowSplash)
+{
+    <div id="splash">
+        <div class="splash-content">
+            <img src="/acuityops-app-icon-splash.png" alt="AcuityOps" />
+            <div class="splash-brand">AcuityOps</div>
+            <div class="splash-company">by Vector Ops Group Pty Ltd</div>
+        </div>
     </div>
-</div>
+}
 
-<div id="mainContent" class="selector-screen">
+<div id="mainContent" class="@selectorScreenClass">
     <div class="selector-inner">
         <div class="home-label">AcuityOps Access</div>
 
-        <img src="/acuityops-app-icon-light.png" class="selector-logo" alt="AcuityOps" />
+        <img src="@Model.LogoPath" class="selector-logo" alt="@Model.ClientName logo" />
 
-        <div class="home-context">Client: @ViewData["ClientName"]</div>
+        <div class="home-context">Client: @Model.ClientName</div>
 
         <p class="selector-title">Select access level</p>
 
@@ -174,6 +178,8 @@ html, body {
 
 </style>
 
+@if (Model.ShowSplash)
+{
 <script>
 (function () {
     const splashSessionKey = "acuityopsSplashShown";
@@ -213,3 +219,4 @@ html, body {
     }, 5300);
 })();
 </script>
+}

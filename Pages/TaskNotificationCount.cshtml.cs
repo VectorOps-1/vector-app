@@ -22,10 +22,30 @@ public class TaskNotificationCountModel : PageModel
         var currentUserId = _currentUser.CurrentUserId;
         if (!currentUserId.HasValue)
         {
-            return new JsonResult(new { count = 0 });
+            return new JsonResult(new { count = 0, url = "/TaskInbox" });
         }
 
-        var count = await _db.TaskItems.CountAsync(t => t.AssignedToUserId == currentUserId.Value && t.Status == "Open");
-        return new JsonResult(new { count });
+        var openTasks = await _db.TaskItems
+            .AsNoTracking()
+            .Where(t => t.AssignedToUserId == currentUserId.Value && t.Status == "Open")
+            .OrderByDescending(t => t.ActionType == "Checklist approval request")
+            .ThenByDescending(t => t.CreatedAtUtc)
+            .Select(t => new
+            {
+                t.Id,
+                t.ActionType,
+                t.RelatedItemReference
+            })
+            .ToListAsync();
+
+        var task = openTasks.FirstOrDefault();
+        var url = task is null
+            ? "/TaskInbox"
+            : TaskActionCatalog.BuildTaskUrl(task.ActionType, task.Id, task.RelatedItemReference);
+        var label = task?.ActionType == "Checklist approval request"
+            ? "Open checklist approval request"
+            : "Open assigned tasks";
+
+        return new JsonResult(new { count = openTasks.Count, url, label });
     }
 }

@@ -129,6 +129,15 @@ public class IssueReportActionModel : PageModel
             return;
         }
 
+        if (!isSenior && issue.AssignedToUserId != currentUser.Id)
+        {
+            var assignedAreaNames = await LoadAssignedAreaNamesAsync(currentUser);
+            if (!IssueMatchesAreaScope(issue, assignedAreaNames))
+            {
+                return;
+            }
+        }
+
         CanResolve = issue.Status == "Open" && (issue.AssignedToUserId == currentUser.Id || isSenior);
         Issue = new IssueActionDetails
         {
@@ -160,6 +169,34 @@ public class IssueReportActionModel : PageModel
                 CreatedAtUtc = issueEvent.CreatedAtUtc
             })
             .ToList();
+    }
+
+    private async Task<List<string>> LoadAssignedAreaNamesAsync(AppUser currentUser)
+    {
+        return await _db.ManagerOperationalAreaAssignments
+            .AsNoTracking()
+            .Include(assignment => assignment.OperationalArea)
+            .Where(assignment =>
+                assignment.CompanyId == currentUser.CompanyId &&
+                assignment.ManagerUserId == currentUser.Id &&
+                assignment.Status == "Active" &&
+                assignment.OperationalArea != null &&
+                assignment.OperationalArea.Status == "Active")
+            .Select(assignment => assignment.OperationalArea!.Name)
+            .ToListAsync();
+    }
+
+    private static bool IssueMatchesAreaScope(IssueReport issue, IReadOnlyList<string> assignedAreaNames)
+    {
+        return assignedAreaNames.Any(areaName =>
+            ContainsAny(areaName, issue.Location, issue.Description, issue.RelatedItem));
+    }
+
+    private static bool ContainsAny(string search, params string?[] values)
+    {
+        return values.Any(value =>
+            !string.IsNullOrWhiteSpace(value) &&
+            value.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
     public class IssueActionDetails

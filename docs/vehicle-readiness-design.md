@@ -2,16 +2,16 @@
 
 ## Product Principle
 
-The core Vector workflow is a daily readiness decision for a specific vehicle. The report must combine vehicle checks and the equipment carried on that vehicle. Equipment is not a separate floating checklist; it is part of whether that vehicle can respond.
+The core AcuityOps workflow is a daily readiness decision for a specific vehicle. The report must combine vehicle checks and the equipment carried on that vehicle. Equipment is not a separate floating checklist; it is part of whether that vehicle can respond.
 
 ## Daily Readiness Flow
 
 1. Staff or management user selects a vehicle registration number.
-2. Vector loads the vehicle callsign, type, schematic, next service date, and expected equipment.
+2. AcuityOps loads the vehicle callsign, type, unit schematic, next service date, and expected equipment.
 3. The user completes operational checks such as lights, sirens, warning lights, tyres, and radio connectivity.
 4. The user completes schematic/damage checks and notes.
 5. The user checks every expected equipment item for that vehicle.
-6. Vector saves one daily readiness report and calculates the readiness result.
+6. AcuityOps saves one daily readiness report and calculates the readiness result.
 
 Managers must be able to complete the same vehicle checks themselves. The report is always recorded against the signed-in user who performed it.
 
@@ -42,8 +42,39 @@ Senior management defines the operating rules:
 - Equipment loadouts by vehicle, vehicle type, or qualification level
 - Checklist sections and fields
 - Readiness rules, including hard stops and warnings
+- Readiness Engine scoring rules, including severity, percentage impact, hard blockers, and manager alerts
 
 Uploaded client checklists and registers should eventually generate editable setup records, not just static uploaded files.
+
+## Readiness Engine Relationship
+
+Daily readiness should eventually be scored by the Readiness Engine, not by hard-coded checklist logic.
+
+The engine should evaluate:
+
+- vehicle inspection values
+- operational checks
+- unit schematic and damage findings
+- carried equipment status
+- S/N or asset ID mismatch
+- equipment service dates
+- stock sufficiency where it affects operational readiness
+- medication sufficiency and expiry where it affects operational readiness
+- open issue reports
+- checklist completion and omitted required fields
+
+The engine should classify each score-impacting variable as:
+
+- No impact
+- Minor
+- Moderate
+- Major
+- Critical
+- Hard blocker
+
+A hard blocker makes the affected vehicle or asset not ready regardless of its remaining percentage. A small cosmetic defect should not carry the same effect as a missing defibrillator, expired critical medication, failed siren, or missing required equipment.
+
+Operational managers can request scoring changes. Senior management approves and applies, or rejects and clears, those requests.
 
 ## Product Tiers
 
@@ -51,6 +82,7 @@ Base should support the core readiness loop:
 
 - Vehicle register
 - Daily vehicle readiness report
+- Manual checklist builder and checklist register
 - Basic issue reporting
 - Task feedback
 - Basic audit trail
@@ -59,7 +91,8 @@ Base should support the core readiness loop:
 Pro should add deeper operational control:
 
 - Vehicle-specific equipment loadouts
-- Custom checklist builder
+- Advanced checklist publishing controls and guided import
+- Readiness Engine with configurable scoring rules and senior approval
 - Equipment service, battery, and expiry tracking
 - Staff files
 - Medication and stock registers
@@ -69,6 +102,7 @@ Pro should add deeper operational control:
 Premium should add scale and intelligence:
 
 - Readiness analytics
+- Predictive readiness and recurring failure detection
 - AI checklist import and mapping
 - Advanced exports
 - Azure Blob Storage
@@ -90,6 +124,9 @@ Base and Pro do not require Azure Blob Storage. File uploads can use local stora
 7. Daily vehicle equipment check table.
 8. Combined daily vehicle readiness UI.
 9. Manager readiness dashboard.
+10. Readiness Engine tables and default scoring rules.
+11. Readiness Engine UI under Master Setup.
+12. Active scoring rules connected to the dashboard.
 
 ## Implemented Backbone Tables
 

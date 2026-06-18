@@ -22,9 +22,20 @@ public class StockItem
     public string? ItemType { get; set; }
 
     [MaxLength(160)]
+    public string? StockCategory { get; set; }
+
+    [MaxLength(160)]
     public string? BatchNumber { get; set; }
 
     public int Quantity { get; set; }
+    public int? MinimumQuantity { get; set; }
+
+    [MaxLength(80)]
+    public string? Unit { get; set; }
+
+    public DateTime? ExpiryDate { get; set; }
+
+    public bool IsReadinessCritical { get; set; }
 
     [MaxLength(260)]
     public string? Location { get; set; }

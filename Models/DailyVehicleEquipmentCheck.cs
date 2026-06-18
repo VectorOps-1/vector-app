@@ -18,6 +18,9 @@ public class DailyVehicleEquipmentCheck
     public int? EquipmentItemId { get; set; }
     public EquipmentItem? EquipmentItem { get; set; }
 
+    public int? ChecklistItemId { get; set; }
+    public ChecklistItem? ChecklistItem { get; set; }
+
     [MaxLength(180)]
     public string EquipmentName { get; set; } = string.Empty;
 
@@ -62,4 +65,7 @@ public class DailyVehicleEquipmentCheck
     public int SortOrder { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public ICollection<ChecklistVarianceAlert> VarianceAlerts { get; set; } = new List<ChecklistVarianceAlert>();
+    public ICollection<ReadinessAlert> ReadinessAlerts { get; set; } = new List<ReadinessAlert>();
 }

@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Readiness Dashboard";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="readiness-screen">
@@ -41,82 +42,33 @@
                 </div>
 
                 <div class="summary-grid">
-                    <div class="summary-tile">
+                    <a class="summary-tile" asp-page="/ReadinessMetric" asp-route-metric="ready-vehicles" asp-route-operationalAreaId="@Model.OperationalAreaId">
                         <strong>@Model.Summary.ReadyVehicles / @Model.Summary.TotalVehicles</strong>
                         <span>Ready vehicles</span>
-                    </div>
-                    <div class="summary-tile">
+                    </a>
+                    <div class="summary-tile passive-tile" aria-label="Daily vehicle readiness checks completed this shift">
                         <strong>@Model.Summary.CheckedVehicles</strong>
-                        <span>Checked this shift</span>
+                        <span>Daily checks complete</span>
                     </div>
-                    <div class="summary-tile warning-tile">
+                    <div class="summary-tile warning-tile passive-tile" aria-label="Vehicles missing daily readiness checks this shift">
                         <strong>@Model.Summary.MissingChecks</strong>
                         <span>Missing checks</span>
                     </div>
-                    <div class="summary-tile danger-tile">
+                    <div class="summary-tile danger-tile passive-tile" aria-label="Vehicles currently not ready">
                         <strong>@Model.Summary.UnavailableVehicles</strong>
                         <span>Not ready</span>
                     </div>
-                    <div class="summary-tile warning-tile">
+                    <a class="summary-tile warning-tile" asp-page="/ReadinessMetric" asp-route-metric="equipment-alerts" asp-route-operationalAreaId="@Model.OperationalAreaId">
                         <strong>@Model.Summary.EquipmentWarnings</strong>
                         <span>Equipment alerts</span>
-                    </div>
-                    <div class="summary-tile danger-tile">
+                    </a>
+                    <a class="summary-tile danger-tile" asp-page="/ReadinessMetric" asp-route-metric="open-issues" asp-route-operationalAreaId="@Model.OperationalAreaId">
                         <strong>@Model.Summary.OpenIssues</strong>
                         <span>Open issues</span>
-                    </div>
+                    </a>
                 </div>
             </section>
 
-            <div class="shift-window">
-                Shift window: @Model.ShiftStartUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") to @Model.ShiftEndUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-            </div>
-
-            @if (Model.VehicleRows.Count == 0)
-            {
-                <div class="empty-panel">No vehicles are linked to this dashboard scope yet.</div>
-            }
-            else
-            {
-                <div class="readiness-table" role="table" aria-label="Shift readiness">
-                    <div class="readiness-header" role="row">
-                        <div role="columnheader">Vehicle</div>
-                        <div role="columnheader">Area</div>
-                        <div role="columnheader">Last Check</div>
-                        <div role="columnheader">Status</div>
-                        <div role="columnheader">Issues</div>
-                        <div role="columnheader">Actions</div>
-                    </div>
-
-                    @foreach (var vehicle in Model.VehicleRows)
-                    {
-                        <div class="readiness-row" role="row">
-                            <div class="vehicle-identity" role="cell">
-                                <strong>@vehicle.RegistrationNumber / @vehicle.Callsign</strong>
-                                <span>@vehicle.VehicleType</span>
-                                <span>Vehicle status: @vehicle.VehicleStatus</span>
-                            </div>
-                            <div role="cell">@vehicle.AreaName</div>
-                            <div class="stacked-cell" role="cell">
-                                <strong>@(vehicle.LastCheckAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "Not checked")</strong>
-                                <span>@(vehicle.LastCheckedByName ?? "No staff member recorded")</span>
-                            </div>
-                            <div role="cell">
-                                <span class="readiness-pill @vehicle.StatusClass">@vehicle.ReadinessStatus</span>
-                            </div>
-                            <div class="stacked-cell" role="cell">
-                                <strong>@vehicle.IssueSummary</strong>
-                                <span>@vehicle.OpenIssueCount open issue@(vehicle.OpenIssueCount == 1 ? string.Empty : "s")</span>
-                            </div>
-                            <div class="row-actions" role="cell">
-                                <a href="/DailyVehicleChecklist?registration=@Uri.EscapeDataString(vehicle.RegistrationNumber)&callsign=@Uri.EscapeDataString(vehicle.Callsign)">Check</a>
-                                <a href="/VehicleRegister?SearchTerm=@Uri.EscapeDataString(vehicle.RegistrationNumber)">Register</a>
-                                <a href="/ReportIssue?module=vehicle">Issue</a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
         }
     </div>
 </div>
@@ -133,7 +85,7 @@
 .scope-toolbar { width: min(760px, 100%); margin: 0 auto 20px auto; display: grid; grid-template-columns: minmax(240px, 1fr) 160px 160px; gap: 12px; }
 .filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; font-weight: 700; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
-.summary-panel { display: grid; grid-template-columns: 260px 1fr; gap: 22px; align-items: center; width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.72); text-align: left; box-sizing: border-box; }
+.summary-panel { display: flex; flex-direction: column; gap: 22px; align-items: center; width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.72); box-sizing: border-box; }
 .score-ring { --score-color: #9B3B3B; width: 220px; aspect-ratio: 1; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; }
 .score-green { --score-color: #207A63; }
 .score-teal { --score-color: #126C84; }
@@ -142,28 +94,15 @@
 .score-core { width: 152px; aspect-ratio: 1; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 0 0 1px rgba(66,84,102,.14); }
 .score-core strong { color: #102a3a; font-size: 40px; font-weight: 900; line-height: 1; }
 .score-core span { width: 120px; margin-top: 8px; color: #52606d; font-size: 12px; font-weight: 900; line-height: 1.2; }
-.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.summary-tile { min-height: 86px; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; box-sizing: border-box; }
-.summary-tile strong { display: block; color: #102a3a; font-size: 26px; font-weight: 900; }
-.summary-tile span { display: block; margin-top: 4px; color: #52606d; font-size: 13px; font-weight: 800; }
+.summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.summary-tile { display: block; min-height: 82px; padding: 12px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #fff; box-sizing: border-box; text-align: center; text-decoration: none; transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+.summary-tile:hover { border-color: rgba(14,94,122,.36); box-shadow: 0 10px 24px rgba(15,35,55,.08); transform: translateY(-1px); }
+.summary-tile.passive-tile { cursor: default; }
+.summary-tile.passive-tile:hover { border-color: rgba(66,84,102,.16); box-shadow: none; transform: none; }
+.summary-tile strong { display: block; color: #102a3a; font-size: 24px; font-weight: 900; }
+.summary-tile span { display: block; margin-top: 4px; color: #52606d; font-size: 12px; font-weight: 800; }
 .warning-tile strong { color: #8A5A13; }
 .danger-tile strong { color: #8A2C2C; }
-.shift-window { width: min(1120px, 100%); margin: 0 auto 10px auto; text-align: left; color: #52606d; font-size: 13px; font-weight: 900; }
-.empty-panel { width: min(760px, 94%); margin: 0 auto; padding: 22px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.72); font-weight: 800; color: #52606d; }
-.readiness-table { width: min(1120px, 100%); margin: 0 auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.72); text-align: left; }
-.readiness-header, .readiness-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(140px, .75fr) minmax(170px, .85fr) 120px minmax(220px, 1fr) minmax(170px, .8fr); gap: 14px; align-items: center; padding: 14px 16px; }
-.readiness-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
-.readiness-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 700; }
-.vehicle-identity, .stacked-cell { display: flex; flex-direction: column; gap: 4px; }
-.vehicle-identity strong, .stacked-cell strong { color: #1f2937; font-size: 15px; }
-.vehicle-identity span, .stacked-cell span { color: #6b7280; font-size: 13px; }
-.readiness-pill { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 900; }
-.readiness-pill.ready { background: rgba(31,111,91,.12); color: #1f6f5b; }
-.readiness-pill.warning { background: rgba(183,121,31,.14); color: #8A5A13; }
-.readiness-pill.critical { background: rgba(155,59,59,.12); color: #7f2f2f; }
-.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.row-actions a { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid rgba(47,128,168,.24); border-radius: 8px; background: #f8fafc; color: #126C84; font-size: 12px; font-weight: 900; text-decoration: none; }
-.row-actions a:hover { color: #0f5165; background: #eef3f8; }
-@@media (max-width: 1000px) { .summary-panel { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .readiness-header, .readiness-row { grid-template-columns: 1fr; } .readiness-header { display: none; } }
+@@media (max-width: 1050px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @@media (max-width: 700px) { .scope-toolbar, .summary-grid { grid-template-columns: 1fr; } }
 </style>

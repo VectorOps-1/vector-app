@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Master Setup";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="setup-screen">
@@ -16,85 +17,44 @@
         <h2 class="page-title">Master Setup</h2>
         <p class="page-subtitle">Company onboarding and editable setup records</p>
 
+        <div class="setup-section-title">Source Uploads</div>
+        <div class="setup-grid">
+            <a class="module-card primary" href="/UploadVehicleRegister">
+                <strong>Upload Vehicle Register</strong>
+                <span>Import registration numbers, callsigns, service dates, locations, and unit schematic mapping</span>
+            </a>
+
+            <a class="module-card" href="/UploadEquipmentRegister">
+                <strong>Upload Equipment Register</strong>
+                <span>Import equipment names, S/N or asset IDs, service dates, and current locations</span>
+            </a>
+
+            <a class="module-card" href="/UploadStaffRegister">
+                <strong>Upload Staff Register</strong>
+                <span>Import staff names, access level, contact detail, and assigned areas</span>
+            </a>
+
+            <a class="module-card" href="/UploadStockRegister">
+                <strong>Upload Stock Register</strong>
+                <span>Import stock item names, quantities, batch numbers, and storage locations</span>
+            </a>
+
+            <a class="module-card" href="/UploadMedicationRegister">
+                <strong>Upload Medication Register</strong>
+                <span>Import medication names, schedules, quantities, batches, expiry dates, and locations</span>
+            </a>
+        </div>
+
+        <div class="setup-section-title">Setup Management</div>
         <div class="setup-grid">
             <a class="module-card primary" href="/CompanyProfile">
                 <strong>Company Profile</strong>
                 <span>Manage logo, company name, and supplier details</span>
             </a>
 
-            <a class="module-card" href="/EditChecklist">
-                <strong>Checklist Builder</strong>
-                <span>Create, edit, and publish checklist templates manually</span>
-            </a>
-
-            <a class="module-card" href="/VehicleRegister">
-                <strong>Vehicle Register</strong>
-                <span>Review vehicle records, registration numbers, and setup details</span>
-            </a>
-
-            <a class="module-card" href="/VehicleSchematicLibrary">
-                <strong>Vehicle Schematic Library</strong>
-                <span>Store schematic types for ambulances, response, and rescue vehicles</span>
-            </a>
-
-            <a class="module-card" href="/OperationalAreas">
-                <strong>Operational Areas / Bases</strong>
-                <span>Create the bases, stores, stations, and operating areas used for allocation</span>
-            </a>
-
-            <a class="module-card" href="/ManagerAreas">
-                <strong>Manager Area Assignment</strong>
-                <span>Assign operational managers to the bases and regions they oversee</span>
-            </a>
-
-            <a class="module-card" href="/ReadinessDashboard">
-                <strong>Readiness Dashboard</strong>
-                <span>Review live shift readiness across bases, vehicles, issues, and equipment checks</span>
-            </a>
-
-            <a class="module-card" href="/EquipmentRegister">
-                <strong>Equipment Register</strong>
-                <span>Review equipment inventory and linked readiness records</span>
-            </a>
-
-            <a class="module-card" href="/StockRegister">
-                <strong>Stock Register</strong>
-                <span>Review stock records, quantities, locations, and batch details</span>
-            </a>
-
-            <a class="module-card" href="/MedicationRegister">
-                <strong>Medication Register</strong>
-                <span>Review medication records, schedules, quantities, batch numbers, locations, and expiry dates</span>
-            </a>
-
-            <a class="module-card" href="/UploadStaffFiles">
-                <strong>Upload Staff Files</strong>
-                <span>Add staff documents, certificates, and support records</span>
-            </a>
-
-            <a class="module-card" href="/StaffRecordsSearch">
-                <strong>Search Staff Records</strong>
-                <span>Find staff files and related record areas</span>
-            </a>
-
-            <a class="module-card" href="/CreateManagerAccess">
-                <strong>Create Manager Access</strong>
-                <span>Issue senior or operational management access</span>
-            </a>
-
-            <a class="module-card" href="/CreateOperationalStaffAccess">
-                <strong>Create Staff Access</strong>
-                <span>Issue operational staff login access</span>
-            </a>
-
-            <a class="module-card" href="/TaskCommunicationSetup">
-                <strong>Task Communication Setup</strong>
-                <span>Configure how task communications are handled</span>
-            </a>
-
-            <a class="module-card" href="/AuditLog">
-                <strong>Audit Log / Activity History</strong>
-                <span>Review recorded activity and accountability history</span>
+            <a class="module-card" href="/ReadinessEngine">
+                <strong>Readiness Engine</strong>
+                <span>Configure score weightings, hard blockers, manager alerts, and scoring change approvals</span>
             </a>
         </div>
     </div>
@@ -160,6 +120,15 @@
 .setup-grid {
     gap: 24px;
     row-gap: 24px;
+}
+
+.setup-section-title {
+    margin: 28px 0 16px 0;
+    color: #5f6b7a;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
 }
 
 .setup-grid .menu-btn {

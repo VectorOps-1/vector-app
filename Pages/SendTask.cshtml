@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Send Task";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="task-screen">
@@ -24,32 +25,39 @@
                 <div class="form-grid">
                     <div class="field-group">
                         <label class="field-label" asp-for="AssignedToUserId">Staff member / recipient</label>
-                        <select class="text-input" asp-for="AssignedToUserId" asp-items="Model.Recipients">
+                        <select class="text-input" asp-for="AssignedToUserId" id="recipientSelect">
                             <option value="">Select recipient</option>
+                            @foreach (var recipient in Model.Recipients)
+                            {
+                                <option value="@recipient.Id"
+                                        data-access-view="@recipient.AccessView"
+                                        selected="@(recipient.Id == Model.AssignedToUserId)">
+                                    @recipient.DisplayName
+                                </option>
+                            }
                         </select>
                         <span class="field-error" asp-validation-for="AssignedToUserId"></span>
                     </div>
 
                     <div class="field-group">
                         <label class="field-label" asp-for="ActionType">Task action</label>
-                        <select class="text-input" asp-for="ActionType">
-                            <option>Daily Vehicle Readiness</option>
-                            <option>Report Issue</option>
-                            <option>Upload Personal Documents</option>
-                            <option>Add New Vehicle</option>
-                            <option>Add New Equipment</option>
-                            <option>Update Equipment Service Dates</option>
-                            <option>Add New Stock Item</option>
-                            <option>Add Medication</option>
-                            <option>Move / Reallocate Vehicle</option>
-                            <option>Move / Reallocate Equipment</option>
-                            <option>Move / Reallocate Stock</option>
-                            <option>Move / Reallocate Medication</option>
-                            <option>Receive Stock</option>
-                            <option>Issue / Allocate Stock</option>
-                            <option>Batch Number Tracking</option>
-                            <option>Expiry / Compliance Check</option>
+                        <select class="text-input" asp-for="ActionType" id="actionTypeSelect">
+                            <option value="">Select task action</option>
+                            @foreach (var actionGroup in Model.TaskActions.GroupBy(action => action.Category))
+                            {
+                                <optgroup label="@actionGroup.Key">
+                                    @foreach (var action in actionGroup)
+                                    {
+                                        <option value="@action.Value"
+                                                data-recipient-access="@string.Join(",", action.AllowedRecipientAccessViews)"
+                                                selected="@(string.Equals(action.Value, Model.ActionType, StringComparison.OrdinalIgnoreCase))">
+                                            @action.Label
+                                        </option>
+                                    }
+                                </optgroup>
+                            }
                         </select>
+                        <div id="actionAccessHint" class="field-hint">Select a recipient to show actions allowed for that person's access level.</div>
                         <span class="field-error" asp-validation-for="ActionType"></span>
                     </div>
 
@@ -236,6 +244,13 @@
     font-weight: 700;
 }
 
+.field-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
 .action-row {
     display: flex;
     justify-content: center;
@@ -255,6 +270,61 @@
     }
 }
 </style>
+
+<script>
+    (function () {
+        const recipientSelect = document.getElementById("recipientSelect");
+        const actionSelect = document.getElementById("actionTypeSelect");
+        const accessHint = document.getElementById("actionAccessHint");
+
+        if (!recipientSelect || !actionSelect) {
+            return;
+        }
+
+        function getActionOptions() {
+            return Array.from(actionSelect.querySelectorAll("option[data-recipient-access]"));
+        }
+
+        function updateActionOptions() {
+            const selectedRecipient = recipientSelect.selectedOptions?.[0];
+            const recipientAccess = selectedRecipient?.dataset.accessView || "";
+            let visibleCount = 0;
+
+            getActionOptions().forEach(function (option) {
+                const allowedAccess = (option.dataset.recipientAccess || "").split(",");
+                const isVisible = Boolean(recipientAccess) && allowedAccess.includes(recipientAccess);
+
+                option.hidden = !isVisible;
+                option.disabled = !isVisible;
+
+                if (isVisible) {
+                    visibleCount += 1;
+                }
+            });
+
+            Array.from(actionSelect.querySelectorAll("optgroup")).forEach(function (group) {
+                const hasVisibleOption = Array.from(group.querySelectorAll("option")).some(function (option) {
+                    return !option.hidden;
+                });
+                group.hidden = !hasVisibleOption;
+            });
+
+            const selectedAction = actionSelect.selectedOptions?.[0];
+            if (selectedAction?.disabled) {
+                actionSelect.value = "";
+            }
+
+            if (accessHint) {
+                accessHint.textContent = recipientAccess
+                    ? `${visibleCount} task actions are available for this recipient's access level.`
+                    : "Select a recipient to show actions allowed for that person's access level.";
+            }
+        }
+
+        recipientSelect.addEventListener("change", updateActionOptions);
+        updateActionOptions();
+    })();
+</script>
 
 @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
 {

@@ -44,9 +44,11 @@ public class TaskInboxModel : PageModel
 
         var task = await _db.TaskItems
             .Include(t => t.Company)
+            .Include(t => t.AssignedByUser)
+                .ThenInclude(user => user!.AppRole)
             .FirstOrDefaultAsync(t => t.Id == taskId && t.AssignedToUserId == currentUser.Id && t.Status == "Open");
 
-        if (task is null)
+        if (task is null || !CurrentUserService.CanSendTasks(task.AssignedByUser?.AppRole?.Name))
         {
             return RedirectToPage(new { confirmation = "task-not-found" });
         }
@@ -92,6 +94,7 @@ public class TaskInboxModel : PageModel
 
         OpenTasks = await _db.TaskItems
             .Include(t => t.AssignedByUser)
+                .ThenInclude(user => user!.AppRole)
             .Include(t => t.AssignedToUser)
             .Where(t => t.AssignedToUserId == currentUser.Id && t.Status == "Open")
             .OrderByDescending(t => t.CreatedAtUtc)
@@ -103,7 +106,12 @@ public class TaskInboxModel : PageModel
                 AssignedToName = t.AssignedToUser == null ? "Current user" : t.AssignedToUser.FullName,
                 InstructionMessage = t.InstructionMessage,
                 CreatedAtUtc = t.CreatedAtUtc,
-                ExpiresAtUtc = t.ExpiresAtUtc
+                ExpiresAtUtc = t.ExpiresAtUtc,
+                CanDelete = t.AssignedByUser != null &&
+                    t.AssignedByUser.AppRole != null &&
+                    (t.AssignedByUser.AppRole.Name == "Operational Management" ||
+                        t.AssignedByUser.AppRole.Name == "Senior Management" ||
+                        t.AssignedByUser.AppRole.Name == "Company Owner")
             })
             .ToListAsync();
     }
@@ -117,5 +125,6 @@ public class TaskInboxModel : PageModel
         public string? InstructionMessage { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? ExpiresAtUtc { get; set; }
+        public bool CanDelete { get; set; }
     }
 }

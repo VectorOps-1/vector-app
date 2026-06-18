@@ -1,10 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
 public class UploadVehicleRegisterModel : PageModel
 {
+    private readonly SetupUploadService _setupUploads;
+
+    public UploadVehicleRegisterModel(SetupUploadService setupUploads)
+    {
+        _setupUploads = setupUploads;
+    }
+
     [BindProperty]
     public IFormFile? VehicleRegisterFile { get; set; }
 
@@ -12,11 +20,23 @@ public class UploadVehicleRegisterModel : PageModel
 
     public IActionResult OnGet()
     {
-        return RedirectToPage("/VehicleRegister");
+        return Page();
     }
 
-    public IActionResult OnPost()
+    public async Task<IActionResult> OnPostAsync()
     {
-        return RedirectToPage("/VehicleRegister");
+        var result = await _setupUploads.SaveRegisterUploadAsync(VehicleRegisterFile, "Vehicle Register");
+        if (result.IsNotSignedIn)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        if (!result.IsSaved)
+        {
+            StatusMessage = result.ErrorMessage;
+            return Page();
+        }
+
+        return RedirectToPage("/VehicleRegisterPreview", new { sourceFileId = result.FileId });
     }
 }

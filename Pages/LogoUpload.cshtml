@@ -8,7 +8,46 @@
     <div class="logo-upload-inner">
         <div class="home-label">Company Profile</div>
         <h2 class="page-title">Logo Upload</h2>
-        <p class="page-subtitle">Upload or replace the company logo</p>
+        <p class="page-subtitle">Upload the logo used after company access is accepted</p>
+
+        <div class="logo-spec-panel">
+            <div>
+                <div class="spec-label">Recommended upload</div>
+                <h3>Transparent PNG, no background box</h3>
+                <p>
+                    For a clean app integration, upload a logo file with a transparent background.
+                    Do not upload a screenshot, photo, PDF export, or a logo sitting inside a white,
+                    black, or coloured square.
+                </p>
+            </div>
+
+            <div class="logo-spec-grid">
+                <div>
+                    <strong>Best format</strong>
+                    <span>PNG with transparent background</span>
+                </div>
+                <div>
+                    <strong>Best size</strong>
+                    <span>1200 x 1200 px, centred</span>
+                </div>
+                <div>
+                    <strong>Wide logos</strong>
+                    <span>1600 x 700 px, transparent</span>
+                </div>
+                <div>
+                    <strong>Clear space</strong>
+                    <span>Leave 10-15% empty space around the logo</span>
+                </div>
+                <div>
+                    <strong>Maximum file</strong>
+                    <span>@Model.MaxLogoSizeLabel</span>
+                </div>
+                <div>
+                    <strong>Avoid</strong>
+                    <span>Borders, shadows, watermarks, cropped edges</span>
+                </div>
+            </div>
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -20,10 +59,14 @@
             <div class="logo-preview-wrap">
                 <img class="logo-preview" src="@Model.ExistingLogoPath" alt="Current company logo" />
             </div>
+            <form method="post" asp-page-handler="Remove" class="remove-logo-form">
+                <button class="remove-logo-btn" type="submit">Remove Logo</button>
+            </form>
         }
 
         <form method="post" enctype="multipart/form-data" class="upload-form">
-            <input class="file-input" asp-for="LogoFile" type="file" accept="image/png,image/jpeg" />
+            <input class="file-input" asp-for="LogoFile" type="file" accept="image/png" />
+            <p class="file-help">Upload a transparent PNG. JPEG files are not used here because they cannot be transparent and usually create visible borders.</p>
             <button class="menu-btn equipment-btn save-logo-btn" type="submit">Save Logo</button>
         </form>
     </div>
@@ -70,6 +113,73 @@
     color: #6b7280;
 }
 
+.logo-spec-panel {
+    width: min(760px, 96%);
+    margin: 0 auto 24px auto;
+    padding: 18px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.78);
+    text-align: left;
+}
+
+.logo-spec-panel h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: #10233f;
+}
+
+.logo-spec-panel p {
+    margin: 0;
+    color: #52606d;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.spec-label {
+    margin-bottom: 6px;
+    color: #5f6b7a;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.logo-spec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.logo-spec-grid div {
+    padding: 12px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.logo-spec-grid strong,
+.logo-spec-grid span {
+    display: block;
+}
+
+.logo-spec-grid strong {
+    margin-bottom: 4px;
+    color: #10233f;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.logo-spec-grid span {
+    color: #52606d;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
 .status-message {
     width: min(520px, 90%);
     margin: 0 auto 22px auto;
@@ -107,6 +217,26 @@
     gap: 20px;
 }
 
+.remove-logo-form {
+    margin: -12px auto 26px auto;
+}
+
+.remove-logo-btn {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid rgba(155, 59, 59, 0.28);
+    border-radius: 8px;
+    background: rgba(155, 59, 59, 0.06);
+    color: #8a2f2f;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.remove-logo-btn:hover {
+    background: rgba(155, 59, 59, 0.12);
+}
+
 .file-input {
     width: min(420px, 90%);
     padding: 14px;
@@ -115,8 +245,24 @@
     background: #ffffff;
 }
 
+.file-help {
+    width: min(520px, 94%);
+    margin: -10px auto 0 auto;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+}
+
 .save-logo-btn {
     border: none;
+}
+
+@@media (max-width: 700px) {
+    .logo-spec-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -124,7 +270,7 @@
 {
     <script>
         window.VectorActionConfirmation?.show({
-            message: "Company logo saved.",
+            message: @Json.Serialize(Model.ActionConfirmationMessage),
             redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
             delay: 1300
         });

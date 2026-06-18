@@ -30,7 +30,7 @@ public class EquipmentServiceModel : PageModel
     public List<ServiceEquipmentRow> EquipmentItems { get; private set; } = new();
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
-    public string SafeReturnUrl { get; private set; } = "/EquipmentRegister";
+    public string SafeReturnUrl { get; private set; } = "/EquipmentRegister?view=register";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -187,13 +187,13 @@ public class EquipmentServiceModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(returnUrl))
         {
-            return "/EquipmentRegister";
+            return "/EquipmentRegister?view=register";
         }
 
         var trimmed = returnUrl.Trim();
         return trimmed.StartsWith('/') && !trimmed.StartsWith("//", StringComparison.Ordinal)
             ? trimmed
-            : "/EquipmentRegister";
+            : "/EquipmentRegister?view=register";
     }
 
     private static string? NormalizeOptional(string? value)

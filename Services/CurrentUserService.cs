@@ -15,6 +15,7 @@ public class CurrentUserService
     public const string FullNameSessionKey = "Vector.FullName";
     public const string RoleNameSessionKey = "Vector.RoleName";
     public const string AccessViewSessionKey = "Vector.AccessView";
+    public const string SplashShownSessionKey = "Vector.SplashShown";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly VectorDbContext _db;
@@ -28,6 +29,32 @@ public class CurrentUserService
     public int? CurrentUserId => _httpContextAccessor.HttpContext?.Session.GetInt32(UserIdSessionKey);
 
     public string? CurrentAccessView => _httpContextAccessor.HttpContext?.Session.GetString(AccessViewSessionKey);
+
+    public async Task<CompanyBrandingContext> GetCurrentCompanyBrandingAsync(IWebHostEnvironment environment)
+    {
+        var company = await GetCurrentCompanyAsync();
+        var clientName = CompanyBranding.GetDisplayCompanyName(company);
+        var logoPath = CompanyBranding.GetLogoPath(environment, company);
+
+        return new CompanyBrandingContext(clientName, logoPath);
+    }
+
+    public async Task<Company?> GetCurrentCompanyAsync()
+    {
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser?.Company is not null)
+        {
+            return currentUser.Company;
+        }
+
+        var companyId = _httpContextAccessor.HttpContext?.Session.GetInt32(CompanyIdSessionKey);
+        if (!companyId.HasValue)
+        {
+            return null;
+        }
+
+        return await _db.Companies.FirstOrDefaultAsync(company => company.Id == companyId.Value);
+    }
 
     public async Task<AppUser?> GetCurrentUserAsync()
     {
@@ -56,6 +83,7 @@ public class CurrentUserService
         session.SetString(FullNameSessionKey, user.FullName);
         session.SetString(RoleNameSessionKey, user.AppRole?.Name ?? string.Empty);
         session.SetString(AccessViewSessionKey, NormalizeAccessView(accessView));
+        session.SetString(SplashShownSessionKey, "true");
     }
 
     public void SignOut()
@@ -66,6 +94,21 @@ public class CurrentUserService
         session?.Remove(FullNameSessionKey);
         session?.Remove(RoleNameSessionKey);
         session?.Remove(AccessViewSessionKey);
+    }
+
+    public void SignOutCurrentUserOnly()
+    {
+        var session = _httpContextAccessor.HttpContext?.Session;
+        if (session is null)
+        {
+            return;
+        }
+
+        session.Remove(UserIdSessionKey);
+        session.Remove(FullNameSessionKey);
+        session.Remove(RoleNameSessionKey);
+        session.Remove(AccessViewSessionKey);
+        session.SetString(SplashShownSessionKey, "true");
     }
 
     public static string NormalizeAccessView(string? access)
@@ -110,3 +153,5 @@ public class CurrentUserService
             || string.Equals(roleName, "Company Owner", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+public record CompanyBrandingContext(string ClientName, string LogoPath);

@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Operational Checklists";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="checklist-select-screen">
@@ -17,13 +18,13 @@
 
         <div class="module-grid checklist-frequency-row">
             <a class="module-card primary" href="/DailyVehicleChecklist">
-                <strong>Daily Vehicle Readiness</strong>
-                <span>Vehicle details, operational checks, schematic notes, and carried equipment in one report</span>
+                <strong>Daily Vehicle & Equipment Check</strong>
+                <span>Vehicle details, operational checks, unit schematic notes, and carried equipment in one report</span>
             </a>
 
-            <a class="module-card" href="/MonthlyChecklist">
-                <strong>Monthly Inspections</strong>
-                <span>Open lower-frequency vehicle and equipment inspection options</span>
+            <a class="module-card" href="/DailyVehicleChecklist?frequency=full-audit">
+                <strong>Full Audit</strong>
+                <span>Open a full audit checklist for lower-frequency inspection work</span>
             </a>
         </div>
     </div>

@@ -1,5 +1,7 @@
 App_Data/uploads/
 vector-dev.db*
 bin/
-obj/Debug/
+obj/
+artifacts/
 *.log
+.data-protection-keys/

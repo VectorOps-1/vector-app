@@ -14,11 +14,16 @@ public class ReadinessDashboardModel : PageModel
 
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly ReadinessEngineScoringService _readinessScoring;
 
-    public ReadinessDashboardModel(VectorDbContext db, CurrentUserService currentUser)
+    public ReadinessDashboardModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        ReadinessEngineScoringService readinessScoring)
     {
         _db = db;
         _currentUser = currentUser;
+        _readinessScoring = readinessScoring;
     }
 
     [BindProperty(SupportsGet = true)] public int? OperationalAreaId { get; set; }
@@ -31,7 +36,6 @@ public class ReadinessDashboardModel : PageModel
     public DateTime ShiftEndUtc { get; private set; }
     public DashboardSummary Summary { get; private set; } = new();
     public List<SelectListItem> AreaOptions { get; private set; } = new();
-    public List<VehicleReadinessRow> VehicleRows { get; private set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -39,6 +43,11 @@ public class ReadinessDashboardModel : PageModel
         if (currentUser is null)
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        if (!CanViewReadinessDashboard(currentUser))
+        {
+            return RedirectToPage("/Home");
         }
 
         IsSeniorOverview = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
@@ -159,6 +168,7 @@ public class ReadinessDashboardModel : PageModel
                 .Include(report => report.EquipmentChecks)
                 .Where(report =>
                     report.CompanyId == companyId &&
+                    report.WorkflowStatus != "Deleted" &&
                     vehicleIds.Contains(report.VehicleId) &&
                     (report.SubmittedAtUtc ?? report.InspectionDateUtc) >= ShiftStartUtc)
                 .ToListAsync();
@@ -188,11 +198,23 @@ public class ReadinessDashboardModel : PageModel
                 .ToList();
         }
 
-        VehicleRows = vehicles
+        var vehicleRows = vehicles
             .Select(vehicle => BuildVehicleRow(vehicle, latestReports.GetValueOrDefault(vehicle.Id), openIssues))
             .ToList();
 
-        Summary = BuildSummary(VehicleRows, openIssues.Count);
+        var engineSummary = await _readinessScoring.ScoreDashboardAsync(companyId, vehicles, latestReports, openIssues);
+        Summary = new DashboardSummary
+        {
+            TotalVehicles = engineSummary.TotalVehicles,
+            CheckedVehicles = engineSummary.CheckedVehicles,
+            ReadyVehicles = engineSummary.ReadyVehicles,
+            UnavailableVehicles = engineSummary.UnavailableVehicles,
+            MissingChecks = engineSummary.MissingChecks,
+            OpenIssues = engineSummary.OpenIssues,
+            EquipmentWarnings = engineSummary.EquipmentWarnings,
+            ScorePercent = engineSummary.ScorePercent,
+            ScoreClass = engineSummary.ScoreClass
+        };
     }
 
     private static VehicleReadinessRow BuildVehicleRow(
@@ -204,7 +226,7 @@ public class ReadinessDashboardModel : PageModel
             MatchesIssue(issue, vehicle.RegistrationNumber) ||
             MatchesIssue(issue, vehicle.Callsign));
 
-        var checkedThisShift = report is not null;
+        var checkedThisShift = IsReadinessCheckComplete(report);
         var vehicleUnavailable = IsUnavailable(vehicle.Status);
         var reportUnavailable = report is not null &&
             (IsUnavailable(report.ReadinessStatus) || report.CriticalIssueCount > 0);
@@ -290,9 +312,17 @@ public class ReadinessDashboardModel : PageModel
         return report.EquipmentChecks.Any(check =>
             !check.IsOperational ||
             IsProblemStatus(check.PresentStatus, "Present") ||
-            IsProblemStatus(check.BatteryStatus, "Full", "Acceptable", "Not applicable", "N/A") ||
+            IsProblemStatus(check.BatteryStatus, "Full", "Acceptable", "Charging", "Not applicable", "N/A") ||
             IsProblemStatus(check.DamageStatus, "No damage", "None", "Good", "Not applicable", "N/A") ||
             IsProblemStatus(check.ReadinessImpact, "None"));
+    }
+
+    private static bool IsReadinessCheckComplete(DailyVehicleReadinessReport? report)
+    {
+        return report is not null &&
+            !string.Equals(report.WorkflowStatus, "Draft", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(report.LastSavedSection, "Equipment", StringComparison.OrdinalIgnoreCase) &&
+            report.EquipmentChecks.Any();
     }
 
     private static bool IsProblemStatus(string? value, params string[] acceptedValues)
@@ -334,6 +364,12 @@ public class ReadinessDashboardModel : PageModel
         return !string.IsNullOrWhiteSpace(haystack) &&
             !string.IsNullOrWhiteSpace(needle) &&
             haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CanViewReadinessDashboard(AppUser user)
+    {
+        return string.Equals(user.AppRole?.Name, "Operational Management", StringComparison.OrdinalIgnoreCase) ||
+            CurrentUserService.IsSeniorAccessRole(user.AppRole?.Name);
     }
 
     private sealed record AreaScopeItem(int Id, string Name, string AreaType);

@@ -1,0 +1,127 @@
+@page
+@model ReadinessMetricModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = Model.MetricHeading;
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="metric-screen">
+    <div class="metric-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Shift Readiness</div>
+        <h2 class="page-title">@Model.MetricHeading</h2>
+        <p class="page-subtitle">@Model.MetricSubtitle</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="confirmation-flag" role="status">@Model.StatusMessage</div>
+        }
+
+        <section class="metric-list-panel">
+            <div class="metric-list-header">
+                <span>@Model.PrimaryColumnHeading</span>
+                <span>@Model.DetailColumnHeading</span>
+                <span>@Model.OwnerColumnHeading</span>
+                <span></span>
+            </div>
+
+            @if (Model.Rows.Count == 0)
+            {
+                <div class="empty-state">@Model.EmptyMessage</div>
+            }
+            else
+            {
+                @foreach (var row in Model.Rows)
+                {
+                    <div class="metric-row @(row.IsReady ? "ready-row" : "problem-row")">
+                        <a class="metric-row-link" href="@row.TargetUrl">
+                            <span>@row.Callsign</span>
+                            <span>@row.Discrepancy</span>
+                            <span>@row.AssignedManager</span>
+                        </a>
+                        <form method="post" asp-page-handler="Delete" class="delete-row-form">
+                            <input type="hidden" name="metric" value="@Model.Metric" />
+                            <input type="hidden" name="operationalAreaId" value="@Model.OperationalAreaId" />
+                            <input type="hidden" name="vehicleId" value="@row.VehicleId" />
+                            <input type="hidden" name="reportId" value="@row.ReportId" />
+                            <input type="hidden" name="issueId" value="@row.IssueId" />
+                            <input type="hidden" name="alertKey" value="@row.AlertKey" />
+                            <button type="button" class="delete-row-btn" aria-label="Delete @row.Callsign" title="Delete">Delete</button>
+                            <div class="delete-confirm-panel" hidden>
+                                <span>Delete this item?</span>
+                                <div class="delete-confirm-actions">
+                                    <button type="submit" class="delete-confirm-btn">Confirm</button>
+                                    <button type="button" class="delete-cancel-btn">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                }
+            }
+        </section>
+
+        <a class="back-link" asp-page="/ReadinessDashboard" asp-route-operationalAreaId="@Model.OperationalAreaId">Back: Readiness Dashboard</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('click', function (event) {
+    const trigger = event.target.closest('.delete-row-btn');
+    if (trigger) {
+        const form = trigger.closest('.delete-row-form');
+        const row = trigger.closest('.metric-row');
+        form.querySelector('.delete-confirm-panel').hidden = false;
+        trigger.hidden = true;
+        row.classList.add('confirm-delete');
+        return;
+    }
+
+    const cancel = event.target.closest('.delete-cancel-btn');
+    if (cancel) {
+        const form = cancel.closest('.delete-row-form');
+        const row = cancel.closest('.metric-row');
+        form.querySelector('.delete-confirm-panel').hidden = true;
+        form.querySelector('.delete-row-btn').hidden = false;
+        row.classList.remove('confirm-delete');
+    }
+});
+</script>
+
+<style>
+.metric-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.metric-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+.page-logo { width: 300px; max-width: 72%; max-height: 170px; object-fit: contain; margin: 0 auto 12px auto; display: block; }
+.client-line { margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
+.home-label { margin-bottom: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #5f6b7a; }
+.page-title { margin: 0 0 8px 0; font-size: 30px; font-weight: 900; color: #1f2937; }
+.page-subtitle { width: min(760px, 94%); margin: 0 auto 22px auto; color: #6b7280; font-size: 15px; font-weight: 700; }
+.confirmation-flag { width: min(920px, 100%); box-sizing: border-box; margin: 0 auto 16px auto; padding: 12px 16px; border: 1px solid rgba(32,122,99,.24); border-radius: 8px; background: rgba(32,122,99,.10); color: #1f6f5b; font-size: 14px; font-weight: 900; text-align: left; }
+.metric-list-panel { width: min(920px, 100%); margin: 0 auto 22px auto; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.78); text-align: left; }
+.metric-list-header { display: grid; grid-template-columns: 180px 1fr 220px 54px; gap: 14px; align-items: center; padding: 13px 16px; }
+.metric-list-header { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.metric-row { display: grid; grid-template-columns: 1fr 74px; gap: 10px; align-items: stretch; border-top: 1px solid rgba(66,84,102,.12); border-left: 5px solid transparent; color: #1f2937; font-size: 14px; font-weight: 800; }
+.metric-row.confirm-delete { grid-template-columns: 1fr 220px; }
+.metric-row-link { display: grid; grid-template-columns: 180px 1fr 220px; gap: 14px; align-items: center; padding: 13px 0 13px 11px; color: inherit; text-decoration: none; }
+.metric-row.problem-row { border-left-color: #9B3B3B; background: rgba(155,59,59,.08); }
+.metric-row.ready-row { border-left-color: #207A63; background: rgba(32,122,99,.08); }
+.metric-row.problem-row .metric-row-link span:first-child, .metric-row.problem-row .metric-row-link span:nth-child(2) { color: #7f2f2f; }
+.metric-row.ready-row .metric-row-link span:first-child, .metric-row.ready-row .metric-row-link span:nth-child(2) { color: #1f6f5b; }
+.metric-row:hover { filter: brightness(.98); box-shadow: inset 0 0 0 1px rgba(14,94,122,.14); }
+.delete-row-form { display: flex; align-items: center; justify-content: center; padding-right: 8px; }
+.delete-row-btn { min-width: 62px; height: 34px; border: 1px solid rgba(155,59,59,.22); border-radius: 8px; background: #fff; color: #7f2f2f; cursor: pointer; font-size: 12px; font-weight: 900; line-height: 1; }
+.delete-row-btn:hover { background: rgba(155,59,59,.10); }
+.delete-confirm-panel { width: 100%; display: grid; gap: 8px; align-content: center; padding: 8px 0; color: #7f2f2f; font-size: 12px; font-weight: 900; }
+.delete-confirm-actions { display: flex; gap: 6px; }
+.delete-confirm-btn, .delete-cancel-btn { min-height: 32px; flex: 1; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 900; }
+.delete-confirm-btn { border: 1px solid rgba(155,59,59,.28); background: #9B3B3B; color: #fff; }
+.delete-cancel-btn { border: 1px solid rgba(66,84,102,.18); background: #fff; color: #334155; }
+.empty-state { padding: 22px 16px; color: #52606d; font-size: 15px; font-weight: 900; text-align: center; }
+.back-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 18px; border: 1px solid rgba(66,84,102,.22); border-radius: 8px; background: #fff; color: #0E5E7A; font-weight: 900; text-decoration: none; }
+.back-link:hover { background: #eef3f8; color: #0b4b61; }
+@@media (max-width: 760px) { .metric-list-header { display: none; } .metric-row, .metric-row.confirm-delete { grid-template-columns: 1fr; gap: 0; } .metric-row-link { grid-template-columns: 1fr; gap: 6px; padding-right: 12px; } .metric-row-link span { display: block; } .metric-row-link span::before { display: block; margin-bottom: 2px; color: #6b7280; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; } .metric-row-link span:nth-child(1)::before { content: "Callsign"; } .metric-row-link span:nth-child(2)::before { content: "Discrepancy"; } .metric-row-link span:nth-child(3)::before { content: "Assigned manager"; } .delete-row-form { justify-content: stretch; padding: 0 12px 12px 11px; } .delete-row-btn { width: 100%; min-height: 42px; } .delete-confirm-panel { padding-top: 0; } }
+</style>

@@ -4,8 +4,9 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @{
     ViewData["Title"] = "Medication Register Preview";
-    var companyLogoPath = CompanyBranding.GetLogoPath(WebHostEnvironment);
-    var companyName = CompanyBranding.GetCompanyName(WebHostEnvironment);
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
 }
 
 <div class="preview-screen">
@@ -85,7 +86,7 @@
 
         <div class="action-row">
             <a class="menu-btn vehicle-btn" href="/UploadMedicationRegister">Upload Different File</a>
-            <button class="menu-btn equipment-btn" type="button" data-action-confirmation data-confirmation-message="Medication register saved.">Save Medication Register</button>
+            <a class="menu-btn equipment-btn" href="/MedicationRegister?view=register">Open Medication Register</a>
         </div>
     </div>
 </div>
