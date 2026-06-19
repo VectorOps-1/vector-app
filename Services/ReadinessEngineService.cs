@@ -4,8 +4,12 @@ using vector_app_local.Models;
 
 namespace vector_app_local.Services;
 
+public sealed record ReadinessDraftCleanupResult(int RemovedRules, int ReorderedRules);
+
 public class ReadinessEngineService
 {
+    public const string ProductDefaultSourceType = "AcuityOps product default";
+
     private readonly VectorDbContext _db;
 
     public ReadinessEngineService(VectorDbContext db)
@@ -13,10 +17,19 @@ public class ReadinessEngineService
         _db = db;
     }
 
-    public async Task<ReadinessEngineVersion> EnsureDraftVersionAsync(AppUser currentUser)
+    public async Task<ReadinessEngineVersion?> LoadDraftVersionAsync(int companyId)
     {
-        await EnsureDefaultPublishedEngineAsync(_db, currentUser.CompanyId, currentUser.Id);
+        return await _db.ReadinessEngineVersions
+            .Include(version => version.Rules)
+            .Where(version =>
+                version.CompanyId == companyId &&
+                version.Status == ReadinessEngineStatuses.Draft)
+            .OrderByDescending(version => version.CreatedAtUtc)
+            .FirstOrDefaultAsync();
+    }
 
+    public async Task<ReadinessEngineVersion> CreateDraftVersionAsync(AppUser currentUser)
+    {
         var draft = await _db.ReadinessEngineVersions
             .Include(version => version.Rules)
             .Where(version =>
@@ -31,31 +44,33 @@ public class ReadinessEngineService
         }
 
         var published = await LoadPublishedVersionAsync(currentUser.CompanyId);
-        if (published is null)
-        {
-            throw new InvalidOperationException("No readiness engine version is available.");
-        }
+        var now = DateTime.UtcNow;
 
         draft = new ReadinessEngineVersion
         {
             CompanyId = currentUser.CompanyId,
             Name = "Draft readiness engine",
-            VersionNumber = NextVersionNumber(published.VersionNumber),
+            VersionNumber = published is null ? "1.0" : NextVersionNumber(published.VersionNumber),
             Status = ReadinessEngineStatuses.Draft,
-            SourceReadinessEngineVersionId = published.Id,
+            SourceReadinessEngineVersionId = published?.Id,
             CreatedByUserId = currentUser.Id,
-            Notes = "Draft created from the active published readiness engine.",
-            CreatedAtUtc = DateTime.UtcNow
+            Notes = published is null
+                ? "Blank readiness engine draft created by senior management."
+                : "Draft created from the active published readiness engine.",
+            CreatedAtUtc = now
         };
 
         _db.ReadinessEngineVersions.Add(draft);
         await _db.SaveChangesAsync();
 
-        foreach (var rule in published.Rules.OrderBy(rule => rule.SortOrder).ThenBy(rule => rule.Id))
+        if (published is not null)
         {
-            var draftRule = CloneRule(rule, currentUser.CompanyId);
-            draftRule.ReadinessEngineVersionId = draft.Id;
-            _db.ReadinessEngineRules.Add(draftRule);
+            foreach (var rule in published.Rules.OrderBy(rule => rule.SortOrder).ThenBy(rule => rule.Id))
+            {
+                var draftRule = CloneRule(rule, currentUser.CompanyId);
+                draftRule.ReadinessEngineVersionId = draft.Id;
+                _db.ReadinessEngineRules.Add(draftRule);
+            }
         }
 
         AuditTrailService.Record(
@@ -65,7 +80,9 @@ public class ReadinessEngineService
             "Readiness engine draft created",
             "ReadinessEngineVersion",
             draft.Id,
-            $"Draft readiness engine {draft.VersionNumber} created from published version {published.VersionNumber}.");
+            published is null
+                ? $"Blank readiness engine draft {draft.VersionNumber} created."
+                : $"Draft readiness engine {draft.VersionNumber} created from published version {published.VersionNumber}.");
         await _db.SaveChangesAsync();
         return draft;
     }
@@ -79,6 +96,68 @@ public class ReadinessEngineService
                 version.Status == ReadinessEngineStatuses.Published)
             .OrderByDescending(version => version.PublishedAtUtc ?? version.CreatedAtUtc)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<int> ApplyProductDefaultRulesAsync(AppUser currentUser, int versionId)
+    {
+        var version = await _db.ReadinessEngineVersions
+            .Include(item => item.Rules)
+            .FirstOrDefaultAsync(item =>
+                item.Id == versionId &&
+                item.CompanyId == currentUser.CompanyId &&
+                item.Status == ReadinessEngineStatuses.Draft);
+
+        if (version is null ||
+            version.Rules.Any(rule => string.Equals(rule.SourceType, ProductDefaultSourceType, StringComparison.OrdinalIgnoreCase)))
+        {
+            return 0;
+        }
+
+        var fingerprints = version.Rules
+            .Select(BuildFingerprint)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var nextOrder = version.Rules.Count == 0 ? 10 : version.Rules.Max(rule => rule.SortOrder) + 10;
+        var addedCount = 0;
+        var now = DateTime.UtcNow;
+
+        foreach (var rule in ProductDefaultRules())
+        {
+            rule.CompanyId = currentUser.CompanyId;
+            rule.ReadinessEngineVersionId = version.Id;
+            rule.SourceType = ProductDefaultSourceType;
+            rule.SourceEntityType = "ProductDefault";
+            rule.IsAutoPopulated = false;
+            rule.SortOrder = nextOrder;
+            rule.CreatedAtUtc = now;
+
+            if (!fingerprints.Add(BuildFingerprint(rule)))
+            {
+                continue;
+            }
+
+            nextOrder += 10;
+            addedCount++;
+            version.Rules.Add(rule);
+        }
+
+        if (addedCount == 0)
+        {
+            return 0;
+        }
+
+        version.UpdatedAtUtc = now;
+        AuditTrailService.Record(
+            _db,
+            currentUser.CompanyId,
+            currentUser.Id,
+            "Readiness engine product defaults applied",
+            "ReadinessEngineVersion",
+            version.Id,
+            $"{addedCount} AcuityOps product default scoring rule(s) were intentionally added to draft {version.VersionNumber}.",
+            now);
+
+        await _db.SaveChangesAsync();
+        return addedCount;
     }
 
     public async Task<int> AutoPopulateSuggestedRulesAsync(AppUser currentUser, int versionId)
@@ -122,17 +201,21 @@ public class ReadinessEngineService
             version.Rules.Add(rule);
         }
 
-        var vehicleTypes = await _db.Vehicles
+        var vehicleRows = await _db.Vehicles
             .AsNoTracking()
             .Where(vehicle => vehicle.CompanyId == currentUser.CompanyId && vehicle.Status != "Deleted")
-            .Select(vehicle => vehicle.VehicleType)
-            .Distinct()
             .ToListAsync();
 
-        foreach (var vehicleType in vehicleTypes.Where(type => !string.IsNullOrWhiteSpace(type)))
+        var vehicleTypes = vehicleRows
+            .Select(VehicleTaxonomyService.DisplayClassification)
+            .Where(type => !string.IsNullOrWhiteSpace(type))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var vehicleType in vehicleTypes)
         {
-            AddSuggested(CreateRule("Vehicle", "Vehicle register", vehicleType, "Next service date", "Service overdue", "Vehicle type", vehicleType, null, ReadinessRuleSeverity.Major, 20, false, true, "VehicleType", null, ReadinessRuleScope.AssignedToActiveVehicle));
-            AddSuggested(CreateRule("Vehicle", "Vehicle status", vehicleType, "Status", "Out of service / unavailable", "Vehicle type", vehicleType, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "VehicleType", null, ReadinessRuleScope.AssignedToActiveVehicle));
+            AddSuggested(CreateRule("Vehicle", "Vehicle register", vehicleType, "Next service date", "Service overdue", "Vehicle function / subtype", vehicleType, null, ReadinessRuleSeverity.Major, 20, false, true, "VehicleClassification", null, ReadinessRuleScope.AssignedToActiveVehicle));
+            AddSuggested(CreateRule("Vehicle", "Vehicle status", vehicleType, "Status", "Out of service / unavailable", "Vehicle function / subtype", vehicleType, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "VehicleClassification", null, ReadinessRuleScope.AssignedToActiveVehicle));
         }
 
         var equipmentGroups = await _db.EquipmentItems
@@ -205,9 +288,95 @@ public class ReadinessEngineService
         return addedCount;
     }
 
+    public async Task<ReadinessDraftCleanupResult> CleanDraftRulesAsync(AppUser currentUser, int versionId)
+    {
+        var version = await _db.ReadinessEngineVersions
+            .Include(item => item.Rules)
+            .FirstOrDefaultAsync(item =>
+                item.Id == versionId &&
+                item.CompanyId == currentUser.CompanyId &&
+                item.Status == ReadinessEngineStatuses.Draft);
+
+        if (version is null)
+        {
+            return new ReadinessDraftCleanupResult(0, 0);
+        }
+
+        var rulesToRemove = version.Rules
+            .GroupBy(BuildFingerprint, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .SelectMany(group =>
+            {
+                var keep = group
+                    .OrderBy(RuleRetentionRank)
+                    .ThenByDescending(rule => rule.IsActive)
+                    .ThenByDescending(rule => rule.ManualImpactPercent.HasValue)
+                    .ThenByDescending(rule => !string.IsNullOrWhiteSpace(rule.Notes))
+                    .ThenByDescending(rule => rule.UpdatedAtUtc ?? rule.CreatedAtUtc)
+                    .ThenBy(rule => rule.SortOrder)
+                    .ThenBy(rule => rule.Id)
+                    .First();
+
+                return group.Where(rule => rule.Id != keep.Id);
+            })
+            .ToList();
+        var duplicateRuleCount = rulesToRemove.Count;
+        var inactiveGeneratedSuggestions = version.Rules
+            .Except(rulesToRemove)
+            .Where(IsInactiveGeneratedSuggestion)
+            .ToList();
+
+        rulesToRemove.AddRange(inactiveGeneratedSuggestions);
+
+        foreach (var rule in rulesToRemove)
+        {
+            version.Rules.Remove(rule);
+            _db.ReadinessEngineRules.Remove(rule);
+        }
+
+        var reorderedCount = 0;
+        var order = 10;
+        foreach (var rule in version.Rules
+            .Except(rulesToRemove)
+            .OrderBy(rule => rule.SortOrder)
+            .ThenBy(rule => rule.AssetType)
+            .ThenBy(rule => rule.ItemName)
+            .ThenBy(rule => rule.Id))
+        {
+            if (rule.SortOrder != order)
+            {
+                reorderedCount++;
+                rule.SortOrder = order;
+            }
+
+            order += 10;
+        }
+
+        if (rulesToRemove.Count == 0 && reorderedCount == 0)
+        {
+            return new ReadinessDraftCleanupResult(0, 0);
+        }
+
+        var now = DateTime.UtcNow;
+        version.UpdatedAtUtc = now;
+        AuditTrailService.Record(
+            _db,
+            currentUser.CompanyId,
+            currentUser.Id,
+            "Readiness engine draft cleaned",
+            "ReadinessEngineVersion",
+            version.Id,
+            $"Removed {duplicateRuleCount} duplicate draft rule(s), removed {inactiveGeneratedSuggestions.Count} inactive generated suggestion(s), and reordered {reorderedCount} retained rule(s).",
+            now);
+
+        await _db.SaveChangesAsync();
+        return new ReadinessDraftCleanupResult(rulesToRemove.Count, reorderedCount);
+    }
+
     public async Task PublishDraftAsync(AppUser currentUser, int versionId)
     {
         var draft = await _db.ReadinessEngineVersions
+            .Include(version => version.Rules)
             .FirstOrDefaultAsync(version =>
                 version.Id == versionId &&
                 version.CompanyId == currentUser.CompanyId &&
@@ -243,7 +412,7 @@ public class ReadinessEngineService
             "Readiness engine published",
             "ReadinessEngineVersion",
             draft.Id,
-            $"{draft.Name} {draft.VersionNumber} published.",
+            $"{currentUser.FullName} published {draft.Name} {draft.VersionNumber} with {draft.Rules.Count} rule(s). {publishedVersions.Count} previous published version(s) archived.",
             now);
 
         await _db.SaveChangesAsync();
@@ -294,7 +463,7 @@ public class ReadinessEngineService
             "Readiness scoring request created",
             "ReadinessScoringChangeRequest",
             request.Id,
-            $"{currentUser.FullName} requested scoring change for {request.AssetType} / {request.ItemName}: {request.Reason}");
+            $"{currentUser.FullName} requested scoring change for rule {rule.Id} ({request.AssetType} / {request.ItemName} / {request.TriggerValue}). Current: {request.CurrentSeverity} / -{request.CurrentImpactPercent}% / {(request.CurrentActive == true ? "active" : "inactive")}. Proposed: {request.ProposedSeverity} / -{request.ProposedImpactPercent ?? request.CurrentImpactPercent ?? 0}% / {(request.ProposedActive == false ? "inactive" : "active")}. Reason: {request.Reason}");
         await _db.SaveChangesAsync();
     }
 
@@ -302,6 +471,7 @@ public class ReadinessEngineService
     {
         var request = await _db.ReadinessScoringChangeRequests
             .Include(item => item.ReadinessEngineRule)
+            .Include(item => item.RequestedByUser)
             .FirstOrDefaultAsync(item =>
                 item.Id == requestId &&
                 item.CompanyId == currentUser.CompanyId &&
@@ -341,8 +511,21 @@ public class ReadinessEngineService
             approve ? "Readiness scoring request approved" : "Readiness scoring request rejected",
             "ReadinessScoringChangeRequest",
             request.Id,
-            string.IsNullOrWhiteSpace(decisionNote) ? request.Reason : decisionNote,
+            $"{currentUser.FullName} {(approve ? "approved" : "rejected")} scoring request {request.Id} from {request.RequestedByUser?.FullName ?? "operational manager"} for {request.AssetType} / {request.ItemName} / {request.TriggerValue}. Current: {request.CurrentSeverity} / -{request.CurrentImpactPercent}% / {(request.CurrentActive == false ? "inactive" : "active")}. Proposed: {request.ProposedSeverity} / -{request.ProposedImpactPercent ?? request.CurrentImpactPercent ?? 0}% / {(request.ProposedActive == false ? "inactive" : "active")}. Note: {(string.IsNullOrWhiteSpace(decisionNote) ? request.Reason : decisionNote)}",
             now);
+
+        if (approve && request.ReadinessEngineRule is not null)
+        {
+            AuditTrailService.Record(
+                _db,
+                currentUser.CompanyId,
+                currentUser.Id,
+                "Readiness engine rule updated from approved request",
+                "ReadinessEngineRule",
+                request.ReadinessEngineRule.Id,
+                $"Rule updated from approved scoring request {request.Id}: {request.AssetType} / {request.ItemName} / {request.TriggerValue}. New setting: {request.ReadinessEngineRule.Severity} / -{request.ReadinessEngineRule.ManualImpactPercent ?? request.ReadinessEngineRule.DefaultImpactPercent}% / {(request.ReadinessEngineRule.IsActive ? "active" : "inactive")}.",
+                now);
+        }
 
         await _db.SaveChangesAsync();
     }
@@ -379,96 +562,6 @@ public class ReadinessEngineService
             now);
 
         await _db.SaveChangesAsync();
-    }
-
-    public static async Task EnsureDefaultPublishedEngineAsync(VectorDbContext db, int companyId, int? createdByUserId)
-    {
-        var version = await db.ReadinessEngineVersions
-            .Include(item => item.Rules)
-            .Where(item => item.CompanyId == companyId && item.Status == ReadinessEngineStatuses.Published)
-            .OrderByDescending(item => item.PublishedAtUtc ?? item.CreatedAtUtc)
-            .FirstOrDefaultAsync();
-
-        if (version is null)
-        {
-            version = new ReadinessEngineVersion
-            {
-                CompanyId = companyId,
-                Name = "Default AcuityOps Engine",
-                VersionNumber = "1.0",
-                Status = ReadinessEngineStatuses.Published,
-                CreatedByUserId = createdByUserId,
-                PublishedByUserId = createdByUserId,
-                Notes = "Default readiness scoring rules supplied by AcuityOps.",
-                CreatedAtUtc = DateTime.UtcNow,
-                PublishedAtUtc = DateTime.UtcNow
-            };
-
-            db.ReadinessEngineVersions.Add(version);
-            AuditTrailService.Record(
-                db,
-                companyId,
-                createdByUserId,
-                "Default readiness engine created",
-                "ReadinessEngineVersion",
-                null,
-                "Default AcuityOps readiness scoring engine created.");
-            await db.SaveChangesAsync();
-        }
-
-        var fingerprints = version.Rules
-            .Select(BuildFingerprint)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var order = version.Rules.Count == 0 ? 10 : version.Rules.Max(rule => rule.SortOrder) + 10;
-
-        foreach (var rule in DefaultRules(companyId))
-        {
-            if (!fingerprints.Add(BuildFingerprint(rule)))
-            {
-                continue;
-            }
-
-            rule.CompanyId = companyId;
-            rule.SortOrder = order;
-            rule.ReadinessEngineVersionId = version.Id;
-            order += 10;
-            db.ReadinessEngineRules.Add(rule);
-        }
-
-        await db.SaveChangesAsync();
-    }
-
-    private static IEnumerable<ReadinessEngineRule> DefaultRules(int companyId)
-    {
-        yield return CreateRule("Checklist Completion", "Daily readiness", "Daily vehicle readiness", "Completion", "Missing completed check", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Checklist Completion", "Daily readiness", "Required field", "Completion", "Omitted required field", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Vehicle", "Vehicle status", "Vehicle", "Status", "Out of service / unavailable", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Vehicle", "Operational checks", "Lights", "LightsStatus", "Failed / not operational", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Vehicle", "Operational checks", "Sirens", "SirensStatus", "Failed / not operational", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Vehicle", "Operational checks", "Warning lights", "WarningLightsStatus", "Failed / not operational", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Vehicle", "Operational checks", "Tyres", "TyresStatus", "Unsafe / failed", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Vehicle", "Operational checks", "Ops radio", "RadioConnectivityStatus", "Disconnected / failed", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Vehicle", "Vehicle register", "Next service date", "NextServiceDate", "Service overdue", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Vehicle", "Schematic / damage", "Damage", "DamageStatus", "Minor cosmetic", "All", null, null, ReadinessRuleSeverity.Minor, 2, false, false, "Default", null);
-        yield return CreateRule("Vehicle", "Schematic / damage", "Damage", "DamageStatus", "Operationally unsafe", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-
-        yield return CreateRule("Equipment", "Carried equipment", "Required equipment", "PresentStatus", "Missing", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Equipment", "Carried equipment", "Required equipment", "Operational", "No", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Equipment", "Carried equipment", "Battery", "BatteryStatus", "Low", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Equipment", "Carried equipment", "Battery", "BatteryStatus", "Charging", "All", null, null, ReadinessRuleSeverity.Minor, 3, false, false, "Default", null);
-        yield return CreateRule("Equipment", "Carried equipment", "Battery", "BatteryStatus", "Flat / failed", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null);
-        yield return CreateRule("Equipment", "Equipment register", "Service date", "NextServiceDate", "Service overdue", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
-        yield return CreateRule("Equipment", "Equipment register", "S/N / ID", "SerialOrAssetId", "S/N mismatch or wrong location", "All", null, null, ReadinessRuleSeverity.Moderate, 10, false, true, "Default", null);
-
-        yield return CreateRule("Stock", "Stock register", "Required stock", "Quantity", "Below minimum", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-        yield return CreateRule("Stock", "Stock register", "Required stock", "Quantity", "Missing", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-        yield return CreateRule("Stock", "Stock register", "Disposable stock", "ExpiryDate", "Expired", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-
-        yield return CreateRule("Medication", "Medication register", "Required medication", "Quantity", "Below minimum", "All", null, null, ReadinessRuleSeverity.Critical, 40, false, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-        yield return CreateRule("Medication", "Medication register", "Required medication", "Quantity", "Missing", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-        yield return CreateRule("Medication", "Medication register", "Medication expiry", "ExpiryDate", "Expired", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, "Default", null, ReadinessRuleScope.RequiredStockMinimum);
-
-        yield return CreateRule("Issue Report", "Issue reports", "Open issue", "Severity", "Critical unresolved issue", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, "Default", null);
     }
 
     private static ReadinessEngineRule CreateRule(
@@ -510,6 +603,27 @@ public class ReadinessEngineService
             SourceEntityId = sourceEntityId,
             CreatedAtUtc = DateTime.UtcNow
         };
+    }
+
+    private static IReadOnlyList<ReadinessEngineRule> ProductDefaultRules()
+    {
+        return
+        [
+            CreateRule("Checklist Completion", "Daily check", "Daily vehicle readiness", "Completion", "Missing completed check", "All", null, null, ReadinessRuleSeverity.Critical, 40, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Vehicle", "Vehicle register", "Vehicle", "Status", "Out of service / unavailable", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Vehicle", "Vehicle register", "Next service date", "NextServiceDate", "Service overdue", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment check", "Required equipment", "PresentStatus", "Missing", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment check", "Required equipment", "Operational", "No", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment check", "Battery", "BatteryStatus", "Low", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment check", "Battery", "BatteryStatus", "Flat / failed", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment register", "Next service date", "NextServiceDate", "Service overdue", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Equipment", "Equipment register", "S/N / Asset ID", "SerialOrAssetId", "S/N mismatch or wrong location", "All", null, null, ReadinessRuleSeverity.Moderate, 10, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.AssignedToActiveVehicle),
+            CreateRule("Issue Report", "Issue reports", "Open issue", "Severity", "Critical unresolved issue", "All", null, null, ReadinessRuleSeverity.Critical, 40, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.ActiveShift),
+            CreateRule("Stock", "Stock register", "Required stock", "Quantity", "Below minimum", "All", null, null, ReadinessRuleSeverity.Major, 20, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.RequiredStockMinimum),
+            CreateRule("Stock", "Stock register", "Required stock", "ExpiryDate", "Expired", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.RequiredStockMinimum),
+            CreateRule("Medication", "Medication register", "Required medication", "Quantity", "Below minimum", "All", null, null, ReadinessRuleSeverity.Critical, 40, false, true, ProductDefaultSourceType, null, ReadinessRuleScope.RequiredStockMinimum),
+            CreateRule("Medication", "Medication register", "Required medication", "ExpiryDate", "Expired", "All", null, null, ReadinessRuleSeverity.HardBlocker, 100, true, true, ProductDefaultSourceType, null, ReadinessRuleScope.RequiredStockMinimum)
+        ];
     }
 
     private static ReadinessEngineRule CloneRule(ReadinessEngineRule source, int companyId)
@@ -569,16 +683,61 @@ public class ReadinessEngineService
     {
         return string.Join("|", new[]
         {
-            rule.AssetType,
-            rule.Section,
-            rule.ItemName,
-            rule.FieldKey ?? string.Empty,
-            rule.TriggerValue,
-            rule.AppliesTo,
-            rule.ReadinessScope,
-            rule.TargetVehicleType ?? string.Empty,
+            NormalizeFingerprintPart(rule.AssetType),
+            NormalizeFingerprintPart(rule.Section),
+            NormalizeFingerprintPart(rule.ItemName),
+            NormalizeFingerprintPart(rule.FieldKey),
+            NormalizeFingerprintPart(rule.TriggerValue),
+            NormalizeFingerprintPart(rule.AppliesTo),
+            NormalizeFingerprintPart(rule.ReadinessScope),
+            NormalizeFingerprintPart(rule.TargetVehicleType),
             rule.OperationalAreaId?.ToString() ?? string.Empty
-        }).ToUpperInvariant();
+        });
+    }
+
+    private static string NormalizeFingerprintPart(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().ToUpperInvariant();
+    }
+
+    private static int RuleRetentionRank(ReadinessEngineRule rule)
+    {
+        var sourceType = rule.SourceType ?? string.Empty;
+        if (string.Equals(sourceType, "Custom", StringComparison.OrdinalIgnoreCase) && !rule.IsAutoPopulated)
+        {
+            return 0;
+        }
+
+        if (!rule.IsAutoPopulated &&
+            !string.Equals(sourceType, ProductDefaultSourceType, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sourceType, "Auto-populated", StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        if (!rule.IsAutoPopulated &&
+            string.Equals(sourceType, ProductDefaultSourceType, StringComparison.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+
+        if (!rule.IsAutoPopulated)
+        {
+            return 3;
+        }
+
+        return 4;
+    }
+
+    private static bool IsInactiveGeneratedSuggestion(ReadinessEngineRule rule)
+    {
+        var sourceType = rule.SourceType ?? string.Empty;
+        return !rule.IsActive &&
+            (rule.IsAutoPopulated || string.Equals(sourceType, "Auto-populated", StringComparison.OrdinalIgnoreCase)) &&
+            !rule.ManualImpactPercent.HasValue &&
+            string.IsNullOrWhiteSpace(rule.Notes);
     }
 
     private static string NextVersionNumber(string versionNumber)

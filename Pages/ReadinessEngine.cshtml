@@ -65,6 +65,7 @@
                 <div><dt>Notes</dt><dd>Internal explanation for why the rule exists or how managers should interpret it.</dd></div>
                 <div><dt>Order</dt><dd>The display order of rules in this editor.</dd></div>
                 <div><dt>Source</dt><dd>Whether the rule came from AcuityOps defaults, company registers, or was manually created.</dd></div>
+                <div><dt>AcuityOps product defaults</dt><dd>An intentional starter set added only when senior management chooses it during readiness engine setup.</dd></div>
                 <div><dt>Auto-populate from registers</dt><dd>Adds suggested scoring rules from the vehicles, equipment, stock, and medication already in the company register.</dd></div>
                 <div><dt>Publish Engine</dt><dd>Makes the editable draft become the live scoring engine used by dashboards and reports.</dd></div>
                 <div><dt>Manager requests</dt><dd>Operational manager suggestions for scoring changes. Senior management can approve, reject, or delete them.</dd></div>
@@ -157,10 +158,45 @@
                 }
             </section>
 
+            @if (Model.WorkingVersion is null)
+            {
+                <section class="engine-panel compact-panel">
+                    <div class="panel-head">
+                        <div>
+                            <span>No editable draft</span>
+                            <h3>Start readiness engine setup</h3>
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        No readiness engine draft exists. Create a draft only when you are ready to configure scoring rules.
+                    </div>
+                    <div class="engine-actions draft-start-actions">
+                        <form method="post" asp-page-handler="CreateDraft">
+                            <button class="engine-btn secondary" type="submit">Create Blank Draft</button>
+                        </form>
+                        <form method="post" asp-page-handler="ApplyProductDefaults" data-confirm-message="Create a readiness engine draft with AcuityOps product default rules?">
+                            <button class="engine-btn primary" type="submit">Start With AcuityOps Defaults</button>
+                        </form>
+                    </div>
+                </section>
+            }
+            else
+            {
             <section class="engine-actions">
+                @if (Model.CanApplyProductDefaults)
+                {
+                    <form method="post" asp-page-handler="ApplyProductDefaults" data-confirm-message="Add AcuityOps product default rules to this draft? This can only be done once for the draft.">
+                        <input type="hidden" asp-for="VersionId" />
+                        <button class="engine-btn secondary" type="submit">Add AcuityOps Product Defaults</button>
+                    </form>
+                }
                 <form method="post" asp-page-handler="Autopopulate">
                     <input type="hidden" asp-for="VersionId" />
                     <button class="engine-btn secondary" type="submit">Auto-populate from registers</button>
+                </form>
+                <form method="post" asp-page-handler="CleanDraftRules" data-confirm-message="Clean duplicate draft rules? Published rules will not be changed.">
+                    <input type="hidden" asp-for="VersionId" />
+                    <button class="engine-btn secondary" type="submit">Clean Draft Rules</button>
                 </form>
                 <form method="post" asp-page-handler="Publish" data-confirm-message="Publish this readiness engine for live dashboard scoring?">
                     <input type="hidden" asp-for="VersionId" />
@@ -384,6 +420,7 @@
                     <button class="engine-btn primary" type="submit">Add Rule</button>
                 </form>
             </section>
+            }
 
         }
         else if (Model.IsOperationalManager)

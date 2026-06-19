@@ -47,6 +47,7 @@ public class ReadinessEngineModel : PageModel
     public List<ReadinessRuleRow> RuleRows { get; private set; } = [];
     public List<ScoringRequestRow> PendingRequests { get; private set; } = [];
     public List<ScoringRequestRow> OwnRequests { get; private set; } = [];
+    public bool CanApplyProductDefaults { get; private set; }
     public string[] SeverityOptions { get; } = ReadinessRuleSeverity.Options;
     public string[] ReadinessScopeOptions { get; } = ReadinessRuleScope.Options;
     public string[] AssetTypeOptions { get; } =
@@ -78,6 +79,31 @@ public class ReadinessEngineModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostCreateDraftAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null || !CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return RedirectToPage("/Home");
+        }
+
+        await _engineService.CreateDraftVersionAsync(currentUser);
+        return RedirectToPage("/ReadinessEngine", new { confirmation = "draft-created" });
+    }
+
+    public async Task<IActionResult> OnPostApplyProductDefaultsAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null || !CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return RedirectToPage("/Home");
+        }
+
+        var draft = await _engineService.CreateDraftVersionAsync(currentUser);
+        var added = await _engineService.ApplyProductDefaultRulesAsync(currentUser, VersionId > 0 ? VersionId : draft.Id);
+        return RedirectToPage("/ReadinessEngine", new { confirmation = added == 0 ? "product-defaults-exist" : "product-defaults-added" });
+    }
+
     public async Task<IActionResult> OnPostSaveAsync()
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
@@ -102,6 +128,7 @@ public class ReadinessEngineModel : PageModel
             .Where(input => input.Id > 0)
             .ToDictionary(input => input.Id);
         var now = DateTime.UtcNow;
+        var changeSummaries = new List<string>();
 
         foreach (var rule in draft.Rules)
         {
@@ -110,16 +137,27 @@ public class ReadinessEngineModel : PageModel
                 continue;
             }
 
+            var before = RuleAuditSnapshot.FromRule(rule);
             ApplyRuleInput(rule, input, now);
+            var after = RuleAuditSnapshot.FromRule(rule);
+            var summary = before.DescribeChanges(after, rule.Id);
+            if (!string.IsNullOrWhiteSpace(summary))
+            {
+                changeSummaries.Add(summary);
+            }
         }
 
         draft.UpdatedAtUtc = now;
+        var details = changeSummaries.Count == 0
+            ? $"No field changes detected while saving {draft.Name} {draft.VersionNumber}."
+            : $"{changeSummaries.Count} readiness scoring rule edit(s) saved in {draft.Name} {draft.VersionNumber}: {string.Join("; ", changeSummaries.Take(8))}{(changeSummaries.Count > 8 ? "; ..." : string.Empty)}";
+
         _auditTrail.Record(
             currentUser,
-            "Readiness engine rules saved",
+            changeSummaries.Count == 0 ? "Readiness engine rules save checked" : "Readiness engine rules edited",
             "ReadinessEngineVersion",
             draft.Id,
-            $"{Rules.Count} readiness scoring rule(s) reviewed and saved in {draft.Name} {draft.VersionNumber}.",
+            details,
             now);
         await _db.SaveChangesAsync();
         return RedirectToPage("/ReadinessEngine", new { confirmation = "rules-saved" });
@@ -274,6 +312,22 @@ public class ReadinessEngineModel : PageModel
         return RedirectToPage("/ReadinessEngine", new { confirmation = added == 0 ? "no-new-rules" : "rules-autopopulated" });
     }
 
+    public async Task<IActionResult> OnPostCleanDraftRulesAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null || !CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return RedirectToPage("/Home");
+        }
+
+        var result = await _engineService.CleanDraftRulesAsync(currentUser, VersionId);
+        var confirmation = result.RemovedRules == 0 && result.ReorderedRules == 0
+            ? "draft-rules-clean"
+            : "draft-rules-cleaned";
+
+        return RedirectToPage("/ReadinessEngine", new { confirmation });
+    }
+
     public async Task<IActionResult> OnPostPublishAsync()
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
@@ -341,14 +395,8 @@ public class ReadinessEngineModel : PageModel
         CurrentUserLabel = $"{currentUser.FullName} ({currentUser.AppRole?.Name})";
 
         ActiveVersion = await _engineService.LoadPublishedVersionAsync(currentUser.CompanyId);
-        if (ActiveVersion is null)
-        {
-            await ReadinessEngineService.EnsureDefaultPublishedEngineAsync(_db, currentUser.CompanyId, currentUser.Id);
-            ActiveVersion = await _engineService.LoadPublishedVersionAsync(currentUser.CompanyId);
-        }
-
         WorkingVersion = IsSeniorManager
-            ? await _engineService.EnsureDraftVersionAsync(currentUser)
+            ? await _engineService.LoadDraftVersionAsync(currentUser.CompanyId)
             : ActiveVersion;
 
         RuleRows = (WorkingVersion?.Rules ?? [])
@@ -360,6 +408,9 @@ public class ReadinessEngineModel : PageModel
 
         Rules = RuleRows.Select(RuleInput.FromRow).ToList();
         VersionId = WorkingVersion?.Id ?? 0;
+        CanApplyProductDefaults = IsSeniorManager &&
+            WorkingVersion is not null &&
+            !WorkingVersion.Rules.Any(rule => string.Equals(rule.SourceType, ReadinessEngineService.ProductDefaultSourceType, StringComparison.OrdinalIgnoreCase));
 
         if (IsSeniorManager)
         {
@@ -394,6 +445,10 @@ public class ReadinessEngineModel : PageModel
             "rule-duplicated" => "Readiness rule duplicated.",
             "rules-autopopulated" => "Suggested rules added from registers.",
             "no-new-rules" => "No new register-based rules were found.",
+            "product-defaults-added" => "AcuityOps product default rules added to the editable draft.",
+            "product-defaults-exist" => "AcuityOps product default rules were already applied to this draft.",
+            "draft-rules-cleaned" => "Duplicate draft rules cleaned and rule order tightened.",
+            "draft-rules-clean" => "No duplicate draft rules were found.",
             "engine-published" => "Readiness engine published for live use.",
             "request-sent" => "Scoring change request sent to senior management.",
             "request-approved" => "Scoring change request approved.",
@@ -401,6 +456,7 @@ public class ReadinessEngineModel : PageModel
             "request-deleted" => "Scoring change request deleted.",
             "request-needs-reason" => "Add a reason before sending the request.",
             "missing-draft" => "No editable draft engine was available.",
+            "draft-created" => "Editable readiness engine draft created.",
             _ => null
         };
     }
@@ -446,6 +502,81 @@ public class ReadinessEngineModel : PageModel
     private static bool IsOpsManager(AppUser user)
     {
         return string.Equals(user.AppRole?.Name, "Operational Management", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record RuleAuditSnapshot(
+        string AssetType,
+        string Section,
+        string ItemName,
+        string? FieldKey,
+        string TriggerValue,
+        string AppliesTo,
+        string ReadinessScope,
+        string? TargetVehicleType,
+        string Severity,
+        int DefaultImpactPercent,
+        int? ManualImpactPercent,
+        bool IsHardBlocker,
+        bool ManagerAlert,
+        bool IsActive,
+        string? Notes,
+        int SortOrder)
+    {
+        public static RuleAuditSnapshot FromRule(ReadinessEngineRule rule)
+        {
+            return new RuleAuditSnapshot(
+                rule.AssetType,
+                rule.Section,
+                rule.ItemName,
+                rule.FieldKey,
+                rule.TriggerValue,
+                rule.AppliesTo,
+                rule.ReadinessScope,
+                rule.TargetVehicleType,
+                rule.Severity,
+                rule.DefaultImpactPercent,
+                rule.ManualImpactPercent,
+                rule.IsHardBlocker,
+                rule.ManagerAlert,
+                rule.IsActive,
+                rule.Notes,
+                rule.SortOrder);
+        }
+
+        public string? DescribeChanges(RuleAuditSnapshot after, int ruleId)
+        {
+            var changes = new List<string>();
+            AddChange(changes, "asset", AssetType, after.AssetType);
+            AddChange(changes, "source area", Section, after.Section);
+            AddChange(changes, "item", ItemName, after.ItemName);
+            AddChange(changes, "field", FieldKey, after.FieldKey);
+            AddChange(changes, "trigger", TriggerValue, after.TriggerValue);
+            AddChange(changes, "applies to", AppliesTo, after.AppliesTo);
+            AddChange(changes, "scope", ReadinessScope, after.ReadinessScope);
+            AddChange(changes, "target vehicle type", TargetVehicleType, after.TargetVehicleType);
+            AddChange(changes, "severity", Severity, after.Severity);
+            AddChange(changes, "default impact", DefaultImpactPercent.ToString(), after.DefaultImpactPercent.ToString());
+            AddChange(changes, "manual impact", ManualImpactPercent?.ToString(), after.ManualImpactPercent?.ToString());
+            AddChange(changes, "hard blocker", IsHardBlocker.ToString(), after.IsHardBlocker.ToString());
+            AddChange(changes, "manager alert", ManagerAlert.ToString(), after.ManagerAlert.ToString());
+            AddChange(changes, "active", IsActive.ToString(), after.IsActive.ToString());
+            AddChange(changes, "notes", Notes, after.Notes);
+            AddChange(changes, "order", SortOrder.ToString(), after.SortOrder.ToString());
+
+            return changes.Count == 0
+                ? null
+                : $"rule {ruleId} ({after.AssetType} / {after.ItemName} / {after.TriggerValue}) changed {string.Join(", ", changes)}";
+        }
+
+        private static void AddChange(List<string> changes, string label, string? before, string? after)
+        {
+            var beforeText = string.IsNullOrWhiteSpace(before) ? "blank" : before.Trim();
+            var afterText = string.IsNullOrWhiteSpace(after) ? "blank" : after.Trim();
+            if (!string.Equals(beforeText, afterText, StringComparison.Ordinal))
+            {
+                changes.Add($"{label} from '{beforeText}' to '{afterText}'");
+            }
+        }
     }
 
     public sealed class RuleInput

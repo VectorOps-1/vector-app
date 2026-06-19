@@ -31,20 +31,6 @@ public class ReadinessEngineScoringService
             .OrderBy(rule => rule.SortOrder)
             .ToList() ?? [];
 
-        if (rules.Count == 0)
-        {
-            await ReadinessEngineService.EnsureDefaultPublishedEngineAsync(_db, companyId, null);
-            rules = await _db.ReadinessEngineRules
-                .AsNoTracking()
-                .Where(rule =>
-                    rule.CompanyId == companyId &&
-                    rule.IsActive &&
-                    rule.ReadinessEngineVersion != null &&
-                    rule.ReadinessEngineVersion.Status == ReadinessEngineStatuses.Published)
-                .OrderBy(rule => rule.SortOrder)
-                .ToListAsync();
-        }
-
         var scores = vehicles
             .Select(vehicle => ScoreVehicle(vehicle, latestReports.GetValueOrDefault(vehicle.Id), openIssues, rules))
             .ToList();
@@ -55,6 +41,7 @@ public class ReadinessEngineScoringService
         var unavailableVehicles = scores.Count(score => score.IsHardBlocked);
         var missingChecks = scores.Count(score => score.MissingCheck);
         var equipmentWarnings = scores.Count(score => score.HasEquipmentAlert);
+        var openIssueImpacts = scores.Sum(score => score.OpenIssueImpactCount);
         var scorePercent = totalVehicles == 0 ? 0 : (int)Math.Round(scores.Average(score => score.ScorePercent));
 
         return new ReadinessDashboardScore
@@ -65,7 +52,7 @@ public class ReadinessEngineScoringService
             UnavailableVehicles = unavailableVehicles,
             MissingChecks = missingChecks,
             EquipmentWarnings = equipmentWarnings,
-            OpenIssues = openIssues.Count,
+            OpenIssues = openIssueImpacts,
             ScorePercent = scorePercent,
             ScoreClass = scorePercent >= 90 ? "score-green" : scorePercent >= 75 ? "score-teal" : scorePercent >= 50 ? "score-amber" : "score-red"
         };
@@ -79,18 +66,12 @@ public class ReadinessEngineScoringService
     {
         var result = new VehicleScore();
 
-        void Apply(string assetType, string itemName, string? fieldKey, string triggerValue)
+        bool Apply(string assetType, string itemName, string? fieldKey, string triggerValue)
         {
             var rule = FindRule(rules, vehicle, assetType, itemName, fieldKey, triggerValue);
             if (rule is null)
             {
-                if (HasNonScoringMatch(rules, vehicle, assetType, itemName, fieldKey, triggerValue))
-                {
-                    return;
-                }
-
-                result.ScorePercent -= FallbackImpact(triggerValue);
-                return;
+                return false;
             }
 
             var impact = Math.Clamp(rule.ManualImpactPercent ?? rule.DefaultImpactPercent, 0, 100);
@@ -102,19 +83,20 @@ public class ReadinessEngineScoringService
             {
                 result.HasEquipmentAlert = true;
             }
+
+            return true;
         }
 
         result.CheckedThisShift = IsReadinessCheckComplete(report);
-        result.MissingCheck = !result.CheckedThisShift;
 
-        if (result.MissingCheck)
+        if (!result.CheckedThisShift)
         {
-            Apply("Checklist Completion", "Daily vehicle readiness", "Completion", "Missing completed check");
+            result.MissingCheck = Apply("Checklist Completion", "Daily vehicle readiness", "Completion", "Missing completed check");
         }
 
         if (IsUnavailable(vehicle.Status))
         {
-            Apply("Vehicle", "Vehicle", "Status", "Out of service / unavailable");
+            ApplyRuleValues("Vehicle", "Vehicle", "Status", vehicle.Status, "Out of service / unavailable", Apply);
         }
 
         if (vehicle.NextServiceDate.HasValue && vehicle.NextServiceDate.Value.Date < DateTime.UtcNow.Date)
@@ -124,15 +106,9 @@ public class ReadinessEngineScoringService
 
         if (report is not null)
         {
-            ApplyOperationalCheckIfNeeded(report.LightsStatus, "Lights", "LightsStatus", Apply);
-            ApplyOperationalCheckIfNeeded(report.SirensStatus, "Sirens", "SirensStatus", Apply);
-            ApplyOperationalCheckIfNeeded(report.WarningLightsStatus, "Warning lights", "WarningLightsStatus", Apply);
-            ApplyOperationalCheckIfNeeded(report.TyresStatus, "Tyres", "TyresStatus", Apply);
-            ApplyOperationalCheckIfNeeded(report.RadioConnectivityStatus, "Ops radio", "RadioConnectivityStatus", Apply);
-
             if (IsUnavailable(report.ReadinessStatus) || report.CriticalIssueCount > 0)
             {
-                Apply("Issue Report", "Open issue", "Severity", "Critical unresolved issue");
+                ApplyRuleValues("Issue Report", "Open issue", "Severity", report.ReadinessStatus, "Critical unresolved issue", Apply);
             }
 
             if (report.EquipmentChecks.Count == 0)
@@ -144,7 +120,7 @@ public class ReadinessEngineScoringService
             {
                 if (IsProblemStatus(check.PresentStatus, "Present", "N/A", "Not applicable"))
                 {
-                    Apply("Equipment", check.EquipmentName, "PresentStatus", "Missing");
+                    ApplyRuleValues("Equipment", check.EquipmentName, "PresentStatus", check.PresentStatus, "Missing", Apply);
                 }
 
                 if (!check.IsOperational)
@@ -155,7 +131,7 @@ public class ReadinessEngineScoringService
                 if (IsProblemStatus(check.BatteryStatus, "Full", "Acceptable", "Charging", "N/A", "Not applicable"))
                 {
                     var batteryTrigger = ContainsAny(check.BatteryStatus, "flat", "fail", "empty") ? "Flat / failed" : "Low";
-                    Apply("Equipment", check.EquipmentName, "BatteryStatus", batteryTrigger);
+                    ApplyRuleValues("Equipment", check.EquipmentName, "BatteryStatus", check.BatteryStatus, batteryTrigger, Apply);
                 }
 
                 if (check.NextServiceDateAtCheck.HasValue && check.NextServiceDateAtCheck.Value.Date < DateTime.UtcNow.Date)
@@ -163,21 +139,31 @@ public class ReadinessEngineScoringService
                     Apply("Equipment", check.EquipmentName, "NextServiceDate", "Service overdue");
                 }
 
-                if (!string.IsNullOrWhiteSpace(check.IssueNotes) ||
-                    IsProblemStatus(check.DamageStatus, "No damage", "None", "Good", "N/A", "Not applicable") ||
-                    IsProblemStatus(check.ReadinessImpact, "None", "N/A", "Not applicable"))
+                if (!string.IsNullOrWhiteSpace(check.IssueNotes))
                 {
-                    result.HasEquipmentAlert = true;
+                    Apply("Equipment", check.EquipmentName, "IssueNotes", "Issue notes captured");
+                }
+
+                if (IsProblemStatus(check.DamageStatus, "No damage", "None", "Good", "N/A", "Not applicable"))
+                {
+                    ApplyRuleValues("Equipment", check.EquipmentName, "DamageStatus", check.DamageStatus, "Damage reported", Apply);
+                }
+
+                if (IsProblemStatus(check.ReadinessImpact, "None", "N/A", "Not applicable"))
+                {
+                    ApplyRuleValues("Equipment", check.EquipmentName, "ReadinessImpact", check.ReadinessImpact, "Readiness impact captured", Apply);
                 }
             }
         }
 
-        var issueCount = openIssues.Count(issue =>
+        foreach (var issue in openIssues.Where(issue =>
             MatchesIssue(issue, vehicle.RegistrationNumber) ||
-            MatchesIssue(issue, vehicle.Callsign));
-        for (var i = 0; i < issueCount; i++)
+            MatchesIssue(issue, vehicle.Callsign)))
         {
-            Apply("Issue Report", "Open issue", "Severity", "Critical unresolved issue");
+            if (ApplyIssueRules(issue, Apply))
+            {
+                result.OpenIssueImpactCount++;
+            }
         }
 
         result.ScorePercent = Math.Clamp(result.ScorePercent, 0, 100);
@@ -195,19 +181,6 @@ public class ReadinessEngineScoringService
     {
         return rules.FirstOrDefault(rule =>
             ReadinessRuleScope.AffectsShiftReadiness(rule.ReadinessScope) &&
-            MatchesRule(rule, vehicle, assetType, itemName, fieldKey, triggerValue));
-    }
-
-    private static bool HasNonScoringMatch(
-        IReadOnlyList<ReadinessEngineRule> rules,
-        Vehicle vehicle,
-        string assetType,
-        string itemName,
-        string? fieldKey,
-        string triggerValue)
-    {
-        return rules.Any(rule =>
-            !ReadinessRuleScope.AffectsShiftReadiness(rule.ReadinessScope) &&
             MatchesRule(rule, vehicle, assetType, itemName, fieldKey, triggerValue));
     }
 
@@ -229,7 +202,7 @@ public class ReadinessEngineScoringService
     private static bool MatchesTarget(ReadinessEngineRule rule, Vehicle vehicle)
     {
         if (!string.IsNullOrWhiteSpace(rule.TargetVehicleType) &&
-            !Matches(rule.TargetVehicleType, vehicle.VehicleType))
+            !VehicleTaxonomyService.MatchesClassification(vehicle, rule.TargetVehicleType))
         {
             return false;
         }
@@ -242,7 +215,7 @@ public class ReadinessEngineScoringService
 
         return string.Equals(rule.AppliesTo, "All", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(rule.AppliesTo) ||
-            Matches(rule.AppliesTo, vehicle.VehicleType) ||
+            VehicleTaxonomyService.MatchesClassification(vehicle, rule.AppliesTo) ||
             Matches(rule.AppliesTo, vehicle.Callsign) ||
             Matches(rule.AppliesTo, vehicle.RegistrationNumber);
     }
@@ -267,36 +240,60 @@ public class ReadinessEngineScoringService
             itemName.Contains("required", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ApplyOperationalCheckIfNeeded(
-        string? value,
+    private static bool ApplyRuleValues(
+        string assetType,
         string itemName,
-        string fieldKey,
-        Action<string, string, string?, string> apply)
+        string? fieldKey,
+        string? actualValue,
+        string canonicalTrigger,
+        Func<string, string, string?, string, bool> apply)
     {
-        if (IsProblemStatus(value, "Operational", "Pass", "Passed", "OK", "Good", "N/A", "Not applicable"))
+        var applied = false;
+        if (!string.IsNullOrWhiteSpace(actualValue))
         {
-            apply("Vehicle", itemName, fieldKey, "Failed / not operational");
+            applied = apply(assetType, itemName, fieldKey, actualValue.Trim());
         }
+
+        if (!string.Equals(actualValue?.Trim(), canonicalTrigger, StringComparison.OrdinalIgnoreCase))
+        {
+            applied = apply(assetType, itemName, fieldKey, canonicalTrigger) || applied;
+        }
+
+        return applied;
     }
 
-    private static int FallbackImpact(string triggerValue)
+    private static bool ApplyIssueRules(
+        IssueReport issue,
+        Func<string, string, string?, string, bool> apply)
     {
-        if (ContainsAny(triggerValue, "missing", "failed", "out of service", "unavailable", "expired"))
+        var applied = false;
+        foreach (var trigger in BuildIssueTriggers(issue))
         {
-            return 100;
+            applied = apply("Issue Report", "Open issue", "Severity", trigger) || applied;
         }
 
-        if (ContainsAny(triggerValue, "critical"))
+        return applied;
+    }
+
+    private static IEnumerable<string> BuildIssueTriggers(IssueReport issue)
+    {
+        if (!string.IsNullOrWhiteSpace(issue.Severity))
         {
-            return 40;
+            yield return issue.Severity.Trim();
         }
 
-        if (ContainsAny(triggerValue, "low", "overdue", "below minimum"))
+        if (!string.IsNullOrWhiteSpace(issue.OperationalStatus))
         {
-            return 20;
+            yield return issue.OperationalStatus.Trim();
         }
 
-        return 10;
+        yield return "Open issue";
+
+        if (ContainsAny(issue.Severity, "critical") ||
+            ContainsAny(issue.OperationalStatus, "critical", "not ready", "unavailable"))
+        {
+            yield return "Critical unresolved issue";
+        }
     }
 
     private static bool IsReadinessCheckComplete(DailyVehicleReadinessReport? report)
@@ -358,6 +355,7 @@ public class ReadinessEngineScoringService
         public bool IsHardBlocked { get; set; }
         public bool IsReady { get; set; }
         public bool HasEquipmentAlert { get; set; }
+        public int OpenIssueImpactCount { get; set; }
     }
 }
 
