@@ -35,7 +35,7 @@
                     <label>Cell Number<input asp-for="CellNumber" type="tel" placeholder="Mobile / cell number" /></label>
                     <label>Clinical qualification / scope<input asp-for="StaffQualificationFunction" type="text" list="clinicalScopeOptions" placeholder="Example: ECP, CCA, AEA, ILS, BLS" /></label>
                     <label>Practitioner Number<input asp-for="StaffPractitionerNumber" type="text" placeholder="Professional council / practitioner number" /></label>
-                    <label>Annual licence expiry<input asp-for="StaffAnnualLicenseExpiryDate" type="date" /></label>
+                    <label>Annual licence expiry<input asp-for="StaffAnnualLicenseExpiryDate" type="date" data-date-status-field="licence" /></label>
                     <label>
                         CPD compliance
                         <select asp-for="StaffCpdComplianceStatus">
@@ -47,7 +47,7 @@
                             <option>Under review</option>
                         </select>
                     </label>
-                    <label>CPD valid until<input asp-for="StaffCpdComplianceExpiryDate" type="date" /></label>
+                    <label>CPD valid until<input asp-for="StaffCpdComplianceExpiryDate" type="date" data-date-status-field="cpd" /></label>
                     <label>
                         Assigned area
                         <select asp-for="Location" asp-items="Model.LocationOptions">
@@ -81,16 +81,7 @@
                         Custom subtype
                         <input asp-for="CustomVehicleSubtype" id="customVehicleSubtypeInput" type="text" placeholder="Example: Primary Ops Ambulance, IFT Ambulance, ALS RV" />
                     </label>
-                    <label>
-                        Unit Schematic
-                        <select asp-for="UnitSchematicKey" id="unitSchematicSelect">
-                            <option value="">Select unit schematic</option>
-                            @foreach (var schematic in Model.PublishedUnitSchematics)
-                            {
-                                <option value="@schematic.Key" data-category="@schematic.Category" data-subtype="@schematic.Subtype">@schematic.Category - @schematic.DisplayName</option>
-                            }
-                        </select>
-                    </label>
+                    <div class="field-note">Unit schematics are assigned in Checklist Management &gt; Unit Schematic Library after the vehicle is saved.</div>
                     <label>
                         Assigned area
                         <select asp-for="Location" asp-items="Model.LocationOptions">
@@ -100,9 +91,9 @@
                     <label>VIN Number<input asp-for="VinNumber" type="text" placeholder="VIN number" /></label>
                     <label>Chassis Number<input asp-for="ChassisNumber" type="text" placeholder="Chassis number" /></label>
                     <label>Vehicle licence number<input asp-for="LicenseNumber" type="text" placeholder="Annual licence number" /></label>
-                    <label>Licence disc expiry<input asp-for="LicenseDiscExpiryDate" type="date" /></label>
-                    <label>Last service date<input asp-for="LastServiceDate" type="date" /></label>
-                    <label>Next service date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+                    <label>Licence disc expiry<input asp-for="LicenseDiscExpiryDate" type="date" data-date-status-field="licence" /></label>
+                    <label>Last service date<input asp-for="LastServiceDate" type="date" data-skip-date-status="true" /></label>
+                    <label>Next service date<input asp-for="ExpiryOrReviewDate" type="date" data-date-status-field="service" /></label>
                     <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
                 }
                 else
@@ -121,7 +112,7 @@
                     </label>
                     <label>Status<select asp-for="Status"><option value="">Select status</option><option>Active</option><option>Operational</option><option>In storage</option><option>Assigned</option><option>Out of service</option><option>Inactive</option></select></label>
                     <label>Quantity<input asp-for="Quantity" type="number" min="0" placeholder="If applicable" /></label>
-                    <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" /></label>
+                    <label>Expiry / review date<input asp-for="ExpiryOrReviewDate" type="date" data-date-status-field="expiry" /></label>
                 }
             </div>
 
@@ -196,6 +187,7 @@
 .form-grid { width: min(860px, 94%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-grid label, .notes-field { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; font-weight: 700; color: #52606d; }
 .form-grid input, .form-grid select, .notes-field textarea { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 14px; font-size: 15px; background: #fff; color: #1f2937; box-sizing: border-box; }
+.field-note { display: flex; align-items: center; min-height: 46px; border: 1px dashed rgba(14,94,122,.24); border-radius: 8px; padding: 10px 14px; background: rgba(14,94,122,.06); color: #52606d; font-size: 13px; font-weight: 800; box-sizing: border-box; }
 .is-hidden { display: none !important; }
 .notes-field { width: min(860px, 94%); }
 .notes-field textarea { padding-top: 12px; resize: vertical; }

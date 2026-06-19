@@ -59,7 +59,6 @@ public class AddItemModel : PageModel
     [BindProperty] public string? VinNumber { get; set; }
     [BindProperty] public string? ChassisNumber { get; set; }
     [BindProperty] public string? LicenseNumber { get; set; }
-    [BindProperty] public string? UnitSchematicKey { get; set; }
     [BindProperty] public DateTime? LicenseDiscExpiryDate { get; set; }
     [BindProperty] public DateTime? LastServiceDate { get; set; }
     [BindProperty] public string? Location { get; set; }
@@ -77,7 +76,6 @@ public class AddItemModel : PageModel
     public List<SelectListItem> LocationOptions { get; private set; } = new();
     public List<SelectListItem> VehicleSubtypeOptions { get; private set; } = new();
     public List<SelectListItem> StaffFileCategoryOptions { get; private set; } = new();
-    public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
     public bool IsStaffProfile => NormalizedType == "staff";
     public bool IsVehicleEntry => NormalizedType == "vehicle";
 
@@ -358,7 +356,6 @@ public class AddItemModel : PageModel
             VehicleType = vehicleType,
             VehicleFunction = function,
             VehicleSubtype = vehicleSubtype,
-            SchematicType = NormalizeOptional(UnitSchematicKey),
             VinNumber = NormalizeOptional(VinNumber),
             ChassisNumber = NormalizeOptional(ChassisNumber),
             LicenseNumber = NormalizeOptional(LicenseNumber),
