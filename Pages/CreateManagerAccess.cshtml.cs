@@ -66,6 +66,8 @@ public class CreateManagerAccessModel : PageModel
         .SelectMany(group => group.Options)
         .ToDictionary(option => option.Key, option => option.Name, StringComparer.OrdinalIgnoreCase);
 
+    private sealed record PermissionSelection(IReadOnlyList<string> AllowedKeys, bool HasSavedRows);
+
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
 
@@ -88,6 +90,9 @@ public class CreateManagerAccessModel : PageModel
     public IReadOnlyList<AccessPermissionGroup> PermissionGroups => PermissionCatalog;
     public HashSet<string> SelectedPermissionKeySet { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public StaffAccessProfile? SelectedStaff { get; private set; }
+    public bool CanEditSelectedStaff { get; private set; }
+    public bool SelectedStaffHasSavedPermissions { get; private set; }
+    public int ProfilesMissingSavedPermissionsCount { get; private set; }
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
 
@@ -99,6 +104,136 @@ public class CreateManagerAccessModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
+        AccessLevel = CurrentUserService.NormalizeAccessView(AccessLevel);
+        await LoadPageDataAsync(currentUser, useRegisterValues: true);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostInitializePermissionDefaultsAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return Forbid();
+        }
+
+        var now = DateTime.UtcNow;
+        var staffUsers = await _db.AppUsers
+            .Include(user => user.AppRole)
+            .Where(user =>
+                user.CompanyId == currentUser.CompanyId &&
+                user.Status != "Deleted")
+            .OrderBy(user => user.FullName)
+            .ToListAsync();
+
+        var staffUserIds = staffUsers.Select(user => user.Id).ToList();
+        var usersWithSavedRows = await _db.AppUserAccessPermissions
+            .AsNoTracking()
+            .Where(permission =>
+                permission.CompanyId == currentUser.CompanyId &&
+                staffUserIds.Contains(permission.AppUserId))
+            .Select(permission => permission.AppUserId)
+            .Distinct()
+            .ToListAsync();
+        var usersWithSavedRowsSet = usersWithSavedRows.ToHashSet();
+
+        var initializedCount = 0;
+        foreach (var staffUser in staffUsers)
+        {
+            if (usersWithSavedRowsSet.Contains(staffUser.Id))
+            {
+                continue;
+            }
+
+            if (staffUser.Id != currentUser.Id && !CanEditTarget(currentUser.AppRole?.Name, staffUser.AppRole?.Name))
+            {
+                continue;
+            }
+
+            var accessLevel = RoleNameToAccessView(staffUser.AppRole?.Name);
+            var defaultPermissionKeys = DefaultPermissionKeysForAccess(accessLevel).ToList();
+            await SyncAccessPermissionsAsync(currentUser, staffUser, defaultPermissionKeys, now);
+            initializedCount++;
+        }
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = currentUser.CompanyId,
+            AppUserId = currentUser.Id,
+            Action = "Access permissions initialized",
+            EntityType = "AppUserAccessPermission",
+            Details = $"{currentUser.FullName} saved default access permissions for {initializedCount} profile(s).",
+            CreatedAtUtc = now
+        });
+
+        await _db.SaveChangesAsync();
+
+        StatusMessage = initializedCount == 0
+            ? "No missing access permissions were available for your access level to initialize."
+            : $"Default action permissions saved for {initializedCount} profile(s).";
+        ActionSaved = true;
+        AccessLevel = CurrentUserService.NormalizeAccessView(AccessLevel);
+        await LoadPageDataAsync(currentUser, useRegisterValues: true);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostForcePermissionDefaultsAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            return Forbid();
+        }
+
+        var now = DateTime.UtcNow;
+        var staffUsers = await _db.AppUsers
+            .Include(user => user.AppRole)
+            .Where(user =>
+                user.CompanyId == currentUser.CompanyId &&
+                user.Status != "Deleted")
+            .OrderBy(user => user.FullName)
+            .ToListAsync();
+
+        var forcedCount = 0;
+        foreach (var staffUser in staffUsers)
+        {
+            if (staffUser.Id != currentUser.Id && !CanEditTarget(currentUser.AppRole?.Name, staffUser.AppRole?.Name))
+            {
+                continue;
+            }
+
+            var accessLevel = RoleNameToAccessView(staffUser.AppRole?.Name);
+            var defaultPermissionKeys = DefaultPermissionKeysForAccess(accessLevel).ToList();
+            await SyncAccessPermissionsAsync(currentUser, staffUser, defaultPermissionKeys, now);
+            forcedCount++;
+        }
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = currentUser.CompanyId,
+            AppUserId = currentUser.Id,
+            Action = "Access permissions forced to role defaults",
+            EntityType = "AppUserAccessPermission",
+            Details = $"{currentUser.FullName} forced saved default access permissions for {forcedCount} profile(s).",
+            CreatedAtUtc = now
+        });
+
+        await _db.SaveChangesAsync();
+
+        StatusMessage = forcedCount == 0
+            ? "No profiles were available for your access level to force to defaults."
+            : $"Saved action permissions forced to current role defaults for {forcedCount} profile(s).";
+        ActionSaved = true;
         AccessLevel = CurrentUserService.NormalizeAccessView(AccessLevel);
         await LoadPageDataAsync(currentUser, useRegisterValues: true);
         return Page();
@@ -129,7 +264,10 @@ public class CreateManagerAccessModel : PageModel
         var staffUser = StaffUserId.HasValue
             ? await _db.AppUsers
                 .Include(user => user.AppRole)
-                .FirstOrDefaultAsync(user => user.CompanyId == currentUser.CompanyId && user.Id == StaffUserId.Value)
+                .FirstOrDefaultAsync(user =>
+                    user.CompanyId == currentUser.CompanyId &&
+                    user.Id == StaffUserId.Value &&
+                    user.Status != "Deleted")
             : null;
 
         if (staffUser is null)
@@ -208,21 +346,34 @@ public class CreateManagerAccessModel : PageModel
     {
         var companyId = currentUser.CompanyId;
 
-        StaffOptions = await _db.AppUsers
+        var staffOptionRows = await _db.AppUsers
             .AsNoTracking()
             .Include(user => user.AppRole)
-            .Where(user => user.CompanyId == companyId)
+            .Where(user =>
+                user.CompanyId == companyId &&
+                user.Status != "Deleted")
             .OrderBy(user => user.FullName)
             .ThenBy(user => user.StaffIdentifier)
+            .Select(user => new
+            {
+                user.Id,
+                user.FullName,
+                user.StaffIdentifier,
+                RoleName = user.AppRole == null ? "No access role" : user.AppRole.Name
+            })
+            .ToListAsync();
+
+        StaffOptions = staffOptionRows
+            .Where(user => user.Id != currentUser.Id && CanEditTarget(currentUser.AppRole?.Name, user.RoleName))
             .Select(user => new SelectListItem
             {
                 Value = user.Id.ToString(),
                 Text = user.FullName
                     + (string.IsNullOrWhiteSpace(user.StaffIdentifier) ? string.Empty : $" / {user.StaffIdentifier}")
-                    + $" - {(user.AppRole == null ? "No access role" : user.AppRole.Name)}",
+                    + $" - {user.RoleName}",
                 Selected = StaffUserId.HasValue && user.Id == StaffUserId.Value
             })
-            .ToListAsync();
+            .ToList();
 
         AccessLevelOptions = new List<SelectListItem>
         {
@@ -249,6 +400,8 @@ public class CreateManagerAccessModel : PageModel
         if (!StaffUserId.HasValue)
         {
             SelectedStaff = null;
+            CanEditSelectedStaff = false;
+            SelectedStaffHasSavedPermissions = false;
             return;
         }
 
@@ -256,7 +409,10 @@ public class CreateManagerAccessModel : PageModel
             .AsNoTracking()
             .Include(user => user.AppRole)
             .Include(user => user.AssignedOperationalArea)
-            .Where(user => user.CompanyId == companyId && user.Id == StaffUserId.Value)
+            .Where(user =>
+                user.CompanyId == companyId &&
+                user.Id == StaffUserId.Value &&
+                user.Status != "Deleted")
             .Select(user => new StaffAccessProfile
             {
                 Id = user.Id,
@@ -279,8 +435,12 @@ public class CreateManagerAccessModel : PageModel
 
         if (SelectedStaff is null)
         {
+            CanEditSelectedStaff = false;
+            SelectedStaffHasSavedPermissions = false;
             return;
         }
+
+        CanEditSelectedStaff = SelectedStaff.Id != currentUser.Id && CanEditTarget(currentUser.AppRole?.Name, SelectedStaff.RoleName);
 
         if (!useRegisterValues)
         {
@@ -292,11 +452,11 @@ public class CreateManagerAccessModel : PageModel
         AccessLevel = RoleNameToAccessView(SelectedStaff.RoleName);
         AssignedOperationalAreaId = SelectedStaff.AssignedOperationalAreaId;
         AccountActive = string.Equals(SelectedStaff.Status, "Active", StringComparison.OrdinalIgnoreCase);
-        SelectedPermissionKeys = await LoadPermissionKeysAsync(companyId, SelectedStaff.Id);
-        if (SelectedPermissionKeys.Count == 0)
-        {
-            SelectedPermissionKeys = DefaultPermissionKeysForAccess(AccessLevel).ToList();
-        }
+        var permissionSelection = await LoadPermissionSelectionAsync(companyId, SelectedStaff.Id);
+        SelectedStaffHasSavedPermissions = permissionSelection.HasSavedRows;
+        SelectedPermissionKeys = permissionSelection.HasSavedRows
+            ? permissionSelection.AllowedKeys.ToList()
+            : DefaultPermissionKeysForAccess(AccessLevel).ToList();
 
         SelectedPermissionKeySet = new HashSet<string>(SelectedPermissionKeys, StringComparer.OrdinalIgnoreCase);
 
@@ -340,12 +500,12 @@ public class CreateManagerAccessModel : PageModel
         var savedPermissions = await _db.AppUserAccessPermissions
             .AsNoTracking()
             .Where(permission =>
-                permission.CompanyId == companyId &&
-                permission.Status == "Allowed")
+                permission.CompanyId == companyId)
             .Select(permission => new
             {
                 permission.AppUserId,
-                permission.PermissionKey
+                permission.PermissionKey,
+                permission.Status
             })
             .ToListAsync();
 
@@ -353,17 +513,23 @@ public class CreateManagerAccessModel : PageModel
             .GroupBy(permission => permission.AppUserId)
             .ToDictionary(
                 group => group.Key,
-                group => group
-                    .Select(permission => permission.PermissionKey)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(permission => permission)
-                    .ToList());
+                group => new PermissionSelection(
+                    group
+                        .Where(permission => string.Equals(permission.Status, "Allowed", StringComparison.OrdinalIgnoreCase))
+                        .Select(permission => permission.PermissionKey)
+                        .Where(UserActionPermissions.All.Contains)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(permission => permission)
+                        .ToList(),
+                    true));
 
         AccessRows = await _db.AppUsers
             .AsNoTracking()
             .Include(user => user.AppRole)
             .Include(user => user.AssignedOperationalArea)
-            .Where(user => user.CompanyId == companyId)
+            .Where(user =>
+                user.CompanyId == companyId &&
+                user.Status != "Deleted")
             .OrderByDescending(user => user.AppRole != null && user.AppRole.Name == "Company Owner")
             .ThenBy(user => user.AppRole == null ? "Unassigned" : user.AppRole.Name)
             .ThenBy(user => user.FullName)
@@ -379,6 +545,10 @@ public class CreateManagerAccessModel : PageModel
             })
             .ToListAsync();
 
+        ProfilesMissingSavedPermissionsCount = AccessRows.Count(row =>
+            !permissionMap.ContainsKey(row.StaffUserId) &&
+            (row.StaffUserId == currentUser.Id || CanEditTarget(currentUser.AppRole?.Name, row.AccessRole)));
+
         foreach (var row in AccessRows)
         {
             row.ManagerScope = scopeMap.TryGetValue(row.StaffUserId, out var scope)
@@ -387,12 +557,16 @@ public class CreateManagerAccessModel : PageModel
             row.EditAccessLevel = RoleNameToAccessView(row.AccessRole);
             row.CanEdit = row.StaffUserId != currentUser.Id && CanEditTarget(currentUser.AppRole?.Name, row.AccessRole);
 
-            var permissionKeys = permissionMap.TryGetValue(row.StaffUserId, out var keys)
-                ? keys
-                : DefaultPermissionKeysForAccess(row.EditAccessLevel).ToList();
+            var hasSavedPermissions = permissionMap.TryGetValue(row.StaffUserId, out var selection);
+            row.HasSavedPermissionRows = hasSavedPermissions;
+            var permissionKeys = hasSavedPermissions
+                ? selection!.AllowedKeys.ToList()
+                : new List<string>();
 
             row.PermissionCount = permissionKeys.Count;
-            row.PermissionSummary = DescribePermissionSummary(permissionKeys);
+            row.PermissionSummary = hasSavedPermissions
+                ? DescribePermissionSummary(permissionKeys)
+                : "Not initialized - save defaults or edit access";
         }
     }
 
@@ -450,17 +624,34 @@ public class CreateManagerAccessModel : PageModel
         }
     }
 
-    private async Task<List<string>> LoadPermissionKeysAsync(int companyId, int staffUserId)
+    private async Task<PermissionSelection> LoadPermissionSelectionAsync(int companyId, int staffUserId)
     {
-        return await _db.AppUserAccessPermissions
+        var permissionRows = await _db.AppUserAccessPermissions
             .AsNoTracking()
             .Where(permission =>
                 permission.CompanyId == companyId &&
-                permission.AppUserId == staffUserId &&
-                permission.Status == "Allowed")
-            .OrderBy(permission => permission.PermissionKey)
-            .Select(permission => permission.PermissionKey)
+                permission.AppUserId == staffUserId)
+            .Select(permission => new
+            {
+                permission.PermissionKey,
+                permission.Status
+            })
             .ToListAsync();
+
+        if (permissionRows.Count == 0)
+        {
+            return new PermissionSelection(Array.Empty<string>(), false);
+        }
+
+        var allowedKeys = permissionRows
+            .Where(permission => string.Equals(permission.Status, "Allowed", StringComparison.OrdinalIgnoreCase))
+            .Select(permission => permission.PermissionKey)
+            .Where(UserActionPermissions.All.Contains)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(permission => permission)
+            .ToList();
+
+        return new PermissionSelection(allowedKeys, true);
     }
 
     private async Task SyncAccessPermissionsAsync(AppUser currentUser, AppUser staffUser, IReadOnlyCollection<string> permissionKeys, DateTime now)
@@ -538,45 +729,7 @@ public class CreateManagerAccessModel : PageModel
 
     private static IEnumerable<string> DefaultPermissionKeysForAccess(string accessLevel)
     {
-        return accessLevel switch
-        {
-            CurrentUserService.SeniorManagementAccess => PermissionCatalog
-                .SelectMany(group => group.Options)
-                .Select(option => option.Key),
-
-            CurrentUserService.OperationalManagementAccess => new[]
-            {
-                "registers.view",
-                "registers.vehicle.edit",
-                "registers.equipment.edit",
-                "registers.stock.edit",
-                "registers.medication.edit",
-                "registers.staff.edit",
-                "assets.move",
-                "assets.service.update",
-                "checklists.build",
-                "checklists.edit",
-                "checklists.reports",
-                "checklists.variance.review",
-                "daily.checks.complete",
-                "daily.sameprevious",
-                "issues.report",
-                "issues.manage",
-                "tasks.send",
-                "tasks.manage",
-                "tasks.feedback",
-                "dashboard.readiness",
-                "reports.operations"
-            },
-
-            _ => new[]
-            {
-                "daily.checks.complete",
-                "daily.sameprevious",
-                "issues.report",
-                "tasks.feedback"
-            }
-        };
+        return UserActionPermissions.DefaultForAccess(accessLevel);
     }
 
     private static string DescribePermissionSummary(IReadOnlyCollection<string> permissionKeys)
@@ -658,6 +811,7 @@ public class CreateManagerAccessModel : PageModel
         public string EditAccessLevel { get; set; } = CurrentUserService.OperationalManagementAccess;
         public int PermissionCount { get; set; }
         public string PermissionSummary { get; set; } = string.Empty;
+        public bool HasSavedPermissionRows { get; set; }
         public bool CanEdit { get; set; }
     }
 

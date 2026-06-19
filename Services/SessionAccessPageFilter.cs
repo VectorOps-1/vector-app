@@ -43,20 +43,25 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/StaffRecordsSearch"] = AllSignedInAccess,
         ["/EditStaffProfile"] = AllSignedInAccess,
         ["/ReportIssue"] = AllSignedInAccess,
+        ["/ExpiryNotifications"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
+        ["/EditVehicle"] = ManagementAccess,
         ["/ReassignVehicleCallsign"] = ManagementAccess,
+        ["/Readiness"] = ManagementAccess,
         ["/ReadinessDashboard"] = ManagementAccess,
         ["/ReadinessEngine"] = ManagementAccess,
         ["/ReadinessMetric"] = ManagementAccess,
         ["/ReadinessMetricDetail"] = ManagementAccess,
+        ["/ReadinessAlerts"] = ManagementAccess,
         ["/OperationsReports"] = ManagementAccess,
         ["/ChecklistReports"] = ManagementAccess,
         ["/ChecklistReportDetail"] = ManagementAccess,
         ["/ChecklistTemplateView"] = ManagementAccess,
         ["/Equipment"] = ManagementAccess,
         ["/EquipmentRegister"] = ManagementAccess,
+        ["/EditEquipmentItem"] = ManagementAccess,
         ["/EquipmentService"] = ManagementAccess,
         ["/MoveAsset"] = ManagementAccess,
         ["/Stock"] = ManagementAccess,
@@ -65,9 +70,6 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/StockOrders"] = ManagementAccess,
         ["/PlaceStockOrder"] = ManagementAccess,
         ["/StockOrderAction"] = ManagementAccess,
-        ["/SupplierConfirmations"] = ManagementAccess,
-        ["/EnterStockRegister"] = ManagementAccess,
-        ["/AllocateStock"] = ManagementAccess,
         ["/Staff"] = ManagementAccess,
         ["/StaffRegister"] = ManagementAccess,
         ["/StaffFiles"] = ManagementAccess,
@@ -76,6 +78,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/EditMedicationItem"] = ManagementAccess,
         ["/SendTask"] = ManagementAccess,
         ["/IssueInbox"] = ManagementAccess,
+        ["/TasksIssues"] = ManagementAccess,
         ["/ChecklistVarianceAlerts"] = ManagementAccess,
         ["/ReadinessAlerts"] = ManagementAccess,
         ["/IssueReports"] = ManagementAccess,
@@ -121,8 +124,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/AddItem",
         "/EquipmentService",
         "/MoveAsset",
-        "/EnterStockRegister",
-        "/AllocateStock",
+        "/StockOrders",
+        "/StockOrderAction",
         "/StockRegister"
     };
 
@@ -205,7 +208,10 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return true;
         }
 
-        context.Result = new RedirectToPageResult("/Home", new { permissionDenied = "true" });
+        var hasSavedPermissionRows = await permissionService.HasSavedPermissionRowsAsync(currentUser, context.HttpContext.RequestAborted);
+        context.Result = hasSavedPermissionRows
+            ? new RedirectToPageResult("/Home", new { permissionDenied = "true" })
+            : new RedirectToPageResult("/Home", new { permissionSetupRequired = "true" });
         return false;
     }
 
@@ -239,6 +245,15 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             }
 
             return null;
+        }
+
+        if (pagePath == "/DailyVehicleChecklist" && isPost)
+        {
+            var sameAsPreviousValue = await GetRequestValueAsync(request, "SameAsPreviousShift");
+
+            return IsTruthyFormValue(sameAsPreviousValue)
+                ? PermissionRequirement.All(UserActionPermissions.DailyChecksComplete, UserActionPermissions.DailySamePrevious)
+                : PermissionRequirement.All(UserActionPermissions.DailyChecksComplete);
         }
 
         if (pagePath == "/EditVehicleChecklist")
@@ -304,7 +319,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/EditEquipmentItem"
                 => PermissionRequirement.All(UserActionPermissions.RegistersEquipmentEdit),
 
-            "/EditStockItem" or "/PlaceStockOrder" or "/StockOrders" or "/StockOrderAction" or "/SupplierConfirmations" or "/EnterStockRegister" or "/AllocateStock"
+            "/EditStockItem" or "/PlaceStockOrder" or "/StockOrders" or "/StockOrderAction"
                 => PermissionRequirement.All(UserActionPermissions.RegistersStockEdit),
 
             "/EditMedicationItem"
@@ -327,6 +342,19 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
             "/IssueInbox" or "/IssueReports" or "/IssueReportAction"
                 => PermissionRequirement.All(UserActionPermissions.IssuesManage),
+
+            "/TasksIssues"
+                => PermissionRequirement.Any(UserActionPermissions.TasksSend, UserActionPermissions.IssuesManage),
+
+            "/Readiness"
+                => PermissionRequirement.Any(
+                    UserActionPermissions.DashboardReadiness,
+                    UserActionPermissions.ChecklistsBuild,
+                    UserActionPermissions.ChecklistsEdit,
+                    UserActionPermissions.ChecklistsPublish,
+                    UserActionPermissions.ChecklistsReports,
+                    UserActionPermissions.ReportsOperations,
+                    UserActionPermissions.AssetsServiceUpdate),
 
             "/ReadinessDashboard" or "/ReadinessMetric" or "/ReadinessMetricDetail" or "/ReadinessAlerts"
                 => PermissionRequirement.All(UserActionPermissions.DashboardReadiness),
@@ -415,6 +443,22 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         };
     }
 
+    private static bool IsTruthyFormValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(part =>
+                string.Equals(part, "true", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(part, "on", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(part, "yes", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(part, "1", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static async Task<string?> GetRequestValueAsync(HttpRequest request, string key)
     {
         var queryValue = request.Query[key].ToString();
@@ -435,12 +479,19 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
     private static async Task<bool> HasValidTaskAccessAsync(PageHandlerExecutingContext context, string pagePath, int currentUserId)
     {
+        var request = context.HttpContext.Request;
+        var handlerName = context.HandlerMethod?.Name ?? string.Empty;
+        if (string.Equals(request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
+            handlerName.Contains("Delete", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (!TaskAccessibleManagementPages.Contains(pagePath) && !TaskActionCatalog.CanBeOpenedWithTaskAccess(pagePath))
         {
             return false;
         }
 
-        var request = context.HttpContext.Request;
         if (!QueryEquals(request.Query, "taskAccess", "true"))
         {
             return false;

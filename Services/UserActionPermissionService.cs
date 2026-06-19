@@ -119,6 +119,7 @@ public interface IUserActionPermissionService
     Task<bool> HasPermissionAsync(AppUser user, string permissionKey, CancellationToken cancellationToken = default);
     Task<bool> HasAllPermissionsAsync(AppUser user, IEnumerable<string> permissionKeys, CancellationToken cancellationToken = default);
     Task<bool> HasAnyPermissionAsync(AppUser user, IEnumerable<string> permissionKeys, CancellationToken cancellationToken = default);
+    Task<bool> HasSavedPermissionRowsAsync(AppUser user, CancellationToken cancellationToken = default);
 }
 
 public class UserActionPermissionService : IUserActionPermissionService
@@ -159,6 +160,16 @@ public class UserActionPermissionService : IUserActionPermissionService
         return keys.Any(key => effectiveKeys.Contains(key));
     }
 
+    public async Task<bool> HasSavedPermissionRowsAsync(AppUser user, CancellationToken cancellationToken = default)
+    {
+        return await _db.AppUserAccessPermissions
+            .AsNoTracking()
+            .AnyAsync(permission =>
+                permission.CompanyId == user.CompanyId &&
+                permission.AppUserId == user.Id,
+                cancellationToken);
+    }
+
     private async Task<HashSet<string>> LoadEffectivePermissionKeysAsync(AppUser user, CancellationToken cancellationToken)
     {
         var savedPermissions = await _db.AppUserAccessPermissions
@@ -175,9 +186,7 @@ public class UserActionPermissionService : IUserActionPermissionService
 
         if (savedPermissions.Count == 0)
         {
-            return UserActionPermissions
-                .DefaultForAccess(RoleNameToAccessView(user.AppRole?.Name))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         return savedPermissions
@@ -193,15 +202,5 @@ public class UserActionPermissionService : IUserActionPermissionService
             .Where(UserActionPermissions.All.Contains)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static string RoleNameToAccessView(string? roleName)
-    {
-        return roleName switch
-        {
-            "Staff" => CurrentUserService.StaffAccess,
-            "Senior Management" or "Company Owner" => CurrentUserService.SeniorManagementAccess,
-            _ => CurrentUserService.OperationalManagementAccess
-        };
     }
 }

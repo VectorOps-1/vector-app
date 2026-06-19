@@ -154,9 +154,22 @@ public class SendTaskModel : PageModel
             .GetActionsForSender(_currentUser.CurrentAccessView)
             .ToList();
 
-        var users = await _db.AppUsers
+        var usersQuery = _db.AppUsers
             .Include(u => u.AppRole)
             .Where(u => u.CompanyId == currentUser.CompanyId && u.Status == "Active")
+            .AsQueryable();
+
+        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        {
+            var assignedAreaIds = await LoadAssignedAreaIdsAsync(currentUser);
+            usersQuery = assignedAreaIds.Count == 0
+                ? usersQuery.Where(user => user.Id == currentUser.Id)
+                : usersQuery.Where(user =>
+                    user.Id == currentUser.Id ||
+                    (user.AssignedOperationalAreaId.HasValue && assignedAreaIds.Contains(user.AssignedOperationalAreaId.Value)));
+        }
+
+        var users = await usersQuery
             .OrderBy(u => u.FullName)
             .ToListAsync();
 
@@ -170,6 +183,26 @@ public class SendTaskModel : PageModel
             .ToList();
 
         return currentUser;
+    }
+
+    private async Task<List<int>> LoadAssignedAreaIdsAsync(AppUser currentUser)
+    {
+        var assignedAreaIds = await _db.ManagerOperationalAreaAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.CompanyId == currentUser.CompanyId &&
+                assignment.ManagerUserId == currentUser.Id &&
+                assignment.Status == "Active")
+            .Select(assignment => assignment.OperationalAreaId)
+            .ToListAsync();
+
+        if (currentUser.AssignedOperationalAreaId.HasValue &&
+            !assignedAreaIds.Contains(currentUser.AssignedOperationalAreaId.Value))
+        {
+            assignedAreaIds.Add(currentUser.AssignedOperationalAreaId.Value);
+        }
+
+        return assignedAreaIds;
     }
 
     public class TaskRecipientOption

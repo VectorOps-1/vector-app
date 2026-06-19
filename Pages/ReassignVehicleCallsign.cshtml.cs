@@ -151,17 +151,20 @@ public class ReassignVehicleCallsignModel : PageModel
 
     private async Task LoadVehicleOptionsAsync(int companyId)
     {
-        VehicleOptions = await _db.Vehicles
+        var vehicles = await _db.Vehicles
             .AsNoTracking()
             .Where(vehicle => vehicle.CompanyId == companyId && vehicle.Status != "Deleted")
             .OrderBy(vehicle => vehicle.Callsign)
             .ThenBy(vehicle => vehicle.RegistrationNumber)
+            .ToListAsync();
+
+        VehicleOptions = vehicles
             .Select(vehicle => new SelectListItem
             {
                 Value = vehicle.Id.ToString(),
-                Text = vehicle.Callsign + " / " + vehicle.RegistrationNumber + " / " + vehicle.VehicleType
+                Text = vehicle.Callsign + " / " + vehicle.RegistrationNumber + " / " + VehicleTaxonomyService.DisplayClassification(vehicle)
             })
-            .ToListAsync();
+            .ToList();
     }
 
     private static string? NormalizeOptional(string? value)

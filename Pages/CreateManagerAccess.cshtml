@@ -25,12 +25,39 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Area / Manager Control</div>
         <h2 class="page-title">Access Setup</h2>
-        <p class="page-subtitle">Select an existing staff profile from the register, then assign the correct access level and area control.</p>
+        <p class="page-subtitle">Select an existing staff profile from the register, then assign access level, area control, and granular action permissions.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
             <div class="status-message" data-action-status>@Model.StatusMessage</div>
         }
+
+        <section class="form-panel permission-setup-warning">
+            <div>
+                <div class="section-label">Saved Permission Baseline</div>
+                @if (Model.ProfilesMissingSavedPermissionsCount > 0)
+                {
+                    <h3>@Model.ProfilesMissingSavedPermissionsCount profile@(Model.ProfilesMissingSavedPermissionsCount == 1 ? string.Empty : "s") need saved action permissions</h3>
+                    <p class="source-note">Permission-sensitive testing uses saved permission rows only. Initialize missing profiles before testing role access.</p>
+                }
+                else
+                {
+                    <h3>Saved action permissions are initialized for editable profiles</h3>
+                    <p class="source-note">Use force defaults only when you need a clean role-default baseline before testing permissions again.</p>
+                }
+            </div>
+            <div class="permission-baseline-actions">
+                @if (Model.ProfilesMissingSavedPermissionsCount > 0)
+                {
+                    <form method="post" asp-page-handler="InitializePermissionDefaults">
+                        <button class="menu-btn equipment-btn" type="submit">Initialize Missing Defaults</button>
+                    </form>
+                }
+                <form method="post" asp-page-handler="ForcePermissionDefaults">
+                    <button class="menu-btn vehicle-btn" type="submit">Force Role Defaults</button>
+                </form>
+            </div>
+        </section>
 
         <form method="get" class="access-form selector-form" data-staff-profile-form>
             <section class="form-panel">
@@ -45,7 +72,7 @@
                     <input type="hidden" asp-for="AccessLevel" />
                     <button class="menu-btn equipment-btn selector-button" type="submit">Open Access Assignment</button>
                 </div>
-                <p class="source-note">Names, email addresses, staff IDs, clinical qualification / scope, practitioner numbers, licensing, CPD, and current area are pulled from the staff register.</p>
+                <p class="source-note">The dropdown only shows profiles you are allowed to edit. Names, email addresses, staff IDs, clinical qualification / scope, practitioner numbers, licensing, CPD, and current area are pulled from the staff register.</p>
             </section>
         </form>
 
@@ -55,6 +82,18 @@
                 <section class="form-panel empty-panel">
                     <div class="section-label">Access Assignment</div>
                     <p>Select a staff member above before changing access. This prevents creating manager logins that do not belong to a real staff profile.</p>
+                    <div class="permission-overview">
+                        <div class="section-label">Granular Permission Controls</div>
+                        <div class="permission-overview-grid">
+                            @foreach (var permissionGroup in Model.PermissionGroups)
+                            {
+                                <div class="permission-overview-item">
+                                    <strong>@permissionGroup.Name</strong>
+                                    <span>@permissionGroup.Options.Count action control@(permissionGroup.Options.Count == 1 ? string.Empty : "s")</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </section>
             }
             else
@@ -73,9 +112,9 @@
                             <div><span>National ID</span><strong>@TextOrDefault(staff.NationalId)</strong></div>
                             <div><span>Clinical qualification / scope</span><strong>@TextOrDefault(staff.QualificationFunction)</strong></div>
                             <div><span>Practitioner Number</span><strong>@TextOrDefault(staff.PractitionerNumber)</strong></div>
-                            <div><span>Annual licence expiry</span><strong>@DateOrDefault(staff.AnnualLicenseExpiryDate)</strong></div>
+                            <div><span>Annual licence expiry</span><strong data-date-status-field="licence">@DateOrDefault(staff.AnnualLicenseExpiryDate)</strong></div>
                             <div><span>CPD status</span><strong>@TextOrDefault(staff.CpdComplianceStatus, "N/A")</strong></div>
-                            <div><span>CPD valid until</span><strong>@DateOrDefault(staff.CpdComplianceExpiryDate)</strong></div>
+                            <div><span>CPD valid until</span><strong data-date-status-field="cpd">@DateOrDefault(staff.CpdComplianceExpiryDate)</strong></div>
                             <div><span>Current access role</span><strong>@staff.RoleName</strong></div>
                             <div><span>Current assigned area</span><strong>@staff.AssignedArea</strong></div>
                         </div>
@@ -104,13 +143,21 @@
                                 <span>Account active</span>
                             </label>
                         </div>
-                        <p class="source-note">Operational managers are limited by assigned area. Staff and senior management permissions are derived from their access level in this build.</p>
+                        <p class="source-note">The access level sets the broad login route. The granular permission controls below decide which actions this person may perform inside that route.</p>
                     </section>
 
                     <section class="form-panel permissions-panel">
-                        <div class="section-label">Action Permissions</div>
-                        <h3 class="panel-heading">Choose exactly what this person may do</h3>
+                        <div class="section-label">Granular Access Permission Controls</div>
+                        <h3 class="panel-heading">Choose exactly what @staff.FullName may do</h3>
                         <p class="source-note">Access level controls the broad login route. These permissions control individual app actions such as register editing, checklist publishing, task management, and setup access.</p>
+                        @if (!Model.SelectedStaffHasSavedPermissions)
+                        {
+                            <div class="locked-notice">This profile does not yet have saved action permissions. The checked boxes below are suggested defaults and only become active after you save access or initialize defaults.</div>
+                        }
+                        @if (!Model.CanEditSelectedStaff)
+                        {
+                            <div class="locked-notice">This profile is above or equal to your current access level, so its permissions are shown for reference only.</div>
+                        }
 
                         @foreach (var permissionGroup in Model.PermissionGroups)
                         {
@@ -123,7 +170,8 @@
                                             <input type="checkbox"
                                                    name="SelectedPermissionKeys"
                                                    value="@permission.Key"
-                                                   checked="@Model.SelectedPermissionKeySet.Contains(permission.Key)" />
+                                                   checked="@Model.SelectedPermissionKeySet.Contains(permission.Key)"
+                                                   disabled="@(!Model.CanEditSelectedStaff)" />
                                             <span>
                                                 <strong>@permission.Name</strong>
                                                 <small>@permission.Description</small>
@@ -137,7 +185,7 @@
 
                     <div class="action-row">
                         <a class="menu-btn vehicle-btn" href="/AreaManagerControl">Back to Area / Manager Control</a>
-                        <button class="menu-btn equipment-btn" type="submit">Save Access</button>
+                        <button class="menu-btn equipment-btn" type="submit" disabled="@(!Model.CanEditSelectedStaff)">Save Access</button>
                     </div>
                 </form>
             }
@@ -179,12 +227,16 @@
                                 <td>
                                     <strong>@row.PermissionCount permission@(row.PermissionCount == 1 ? string.Empty : "s")</strong>
                                     <span>@row.PermissionSummary</span>
+                                    @if (!row.HasSavedPermissionRows)
+                                    {
+                                        <small class="permission-missing">Setup required before testing</small>
+                                    }
                                 </td>
                                 <td><span class="status-pill @(row.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) ? "active" : "inactive")">@row.Status</span></td>
                                 <td>
                                     @if (row.CanEdit)
                                     {
-                                        <a class="row-action" href="/CreateManagerAccess?staffUserId=@row.StaffUserId&accessLevel=@row.EditAccessLevel#accessAssignment">Edit</a>
+                                        <a class="row-action" href="/CreateManagerAccess?staffUserId=@row.StaffUserId&accessLevel=@row.EditAccessLevel#accessAssignment">Edit Access</a>
                                     }
                                     else
                                     {
@@ -316,6 +368,39 @@
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.68);
     text-align: left;
+}
+
+.permission-setup-warning {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+    border-color: rgba(146, 64, 14, .24);
+    background: #fff7ed;
+}
+
+.permission-setup-warning h3 {
+    margin: 0 0 4px 0;
+    color: #7c2d12;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.permission-setup-warning form {
+    flex: 0 0 auto;
+}
+
+.permission-baseline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.permission-setup-warning .menu-btn {
+    min-width: 230px;
+    border: none;
 }
 
 .empty-panel {
@@ -500,6 +585,10 @@
     font-weight: 800;
 }
 
+.access-table td small.permission-missing {
+    color: #9a3412;
+}
+
 .status-pill {
     display: inline-flex !important;
     width: fit-content;
@@ -566,6 +655,54 @@
     height: 20px;
 }
 
+.permission-overview {
+    margin-top: 22px;
+    text-align: left;
+}
+
+.permission-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.permission-overview-item {
+    padding: 12px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.permission-overview-item strong,
+.permission-overview-item span {
+    display: block;
+}
+
+.permission-overview-item strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.permission-overview-item span {
+    margin-top: 4px;
+    color: #5f6b7a;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.locked-notice {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(146, 64, 14, .22);
+    border-radius: 8px;
+    background: #fff7ed;
+    color: #7c2d12;
+    font-size: 13px;
+    font-weight: 900;
+}
+
 .permission-group {
     margin-top: 18px;
 }
@@ -622,6 +759,17 @@
     line-height: 1.35;
 }
 
+.permission-item:has(input:disabled) {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+button:disabled,
+.menu-btn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
 .action-row {
     display: flex;
     justify-content: center;
@@ -642,9 +790,19 @@
 }
 
 @@media (max-width: 820px) {
+    .permission-setup-warning {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .permission-setup-warning .menu-btn {
+        width: 100%;
+    }
+
     .selector-grid,
     .form-grid,
     .profile-grid,
+    .permission-overview-grid,
     .permission-grid {
         grid-template-columns: 1fr;
     }

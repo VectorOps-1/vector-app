@@ -33,7 +33,7 @@
             <section class="approval-summary">
                 <div>
                     <div class="source-label">Submitted checklist</div>
-                    <h3>@template.TargetVehicleType - @template.Name</h3>
+                    <h3>@template.TargetVehicleType - @ChecklistDisplayService.TemplateName(template.Name)</h3>
                     <p>Version @template.Version | @template.ChecklistType | @template.SourceType | @template.Status</p>
                 </div>
                 <span class="status-pill">@template.Status</span>
