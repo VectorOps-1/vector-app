@@ -4,6 +4,9 @@ using vector_app_local.Data;
 using vector_app_local.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+const string DevelopmentDatabaseRepairCommand = "--dev-db-repair";
+var runDevelopmentDatabaseRepair = args.Any(arg =>
+    string.Equals(arg, DevelopmentDatabaseRepairCommand, StringComparison.OrdinalIgnoreCase));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -41,6 +44,7 @@ builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<ChecklistReportPdfService>();
 builder.Services.AddScoped<ReadinessEngineService>();
 builder.Services.AddScoped<ReadinessEngineScoringService>();
+builder.Services.AddScoped<ChecklistPublishingService>();
 builder.Services.AddScoped<VehicleSchematicAssignmentService>();
 builder.Services.AddScoped<CustomDropdownOptionService>();
 builder.Services.AddScoped<ExpiryPressureService>();
@@ -58,12 +62,20 @@ builder.Services.AddDbContext<VectorDbContext>(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (runDevelopmentDatabaseRepair)
 {
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("Development database repair can only run in the Development environment.");
+    }
+
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<VectorDbContext>();
-    await DevelopmentDatabase.InitialiseAsync(db);
-    app.Logger.LogInformation("Development database schema checked. Sample/prototype data is not seeded by application startup.");
+    await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(db);
+    app.Logger.LogInformation(
+        "Development database repair completed by explicit command {Command}.",
+        DevelopmentDatabaseRepairCommand);
+    return;
 }
 
 if (!app.Environment.IsDevelopment())

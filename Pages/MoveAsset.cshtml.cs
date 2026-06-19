@@ -58,8 +58,6 @@ public class MoveAssetModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(_db);
-
         if (TaskId.HasValue)
         {
             await ApplyTaskReferenceAsync(currentUser);
@@ -78,8 +76,6 @@ public class MoveAssetModel : PageModel
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
-
-        await DevelopmentDatabase.RepairSqliteDevelopmentSchemaAsync(_db);
 
         var destination = await ResolveDestinationAsync(currentUser.CompanyId);
 

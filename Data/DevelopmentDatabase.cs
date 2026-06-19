@@ -1,52 +1,17 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using vector_app_local.Models;
-using vector_app_local.Services;
 
 namespace vector_app_local.Data;
 
 public static class DevelopmentDatabase
 {
-    private const string EfProductVersion = "8.0.5";
-
-    public static async Task InitialiseAsync(VectorDbContext db)
-    {
-        if (db.Database.IsSqlite())
-        {
-            await InitialiseSqliteAsync(db);
-        }
-        else
-        {
-            await db.Database.MigrateAsync();
-        }
-
-        await BackfillVehicleTaxonomyAsync(db);
-    }
-
     public static async Task RepairSqliteDevelopmentSchemaAsync(VectorDbContext db)
     {
         if (db.Database.IsSqlite())
         {
             await EnsureSqliteDevelopmentSchemaAsync(db);
         }
-    }
-
-    private static async Task InitialiseSqliteAsync(VectorDbContext db)
-    {
-        if (await HasSqliteTableAsync(db, "Companies"))
-        {
-            if (await HasSqliteTableAsync(db, "__EFMigrationsHistory"))
-            {
-                await db.Database.MigrateAsync();
-            }
-
-            await EnsureSqliteDevelopmentSchemaAsync(db);
-            return;
-        }
-
-        await db.Database.EnsureDeletedAsync();
-        await db.Database.EnsureCreatedAsync();
-        await MarkCurrentMigrationsAppliedAsync(db);
     }
 
     private static async Task<bool> HasSqliteTableAsync(VectorDbContext db, string tableName)
@@ -536,6 +501,8 @@ public static class DevelopmentDatabase
                 "ScopeType" TEXT NOT NULL,
                 "VehicleFunction" TEXT NULL,
                 "VehicleSubtype" TEXT NULL,
+                "OperationalAreaId" INTEGER NULL,
+                "VehicleId" INTEGER NULL,
                 "CreatedByUserId" INTEGER NULL,
                 "CreatedAtUtc" TEXT NOT NULL,
                 "UpdatedAtUtc" TEXT NULL
@@ -566,6 +533,8 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "Vehicles", "LicenseNumber", """ALTER TABLE "Vehicles" ADD "LicenseNumber" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Vehicles", "LicenseDiscExpiryDate", """ALTER TABLE "Vehicles" ADD "LicenseDiscExpiryDate" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Vehicles", "LastServiceDate", """ALTER TABLE "Vehicles" ADD "LastServiceDate" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "VehicleSchematicAssignments", "OperationalAreaId", """ALTER TABLE "VehicleSchematicAssignments" ADD "OperationalAreaId" INTEGER NULL;""");
+        await EnsureSqliteColumnAsync(db, "VehicleSchematicAssignments", "VehicleId", """ALTER TABLE "VehicleSchematicAssignments" ADD "VehicleId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "CurrentOperationalAreaId", """ALTER TABLE "EquipmentItems" ADD "CurrentOperationalAreaId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "CurrentLocationDetail", """ALTER TABLE "EquipmentItems" ADD "CurrentLocationDetail" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "EquipmentItems", "LastMovedByUserId", """ALTER TABLE "EquipmentItems" ADD "LastMovedByUserId" INTEGER NULL;""");
@@ -581,6 +550,7 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "AppUsers", "AssignedOperationalAreaId", """ALTER TABLE "AppUsers" ADD "AssignedOperationalAreaId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "Companies", "WorkspaceSlug", """ALTER TABLE "Companies" ADD "WorkspaceSlug" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Companies", "WorkspaceAccessCode", """ALTER TABLE "Companies" ADD "WorkspaceAccessCode" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "LogoStoragePath", """ALTER TABLE "Companies" ADD "LogoStoragePath" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousVehicleInspection", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousVehicleInspection" INTEGER NOT NULL DEFAULT 1;""");
         await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousEquipmentCheck", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousEquipmentCheck" INTEGER NOT NULL DEFAULT 1;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "ShiftStartedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "ShiftStartedAtUtc" TEXT NULL;""");
@@ -696,96 +666,12 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AppUserAccessPermissions_UpdatedByUserId" ON "AppUserAccessPermissions" ("UpdatedByUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_VehicleSchematicAssignments_CompanyId_ScopeType_VehicleFunction_VehicleSubtype" ON "VehicleSchematicAssignments" ("CompanyId", "ScopeType", "VehicleFunction", "VehicleSubtype");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_VehicleSchematicAssignments_CompanyId_SchematicKey" ON "VehicleSchematicAssignments" ("CompanyId", "SchematicKey");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_VehicleSchematicAssignments_CompanyId_ScopeType_OperationalAreaId" ON "VehicleSchematicAssignments" ("CompanyId", "ScopeType", "OperationalAreaId");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_VehicleSchematicAssignments_CompanyId_ScopeType_VehicleId" ON "VehicleSchematicAssignments" ("CompanyId", "ScopeType", "VehicleId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_VehicleSchematicAssignments_CreatedByUserId" ON "VehicleSchematicAssignments" ("CreatedByUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_CustomDropdownOptions_CompanyId_DropdownKey_Value" ON "CustomDropdownOptions" ("CompanyId", "DropdownKey", "Value");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_CustomDropdownOptions_CreatedByUserId" ON "CustomDropdownOptions" ("CreatedByUserId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE UNIQUE INDEX IF NOT EXISTS "IX_Companies_WorkspaceSlug" ON "Companies" ("WorkspaceSlug") WHERE "WorkspaceSlug" IS NOT NULL;""");
-    }
-
-    private static async Task BackfillVehicleTaxonomyAsync(VectorDbContext db)
-    {
-        var vehicles = await db.Vehicles
-            .Where(vehicle =>
-                vehicle.VehicleFunction == null ||
-                vehicle.VehicleFunction == "" ||
-                vehicle.VehicleSubtype == null ||
-                vehicle.VehicleSubtype == "")
-            .ToListAsync();
-
-        var now = DateTime.UtcNow;
-        var changed = false;
-        foreach (var vehicle in vehicles)
-        {
-            if (!VehicleTaxonomyService.Backfill(vehicle))
-            {
-                continue;
-            }
-
-            vehicle.UpdatedAtUtc = now;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            await db.SaveChangesAsync();
-        }
-    }
-
-    private static async Task EnsureDefaultVehicleSchematicAssignmentsAsync(VectorDbContext db)
-    {
-        var companyIds = await db.Companies
-            .AsNoTracking()
-            .Select(company => company.Id)
-            .ToListAsync();
-
-        foreach (var companyId in companyIds)
-        {
-            await EnsureVehicleSchematicAssignmentAsync(
-                db,
-                companyId,
-                VehicleSchematicAssignmentService.FunctionScope,
-                VehicleTaxonomyService.AmbulanceFunction,
-                null,
-                "toyota-quantum-hiace-high-roof");
-
-            await EnsureVehicleSchematicAssignmentAsync(
-                db,
-                companyId,
-                VehicleSchematicAssignmentService.FunctionScope,
-                VehicleTaxonomyService.ResponseVehicleFunction,
-                null,
-                "pickup-rv");
-        }
-
-        await db.SaveChangesAsync();
-    }
-
-    private static async Task EnsureVehicleSchematicAssignmentAsync(
-        VectorDbContext db,
-        int companyId,
-        string scopeType,
-        string? vehicleFunction,
-        string? vehicleSubtype,
-        string schematicKey)
-    {
-        if (await db.VehicleSchematicAssignments.AnyAsync(assignment =>
-            assignment.CompanyId == companyId &&
-            assignment.ScopeType == scopeType &&
-            assignment.VehicleFunction == vehicleFunction &&
-            assignment.VehicleSubtype == vehicleSubtype))
-        {
-            return;
-        }
-
-        db.VehicleSchematicAssignments.Add(new VehicleSchematicAssignment
-        {
-            CompanyId = companyId,
-            ScopeType = scopeType,
-            VehicleFunction = vehicleFunction,
-            VehicleSubtype = vehicleSubtype,
-            SchematicKey = schematicKey,
-            CreatedAtUtc = DateTime.UtcNow
-        });
     }
 
     private static async Task EnsureSqliteColumnAsync(VectorDbContext db, string tableName, string columnName, string alterSql)
@@ -798,24 +684,4 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync(alterSql);
     }
 
-    private static async Task MarkCurrentMigrationsAppliedAsync(VectorDbContext db)
-    {
-        await db.Database.ExecuteSqlRawAsync("""
-            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
-                "MigrationId" TEXT NOT NULL CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY,
-                "ProductVersion" TEXT NOT NULL
-            );
-            """);
-
-        foreach (var migrationId in db.Database.GetMigrations())
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                """
-                INSERT OR IGNORE INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-                VALUES ({0}, {1});
-                """,
-                migrationId,
-                EfProductVersion);
-        }
-    }
 }
