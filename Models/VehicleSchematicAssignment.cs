@@ -21,6 +21,12 @@ public class VehicleSchematicAssignment
     [MaxLength(120)]
     public string? VehicleSubtype { get; set; }
 
+    public int? OperationalAreaId { get; set; }
+    public OperationalArea? OperationalArea { get; set; }
+
+    public int? VehicleId { get; set; }
+    public Vehicle? Vehicle { get; set; }
+
     public int? CreatedByUserId { get; set; }
     public AppUser? CreatedByUser { get; set; }
 

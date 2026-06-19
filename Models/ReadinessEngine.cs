@@ -99,7 +99,7 @@ public class ReadinessEngineVersion
     public Company? Company { get; set; }
 
     [MaxLength(120)]
-    public string Name { get; set; } = "Default AcuityOps Engine";
+    public string Name { get; set; } = "Readiness engine";
 
     [MaxLength(40)]
     public string VersionNumber { get; set; } = "1.0";
@@ -177,7 +177,7 @@ public class ReadinessEngineRule
     public bool IsAutoPopulated { get; set; }
 
     [MaxLength(80)]
-    public string SourceType { get; set; } = "Default";
+    public string SourceType { get; set; } = "Custom";
 
     [MaxLength(80)]
     public string? SourceEntityType { get; set; }

@@ -384,6 +384,12 @@ public class VectorDbContext : DbContext
             .HasIndex(assignment => new { assignment.CompanyId, assignment.SchematicKey });
 
         modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.ScopeType, assignment.OperationalAreaId });
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasIndex(assignment => new { assignment.CompanyId, assignment.ScopeType, assignment.VehicleId });
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
             .HasOne(assignment => assignment.Company)
             .WithMany()
             .HasForeignKey(assignment => assignment.CompanyId)
@@ -393,6 +399,18 @@ public class VectorDbContext : DbContext
             .HasOne(assignment => assignment.CreatedByUser)
             .WithMany()
             .HasForeignKey(assignment => assignment.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasOne(assignment => assignment.OperationalArea)
+            .WithMany()
+            .HasForeignKey(assignment => assignment.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleSchematicAssignment>()
+            .HasOne(assignment => assignment.Vehicle)
+            .WithMany()
+            .HasForeignKey(assignment => assignment.VehicleId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<EquipmentItem>()
