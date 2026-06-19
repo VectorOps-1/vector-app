@@ -94,22 +94,28 @@ public class EditChecklistModel : PageModel
         var now = DateTime.UtcNow;
         template.Status = "Deleted";
         template.IsPublished = false;
+        template.PublishedAtUtc = null;
+        template.PublishedByUserId = null;
+        template.PublishScopeSummary = null;
+        template.PublishNotes = null;
         template.UpdatedAtUtc = now;
 
-        foreach (var activeScope in template.PublishScopes.Where(scope => scope.IsActive))
+        var retiredScopeCount = 0;
+        foreach (var scope in template.PublishScopes)
         {
-            activeScope.IsActive = false;
-            activeScope.RetiredAtUtc = now;
+            scope.IsActive = false;
+            scope.RetiredAtUtc ??= now;
+            retiredScopeCount++;
         }
 
         _db.AuditLogs.Add(new AuditLog
         {
             CompanyId = currentUser.CompanyId,
             AppUserId = currentUser.Id,
-            Action = "Checklist template deleted",
+            Action = "Checklist template retired/deleted",
             EntityType = "ChecklistTemplate",
             EntityId = template.Id,
-            Details = $"Deleted checklist template '{template.Name}' for {template.TargetVehicleType}.",
+            Details = $"Retired/deleted checklist template '{template.Name}' for {template.TargetVehicleType}. Retired publish scopes: {retiredScopeCount}.",
             CreatedAtUtc = now
         });
 
@@ -194,7 +200,6 @@ public record ChecklistTemplateSummary(
     private static bool IsFullAuditName(string? name)
     {
         return !string.IsNullOrWhiteSpace(name) &&
-            (name.Contains("Full Audit", StringComparison.OrdinalIgnoreCase) ||
-                name.Contains("Monthly", StringComparison.OrdinalIgnoreCase));
+            name.Contains("Full Audit", StringComparison.OrdinalIgnoreCase);
     }
 }

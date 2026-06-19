@@ -35,6 +35,6 @@ public class ChecklistPreviewModel : PageModel
             FileName = fileName;
         }
 
-        return Page();
+        return RedirectToPage("/EditChecklist", new { confirmation = "checklist-source-uploaded" });
     }
 }

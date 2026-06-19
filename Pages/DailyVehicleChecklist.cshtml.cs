@@ -53,8 +53,6 @@ public class DailyVehicleChecklistModel : PageModel
     public List<LiveChecklistSection> AssignedChecklistSections { get; private set; } = new();
     private const string SectionNoteItemKind = "SectionNote";
 
-    public string EquipmentChecklistUrl => $"/DailyEquipmentChecklist?callsign={Uri.EscapeDataString(Callsign ?? string.Empty)}&registration={Uri.EscapeDataString(Registration ?? string.Empty)}";
-
     public async Task<IActionResult> OnGetAsync()
     {
         Frequency = NormalizeFrequency(Frequency);
@@ -68,7 +66,7 @@ public class DailyVehicleChecklistModel : PageModel
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
         await LoadVehicleRegisterOptionsAsync(currentUser.CompanyId, currentUser.Id);
         ApplySelectedVehicleValues();
-        await LoadAssignedChecklistSectionsAsync();
+        await LoadAssignedChecklistSectionsAsync(currentUser.CompanyId);
         return Page();
     }
 
@@ -85,7 +83,7 @@ public class DailyVehicleChecklistModel : PageModel
         await LoadSameAsPreviousSettingAsync(currentUser.CompanyId);
         await LoadVehicleRegisterOptionsAsync(currentUser.CompanyId, currentUser.Id);
         ApplySelectedVehicleValues();
-        await LoadAssignedChecklistSectionsAsync();
+        await LoadAssignedChecklistSectionsAsync(currentUser.CompanyId);
 
         if (string.IsNullOrWhiteSpace(Callsign) && string.IsNullOrWhiteSpace(Registration))
         {
@@ -182,7 +180,7 @@ public class DailyVehicleChecklistModel : PageModel
         var latestReportByVehicleId = latestReports
             .GroupBy(report => report.VehicleId)
             .ToDictionary(group => group.Key, group => group.First());
-        var publishedTemplates = await _db.ChecklistTemplates
+        var publishedTemplates = (await _db.ChecklistTemplates
             .AsNoTracking()
             .Include(template => template.PublishScopes)
             .Where(template =>
@@ -191,7 +189,9 @@ public class DailyVehicleChecklistModel : PageModel
                 template.Status == "Published" &&
                 template.IsPublished &&
                 template.PublishScopes.Any(scope => scope.IsActive && scope.RetiredAtUtc == null))
-            .ToListAsync();
+            .ToListAsync())
+            .Where(IsRegisterOwnedTemplate)
+            .ToList();
         var publishedTemplateIds = publishedTemplates.Select(template => template.Id).ToList();
         var configuredTemplateIds = publishedTemplateIds.Count == 0
             ? new HashSet<int>()
@@ -218,7 +218,7 @@ public class DailyVehicleChecklistModel : PageModel
             baseOptions.Add(new VehicleRegisterOption(
                 vehicle.RegistrationNumber,
                 vehicle.Callsign,
-                vehicle.VehicleType,
+                VehicleTaxonomyService.DisplayClassification(vehicle),
                 schematic?.DisplayName ?? NoUnitSchematicConfigured,
                 schematic?.Key ?? "",
                 vehicle.NextServiceDate?.ToString("yyyy-MM-dd") ?? "",
@@ -241,7 +241,7 @@ public class DailyVehicleChecklistModel : PageModel
                     return option with
                     {
                         PublishedChecklistTemplateId = publishedTemplate?.Id,
-                        PublishedChecklistTemplateName = publishedTemplate?.Name ?? "",
+                        PublishedChecklistTemplateName = ChecklistDisplayService.TemplateName(publishedTemplate?.Name),
                         PublishedChecklistHasConfiguredContent = publishedTemplate is not null &&
                             configuredTemplateIds.Contains(publishedTemplate.Id)
                     };
@@ -250,13 +250,13 @@ public class DailyVehicleChecklistModel : PageModel
                 return option with
                 {
                     Callsign = vehicle.Callsign,
-                    VehicleType = vehicle.VehicleType,
+                    VehicleType = VehicleTaxonomyService.DisplayClassification(vehicle),
                     LicenseNumber = vehicle.LicenseNumber ?? "",
                     NextServiceDate = (vehicle.NextServiceDate ?? option.NextServiceDateAsDate)?.ToString("yyyy-MM-dd") ?? option.NextServiceDate,
                     PreviousSourceReportId = report.Id,
                     PreviousSourcePerformer = report.PerformedByUser?.FullName ?? "another profile",
                     PublishedChecklistTemplateId = publishedTemplate?.Id,
-                    PublishedChecklistTemplateName = publishedTemplate?.Name ?? "",
+                    PublishedChecklistTemplateName = ChecklistDisplayService.TemplateName(publishedTemplate?.Name),
                     PublishedChecklistHasConfiguredContent = publishedTemplate is not null &&
                         configuredTemplateIds.Contains(publishedTemplate.Id)
                 };
@@ -266,6 +266,10 @@ public class DailyVehicleChecklistModel : PageModel
 
     private void ApplySelectedVehicleValues()
     {
+        HasAssignedChecklist = false;
+        AssignedChecklistHasConfiguredContent = false;
+        AssignedChecklistName = string.Empty;
+
         if (string.IsNullOrWhiteSpace(Registration))
         {
             return;
@@ -311,10 +315,10 @@ public class DailyVehicleChecklistModel : PageModel
             LastSavedSection = "Vehicle",
             VehicleRegistrationNumber = vehicle.RegistrationNumber,
             CallsignAtCheck = NormalizeOptional(Callsign) ?? vehicle.Callsign,
-            VehicleTypeAtCheck = NormalizeOptional(VehicleType) ?? vehicle.VehicleType,
+            VehicleTypeAtCheck = NormalizeOptional(VehicleType) ?? VehicleTaxonomyService.DisplayClassification(vehicle),
             ChecklistTemplateId = checklistTemplate.Id,
             ChecklistTemplateVersion = checklistTemplate.Version,
-            SchematicTypeAtCheck = selectedVehicle?.SchematicKey ?? vehicle.SchematicType,
+            SchematicTypeAtCheck = selectedVehicle?.SchematicKey,
             VehicleNextServiceDateAtCheck = NextServiceDate ?? vehicle.NextServiceDate,
             SameAsPreviousShiftUsed = SameAsPreviousShift,
             VehicleSameAsPreviousShiftUsed = SameAsPreviousShift,
@@ -366,22 +370,43 @@ public class DailyVehicleChecklistModel : PageModel
             item.RegistrationNumber == registration);
     }
 
-    private async Task LoadAssignedChecklistSectionsAsync()
+    private async Task LoadAssignedChecklistSectionsAsync(int companyId)
     {
         AssignedChecklistSections = new List<LiveChecklistSection>();
         if (string.IsNullOrWhiteSpace(Registration))
         {
+            HasAssignedChecklist = false;
             AssignedChecklistHasConfiguredContent = false;
+            AssignedChecklistName = string.Empty;
             return;
         }
 
         var selectedVehicle = VehicleRegisterOptions.FirstOrDefault(option =>
             string.Equals(option.Registration, Registration, StringComparison.OrdinalIgnoreCase));
-        if (selectedVehicle?.PublishedChecklistTemplateId is not { } templateId)
+        if (selectedVehicle?.PublishedChecklistTemplateId is not { } selectedTemplateId)
         {
+            HasAssignedChecklist = false;
             AssignedChecklistHasConfiguredContent = false;
+            AssignedChecklistName = string.Empty;
             return;
         }
+
+        var vehicle = await FindSelectedRegisteredVehicleAsync(companyId);
+        var liveTemplate = vehicle is null
+            ? null
+            : await ResolvePublishedTemplateForVehicleAsync(companyId, vehicle);
+
+        if (liveTemplate is null || liveTemplate.Id != selectedTemplateId)
+        {
+            HasAssignedChecklist = false;
+            AssignedChecklistHasConfiguredContent = false;
+            AssignedChecklistName = string.Empty;
+            return;
+        }
+
+        HasAssignedChecklist = true;
+        AssignedChecklistName = ChecklistDisplayService.TemplateName(liveTemplate.Name);
+        var templateId = liveTemplate.Id;
 
         var sections = await _db.ChecklistSections
             .AsNoTracking()
@@ -503,8 +528,7 @@ public class DailyVehicleChecklistModel : PageModel
 
     public VehicleSchematicDefinition? ResolveSchematicForItem(LiveChecklistItem item)
     {
-        return VehicleSchematicLibrary.Find(SelectedVehicleOption?.SchematicKey ?? string.Empty) ??
-            VehicleSchematicLibrary.Find(item.SchematicKey ?? string.Empty);
+        return VehicleSchematicLibrary.Find(SelectedVehicleOption?.SchematicKey ?? string.Empty);
     }
 
     private static List<string> ParseDropdownOptions(string? dropdownOptionsJson)
@@ -705,32 +729,40 @@ public class DailyVehicleChecklistModel : PageModel
 
     private static bool IsLivePublishedTemplate(ChecklistTemplate template)
     {
-        return template.IsPublished &&
+        return IsRegisterOwnedTemplate(template) &&
+            template.IsPublished &&
             string.Equals(template.Status, "Published", StringComparison.OrdinalIgnoreCase) &&
             template.PublishScopes.Any(scope => scope.IsActive && scope.RetiredAtUtc is null);
     }
 
+    private static bool IsRegisterOwnedTemplate(ChecklistTemplate template)
+    {
+        var sourceType = NormalizeOptional(template.SourceType);
+        return !string.Equals(sourceType, "Seed", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sourceType, "Default", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sourceType, "Sample", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool ScopeAppliesToVehicle(ChecklistPublishScope scope, ChecklistTemplate template, Vehicle vehicle)
     {
-        if (!VehicleMatchesTemplateTarget(vehicle, template.TargetVehicleType))
-        {
-            return false;
-        }
-
         return scope.ScopeType switch
         {
-            "Vehicle" => scope.VehicleId == vehicle.Id,
-            "OperationalArea" => scope.OperationalAreaId == vehicle.CurrentOperationalAreaId,
-            "VehicleCategory" => true,
-            "AllAreas" => true,
+            "Vehicle" => scope.VehicleId == vehicle.Id && VehicleMatchesTemplateTarget(vehicle, template.TargetVehicleType),
+            "OperationalArea" => scope.OperationalAreaId == vehicle.CurrentOperationalAreaId && VehicleMatchesTemplateTarget(vehicle, template.TargetVehicleType),
+            "VehicleFunction" => VehicleFunctionMatchesTemplateTarget(vehicle, template.TargetVehicleType),
+            "VehicleSubtype" => VehicleSubtypeMatchesTemplateTarget(vehicle, template.TargetVehicleType),
+            "VehicleCategory" => VehicleMatchesTemplateTarget(vehicle, template.TargetVehicleType),
+            "AllAreas" => VehicleMatchesTemplateTarget(vehicle, template.TargetVehicleType),
             _ => false
         };
     }
 
     private static int ScopeRank(string scopeType) => scopeType switch
     {
-        "Vehicle" => 4,
-        "OperationalArea" => 3,
+        "Vehicle" => 5,
+        "OperationalArea" => 4,
+        "VehicleSubtype" => 3,
+        "VehicleFunction" => 2,
         "VehicleCategory" => 2,
         "AllAreas" => 1,
         _ => 0
@@ -751,9 +783,22 @@ public class DailyVehicleChecklistModel : PageModel
             string.Equals(vehicle.VehicleType, targetVehicleType, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool VehicleFunctionMatchesTemplateTarget(Vehicle vehicle, string targetVehicleType)
+    {
+        var function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
+        return string.Equals(function, targetVehicleType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool VehicleSubtypeMatchesTemplateTarget(Vehicle vehicle, string targetVehicleType)
+    {
+        var subtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
+        return string.Equals(subtype, targetVehicleType, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(vehicle.VehicleType, targetVehicleType, StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task<ChecklistTemplate?> ResolvePublishedTemplateForVehicleAsync(int companyId, Vehicle vehicle)
     {
-        var publishedTemplates = await _db.ChecklistTemplates
+        var publishedTemplates = (await _db.ChecklistTemplates
             .AsNoTracking()
             .Include(template => template.PublishScopes)
             .Where(template =>
@@ -762,7 +807,9 @@ public class DailyVehicleChecklistModel : PageModel
                 template.Status == "Published" &&
                 template.IsPublished &&
                 template.PublishScopes.Any(scope => scope.IsActive && scope.RetiredAtUtc == null))
-            .ToListAsync();
+            .ToListAsync())
+            .Where(IsRegisterOwnedTemplate)
+            .ToList();
 
         return SelectPublishedTemplateForVehicle(publishedTemplates, vehicle);
     }
@@ -771,8 +818,7 @@ public class DailyVehicleChecklistModel : PageModel
     {
         if (string.Equals(frequency, "full-audit", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(frequency, "full audit", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(frequency, "audit", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(frequency, "monthly", StringComparison.OrdinalIgnoreCase))
+            string.Equals(frequency, "audit", StringComparison.OrdinalIgnoreCase))
         {
             return "full-audit";
         }

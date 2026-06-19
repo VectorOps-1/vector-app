@@ -1,285 +1,37 @@
 @page
 @model ChecklistPreviewModel
-@using vector_app_local.Services
-@inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Checklist Preview";
-    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
-    var companyLogoPath = branding.LogoPath;
-    var companyName = branding.ClientName;
+    ViewData["Title"] = "Checklist Source Uploaded";
 }
 
-<div class="preview-screen">
-    <div class="preview-inner">
-        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
-        <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Uploaded Checklist Preview</div>
-        <h2 class="page-title">Review Uploaded Checklist</h2>
-        <p class="page-subtitle">Source file: @Model.FileName</p>
+<div class="source-review-screen">
+    <div class="source-review-panel">
+        <div class="home-label">Checklist Management</div>
+        <h2 class="page-title">Checklist Source Uploaded</h2>
+        <p class="page-subtitle">The uploaded file has been stored as setup source material. Build or edit the live checklist from Checklist Management.</p>
 
-        <div class="preview-layout">
-            <section class="template-panel">
-                <label class="field-label" for="checklistName">Checklist name</label>
-                <input id="checklistName" class="text-input" type="text" value="Daily Vehicle & Equipment Check" />
-
-                <div class="section-card">
-                    <div class="section-header">
-                        <input class="section-title-input" type="text" value="Vehicle Readiness" />
-                        <button class="small-action" type="button">Edit Section</button>
-                    </div>
-
-                    <label class="check-row">
-                        <input type="checkbox" />
-                        <span>Exterior damage checked</span>
-                    </label>
-
-                    <label class="check-row">
-                        <input type="checkbox" />
-                        <span>Lights and siren checked</span>
-                    </label>
-
-                    <div class="field-group">
-                        <label class="field-label">Odometer reading</label>
-                        <input class="text-input" type="number" placeholder="Enter km" />
-                    </div>
-                </div>
-
-                <div class="section-card">
-                    <div class="section-header">
-                        <input class="section-title-input" type="text" value="Equipment Readiness" />
-                        <button class="small-action" type="button">Edit Section</button>
-                    </div>
-
-                    <label class="check-row">
-                        <input type="checkbox" />
-                        <span>Oxygen available and secured</span>
-                    </label>
-
-                    <label class="check-row">
-                        <input type="checkbox" />
-                        <span>Monitor/defibrillator present</span>
-                    </label>
-
-                    <div class="field-group">
-                        <label class="field-label">Notes</label>
-                        <textarea class="text-area" placeholder="Add comments"></textarea>
-                    </div>
-                </div>
-            </section>
-
-            <aside class="mapping-panel">
-                <div class="mapping-title">Import status</div>
-                <div class="mapping-item">File stored for setup reference</div>
-                <div class="mapping-item">Manual checklist building is available in Base</div>
-                <div class="mapping-item">Guided column mapping is Pro</div>
-                <div class="mapping-item">AI-assisted generation is Premium</div>
-            </aside>
+        <div class="source-summary">
+            <strong>Source file</strong>
+            <span>@Model.FileName</span>
         </div>
 
         <div class="action-row">
-            <a class="menu-btn vehicle-btn" href="/UploadChecklist">Upload Different File</a>
-            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build Checklist Manually</a>
+            <a class="menu-btn vehicle-btn" href="/EditChecklist">Open Checklist Management</a>
+            <a class="menu-btn equipment-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build New Checklist</a>
         </div>
     </div>
 </div>
 
 <style>
-.preview-screen {
-    display: flex;
-    width: 100%;
-    min-height: calc(100vh - 70px);
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.preview-inner {
-    width: 100%;
-    max-width: 1180px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 40px 20px 30px 20px;
-    box-sizing: border-box;
-}
-
-.page-logo {
-    width: 300px;
-    max-width: 72%;
-    max-height: 170px;
-    object-fit: contain;
-    margin: 0 auto 12px auto;
-    display: block;
-}
-
-.client-line {
-    margin-bottom: 14px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #6b7280;
-}
-
-.home-label {
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.page-title {
-    margin: 0 0 8px 0;
-    font-size: 28px;
-    font-weight: 700;
-    color: #2f2f2f;
-}
-
-.page-subtitle {
-    margin: 0 0 28px 0;
-    font-size: 16px;
-    font-weight: 500;
-    color: #6b7280;
-}
-
-.preview-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 24px;
-    align-items: start;
-    text-align: left;
-}
-
-.template-panel,
-.mapping-panel {
-    border: 1px solid rgba(66, 84, 102, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.58);
-    padding: 22px;
-}
-
-.section-card {
-    margin-top: 20px;
-    padding: 18px;
-    border: 1px solid rgba(66, 84, 102, 0.16);
-    border-radius: 8px;
-    background: #ffffff;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.section-title-input {
-    width: 100%;
-    border: none;
-    border-bottom: 1px solid rgba(66, 84, 102, 0.28);
-    padding: 10px 0;
-    font-size: 18px;
-    font-weight: 800;
-    color: #2f2f2f;
-}
-
-.field-label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #425466;
-}
-
-.text-input,
-.text-area {
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid rgba(66, 84, 102, 0.24);
-    border-radius: 8px;
-    background: #ffffff;
-    font-size: 16px;
-    color: #111827;
-    box-sizing: border-box;
-}
-
-.text-area {
-    min-height: 92px;
-    resize: vertical;
-}
-
-.field-group {
-    margin-top: 16px;
-}
-
-.check-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 44px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #2f2f2f;
-}
-
-.check-row input {
-    width: 20px;
-    height: 20px;
-}
-
-.small-action {
-    min-width: 120px;
-    padding: 10px 14px;
-    border: none;
-    border-radius: 8px;
-    background: #425466;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.mapping-title {
-    margin-bottom: 14px;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.mapping-item {
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(66, 84, 102, 0.14);
-    font-size: 14px;
-    font-weight: 700;
-    color: #425466;
-}
-
-.action-row {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-top: 28px;
-    flex-wrap: wrap;
-}
-
-.action-row .menu-btn {
-    min-width: 260px;
-    border: none;
-}
-
-@@media (max-width: 860px) {
-    .preview-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .section-header {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .small-action {
-        width: 100%;
-    }
-}
+.source-review-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; padding: 28px 16px; box-sizing: border-box; }
+.source-review-panel { width: min(760px, 100%); padding: 28px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.74); text-align: center; box-sizing: border-box; }
+.home-label { margin-bottom: 10px; color: #5f6b7a; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.page-title { margin: 0 0 8px 0; color: #1f2937; font-size: 28px; font-weight: 900; }
+.page-subtitle { margin: 0 auto 20px auto; max-width: 620px; color: #64748b; font-size: 15px; font-weight: 700; line-height: 1.45; }
+.source-summary { display: grid; gap: 5px; margin: 0 auto 22px auto; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; text-align: left; }
+.source-summary strong { color: #334155; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.source-summary span { color: #0f172a; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { width: 100%; border: none; }
+@@media (max-width: 700px) { .action-row { grid-template-columns: 1fr; } }
 </style>

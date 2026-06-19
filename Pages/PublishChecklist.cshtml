@@ -32,7 +32,7 @@
             <section class="summary-panel">
                 <div>
                     <div class="source-label">Selected checklist</div>
-                    <h3>@template.TargetVehicleType - @template.Name</h3>
+                    <h3>@template.TargetVehicleType - @ChecklistDisplayService.TemplateName(template.Name)</h3>
                     <p>Version @template.Version | @template.ChecklistType | @template.SourceType</p>
                 </div>
                 <a class="secondary-link" href="/EditChecklist?view=register">Back to Checklist Register</a>
@@ -89,10 +89,13 @@
                         <label>
                             Publish for
                             <select asp-for="ScopeType" id="scopeTypeSelect">
-                                <option value="VehicleCategory">Vehicle type: @template.TargetVehicleType</option>
+                                <option value="@Model.TemplateTargetScopeType">@Model.TemplateTargetScopeLabel</option>
                                 <option value="OperationalArea">Specific area / base</option>
                                 <option value="Vehicle">Specific callsign / registration</option>
-                                <option value="AllAreas">All operational areas</option>
+                                @if (Model.TemplateTargetScopeType != "AllAreas")
+                                {
+                                    <option value="AllAreas">All operational areas</option>
+                                }
                             </select>
                         </label>
 
@@ -169,15 +172,15 @@
             return vehicleSelect?.value ? `Vehicle:${vehicleSelect.value}` : "";
         }
 
-        if (scopeSelect.value === "VehicleCategory") {
-            return "VehicleCategory:@template?.TargetVehicleType";
+        if (scopeSelect.value === "VehicleFunction" || scopeSelect.value === "VehicleSubtype") {
+            return `${scopeSelect.value}:@template?.TargetVehicleType`;
         }
 
         return "AllAreas";
     }
 
     function syncPublishTargetUi() {
-        const scope = scopeSelect?.value || "VehicleCategory";
+        const scope = scopeSelect?.value || "@Model.TemplateTargetScopeType";
         targetFields.forEach(function (field) {
             const isVisible = field.dataset.targetField === scope;
             field.hidden = !isVisible;

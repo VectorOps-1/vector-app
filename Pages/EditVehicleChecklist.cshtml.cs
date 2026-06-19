@@ -14,28 +14,31 @@ public class EditVehicleChecklistModel : PageModel
     private const string DailyVehicleChecklistName = "Daily Vehicle & Equipment Check";
     private const string FullAuditChecklistName = "Full Audit";
     private const string LegacyDailyVehicleChecklistName = "Daily Vehicle Readiness";
-    private const string LegacyMonthlyVehicleEquipmentChecklistName = "Monthly Vehicle & Equipment Check";
-    private const string LegacyMonthlyVehicleChecklistName = "Monthly Vehicle Checklist";
     private const string SectionNoteItemKind = "SectionNote";
     private const string SchematicBlockItemKind = "SchematicBlock";
     private const string SchematicViewItemKind = "SchematicView";
     private static readonly string[] UnitSchematicViews = ["Left", "Right", "Front", "Rear"];
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly ChecklistPublishingService _checklistPublishing;
 
-    public EditVehicleChecklistModel(VectorDbContext db, CurrentUserService currentUser)
+    public EditVehicleChecklistModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        ChecklistPublishingService checklistPublishing)
     {
         _db = db;
         _currentUser = currentUser;
+        _checklistPublishing = checklistPublishing;
     }
 
-    [BindProperty] public string? ChecklistName { get; set; } = DailyVehicleChecklistName;
+    [BindProperty] public string? ChecklistName { get; set; }
     [BindProperty] public string ChecklistStatus { get; set; } = "Draft";
     [BindProperty] public int? SelectedTemplateId { get; set; }
     [BindProperty] public bool CreateAsNewTemplate { get; set; }
     [BindProperty] public bool UseCustomChecklistName { get; set; }
     [BindProperty] public string? CustomChecklistName { get; set; }
-    [BindProperty] public string TargetVehicleType { get; set; } = "All Vehicles";
+    [BindProperty] public string TargetVehicleType { get; set; } = string.Empty;
     [BindProperty] public string? TargetVehicleFunction { get; set; }
     [BindProperty] public string? TargetVehicleSubtype { get; set; }
     [BindProperty] public bool UseCustomTargetVehicleType { get; set; }
@@ -44,6 +47,8 @@ public class EditVehicleChecklistModel : PageModel
     [BindProperty] public int? PublishOperationalAreaId { get; set; }
     [BindProperty] public int? PublishVehicleId { get; set; }
     [BindProperty] public string? PublishVehicleType { get; set; }
+    [BindProperty] public string? PublishVehicleFunction { get; set; }
+    [BindProperty] public string? PublishVehicleSubtype { get; set; }
     [BindProperty] public int? SeniorApproverUserId { get; set; }
     [BindProperty] public string? PublishNote { get; set; }
     [BindProperty] public string? ActionType { get; set; }
@@ -59,46 +64,39 @@ public class EditVehicleChecklistModel : PageModel
     public bool HasDelegatedPublishAccess { get; private set; }
     public bool CanApproveAndPublish => IsSeniorChecklistPublisher || HasDelegatedPublishAccess;
     public string ChecklistAuthorityNote { get; private set; } = "Senior management publishes live checklist versions. Operational managers can draft assigned changes.";
-    public bool IsScratchBuildMode => CreateAsNewTemplate && SelectedTemplateId is null;
-    public string LayoutBuilderSummary => IsVehicleChecklistName(ChecklistName)
-        ? IsScratchBuildMode
-            ? $"{ChecklistName} starts blank. Add sections, rows, columns, items, subitems, notes, and optional register links yourself."
-            : $"{ChecklistName} is built from staff-facing blocks: Vehicle fields linked to registration, and matrix sections linked to vehicle type where needed."
-        : "Select a daily check or full audit checklist to edit the layout.";
+    public bool IsScratchBuildMode => SelectedTemplateId is null;
+    public string LayoutBuilderSummary => IsScratchBuildMode
+        ? "New checklist starts blank. Add sections, rows, columns, items, subitems, notes, and optional register links yourself."
+        : IsVehicleChecklistName(ChecklistName)
+            ? $"{ChecklistName} is built from the saved register template selected above."
+            : "Loaded checklist template is ready for review and editing.";
 
     public List<ChecklistTemplateOption> AvailableTemplates { get; private set; } = new();
     public List<SelectListItem> PublishAreaOptions { get; private set; } = new();
     public List<SelectListItem> PublishVehicleOptions { get; private set; } = new();
     public List<SelectListItem> PublishVehicleTypeOptions { get; private set; } = new();
+    public List<SelectListItem> PublishVehicleFunctionOptions { get; private set; } = new();
+    public List<SelectListItem> PublishVehicleSubtypeOptions { get; private set; } = new();
     public List<SelectListItem> SeniorApproverOptions { get; private set; } = new();
+    public List<ChecklistLiveUseRow> CurrentLiveUses { get; private set; } = new();
+    public List<PublishConflictWarning> ConflictWarnings { get; private set; } = new();
     public List<SelectListItem> TargetVehicleFunctionOptions { get; private set; } = new();
     public List<VehicleTargetSubtypeOption> TargetVehicleSubtypeOptions { get; private set; } = new();
     public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
     public string DefaultUnitSchematicKey => ResolveDefaultSchematicKey(TargetVehicleType);
-    public IReadOnlyList<string> ChecklistNameOptions { get; } = new[]
-    {
-        DailyVehicleChecklistName,
-        FullAuditChecklistName,
-        "Custom Uploaded Vehicle Checklist"
-    };
+    public List<string> ChecklistNameOptions { get; private set; } = new();
     public IReadOnlyList<string> TargetVehicleTypeOptions { get; private set; } = new[] { "All Vehicles" };
-    public IReadOnlyList<string> EquipmentTableExampleRows { get; } = new[]
-    {
-        "LP15",
-        "Syringe driver 1",
-        "Syringe driver 2",
-        "Ventilator Oxylog",
-        "LUCAS"
-    };
 
     public async Task OnGetAsync(string? checklist, int? templateId, string? targetVehicleType, string? mode)
     {
         var isBuildMode = string.Equals(mode, "build", StringComparison.OrdinalIgnoreCase);
         var currentUser = await LoadCurrentAuthorityAsync(loadPublishedSettings: true);
-        ChecklistName = ResolveChecklistName(checklist, ChecklistName);
-        TargetVehicleType = NormalizeTargetVehicleType(targetVehicleType ?? TargetVehicleType);
         SelectedTemplateId = templateId;
-        CreateAsNewTemplate = isBuildMode && templateId is null;
+        CreateAsNewTemplate = templateId is null;
+        ChecklistName = isBuildMode && templateId is null
+            ? string.Empty
+            : ResolveChecklistName(checklist, templateId is null ? string.Empty : ChecklistName);
+        TargetVehicleType = NormalizeTargetVehicleType(targetVehicleType ?? (templateId is null ? string.Empty : TargetVehicleType));
         if (currentUser is not null)
         {
             await LoadTemplateOptionsAsync(currentUser.CompanyId);
@@ -125,6 +123,7 @@ public class EditVehicleChecklistModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        CreateAsNewTemplate = SelectedTemplateId is null;
         var currentUser = await LoadCurrentAuthorityAsync(loadPublishedSettings: false);
         if (!ApplyManualEntryValues())
         {
@@ -156,6 +155,20 @@ public class EditVehicleChecklistModel : PageModel
             }
 
             StatusMessage = "Select a checklist before saving or publishing.";
+            SyncManualEntryControls();
+            return Page();
+        }
+
+        if (string.IsNullOrWhiteSpace(TargetVehicleType))
+        {
+            if (currentUser is not null)
+            {
+                await LoadTemplateOptionsAsync(currentUser.CompanyId);
+                await LoadTargetVehicleOptionsAsync(currentUser.CompanyId);
+                await LoadPublishControlOptionsAsync(currentUser.CompanyId);
+            }
+
+            StatusMessage = "Select a target vehicle function or subtype before saving or publishing.";
             SyncManualEntryControls();
             return Page();
         }
@@ -205,13 +218,25 @@ public class EditVehicleChecklistModel : PageModel
         }
 
         if ((ActionType == "approve-publish" || ActionType == "submit-approval") &&
-            publishScopeType == "VehicleCategory" &&
-            string.IsNullOrWhiteSpace(PublishVehicleType))
+            publishScopeType == "VehicleFunction" &&
+            string.IsNullOrWhiteSpace(PublishVehicleFunction))
         {
             await LoadTemplateOptionsAsync(currentUser.CompanyId);
             await LoadTargetVehicleOptionsAsync(currentUser.CompanyId);
             await LoadPublishControlOptionsAsync(currentUser.CompanyId);
-            StatusMessage = "Select the exact vehicle function or subtype this checklist should apply to.";
+            StatusMessage = "Select the exact vehicle function this checklist should apply to.";
+            SyncManualEntryControls();
+            return Page();
+        }
+
+        if ((ActionType == "approve-publish" || ActionType == "submit-approval") &&
+            publishScopeType == "VehicleSubtype" &&
+            string.IsNullOrWhiteSpace(PublishVehicleSubtype))
+        {
+            await LoadTemplateOptionsAsync(currentUser.CompanyId);
+            await LoadTargetVehicleOptionsAsync(currentUser.CompanyId);
+            await LoadPublishControlOptionsAsync(currentUser.CompanyId);
+            StatusMessage = "Select the exact vehicle subtype this checklist should apply to.";
             SyncManualEntryControls();
             return Page();
         }
@@ -259,6 +284,26 @@ public class EditVehicleChecklistModel : PageModel
 
         if (ActionType == "approve-publish" && currentUser is not null)
         {
+            var publishResult = await _checklistPublishing.PublishAsync(
+                currentUser,
+                new ChecklistPublishRequest(
+                    savedTemplate.Id,
+                    ResolvePublishScopeType(),
+                    PublishOperationalAreaId,
+                    PublishVehicleId,
+                    TargetVehicleType,
+                    PublishNote));
+
+            if (!publishResult.Success)
+            {
+                await LoadTemplateOptionsAsync(currentUser.CompanyId);
+                await LoadTargetVehicleOptionsAsync(currentUser.CompanyId);
+                await LoadPublishControlOptionsAsync(currentUser.CompanyId);
+                StatusMessage = publishResult.Message;
+                SyncManualEntryControls();
+                return Page();
+            }
+
             var company = await _db.Companies.FirstOrDefaultAsync(item => item.Id == currentUser.CompanyId);
             if (company is not null)
             {
@@ -270,7 +315,7 @@ public class EditVehicleChecklistModel : PageModel
         }
 
         StatusMessage = ActionType == "approve-publish"
-            ? $"{savedTemplate.Name} for {savedTemplate.TargetVehicleType} approved for publishing. Same as previous shift: vehicle inspection {(AllowSameAsPreviousVehicleInspection ? "enabled" : "disabled")}; equipment checks {(AllowSameAsPreviousEquipmentCheck ? "enabled" : "disabled")}."
+            ? $"{savedTemplate.Name} for {savedTemplate.TargetVehicleType} approved and published. Same as previous shift: vehicle inspection {(AllowSameAsPreviousVehicleInspection ? "enabled" : "disabled")}; equipment checks {(AllowSameAsPreviousEquipmentCheck ? "enabled" : "disabled")}."
             : $"{savedTemplate.Name} for {savedTemplate.TargetVehicleType} draft saved as an available vehicle checklist template.";
 
         return RedirectToPage("/EditChecklist");
@@ -278,6 +323,8 @@ public class EditVehicleChecklistModel : PageModel
 
     private async Task LoadTemplateOptionsAsync(int companyId)
     {
+        await LoadChecklistNameOptionsAsync(companyId);
+
         AvailableTemplates = await _db.ChecklistTemplates
             .AsNoTracking()
             .Where(template =>
@@ -295,6 +342,17 @@ public class EditVehicleChecklistModel : PageModel
                 template.IsPublished,
                 template.Version))
             .ToListAsync();
+    }
+
+    private Task LoadChecklistNameOptionsAsync(int companyId)
+    {
+        ChecklistNameOptions = new List<string>
+        {
+            DailyVehicleChecklistName,
+            FullAuditChecklistName
+        };
+
+        return Task.CompletedTask;
     }
 
     private async Task LoadTargetVehicleOptionsAsync(int companyId)
@@ -375,6 +433,8 @@ public class EditVehicleChecklistModel : PageModel
     {
         AppliesTo = NormalizePublishScope(AppliesTo);
         PublishVehicleType = NormalizeOptional(PublishVehicleType);
+        PublishVehicleFunction = NormalizeOptional(PublishVehicleFunction);
+        PublishVehicleSubtype = NormalizeOptional(PublishVehicleSubtype);
 
         PublishAreaOptions = await _db.OperationalAreas
             .AsNoTracking()
@@ -408,21 +468,15 @@ public class EditVehicleChecklistModel : PageModel
             })
             .ToList();
 
-        var publishVehicleTypeOptions = new List<SelectListItem>();
-        publishVehicleTypeOptions.AddRange(vehicles
+        var functionValues = vehicles
             .Select(vehicle => NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType))
             .Where(function => !string.IsNullOrWhiteSpace(function))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(function => function == VehicleTaxonomyService.AmbulanceFunction ? 0 : function == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
             .ThenBy(function => function)
-            .Select(function => new SelectListItem
-            {
-                Value = function!,
-                Text = $"Function: {function}",
-                Selected = string.Equals(PublishVehicleType, function, StringComparison.OrdinalIgnoreCase)
-            }));
+            .ToList();
 
-        publishVehicleTypeOptions.AddRange(vehicles
+        var subtypeValues = vehicles
             .Select(vehicle => new
             {
                 Function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType),
@@ -434,27 +488,78 @@ public class EditVehicleChecklistModel : PageModel
             .OrderBy(item => item.Function == VehicleTaxonomyService.AmbulanceFunction ? 0 : item.Function == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
             .ThenBy(item => item.Function)
             .ThenBy(item => item.Subtype)
+            .ToList();
+
+        if (PublishVehicleFunction is null &&
+            PublishVehicleSubtype is null &&
+            PublishVehicleType is not null)
+        {
+            if (functionValues.Any(function => string.Equals(function, PublishVehicleType, StringComparison.OrdinalIgnoreCase)))
+            {
+                PublishVehicleFunction = PublishVehicleType;
+            }
+            else
+            {
+                PublishVehicleSubtype = PublishVehicleType;
+            }
+        }
+
+        PublishVehicleFunctionOptions = functionValues
+            .Select(function => new SelectListItem
+            {
+                Value = function!,
+                Text = function!,
+                Selected = string.Equals(PublishVehicleFunction, function, StringComparison.OrdinalIgnoreCase)
+            })
+            .ToList();
+
+        PublishVehicleSubtypeOptions = subtypeValues
             .Select(item => new SelectListItem
             {
-                Value = item.Subtype,
+                Value = item.Subtype!,
                 Text = string.IsNullOrWhiteSpace(item.Function)
-                    ? $"Subtype: {item.Subtype}"
-                    : $"Subtype: {item.Function} / {item.Subtype}",
-                Selected = string.Equals(PublishVehicleType, item.Subtype, StringComparison.OrdinalIgnoreCase)
-            }));
+                    ? item.Subtype!
+                    : $"{item.Function} / {item.Subtype}",
+                Selected = string.Equals(PublishVehicleSubtype, item.Subtype, StringComparison.OrdinalIgnoreCase)
+            })
+            .ToList();
 
-        if (!string.IsNullOrWhiteSpace(PublishVehicleType) &&
-            !publishVehicleTypeOptions.Any(option => string.Equals(option.Value, PublishVehicleType, StringComparison.OrdinalIgnoreCase)))
+        if (!string.IsNullOrWhiteSpace(PublishVehicleFunction) &&
+            !PublishVehicleFunctionOptions.Any(option => string.Equals(option.Value, PublishVehicleFunction, StringComparison.OrdinalIgnoreCase)))
         {
-            publishVehicleTypeOptions.Add(new SelectListItem
+            PublishVehicleFunctionOptions.Add(new SelectListItem
             {
-                Value = PublishVehicleType,
-                Text = $"Current target: {PublishVehicleType}",
+                Value = PublishVehicleFunction,
+                Text = $"Current function: {PublishVehicleFunction}",
                 Selected = true
             });
         }
 
-        PublishVehicleTypeOptions = publishVehicleTypeOptions;
+        if (!string.IsNullOrWhiteSpace(PublishVehicleSubtype) &&
+            !PublishVehicleSubtypeOptions.Any(option => string.Equals(option.Value, PublishVehicleSubtype, StringComparison.OrdinalIgnoreCase)))
+        {
+            PublishVehicleSubtypeOptions.Add(new SelectListItem
+            {
+                Value = PublishVehicleSubtype,
+                Text = $"Current subtype: {PublishVehicleSubtype}",
+                Selected = true
+            });
+        }
+
+        PublishVehicleTypeOptions = PublishVehicleFunctionOptions
+            .Select(option => new SelectListItem
+            {
+                Value = option.Value,
+                Text = $"Function: {option.Text}",
+                Selected = option.Selected
+            })
+            .Concat(PublishVehicleSubtypeOptions.Select(option => new SelectListItem
+            {
+                Value = option.Value,
+                Text = $"Subtype: {option.Text}",
+                Selected = option.Selected
+            }))
+            .ToList();
 
         SeniorApproverOptions = await _db.AppUsers
             .AsNoTracking()
@@ -473,6 +578,105 @@ public class EditVehicleChecklistModel : PageModel
                 Selected = SeniorApproverUserId == user.Id
             })
             .ToListAsync();
+
+        await LoadCurrentLiveUsesAsync(companyId);
+        await LoadReplacementWarningsAsync(companyId);
+    }
+
+    private async Task LoadCurrentLiveUsesAsync(int companyId)
+    {
+        if (SelectedTemplateId is null)
+        {
+            CurrentLiveUses = new List<ChecklistLiveUseRow>();
+            return;
+        }
+
+        var activeScopes = await _db.ChecklistPublishScopes
+            .AsNoTracking()
+            .Include(scope => scope.ChecklistTemplate)
+            .Include(scope => scope.OperationalArea)
+            .Include(scope => scope.Vehicle)
+                .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
+            .Include(scope => scope.PublishedByUser)
+            .Where(scope =>
+                scope.ChecklistTemplateId == SelectedTemplateId.Value &&
+                scope.IsActive &&
+                scope.RetiredAtUtc == null &&
+                scope.ChecklistTemplate != null &&
+                scope.ChecklistTemplate.CompanyId == companyId &&
+                scope.ChecklistTemplate.Status != "Deleted")
+            .ToListAsync();
+
+        CurrentLiveUses = activeScopes
+            .OrderByDescending(scope => ScopeRank(scope.ScopeType))
+            .ThenBy(scope => LiveUseTargetLabel(scope))
+            .Select(scope => new ChecklistLiveUseRow(
+                LiveUseScopeLabel(scope.ScopeType, scope.ChecklistTemplate!.TargetVehicleType),
+                LiveUseTargetLabel(scope),
+                scope.PublishedAtUtc,
+                scope.PublishedByUser != null ? scope.PublishedByUser.FullName : "Senior manager",
+                scope.PublishNote))
+            .ToList();
+    }
+
+    private async Task LoadReplacementWarningsAsync(int companyId)
+    {
+        var activeScopes = await _db.ChecklistPublishScopes
+            .AsNoTracking()
+            .Include(scope => scope.ChecklistTemplate)
+            .Include(scope => scope.OperationalArea)
+            .Include(scope => scope.Vehicle)
+                .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
+            .Where(scope =>
+                scope.IsActive &&
+                scope.RetiredAtUtc == null &&
+                scope.ChecklistTemplate != null &&
+                scope.ChecklistTemplate.CompanyId == companyId &&
+                scope.ChecklistTemplate.ChecklistType == "Vehicle" &&
+                scope.ChecklistTemplate.Status != "Deleted" &&
+                (SelectedTemplateId == null || scope.ChecklistTemplateId != SelectedTemplateId.Value))
+            .ToListAsync();
+
+        var warnings = new List<PublishConflictWarning>();
+        foreach (var scope in activeScopes)
+        {
+            var message = ReplacementWarningMessage(scope);
+            foreach (var key in ReplacementWarningKeys(scope))
+            {
+                warnings.Add(new PublishConflictWarning(key, message));
+            }
+        }
+
+        var vehicles = await _db.Vehicles
+            .AsNoTracking()
+            .Include(vehicle => vehicle.CurrentOperationalArea)
+            .Where(vehicle => vehicle.CompanyId == companyId && vehicle.Status != "Deleted")
+            .OrderBy(vehicle => vehicle.Callsign)
+            .ThenBy(vehicle => vehicle.RegistrationNumber)
+            .ToListAsync();
+
+        foreach (var vehicle in vehicles)
+        {
+            var effectiveScope = activeScopes
+                .Where(scope => PublishScopeAppliesToVehicle(scope, vehicle))
+                .OrderByDescending(scope => ScopeRank(scope.ScopeType))
+                .FirstOrDefault();
+
+            if (effectiveScope?.ChecklistTemplate is null)
+            {
+                continue;
+            }
+
+            warnings.Add(new PublishConflictWarning(
+                $"Vehicle:{vehicle.Id}",
+                $"Warning: '{effectiveScope.ChecklistTemplate.Name}' is currently the live daily check for {vehicle.Callsign} / {vehicle.RegistrationNumber}. Publishing to this callsign will replace or override the live daily check for that unit."));
+        }
+
+        ConflictWarnings = warnings
+            .GroupBy(warning => new { warning.ScopeKey, warning.Message })
+            .Select(group => group.First())
+            .OrderBy(warning => warning.ScopeKey)
+            .ToList();
     }
 
     private async Task ApplySelectedTemplateAsync(int companyId)
@@ -491,6 +695,8 @@ public class EditVehicleChecklistModel : PageModel
 
         if (template is null)
         {
+            SelectedTemplateId = null;
+            CreateAsNewTemplate = true;
             return;
         }
 
@@ -511,8 +717,13 @@ public class EditVehicleChecklistModel : PageModel
                 .ThenInclude(section => section.Items)
                 .ThenInclude(item => item.ColumnDefinitions)
                 .Include(item => item.PublishScopes)
+                .ThenInclude(scope => scope.OperationalArea)
+                .Include(item => item.PublishScopes)
+                .ThenInclude(scope => scope.Vehicle)
+                .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(item => item.CompanyId == currentUser.CompanyId && item.Id == SelectedTemplateId);
+        var isNewTemplate = template is null;
 
         if (template is null)
         {
@@ -525,46 +736,18 @@ public class EditVehicleChecklistModel : PageModel
             _db.ChecklistTemplates.Add(template);
         }
 
-        template.Name = ChecklistName?.Trim() ?? DailyVehicleChecklistName;
+        template.Name = ChecklistName?.Trim() ?? string.Empty;
         template.ChecklistType = "Vehicle";
         template.TargetVehicleType = TargetVehicleType;
         template.Version = string.IsNullOrWhiteSpace(template.Version) ? "1.0" : template.Version;
         template.SourceType = SelectedTemplateId is null ? "Built" : "Edited";
         template.CreatedByUserId ??= currentUser.Id;
         template.Status = publish
-            ? "Published"
+            ? "Draft"
             : string.Equals(ChecklistStatus, "Published", StringComparison.OrdinalIgnoreCase) ? "Under Review" : ChecklistStatus;
-        template.IsPublished = publish;
-        template.PublishedAtUtc = publish ? now : template.PublishedAtUtc;
-        template.PublishedByUserId = publish ? currentUser.Id : template.PublishedByUserId;
-        template.PublishScopeSummary = publish ? ResolvePublishScopeSummary() : template.PublishScopeSummary;
+        template.IsPublished = publish ? false : template.IsPublished && template.Status == "Published";
         template.PublishNotes = NormalizeOptional(PublishNote);
         template.UpdatedAtUtc = now;
-
-        if (publish)
-        {
-            var otherPublishedTemplates = await _db.ChecklistTemplates
-                .Where(item =>
-                    item.CompanyId == currentUser.CompanyId &&
-                    item.ChecklistType == "Vehicle" &&
-                    item.TargetVehicleType == TargetVehicleType &&
-                    item.Id != template.Id &&
-                    item.IsPublished)
-                .ToListAsync();
-
-            foreach (var otherTemplate in otherPublishedTemplates)
-            {
-                otherTemplate.IsPublished = false;
-                otherTemplate.Status = "Archived";
-                otherTemplate.UpdatedAtUtc = now;
-            }
-
-            foreach (var activeScope in template.PublishScopes.Where(scope => scope.IsActive))
-            {
-                activeScope.IsActive = false;
-                activeScope.RetiredAtUtc = now;
-            }
-        }
 
         _db.ChecklistColumnDefinitions.RemoveRange(template.Sections.SelectMany(section => section.Items).SelectMany(item => item.ColumnDefinitions));
         var existingItems = template.Sections.SelectMany(section => section.Items).ToList();
@@ -682,31 +865,16 @@ public class EditVehicleChecklistModel : PageModel
             _db.ChecklistSections.Add(templateSection);
         }
 
-        if (publish)
-        {
-            _db.ChecklistPublishScopes.Add(new ChecklistPublishScope
-            {
-                ChecklistTemplate = template,
-                ScopeType = ResolvePublishScopeType(),
-                OperationalAreaId = ResolvePublishScopeType() == "OperationalArea" ? PublishOperationalAreaId : null,
-                VehicleId = ResolvePublishScopeType() == "Vehicle" ? PublishVehicleId : null,
-                PublishedByUserId = currentUser.Id,
-                PublishNote = NormalizeOptional(PublishNote),
-                IsActive = true,
-                PublishedAtUtc = now
-            });
-        }
-
         await _db.SaveChangesAsync();
 
         _db.AuditLogs.Add(new AuditLog
         {
             CompanyId = currentUser.CompanyId,
             AppUserId = currentUser.Id,
-            Action = publish ? "Checklist template published" : "Checklist template saved",
+            Action = isNewTemplate ? "Checklist template created" : "Checklist template edited",
             EntityType = "ChecklistTemplate",
             EntityId = template.Id,
-            Details = $"{currentUser.FullName} {(publish ? "published" : "saved")} {template.Name} for {template.TargetVehicleType}.",
+            Details = $"{currentUser.FullName} {(isNewTemplate ? "created" : "edited")} '{template.Name}' for {template.TargetVehicleType}. Status: {template.Status}.",
             CreatedAtUtc = now
         });
 
@@ -741,7 +909,7 @@ public class EditVehicleChecklistModel : PageModel
         int displayOrder)
     {
         var fieldLabel = NormalizeOptional(field.Label) ?? "Unit Schematic";
-        var schematicKey = NormalizeOptional(field.UnitSchematicKey) ?? ResolveDefaultSchematicKey(null);
+        var schematicKey = NormalizeOptional(field.UnitSchematicKey) ?? string.Empty;
         const string source = "Unit Schematic library";
 
         var parentItem = new ChecklistItem
@@ -920,14 +1088,14 @@ public class EditVehicleChecklistModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(checklist))
         {
-            return string.IsNullOrWhiteSpace(fallback) ? DailyVehicleChecklistName : fallback;
+            return string.IsNullOrWhiteSpace(fallback) ? string.Empty : fallback.Trim();
         }
 
         var normalized = checklist.Trim().ToLowerInvariant();
         return normalized switch
         {
             "daily-vehicle" or "daily vehicle" or "daily vehicle checklist" or "daily vehicle inspection" or "daily vehicle readiness" or "daily vehicle check" or "daily vehicle & equipment check" => DailyVehicleChecklistName,
-            "full-audit" or "full audit" or "audit" or "monthly-vehicle" or "monthly vehicle" or "monthly vehicle checklist" or "monthly vehicle inspection" or "monthly vehicle check" or "monthly vehicle & equipment check" => FullAuditChecklistName,
+            "full-audit" or "full audit" or "audit" => FullAuditChecklistName,
             _ => checklist
         };
     }
@@ -936,14 +1104,12 @@ public class EditVehicleChecklistModel : PageModel
     {
         return string.Equals(checklistName, DailyVehicleChecklistName, StringComparison.OrdinalIgnoreCase)
             || string.Equals(checklistName, LegacyDailyVehicleChecklistName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(checklistName, FullAuditChecklistName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(checklistName, LegacyMonthlyVehicleEquipmentChecklistName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(checklistName, LegacyMonthlyVehicleChecklistName, StringComparison.OrdinalIgnoreCase);
+            || string.Equals(checklistName, FullAuditChecklistName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeTargetVehicleType(string? targetVehicleType)
     {
-        return string.IsNullOrWhiteSpace(targetVehicleType) ? "All Vehicles" : targetVehicleType.Trim();
+        return string.IsNullOrWhiteSpace(targetVehicleType) ? string.Empty : targetVehicleType.Trim();
     }
 
     private bool ApplyManualEntryValues()
@@ -993,7 +1159,12 @@ public class EditVehicleChecklistModel : PageModel
         TargetVehicleType = NormalizeTargetVehicleType(TargetVehicleType);
         SyncTargetVehicleSelectionFromTargetType();
 
-        if (ChecklistNameOptions.Any(option => string.Equals(option, ChecklistName, StringComparison.OrdinalIgnoreCase)))
+        if (string.IsNullOrWhiteSpace(ChecklistName))
+        {
+            UseCustomChecklistName = false;
+            CustomChecklistName = null;
+        }
+        else if (ChecklistNameOptions.Any(option => string.Equals(option, ChecklistName, StringComparison.OrdinalIgnoreCase)))
         {
             CustomChecklistName ??= ChecklistName;
         }
@@ -1003,7 +1174,12 @@ public class EditVehicleChecklistModel : PageModel
             CustomChecklistName = ChecklistName;
         }
 
-        if (TargetVehicleTypeOptions.Any(option => string.Equals(option, TargetVehicleType, StringComparison.OrdinalIgnoreCase)))
+        if (string.IsNullOrWhiteSpace(TargetVehicleType))
+        {
+            UseCustomTargetVehicleType = false;
+            CustomTargetVehicleType = null;
+        }
+        else if (TargetVehicleTypeOptions.Any(option => string.Equals(option, TargetVehicleType, StringComparison.OrdinalIgnoreCase)))
         {
             CustomTargetVehicleType ??= TargetVehicleType;
         }
@@ -1056,21 +1232,171 @@ public class EditVehicleChecklistModel : PageModel
         return ResolvePublishScopeType() switch
         {
             "OperationalArea" => $"Base / operational area: {PublishAreaOptions.FirstOrDefault(area => area.Value == PublishOperationalAreaId?.ToString())?.Text ?? "Specific operational area"}",
-            "VehicleCategory" => $"Vehicle function / subtype: {NormalizeOptional(PublishVehicleType) ?? "No function or subtype selected"}",
+            "VehicleFunction" => $"Vehicle function: {NormalizeOptional(PublishVehicleFunction) ?? "No function selected"}",
+            "VehicleSubtype" => $"Vehicle subtype: {NormalizeOptional(PublishVehicleSubtype) ?? "No subtype selected"}",
             "Vehicle" => $"Callsign / registration: {PublishVehicleOptions.FirstOrDefault(vehicle => vehicle.Value == PublishVehicleId?.ToString())?.Text ?? "Specific vehicle registration"}",
             _ => "All areas and all eligible vehicles"
         };
     }
 
+    private static int ScopeRank(string scopeType) => scopeType switch
+    {
+        "Vehicle" => 5,
+        "OperationalArea" => 4,
+        "VehicleSubtype" => 3,
+        "VehicleFunction" => 2,
+        "VehicleCategory" => 2,
+        "AllAreas" => 1,
+        _ => 0
+    };
+
+    private static string LiveUseScopeLabel(string scopeType, string targetVehicleType)
+    {
+        return scopeType switch
+        {
+            "Vehicle" => "Specific callsign / registration",
+            "OperationalArea" => "Specific area / base",
+            "VehicleFunction" => "Vehicle function",
+            "VehicleSubtype" => "Vehicle subtype",
+            "VehicleCategory" => ResolveLegacyScopeLabel(targetVehicleType),
+            "AllAreas" => "All areas / eligible vehicles",
+            _ => "Live use"
+        };
+    }
+
+    private static string ResolveLegacyScopeLabel(string targetVehicleType)
+    {
+        return string.Equals(targetVehicleType, VehicleTaxonomyService.AmbulanceFunction, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(targetVehicleType, VehicleTaxonomyService.ResponseVehicleFunction, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(targetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase)
+            ? "Vehicle function"
+            : "Vehicle subtype";
+    }
+
+    private static string LiveUseTargetLabel(ChecklistPublishScope scope)
+    {
+        return scope.ScopeType switch
+        {
+            "Vehicle" => scope.Vehicle is null
+                ? "Selected callsign / registration"
+                : $"{scope.Vehicle.Callsign} / {scope.Vehicle.RegistrationNumber}{FormatVehicleArea(scope.Vehicle)}",
+            "OperationalArea" => scope.OperationalArea is null
+                ? "Selected area / base"
+                : $"{scope.OperationalArea.AreaType}: {scope.OperationalArea.Name}",
+            "VehicleFunction" => scope.ChecklistTemplate?.TargetVehicleType ?? "Selected function",
+            "VehicleSubtype" => scope.ChecklistTemplate?.TargetVehicleType ?? "Selected subtype",
+            "VehicleCategory" => scope.ChecklistTemplate?.TargetVehicleType ?? "Selected vehicle target",
+            "AllAreas" => "All areas / all eligible vehicles",
+            _ => scope.ChecklistTemplate?.PublishScopeSummary ?? "Live use target"
+        };
+    }
+
+    private static string FormatVehicleArea(Vehicle vehicle)
+    {
+        return vehicle.CurrentOperationalArea is null
+            ? string.Empty
+            : $" - {vehicle.CurrentOperationalArea.Name}";
+    }
+
+    private static IEnumerable<string> ReplacementWarningKeys(ChecklistPublishScope scope)
+    {
+        switch (scope.ScopeType)
+        {
+            case "AllAreas":
+                yield return "AllAreas";
+                break;
+            case "OperationalArea" when scope.OperationalAreaId is not null:
+                yield return $"OperationalArea:{scope.OperationalAreaId}";
+                break;
+            case "Vehicle" when scope.VehicleId is not null:
+                yield return $"Vehicle:{scope.VehicleId}";
+                break;
+            case "VehicleFunction":
+                yield return $"VehicleFunction:{scope.ChecklistTemplate?.TargetVehicleType}";
+                break;
+            case "VehicleSubtype":
+                yield return $"VehicleSubtype:{scope.ChecklistTemplate?.TargetVehicleType}";
+                break;
+            case "VehicleCategory":
+                var target = scope.ChecklistTemplate?.TargetVehicleType ?? string.Empty;
+                yield return $"{(ResolveLegacyScopeLabel(target) == "Vehicle function" ? "VehicleFunction" : "VehicleSubtype")}:{target}";
+                break;
+        }
+    }
+
+    private static string ReplacementWarningMessage(ChecklistPublishScope scope)
+    {
+        var checklistName = scope.ChecklistTemplate?.Name ?? "Another checklist";
+        return $"Warning: '{checklistName}' is already active for {LiveUseTargetLabel(scope)}. Publishing to this same target will replace the live daily check for that target.";
+    }
+
+    private static bool PublishScopeAppliesToVehicle(ChecklistPublishScope scope, Vehicle vehicle)
+    {
+        if (scope.ChecklistTemplate is null ||
+            !VehicleMatchesTemplateTarget(vehicle, scope.ChecklistTemplate.TargetVehicleType))
+        {
+            return false;
+        }
+
+        return scope.ScopeType switch
+        {
+            "Vehicle" => scope.VehicleId == vehicle.Id,
+            "OperationalArea" => scope.OperationalAreaId == vehicle.CurrentOperationalAreaId,
+            "VehicleFunction" => VehicleFunctionMatchesTemplateTarget(vehicle, scope.ChecklistTemplate.TargetVehicleType),
+            "VehicleSubtype" => VehicleSubtypeMatchesTemplateTarget(vehicle, scope.ChecklistTemplate.TargetVehicleType),
+            "VehicleCategory" => VehicleMatchesTemplateTarget(vehicle, scope.ChecklistTemplate.TargetVehicleType),
+            "AllAreas" => VehicleMatchesTemplateTarget(vehicle, scope.ChecklistTemplate.TargetVehicleType),
+            _ => false
+        };
+    }
+
+    private static bool VehicleMatchesTemplateTarget(Vehicle vehicle, string targetVehicleType)
+    {
+        if (string.Equals(targetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
+        var subtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
+
+        return string.Equals(function, targetVehicleType, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(subtype, targetVehicleType, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(vehicle.VehicleType, targetVehicleType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool VehicleFunctionMatchesTemplateTarget(Vehicle vehicle, string targetVehicleType)
+    {
+        var function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
+        return string.Equals(function, targetVehicleType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool VehicleSubtypeMatchesTemplateTarget(Vehicle vehicle, string targetVehicleType)
+    {
+        var subtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
+        return string.Equals(subtype, targetVehicleType, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(vehicle.VehicleType, targetVehicleType, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void ApplyPublishTargetToTemplateTarget()
     {
         var publishScopeType = ResolvePublishScopeType();
-        if (publishScopeType == "VehicleCategory")
+        if (publishScopeType == "VehicleFunction")
         {
-            var publishVehicleType = NormalizeOptional(PublishVehicleType);
-            if (publishVehicleType is not null)
+            var publishVehicleFunction = NormalizeOptional(PublishVehicleFunction);
+            if (publishVehicleFunction is not null)
             {
-                TargetVehicleType = publishVehicleType;
+                TargetVehicleType = publishVehicleFunction;
+            }
+            return;
+        }
+
+        if (publishScopeType == "VehicleSubtype")
+        {
+            var publishVehicleSubtype = NormalizeOptional(PublishVehicleSubtype);
+            if (publishVehicleSubtype is not null)
+            {
+                TargetVehicleType = publishVehicleSubtype;
             }
             return;
         }
@@ -1095,7 +1421,8 @@ public class EditVehicleChecklistModel : PageModel
         return NormalizePublishScope(AppliesTo) switch
         {
             "Specific base" => "OperationalArea",
-            "Vehicle function / subtype" => "VehicleCategory",
+            "Vehicle function" => "VehicleFunction",
+            "Vehicle subtype" => "VehicleSubtype",
             "Specific vehicle registration" => "Vehicle",
             _ => "AllAreas"
         };
@@ -1106,7 +1433,9 @@ public class EditVehicleChecklistModel : PageModel
         return value switch
         {
             "Specific base" or "Specific operational area" => "Specific base",
-            "Vehicle type" or "Specific vehicle category" or "Vehicle function / subtype" => "Vehicle function / subtype",
+            "Vehicle type" or "Specific vehicle category" or "Vehicle function / subtype" => "Vehicle subtype",
+            "Vehicle function" => "Vehicle function",
+            "Vehicle subtype" => "Vehicle subtype",
             "Specific vehicle registration" or "Specific callsign / registration" => "Specific vehicle registration",
             _ => "All operational areas"
         };
@@ -1581,33 +1910,6 @@ public class EditVehicleChecklistModel : PageModel
             return;
         }
 
-        if (EquipmentRows.Count == 0)
-        {
-            EquipmentRows = EquipmentRowsForTarget(TargetVehicleType)
-                .Select(row => new EquipmentRowEditorInput
-                {
-                    Name = row,
-                    EquipmentType = row,
-                    IsRequired = true,
-                    IsReadinessCritical = true,
-                    AllowsSameAsPrevious = true
-                })
-                .ToList();
-        }
-
-        if (EquipmentColumns.Count == 0)
-        {
-            EquipmentColumns = new List<EquipmentColumnEditorInput>
-            {
-                new("Name/item", "Configured row", "Vehicle equipment setup", true, false, true, false, true, false),
-                new("S/N / ID", "Dropdown", "Equipment register", true, true, true, false, true, false),
-                new("Next Service", "Date", "Equipment register", false, true, true, false, true, false),
-                new("Battery", "Dropdown", "Fresh entry", true, true, false, true, true, true),
-                new("Operational?", "Yes/No", "Fresh entry", true, true, false, true, true, true),
-                new("Issues / errors", "Text", "Required if not operational", false, true, false, false, true, false)
-            };
-        }
-
         EquipmentRows = EquipmentRows
             .Select(row =>
             {
@@ -1673,28 +1975,6 @@ public class EditVehicleChecklistModel : PageModel
                     return section;
                 }
 
-                if (!IsScratchBuildMode && SelectedTemplateId is null && section.Title.Equals("Equipment", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (section.MatrixColumns.Count == 0)
-                    {
-                        section.MatrixColumns = DefaultEquipmentColumns();
-                    }
-
-                    if (section.MatrixRows.Count == 0)
-                    {
-                        section.MatrixRows = EquipmentRowsForTarget(TargetVehicleType)
-                            .Select(row => new EquipmentRowEditorInput
-                            {
-                                Name = row,
-                                EquipmentType = row,
-                                IsRequired = true,
-                                IsReadinessCritical = true,
-                                AllowsSameAsPrevious = true
-                            })
-                            .ToList();
-                    }
-                }
-
                 section.MatrixColumns = section.MatrixColumns
                     .Select(column =>
                     {
@@ -1731,16 +2011,6 @@ public class EditVehicleChecklistModel : PageModel
             })
             .ToList();
     }
-
-    private static List<EquipmentColumnEditorInput> DefaultEquipmentColumns() => new()
-    {
-        new("Name/item", "Configured row", "Vehicle equipment setup", true, false, true, false, true, false),
-        new("S/N / ID", "Dropdown", "Equipment register", true, true, true, false, true, false),
-        new("Next Service", "Date", "Equipment register", false, true, true, false, true, false),
-        new("Battery", "Dropdown", "Fresh entry", true, true, false, true, true, true),
-        new("Operational?", "Yes/No", "Fresh entry", true, true, false, true, true, true),
-        new("Issues / errors", "Text", "Required if not operational", false, true, false, false, true, false)
-    };
 
     public string GetColumnOverrideMode(IReadOnlyList<EquipmentColumnOverrideInput>? overrides, int columnIndex)
     {
@@ -1888,23 +2158,6 @@ public class EditVehicleChecklistModel : PageModel
             ?.Key ?? string.Empty;
     }
 
-    private static IReadOnlyList<string> EquipmentRowsForTarget(string targetVehicleType)
-    {
-        if (targetVehicleType.Contains("ICU", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { "Monitor defibrillator", "Transport ventilator", "Syringe driver", "Infusion pump", "Suction unit", "Mechanical CPR device", "Video laryngoscope", "Portable ultrasound", "Oxygen regulator", "Portable radio", "Rugged tablet" };
-        }
-
-        if (targetVehicleType.Contains("Pickup", StringComparison.OrdinalIgnoreCase) ||
-            targetVehicleType.Contains("RV", StringComparison.OrdinalIgnoreCase) ||
-            targetVehicleType.Contains("Response", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { "Monitor defibrillator" };
-        }
-
-        return new[] { "Monitor defibrillator", "Suction unit", "Syringe driver", "Infusion pump", "Oxygen regulator", "Portable radio", "Rugged tablet" };
-    }
-
     private static string FieldKey(string value)
     {
         return value.ToLowerInvariant()
@@ -1924,20 +2177,25 @@ public class EditVehicleChecklistModel : PageModel
 
         if (IsScratchBuildMode)
         {
-            VehicleChecklistSections = new List<ChecklistSectionEditorInput>();
+            VehicleChecklistSections = BlankStarterSections();
             return;
         }
 
-        VehicleChecklistSections = new List<ChecklistSectionEditorInput>
+        VehicleChecklistSections = BlankStarterSections();
+    }
+
+    private static List<ChecklistSectionEditorInput> BlankStarterSections()
+    {
+        return new List<ChecklistSectionEditorInput>
         {
             new(
                 "Vehicle",
-                "Blank vehicle section. Add the fields or rows this checklist should capture.",
+                "Starter blank section. Rename, open, add fields, or remove this section.",
                 ChecklistSectionKind.Fields,
                 new List<ChecklistFieldEditorInput>()),
             new(
                 "Equipment",
-                "Blank matrix section. Add item rows, subitems, and the columns crews must complete.",
+                "Starter blank matrix section. Rename, open, add rows and columns, or remove this section.",
                 ChecklistSectionKind.EquipmentTable,
                 new List<ChecklistFieldEditorInput>())
         };
@@ -1965,7 +2223,7 @@ public class EditVehicleChecklistModel : PageModel
                                 field.Source = "Unit Schematic library";
                                 field.IsSystemLinked = true;
                                 field.IsEditable = true;
-                                field.UnitSchematicKey = NormalizeOptional(field.UnitSchematicKey) ?? ResolveDefaultSchematicKey(TargetVehicleType);
+                                field.UnitSchematicKey = NormalizeOptional(field.UnitSchematicKey);
                             }
                             return field;
                         })
@@ -2096,6 +2354,8 @@ public record ChecklistTemplateOption(
 {
     public string DisplayName => $"{TargetVehicleType} - {Name} v{Version} ({Status})";
 }
+
+public record ChecklistLiveUseRow(string Scope, string Target, DateTime PublishedAtUtc, string PublishedBy, string? PublishNote);
 
 public class EquipmentRowEditorInput
 {

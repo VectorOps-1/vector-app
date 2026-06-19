@@ -33,8 +33,7 @@ public class ChecklistTemplateViewModel : PageModel
     private static bool IsFullAuditTemplateName(string? name)
     {
         return !string.IsNullOrWhiteSpace(name) &&
-            (name.Contains("Full Audit", StringComparison.OrdinalIgnoreCase) ||
-                name.Contains("Monthly", StringComparison.OrdinalIgnoreCase));
+            name.Contains("Full Audit", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<IActionResult> OnGetAsync()

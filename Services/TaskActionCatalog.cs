@@ -34,7 +34,6 @@ public static class TaskActionCatalog
     public static IReadOnlyList<TaskActionOption> Actions { get; } = new List<TaskActionOption>
     {
         All("Daily Vehicle & Equipment Check", "/DailyVehicleChecklist", "Operational Work"),
-        All("Complete Operational Check", "/CompleteChecklist", "Operational Work"),
         All("Full Audit", "/DailyVehicleChecklist", "Operational Work", ("frequency", "full-audit")),
         All("Report Issue", "/ReportIssue", "Operational Work", ("module", "general")),
         All("Update My Profile / Documents", "/MyProfile", "Operational Work"),
@@ -63,12 +62,13 @@ public static class TaskActionCatalog
 
         Management("Open Stock", "/Stock", "Stock"),
         Management("Stock Register", "/StockRegister", "Stock", ("view", "register")),
-        Management("Place Stock Order", "/PlaceStockOrder", "Stock"),
-        Management("Supplier Confirmations", "/SupplierConfirmations", "Stock"),
-        Management("Enter Stock Into Register", "/EnterStockRegister", "Stock"),
-        Management("Allocate Stock", "/AllocateStock", "Stock"),
-        Management("Receive Stock", "/EnterStockRegister", "Stock"),
-        Management("Issue / Allocate Stock", "/AllocateStock", "Stock"),
+        Management("Stock Orders & Distribution", "/StockOrders", "Stock"),
+        Management("Place Stock Order", "/StockOrders", "Stock"),
+        Management("Supplier Confirmations", "/StockOrders", "Stock", ("stage", "supplier")),
+        Management("Enter Stock Into Register", "/StockOrders", "Stock", ("stage", "register")),
+        Management("Allocate Stock", "/StockOrders", "Stock", ("stage", "allocation")),
+        Management("Receive Stock", "/StockOrders", "Stock", ("stage", "register")),
+        Management("Issue / Allocate Stock", "/StockOrders", "Stock", ("stage", "allocation")),
         Management("Batch Number Tracking", "/StockRegister", "Stock"),
         Management("Expiry / Compliance Check", "/StockRegister", "Stock"),
         Management("Add New Stock Item", "/AddItem", "Stock", ("type", "stock")),
