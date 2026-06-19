@@ -1,7 +1,18 @@
 App_Data/uploads/
-vector-dev.db*
+
+# Local SQLite development databases and backups
+vector-dev*.db
+vector-dev*.db-*
+vector-dev.backup*.db
+*.backup*.db
+
+# Build and runtime output
 bin/
 obj/
 artifacts/
+logs/
+tmp/
+
+# Local process/security artifacts
 *.log
 .data-protection-keys/
