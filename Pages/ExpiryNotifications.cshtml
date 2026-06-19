@@ -22,6 +22,31 @@
         .ToList();
 }
 
+@functions {
+    private static string DateStatusFieldForExpiryAssetType(string? assetType)
+    {
+        var value = assetType ?? string.Empty;
+
+        if (value.Contains("service", StringComparison.OrdinalIgnoreCase))
+        {
+            return "service";
+        }
+
+        if (value.Contains("licence", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("license", StringComparison.OrdinalIgnoreCase))
+        {
+            return "licence";
+        }
+
+        if (value.Contains("cpd", StringComparison.OrdinalIgnoreCase))
+        {
+            return "cpd";
+        }
+
+        return "expiry";
+    }
+}
+
 <div class="expiry-screen">
     <div class="expiry-inner">
         <img class="page-logo" src="@branding.LogoPath" alt="Company Logo" />
@@ -96,7 +121,7 @@
                                         : "vector-date-amber";
                             <a class="expiry-list-row @alertClass" href="@row.DetailUrl">
                                 <span>
-                                    <strong>@row.DueAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</strong>
+                                    <strong data-date-status-field="@DateStatusFieldForExpiryAssetType(row.AssetType)">@row.DueAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</strong>
                                     <small class="expiry-status @alertClass">@row.AlertBand</small>
                                 </span>
                                 <span>

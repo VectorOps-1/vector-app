@@ -35,6 +35,6 @@ public class StaffRegisterPreviewModel : PageModel
             FileName = fileName;
         }
 
-        return Page();
+        return RedirectToPage("/StaffRegister", new { confirmation = "staff-source-uploaded" });
     }
 }

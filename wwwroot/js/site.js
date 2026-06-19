@@ -149,72 +149,6 @@
             .toLowerCase();
     }
 
-    function textFromClosestLabel(element) {
-        const explicitId = element.id;
-        if (explicitId) {
-            const explicitLabel = document.querySelector(`label[for='${CSS.escape(explicitId)}']`);
-            if (explicitLabel) {
-                return explicitLabel.textContent || "";
-            }
-        }
-
-        const wrappingLabel = element.closest("label");
-        return wrappingLabel ? (wrappingLabel.textContent || "") : "";
-    }
-
-    function textFromTableHeader(element) {
-        const cell = element.closest("td, th");
-        const row = cell?.parentElement;
-        const table = cell?.closest("table");
-        if (!cell || !row || !table) {
-            return "";
-        }
-
-        const cells = Array.from(row.children).filter(function (child) {
-            return child.matches("td, th");
-        });
-        const index = cells.indexOf(cell);
-        if (index < 0) {
-            return "";
-        }
-
-        const headerRow = table.querySelector("thead tr");
-        const headers = headerRow
-            ? Array.from(headerRow.children).filter(function (child) { return child.matches("td, th"); })
-            : [];
-
-        return headers[index]?.textContent || "";
-    }
-
-    function dateStatusContextFor(element) {
-        const parts = [
-            element.dataset.dateStatusScope,
-            element.dataset.dateStatusField,
-            element.getAttribute("name"),
-            element.id,
-            element.getAttribute("aria-label"),
-            element.getAttribute("placeholder"),
-            element.getAttribute("title"),
-            textFromClosestLabel(element),
-            textFromTableHeader(element)
-        ];
-
-        let current = element.parentElement;
-        for (let depth = 0; current && depth < 3; depth += 1) {
-            parts.push(current.dataset?.dateStatusScope);
-            parts.push(current.dataset?.dateStatusField);
-            parts.push(current.getAttribute?.("aria-label"));
-
-            if (current.matches?.(".profile-field, .detail-row, .metric-row, .register-row, .asset-row, .table-row, .form-group, .field, .readonly-field, .summary-field, .report-field")) {
-                parts.push(current.textContent || "");
-            }
-
-            current = current.parentElement;
-        }
-
-        return normalizeDateContext(parts.filter(Boolean).join(" "));
-    }
-
     function isServiceExpiryLicenseOrCpdDate(element) {
         if (element.dataset.skipDateStatus === "true") {
             return false;
@@ -230,28 +164,7 @@
             return true;
         }
 
-        const context = dateStatusContextFor(element);
-        if (!context) {
-            return false;
-        }
-
-        if (/\b(last service|previous service|service history)\b/.test(context)) {
-            return false;
-        }
-
-        if (/\b(cpd|continuing professional development)\b/.test(context)) {
-            return true;
-        }
-
-        if (/\b(licence|license|licensing|licencing|licence disc|license disc|practitioner licence|practitioner license)\b/.test(context)) {
-            return true;
-        }
-
-        if (/\b(expiry|expires|expired|expiration|use by|use-by|best before|valid until)\b/.test(context)) {
-            return true;
-        }
-
-        return /\b(next service|service due|due for service|service expiry|service expiration|service pressure|service date)\b/.test(context);
+        return false;
     }
 
     function getDateStatus(date) {
@@ -261,22 +174,22 @@
         const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
 
         if (daysUntil < 0) {
-            return { className: "vector-date-red", label: "Past due" };
+            return { className: "vector-date-red", label: "Overdue" };
         }
 
         if (daysUntil <= 15) {
-            return { className: "vector-date-dark-orange", label: "Due within 15 days" };
+            return { className: "vector-date-dark-orange", label: "Due in 15 days or less" };
         }
 
         if (daysUntil <= 30) {
-            return { className: "vector-date-orange", label: "Due within 30 days" };
+            return { className: "vector-date-orange", label: "Due in 30 days or less" };
         }
 
         if (daysUntil <= 60) {
-            return { className: "vector-date-amber", label: "Due within 60 days" };
+            return { className: "vector-date-amber", label: "Due in 60 days or less" };
         }
 
-        return { className: "vector-date-green", label: "More than 60 days" };
+        return { className: "vector-date-green", label: "Over 60 days" };
     }
 
     function applyDateStatus(element, date) {
@@ -512,10 +425,6 @@
             return false;
         }
 
-        if (element.matches(".confirmation-flag, [data-transient-confirmation], [data-action-status]")) {
-            return true;
-        }
-
         const text = (element.textContent || "").trim().toLowerCase();
         if (!text) {
             return false;
@@ -532,12 +441,21 @@
             "could not",
             "must ",
             "required",
+            "failed",
+            "error",
+            "denied",
+            "invalid",
+            "unavailable",
             "before saving",
             "before submitting"
         ];
 
         if (errorTokens.some(function (token) { return text.includes(token); })) {
             return false;
+        }
+
+        if (element.matches(".confirmation-flag, .transient-confirmation, [data-transient-confirmation], [data-action-status]")) {
+            return true;
         }
 
         const actionTokens = [
@@ -560,7 +478,15 @@
             "authorized",
             "marked",
             "allocated",
-            "entered"
+            "entered",
+            "logged",
+            "cleared",
+            "assigned",
+            "unassigned",
+            "retired",
+            "restored",
+            "recorded",
+            "sent back"
         ];
 
         return actionTokens.some(function (token) { return text.includes(token); });
@@ -568,7 +494,7 @@
 
     function initializeTransientActionFeedback(root) {
         (root || document)
-            .querySelectorAll(".confirmation-flag, .status-message, [data-transient-confirmation], [data-action-status]")
+            .querySelectorAll(".confirmation-flag, .status-message, .transient-confirmation, [data-transient-confirmation], [data-action-status]")
             .forEach(function (element) {
                 if (element.dataset.vectorTransientAttached === "true" || !isActionConfirmationMessage(element)) {
                     return;
@@ -584,6 +510,7 @@
 
                     window.setTimeout(function () {
                         element.hidden = true;
+                        element.remove();
                     }, 260);
                 }, duration);
             });
@@ -775,12 +702,270 @@
 
     window.VectorInitializeOtherOptionFields = initializeOtherOptionFields;
 
+    let activeInAppConfirmation = null;
+
+    function getElementLabel(element) {
+        if (!element) {
+            return "";
+        }
+
+        return (element.dataset.confirmLabel ||
+            element.getAttribute("aria-label") ||
+            element.getAttribute("title") ||
+            element.textContent ||
+            "").trim();
+    }
+
+    function getConfirmationMessage(form, trigger) {
+        if (trigger && trigger.dataset.confirmMessage) {
+            return trigger.dataset.confirmMessage;
+        }
+
+        if (form && form.dataset.confirmMessage) {
+            return form.dataset.confirmMessage;
+        }
+
+        if (trigger && trigger.classList.contains("task-delete")) {
+            return "Delete this task?";
+        }
+
+        if (trigger && trigger.classList.contains("issue-delete")) {
+            return "Delete this issue?";
+        }
+
+        const panelMessage = form
+            ? form.querySelector(".delete-confirm-panel span, .delete-confirm-panel p, .delete-confirm-panel strong, .template-delete-confirm span, .template-delete-confirm p, .template-delete-confirm strong")
+            : null;
+        const panelText = (panelMessage?.textContent || "").trim();
+        if (panelText) {
+            return panelText;
+        }
+
+        const label = getElementLabel(trigger).replace(/\s+/g, " ");
+        if (label) {
+            return label.endsWith("?") ? label : label + "?";
+        }
+
+        return "Confirm this action?";
+    }
+
+    function getConfirmationAcceptLabel(form, trigger) {
+        if (trigger && trigger.dataset.confirmAcceptLabel) {
+            return trigger.dataset.confirmAcceptLabel;
+        }
+
+        if (form && form.dataset.confirmAcceptLabel) {
+            return form.dataset.confirmAcceptLabel;
+        }
+
+        const label = getElementLabel(trigger).toLowerCase();
+        if (label.includes("delete") || label.includes("remove") || label.includes("retire")) {
+            return "Delete";
+        }
+
+        if (label.includes("publish")) {
+            return "Publish";
+        }
+
+        if (label.includes("approve")) {
+            return "Approve";
+        }
+
+        if (label.includes("reject")) {
+            return "Reject";
+        }
+
+        return "Confirm";
+    }
+
+    function closeInAppConfirmation(result) {
+        const active = activeInAppConfirmation;
+        if (!active) {
+            return;
+        }
+
+        activeInAppConfirmation = null;
+        active.cleanup();
+        active.modal.classList.add("leaving");
+
+        window.setTimeout(function () {
+            active.modal.classList.remove("visible", "leaving");
+            active.modal.setAttribute("aria-hidden", "true");
+            active.resolve(result);
+
+            if (active.previousFocus && typeof active.previousFocus.focus === "function") {
+                active.previousFocus.focus({ preventScroll: true });
+            }
+        }, 180);
+    }
+
+    function showInAppConfirmation(options) {
+        const settings = options || {};
+        const modal = document.getElementById("inAppConfirmModal");
+        const message = document.getElementById("inAppConfirmMessage");
+        const title = document.getElementById("inAppConfirmTitle");
+        const cancelButton = document.getElementById("inAppConfirmCancel");
+        const acceptButton = document.getElementById("inAppConfirmAccept");
+
+        if (!modal || !message || !title || !cancelButton || !acceptButton) {
+            return Promise.resolve(false);
+        }
+
+        if (activeInAppConfirmation) {
+            closeInAppConfirmation(false);
+        }
+
+        return new Promise(function (resolve) {
+            const previousFocus = document.activeElement;
+
+            title.textContent = settings.title || "Confirm action";
+            message.textContent = settings.message || "Confirm this action?";
+            cancelButton.textContent = settings.cancelLabel || "Cancel";
+            acceptButton.textContent = settings.acceptLabel || "Confirm";
+
+            function onAccept() {
+                closeInAppConfirmation(true);
+            }
+
+            function onCancel() {
+                closeInAppConfirmation(false);
+            }
+
+            function onKeydown(event) {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    closeInAppConfirmation(false);
+                }
+            }
+
+            function onBackdropClick(event) {
+                if (event.target === modal) {
+                    closeInAppConfirmation(false);
+                }
+            }
+
+            function cleanup() {
+                acceptButton.removeEventListener("click", onAccept);
+                cancelButton.removeEventListener("click", onCancel);
+                modal.removeEventListener("click", onBackdropClick);
+                document.removeEventListener("keydown", onKeydown);
+            }
+
+            activeInAppConfirmation = { modal, cleanup, resolve, previousFocus };
+
+            acceptButton.addEventListener("click", onAccept);
+            cancelButton.addEventListener("click", onCancel);
+            modal.addEventListener("click", onBackdropClick);
+            document.addEventListener("keydown", onKeydown);
+
+            modal.classList.remove("leaving");
+            modal.classList.add("visible");
+            modal.setAttribute("aria-hidden", "false");
+            acceptButton.focus({ preventScroll: true });
+        });
+    }
+
+    function submitFormAfterInAppConfirmation(form, submitter) {
+        if (!form) {
+            return;
+        }
+
+        form.dataset.vectorConfirmApproved = "true";
+
+        if (typeof form.requestSubmit === "function") {
+            form.requestSubmit(submitter || undefined);
+        } else {
+            form.submit();
+        }
+
+        window.setTimeout(function () {
+            delete form.dataset.vectorConfirmApproved;
+        }, 0);
+    }
+
+    function handleInAppConfirmationClick(event) {
+        const deleteTrigger = event.target.closest(".delete-row-btn, .delete-confirm-btn, .template-delete, .template-confirm-delete");
+        if (deleteTrigger) {
+            const form = deleteTrigger.closest("form");
+            if (form && form.querySelector(".delete-confirm-panel, .template-delete-confirm")) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                const submitter = form.querySelector(".delete-confirm-btn, .template-confirm-delete, button[type='submit'], input[type='submit']");
+                showInAppConfirmation({
+                    message: getConfirmationMessage(form, deleteTrigger),
+                    acceptLabel: getConfirmationAcceptLabel(form, deleteTrigger)
+                }).then(function (accepted) {
+                    if (accepted) {
+                        submitFormAfterInAppConfirmation(form, submitter);
+                    }
+                });
+            }
+            return;
+        }
+
+        const directDeleteTrigger = event.target.closest(".task-delete, .issue-delete");
+        if (directDeleteTrigger) {
+            const form = directDeleteTrigger.closest("form");
+            if (form) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                showInAppConfirmation({
+                    message: getConfirmationMessage(form, directDeleteTrigger),
+                    acceptLabel: getConfirmationAcceptLabel(form, directDeleteTrigger)
+                }).then(function (accepted) {
+                    if (accepted) {
+                        submitFormAfterInAppConfirmation(form, directDeleteTrigger);
+                    }
+                });
+            }
+        }
+    }
+
+    function handleInAppConfirmationSubmit(event) {
+        const form = event.target;
+        if (!form ||
+            form.nodeName !== "FORM" ||
+            !form.dataset.confirmMessage ||
+            form.dataset.vectorConfirmApproved === "true") {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const submitter = event.submitter || form.querySelector("button[type='submit'], input[type='submit']");
+        showInAppConfirmation({
+            message: getConfirmationMessage(form, submitter),
+            acceptLabel: getConfirmationAcceptLabel(form, submitter)
+        }).then(function (accepted) {
+            if (accepted) {
+                submitFormAfterInAppConfirmation(form, submitter);
+            }
+        });
+    }
+
+    function initializeInAppConfirmations() {
+        if (document.documentElement.dataset.vectorInAppConfirmBound === "true") {
+            return;
+        }
+
+        document.documentElement.dataset.vectorInAppConfirmBound = "true";
+        document.addEventListener("click", handleInAppConfirmationClick, true);
+        document.addEventListener("submit", handleInAppConfirmationSubmit, true);
+    }
+
+    window.VectorInAppConfirmation = { show: showInAppConfirmation };
+    window.VectorInitializeInAppConfirmations = initializeInAppConfirmations;
+
     document.addEventListener("DOMContentLoaded", function () {
         ensureUniversalNaControls();
         initializeDateStatusColors(document);
         initializeChecklistCollapsibles(document);
         initializeTransientActionFeedback(document);
         initializeOtherOptionFields(document);
+        initializeInAppConfirmations();
 
         let collapseRefreshQueued = false;
         const collapseObserver = new MutationObserver(function () {
@@ -795,6 +980,7 @@
                 initializeDateStatusColors(document);
                 initializeTransientActionFeedback(document);
                 initializeOtherOptionFields(document);
+                initializeInAppConfirmations();
                 collapseRefreshQueued = false;
             });
         });

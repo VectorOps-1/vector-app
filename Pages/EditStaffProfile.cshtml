@@ -82,7 +82,7 @@
                     </label>
                     <label>
                         Annual licence expiry
-                        <input asp-for="AnnualLicenseExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" />
+                        <input asp-for="AnnualLicenseExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" data-date-status-field="licence" />
                     </label>
                     <label>
                         CPD compliance
@@ -97,7 +97,7 @@
                     </label>
                     <label>
                         CPD valid until
-                        <input asp-for="CpdComplianceExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" />
+                        <input asp-for="CpdComplianceExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" data-date-status-field="cpd" />
                     </label>
                     <label>
                         Assigned area

@@ -1,248 +1,32 @@
 @page
 @model MedicationRegisterPreviewModel
-@using vector_app_local.Services
-@inject IWebHostEnvironment WebHostEnvironment
 @{
-    ViewData["Title"] = "Medication Register Preview";
-    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
-    var companyLogoPath = branding.LogoPath;
-    var companyName = branding.ClientName;
+    ViewData["Title"] = "Medication Source Uploaded";
 }
 
-<div class="preview-screen">
-    <div class="preview-inner">
-        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
-        <div class="client-line">Client: @companyName</div>
-        <div class="home-label">Generated Medication Register Preview</div>
-        <h2 class="page-title">Review Medication Records</h2>
-        <p class="page-subtitle">Source file: @Model.FileName</p>
-
-        <div class="preview-layout">
-            <section class="register-panel">
-                <div class="table-wrap">
-                    <table class="register-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Schedule</th>
-                                <th>Type / Form</th>
-                                <th>Batch Number</th>
-                                <th>Quantity</th>
-                                <th>Location</th>
-                                <th>Expiry Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><input value="Adrenaline" /></td>
-                                <td><input value="Schedule 4" /></td>
-                                <td><input value="Ampoule" /></td>
-                                <td><input value="MED-BATCH-001" /></td>
-                                <td><input type="number" value="20" /></td>
-                                <td>
-                                    <select>
-                                        <option value="">Select location</option>
-                                        @foreach (var location in Model.LocationOptions)
-                                        {
-                                            <option value="@location.Value">@location.Text</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td><input type="date" /></td>
-                            </tr>
-                            <tr>
-                                <td><input value="Midazolam" /></td>
-                                <td><input value="Schedule 5" /></td>
-                                <td><input value="Ampoule" /></td>
-                                <td><input value="MED-BATCH-002" /></td>
-                                <td><input type="number" value="10" /></td>
-                                <td>
-                                    <select>
-                                        <option value="">Select location</option>
-                                        @foreach (var location in Model.LocationOptions)
-                                        {
-                                            <option value="@location.Value">@location.Text</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td><input type="date" /></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <aside class="mapping-panel">
-                <div class="mapping-title">Detected fields</div>
-                <div class="mapping-item">Medication Name</div>
-                <div class="mapping-item">Schedule</div>
-                <div class="mapping-item">Type / Form</div>
-                <div class="mapping-item">Batch Number</div>
-                <div class="mapping-item">Quantity</div>
-                <div class="mapping-item">Location</div>
-                <div class="mapping-item">Expiry Date</div>
-            </aside>
-        </div>
-
+<div class="source-review-screen">
+    <div class="source-review-panel">
+        <div class="home-label">Medication Register</div>
+        <h2 class="page-title">Medication Source Uploaded</h2>
+        <p class="page-subtitle">The uploaded file has been stored as setup source material. Live medication records are managed in the medication register.</p>
+        <div class="source-summary"><strong>Source file</strong><span>@Model.FileName</span></div>
         <div class="action-row">
-            <a class="menu-btn vehicle-btn" href="/UploadMedicationRegister">Upload Different File</a>
-            <a class="menu-btn equipment-btn" href="/MedicationRegister?view=register">Open Medication Register</a>
+            <a class="menu-btn vehicle-btn" href="/MedicationRegister?view=register">Open Medication Register</a>
+            <a class="menu-btn equipment-btn" href="/UploadMedicationRegister">Upload Different File</a>
         </div>
     </div>
 </div>
 
 <style>
-.preview-screen {
-    display: flex;
-    width: 100%;
-    min-height: calc(100vh - 70px);
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.preview-inner {
-    width: 100%;
-    max-width: 1180px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 40px 20px 30px 20px;
-    box-sizing: border-box;
-}
-
-.page-logo {
-    width: 300px;
-    max-width: 72%;
-    max-height: 170px;
-    object-fit: contain;
-    margin: 0 auto 12px auto;
-    display: block;
-}
-
-.client-line {
-    margin-bottom: 14px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #6b7280;
-}
-
-.home-label {
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: #5f6b7a;
-}
-
-.page-title {
-    margin: 0 0 8px 0;
-    font-size: 28px;
-    font-weight: 700;
-    color: #2f2f2f;
-}
-
-.page-subtitle {
-    margin: 0 0 28px 0;
-    font-size: 16px;
-    font-weight: 500;
-    color: #6b7280;
-}
-
-.preview-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 240px;
-    gap: 20px;
-    align-items: start;
-}
-
-.register-panel,
-.mapping-panel {
-    border: 1px solid rgba(66, 84, 102, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.64);
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-}
-
-.table-wrap {
-    overflow-x: auto;
-}
-
-.register-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 900px;
-}
-
-.register-table th,
-.register-table td {
-    padding: 12px;
-    border-bottom: 1px solid rgba(66, 84, 102, 0.12);
-    text-align: left;
-}
-
-.register-table th {
-    background: #334155;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.7px;
-    text-transform: uppercase;
-}
-
-.register-table input,
-.register-table select {
-    width: 100%;
-    min-height: 40px;
-    border: 1px solid rgba(66, 84, 102, 0.24);
-    border-radius: 8px;
-    padding: 0 10px;
-    font-size: 14px;
-    color: #111827;
-    background: #ffffff;
-    box-sizing: border-box;
-}
-
-.mapping-panel {
-    padding: 18px;
-    text-align: left;
-}
-
-.mapping-title {
-    margin-bottom: 12px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #425466;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-.mapping-item {
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    border: 1px solid rgba(66, 84, 102, 0.14);
-    border-radius: 8px;
-    background: #ffffff;
-    color: #425466;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.action-row {
-    display: flex;
-    justify-content: center;
-    gap: 18px;
-    flex-wrap: wrap;
-    margin-top: 24px;
-}
-
-.action-row .menu-btn {
-    min-width: 240px;
-    border: none;
-}
-
-@@media (max-width: 920px) {
-    .preview-layout {
-        grid-template-columns: 1fr;
-    }
-}
+.source-review-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; padding: 28px 16px; box-sizing: border-box; }
+.source-review-panel { width: min(760px, 100%); padding: 28px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.74); text-align: center; box-sizing: border-box; }
+.home-label { margin-bottom: 10px; color: #5f6b7a; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.page-title { margin: 0 0 8px 0; color: #1f2937; font-size: 28px; font-weight: 900; }
+.page-subtitle { margin: 0 auto 20px auto; max-width: 620px; color: #64748b; font-size: 15px; font-weight: 700; line-height: 1.45; }
+.source-summary { display: grid; gap: 5px; margin: 0 auto 22px auto; padding: 14px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: #f8fafc; text-align: left; }
+.source-summary strong { color: #334155; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.source-summary span { color: #0f172a; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.action-row .menu-btn { width: 100%; border: none; }
+@@media (max-width: 700px) { .action-row { grid-template-columns: 1fr; } }
 </style>

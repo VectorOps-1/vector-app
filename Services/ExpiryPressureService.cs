@@ -392,11 +392,7 @@ public class ExpiryPressureService
 
     private static string BuildVehicleLabel(Vehicle vehicle)
     {
-        var type = string.IsNullOrWhiteSpace(vehicle.VehicleSubtype)
-            ? string.IsNullOrWhiteSpace(vehicle.VehicleType) ? "Vehicle" : vehicle.VehicleType
-            : vehicle.VehicleSubtype;
-
-        return $"{vehicle.RegistrationNumber} / {vehicle.Callsign} ({type})";
+        return $"{vehicle.RegistrationNumber} / {vehicle.Callsign} ({VehicleTaxonomyService.DisplayClassification(vehicle)})";
     }
 
     private static string BuildLocation(string? area, string? detail)

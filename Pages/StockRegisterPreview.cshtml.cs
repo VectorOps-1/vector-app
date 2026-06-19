@@ -42,7 +42,6 @@ public class StockRegisterPreviewModel : PageModel
             FileName = fileName;
         }
 
-        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
-        return Page();
+        return RedirectToPage("/StockRegister", new { view = "register", confirmation = "stock-source-uploaded" });
     }
 }

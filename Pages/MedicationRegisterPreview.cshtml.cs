@@ -42,7 +42,6 @@ public class MedicationRegisterPreviewModel : PageModel
             FileName = fileName;
         }
 
-        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
-        return Page();
+        return RedirectToPage("/MedicationRegister", new { view = "register", confirmation = "medication-source-uploaded" });
     }
 }

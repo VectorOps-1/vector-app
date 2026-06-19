@@ -38,7 +38,7 @@
                 <div class="service-grid">
                     <label>
                         New next service date
-                        <input asp-for="NewNextServiceDate" type="date" />
+                        <input asp-for="NewNextServiceDate" type="date" data-date-status-field="service" />
                     </label>
                     <label>
                         Service note
@@ -92,7 +92,7 @@
                                             <span>@(item.EquipmentType ?? "Type not set")</span>
                                         </span>
                                         <span role="cell">@(item.SerialOrAssetId ?? "Not set")</span>
-                                        <span role="cell"><strong>@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong></span>
+                                        <span role="cell"><strong data-date-status-field="service">@(item.NextServiceDate?.ToString("yyyy-MM-dd") ?? "Not set")</strong></span>
                                         <span class="stacked-cell" role="cell">
                                             <strong>@(item.AssignedVehicle ?? "No vehicle allocation")</strong>
                                             <span>@(item.CurrentLocation ?? "Unallocated")</span>

@@ -70,8 +70,8 @@
                             <span>@selectedStaff.RoleName - @selectedStaff.Status</span>
                             <span>@(string.IsNullOrWhiteSpace(selectedStaff.StaffIdentifier) ? "Staff ID not set" : $"Staff ID: {selectedStaff.StaffIdentifier}")</span>
                             <span>@(string.IsNullOrWhiteSpace(selectedStaff.PractitionerNumber) ? "Practitioner number not set" : $"Practitioner: {selectedStaff.PractitionerNumber}")</span>
-                            <span>Licence expiry: @(selectedStaff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
-                            <span>CPD: @(string.IsNullOrWhiteSpace(selectedStaff.CpdComplianceStatus) ? "N/A" : selectedStaff.CpdComplianceStatus) / @(selectedStaff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                            <span data-date-status-field="licence">Licence expiry: @(selectedStaff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                            <span data-date-status-field="cpd">CPD: @(string.IsNullOrWhiteSpace(selectedStaff.CpdComplianceStatus) ? "N/A" : selectedStaff.CpdComplianceStatus) / @(selectedStaff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
                             <span>Assigned area: @selectedStaff.AssignedArea</span>
                         </div>
                         <div class="selected-actions">

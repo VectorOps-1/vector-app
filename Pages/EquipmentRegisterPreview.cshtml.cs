@@ -42,7 +42,6 @@ public class EquipmentRegisterPreviewModel : PageModel
             FileName = fileName;
         }
 
-        LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
-        return Page();
+        return RedirectToPage("/EquipmentRegister", new { view = "register", confirmation = "equipment-source-uploaded" });
     }
 }

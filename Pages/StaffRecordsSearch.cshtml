@@ -52,9 +52,9 @@
                     <div class="profile-field"><span>Access role</span><strong>@selectedStaff.RoleName</strong></div>
                     <div class="profile-field"><span>Clinical qualification / scope</span><strong>@TextOrDefault(selectedStaff.QualificationFunction, "Not set")</strong></div>
                     <div class="profile-field"><span>Practitioner Number</span><strong>@TextOrDefault(selectedStaff.PractitionerNumber, "Not set")</strong></div>
-                    <div class="profile-field"><span>Annual licence expiry</span><strong>@FormatDate(selectedStaff.AnnualLicenseExpiryDate)</strong></div>
+                    <div class="profile-field"><span>Annual licence expiry</span><strong data-date-status-field="licence">@FormatDate(selectedStaff.AnnualLicenseExpiryDate)</strong></div>
                     <div class="profile-field"><span>CPD compliance</span><strong>@TextOrDefault(selectedStaff.CpdComplianceStatus, "N/A")</strong></div>
-                    <div class="profile-field"><span>CPD valid until</span><strong>@FormatDate(selectedStaff.CpdComplianceExpiryDate)</strong></div>
+                    <div class="profile-field"><span>CPD valid until</span><strong data-date-status-field="cpd">@FormatDate(selectedStaff.CpdComplianceExpiryDate)</strong></div>
                     <div class="profile-field"><span>Assigned area</span><strong>@selectedStaff.AssignedArea</strong></div>
                     <div class="profile-field"><span>Email</span><strong>@selectedStaff.Email</strong></div>
                     <div class="profile-field"><span>Cell number</span><strong>@TextOrDefault(selectedStaff.CellNumber, "Not set")</strong></div>

@@ -58,8 +58,8 @@
                                         <span>@staff.RoleName</span>
                                         <span>@staff.AssignedArea</span>
                                         <span>@(string.IsNullOrWhiteSpace(staff.PractitionerNumber) ? "Practitioner no. not set" : $"Practitioner: {staff.PractitionerNumber}")</span>
-                                        <span>Licence: @(staff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
-                                        <span>CPD: @(string.IsNullOrWhiteSpace(staff.CpdComplianceStatus) ? "N/A" : staff.CpdComplianceStatus) / @(staff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                        <span data-date-status-field="licence">Licence: @(staff.AnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                        <span data-date-status-field="cpd">CPD: @(string.IsNullOrWhiteSpace(staff.CpdComplianceStatus) ? "N/A" : staff.CpdComplianceStatus) / @(staff.CpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</span>
                                     </div>
                                     <div class="staff-contact">
                                         <span>@staff.Email</span>
