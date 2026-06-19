@@ -86,7 +86,7 @@
                             <input asp-for="LineUpdates[index].LineId" type="hidden" />
                             <input class="text-input" asp-for="LineUpdates[index].QuantityConfirmed" type="number" min="0" />
                             <input class="text-input" asp-for="LineUpdates[index].BatchNumber" placeholder="Batch number" />
-                            <input class="text-input" asp-for="LineUpdates[index].ExpiryDate" type="date" />
+                            <input class="text-input" asp-for="LineUpdates[index].ExpiryDate" type="date" data-date-status-field="expiry" />
                         </div>
                     }
 
@@ -131,7 +131,7 @@
                         <div class="line-grid register-grid">
                             <div class="readonly-cell">
                                 <strong>@line.ItemName</strong>
-                                <span>Batch: @(line.BatchNumber ?? "Not confirmed") | Expiry: @(line.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not confirmed")</span>
+                                <span data-date-status-field="expiry">Batch: @(line.BatchNumber ?? "Not confirmed") | Expiry: @(line.ExpiryDate?.ToString("yyyy-MM-dd") ?? "Not confirmed")</span>
                             </div>
                             <input asp-for="LineUpdates[index].LineId" type="hidden" />
                             <select class="text-input" asp-for="LineUpdates[index].RegisterLocation" asp-items="Model.LocationOptions">
