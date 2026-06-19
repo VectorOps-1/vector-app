@@ -66,7 +66,7 @@ public class OperationsReportsModel : PageModel
         var scope = await LoadReportScopeAsync(currentUser);
         await LoadReadinessRowsAsync(currentUser.CompanyId, scope.VehicleIds);
         await LoadIssueRowsAsync(currentUser, scope);
-        await LoadTaskRowsAsync(currentUser);
+        await LoadTaskRowsAsync(currentUser, scope);
         await LoadMovementRowsAsync(currentUser.CompanyId, scope.AreaIds);
         await LoadUploadRowsAsync(currentUser);
         await LoadExpiryRowsAsync(currentUser);
@@ -107,7 +107,7 @@ public class OperationsReportsModel : PageModel
                 .Select(vehicle => vehicle.Id)
                 .ToListAsync();
 
-            return new ReportScope([], allVehicles, []);
+            return new ReportScope([], allVehicles, [], [], []);
         }
 
         var assignedAreas = await _db.ManagerOperationalAreaAssignments
@@ -128,22 +128,42 @@ public class OperationsReportsModel : PageModel
         {
             ScopeLabel = "No assigned area";
             StatusMessage = "This operational manager has no assigned base or region yet. Senior management can assign manager areas in Master Setup.";
-            return new ReportScope([], [], []);
+            return new ReportScope([], [], [], [], []);
         }
 
         var areaIds = assignedAreas.Select(area => area.Id).ToList();
-        var vehicleIds = await _db.Vehicles
+        var scopedVehicles = await _db.Vehicles
             .AsNoTracking()
             .Where(vehicle =>
                 vehicle.CompanyId == currentUser.CompanyId &&
                 vehicle.CurrentOperationalAreaId.HasValue &&
                 areaIds.Contains(vehicle.CurrentOperationalAreaId.Value) &&
                 vehicle.Status != "Deleted")
-            .Select(vehicle => vehicle.Id)
+            .Select(vehicle => new
+            {
+                vehicle.Id,
+                vehicle.RegistrationNumber,
+                vehicle.Callsign
+            })
+            .ToListAsync();
+        var vehicleIds = scopedVehicles.Select(vehicle => vehicle.Id).ToList();
+        var vehicleLabels = scopedVehicles
+            .SelectMany(vehicle => new[] { vehicle.RegistrationNumber, vehicle.Callsign })
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var staffIds = await _db.AppUsers
+            .AsNoTracking()
+            .Where(user =>
+                user.CompanyId == currentUser.CompanyId &&
+                user.Status != "Deleted" &&
+                (user.Id == currentUser.Id ||
+                    (user.AssignedOperationalAreaId.HasValue && areaIds.Contains(user.AssignedOperationalAreaId.Value))))
+            .Select(user => user.Id)
             .ToListAsync();
 
         ScopeLabel = string.Join(", ", assignedAreas.Select(area => area.Name));
-        return new ReportScope(areaIds, vehicleIds, assignedAreas.Select(area => area.Name).ToList());
+        return new ReportScope(areaIds, vehicleIds, assignedAreas.Select(area => area.Name).ToList(), vehicleLabels, staffIds);
     }
 
     private async Task LoadReadinessRowsAsync(int companyId, IReadOnlyList<int> scopedVehicleIds)
@@ -208,7 +228,8 @@ public class OperationsReportsModel : PageModel
             issues = issues
                 .Where(issue =>
                     issue.AssignedToUserId == currentUser.Id ||
-                    scope.AreaNames.Any(areaName => ContainsAny(areaName, issue.Location, issue.Description, issue.RelatedItem)))
+                    scope.AreaNames.Any(areaName => MatchesText(issue.Location, areaName)) ||
+                    scope.VehicleLabels.Any(vehicleLabel => MatchesText(issue.Location, vehicleLabel) || MatchesText(issue.RelatedItem, vehicleLabel)))
                 .ToList();
         }
 
@@ -232,7 +253,7 @@ public class OperationsReportsModel : PageModel
             .ToList();
     }
 
-    private async Task LoadTaskRowsAsync(AppUser currentUser)
+    private async Task LoadTaskRowsAsync(AppUser currentUser, ReportScope scope)
     {
         var query = _db.TaskItems
             .AsNoTracking()
@@ -245,7 +266,14 @@ public class OperationsReportsModel : PageModel
 
         if (!IsSeniorOverview)
         {
-            query = query.Where(task => task.AssignedByUserId == currentUser.Id || task.AssignedToUserId == currentUser.Id);
+            IReadOnlyList<int> scopedStaffIds = scope.StaffIds.Count == 0
+                ? new List<int> { currentUser.Id }
+                : scope.StaffIds;
+            query = query.Where(task =>
+                task.AssignedByUserId == currentUser.Id ||
+                task.AssignedToUserId == currentUser.Id ||
+                scopedStaffIds.Contains(task.AssignedByUserId) ||
+                scopedStaffIds.Contains(task.AssignedToUserId));
         }
 
         TaskRows = await query
@@ -667,6 +695,13 @@ public class OperationsReportsModel : PageModel
         return values.Any(value => !string.IsNullOrWhiteSpace(value) && value.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool MatchesText(string? value, string? search)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+            !string.IsNullOrWhiteSpace(search) &&
+            value.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsSavedOrSubmitted(string? workflowStatus)
     {
         return string.Equals(workflowStatus, "Saved", StringComparison.OrdinalIgnoreCase) ||
@@ -679,7 +714,12 @@ public class OperationsReportsModel : PageModel
     }
 
     private sealed record AreaScopeItem(int Id, string Name);
-    private sealed record ReportScope(IReadOnlyList<int> AreaIds, IReadOnlyList<int> VehicleIds, IReadOnlyList<string> AreaNames);
+    private sealed record ReportScope(
+        IReadOnlyList<int> AreaIds,
+        IReadOnlyList<int> VehicleIds,
+        IReadOnlyList<string> AreaNames,
+        IReadOnlyList<string> VehicleLabels,
+        IReadOnlyList<int> StaffIds);
 
     public sealed class ReportSummary
     {

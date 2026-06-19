@@ -45,15 +45,15 @@ public class IssueReportsModel : PageModel
 
         if (!IsSeniorOverview)
         {
-            var assignedAreaNames = await LoadAssignedAreaNamesAsync(currentUser);
-            ScopeLabel = assignedAreaNames.Count == 0
+            var issueScope = await LoadAssignedIssueScopeAsync(currentUser);
+            ScopeLabel = issueScope.AreaNames.Count == 0
                 ? "Assigned to you"
-                : $"Assigned to you or areas: {string.Join(", ", assignedAreaNames)}";
+                : $"Assigned to you or areas: {string.Join(", ", issueScope.AreaNames)}";
 
             issues = issues
                 .Where(issue =>
                     issue.Status == "Open" &&
-                    (issue.AssignedToUserId == currentUser.Id || IssueMatchesAreaScope(issue, assignedAreaNames)))
+                    (issue.AssignedToUserId == currentUser.Id || IssueMatchesAreaScope(issue, issueScope)))
                 .ToList();
         }
 
@@ -143,33 +143,65 @@ public class IssueReportsModel : PageModel
         });
     }
 
-    private async Task<List<string>> LoadAssignedAreaNamesAsync(AppUser currentUser)
+    private async Task<IssueAreaScope> LoadAssignedIssueScopeAsync(AppUser currentUser)
     {
-        return await _db.ManagerOperationalAreaAssignments
+        var areaIds = await _db.ManagerOperationalAreaAssignments
             .AsNoTracking()
-            .Include(assignment => assignment.OperationalArea)
             .Where(assignment =>
                 assignment.CompanyId == currentUser.CompanyId &&
                 assignment.ManagerUserId == currentUser.Id &&
-                assignment.Status == "Active" &&
-                assignment.OperationalArea != null &&
-                assignment.OperationalArea.Status == "Active")
-            .Select(assignment => assignment.OperationalArea!.Name)
+                assignment.Status == "Active")
+            .Select(assignment => assignment.OperationalAreaId)
             .ToListAsync();
+
+        if (currentUser.AssignedOperationalAreaId.HasValue &&
+            !areaIds.Contains(currentUser.AssignedOperationalAreaId.Value))
+        {
+            areaIds.Add(currentUser.AssignedOperationalAreaId.Value);
+        }
+
+        var areaNames = areaIds.Count == 0
+            ? []
+            : await _db.OperationalAreas
+                .AsNoTracking()
+                .Where(area =>
+                    area.CompanyId == currentUser.CompanyId &&
+                    areaIds.Contains(area.Id) &&
+                    area.Status == "Active")
+                .Select(area => area.Name)
+                .ToListAsync();
+
+        var vehicleLabels = areaIds.Count == 0
+            ? []
+            : await _db.Vehicles
+                .AsNoTracking()
+                .Where(vehicle =>
+                    vehicle.CompanyId == currentUser.CompanyId &&
+                    vehicle.CurrentOperationalAreaId.HasValue &&
+                    areaIds.Contains(vehicle.CurrentOperationalAreaId.Value) &&
+                    vehicle.Status != "Deleted")
+                .SelectMany(vehicle => new[] { vehicle.RegistrationNumber, vehicle.Callsign })
+                .Where(label => !string.IsNullOrWhiteSpace(label))
+                .Distinct()
+                .ToListAsync();
+
+        return new IssueAreaScope(areaNames, vehicleLabels);
     }
 
-    private static bool IssueMatchesAreaScope(IssueReport issue, IReadOnlyList<string> assignedAreaNames)
+    private static bool IssueMatchesAreaScope(IssueReport issue, IssueAreaScope scope)
     {
-        return assignedAreaNames.Any(areaName =>
-            ContainsAny(areaName, issue.Location, issue.Description, issue.RelatedItem));
+        return scope.AreaNames.Any(areaName => MatchesText(issue.Location, areaName)) ||
+            scope.VehicleLabels.Any(vehicleLabel => MatchesText(issue.Location, vehicleLabel) || MatchesText(issue.RelatedItem, vehicleLabel));
     }
 
-    private static bool ContainsAny(string search, params string?[] values)
+    private static bool MatchesText(string? value, string? search)
     {
-        return values.Any(value =>
-            !string.IsNullOrWhiteSpace(value) &&
-            value.Contains(search, StringComparison.OrdinalIgnoreCase));
+        return !string.IsNullOrWhiteSpace(value) &&
+            !string.IsNullOrWhiteSpace(search) &&
+            value.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
+
+    private sealed record IssueAreaScope(IReadOnlyList<string> AreaNames, IReadOnlyList<string> VehicleLabels);
 
     public class PooledIssueItem
     {

@@ -68,6 +68,7 @@ public class ChecklistReportsModel : PageModel
     public List<SelectListItem> SearchValueOptions { get; private set; } = [];
     public List<ChecklistReportRow> ReportRows { get; private set; } = [];
     public List<ChecklistReportRow> SelectedReportRows { get; private set; } = [];
+    public List<ChecklistReportAreaGroup> SelectedReportAreaGroups { get; private set; } = [];
     public List<ChecklistReportDateGroup> ReportDateGroups { get; private set; } = [];
     public ChecklistReportSummary Summary { get; private set; } = new();
     public string? SelectedReportDateLabel => SelectedReportDate?.Date.ToString("yyyy-MM-dd");
@@ -261,12 +262,25 @@ public class ChecklistReportsModel : PageModel
                 areaIds.Contains(vehicle.CurrentOperationalAreaId.Value));
         }
 
-        var vehicleTypes = await query
-            .Select(vehicle => vehicle.VehicleType)
-            .Where(value => value != string.Empty)
-            .Distinct()
-            .OrderBy(value => value)
+        var vehicleRows = await query
+            .Select(vehicle => new
+            {
+                vehicle.VehicleFunction,
+                vehicle.VehicleSubtype,
+                vehicle.VehicleType
+            })
             .ToListAsync();
+
+        var vehicleTypes = vehicleRows
+            .Select(vehicle =>
+                NormalizeOptional(vehicle.VehicleSubtype) ??
+                NormalizeOptional(vehicle.VehicleFunction) ??
+                NormalizeOptional(vehicle.VehicleType))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value)
+            .ToList();
 
         VehicleTypeOptions = [new SelectListItem("All vehicle types", string.Empty)];
         VehicleTypeOptions.AddRange(vehicleTypes.Select(type => new SelectListItem(type, type)));
@@ -318,9 +332,13 @@ public class ChecklistReportsModel : PageModel
 
         if (!string.IsNullOrWhiteSpace(VehicleType))
         {
+            var selectedVehicleType = VehicleType.Trim();
             query = query.Where(report =>
-                report.VehicleTypeAtCheck == VehicleType ||
-                (report.Vehicle != null && report.Vehicle.VehicleType == VehicleType));
+                report.VehicleTypeAtCheck == selectedVehicleType ||
+                (report.Vehicle != null &&
+                    (report.Vehicle.VehicleType == selectedVehicleType ||
+                     report.Vehicle.VehicleFunction == selectedVehicleType ||
+                     report.Vehicle.VehicleSubtype == selectedVehicleType)));
         }
 
         var reports = await query
@@ -455,6 +473,7 @@ public class ChecklistReportsModel : PageModel
         if (!SelectedReportDate.HasValue)
         {
             SelectedReportRows = [];
+            SelectedReportAreaGroups = [];
             return;
         }
 
@@ -464,6 +483,28 @@ public class ChecklistReportsModel : PageModel
             .OrderBy(row => row.AreaName)
             .ThenBy(row => row.Callsign)
             .ThenByDescending(row => row.RecordedAtUtc)
+            .ToList();
+
+        SelectedReportAreaGroups = SelectedReportRows
+            .GroupBy(row => string.IsNullOrWhiteSpace(row.AreaName) ? "Unallocated" : row.AreaName)
+            .OrderBy(group => group.Key)
+            .Select(areaGroup => new ChecklistReportAreaGroup
+            {
+                AreaName = areaGroup.Key,
+                TotalReports = areaGroup.Count(),
+                CallsignGroups = areaGroup
+                    .GroupBy(row => string.IsNullOrWhiteSpace(row.Callsign) ? "No callsign" : row.Callsign)
+                    .OrderBy(group => group.Key)
+                    .Select(callsignGroup => new ChecklistReportCallsignGroup
+                    {
+                        Callsign = callsignGroup.Key,
+                        TotalReports = callsignGroup.Count(),
+                        Rows = callsignGroup
+                            .OrderByDescending(row => row.RecordedAtUtc)
+                            .ToList()
+                    })
+                    .ToList()
+            })
             .ToList();
     }
 
@@ -493,9 +534,9 @@ public class ChecklistReportsModel : PageModel
         var callsign = string.IsNullOrWhiteSpace(report.CallsignAtCheck)
             ? vehicle?.Callsign ?? "No callsign"
             : report.CallsignAtCheck;
-        var vehicleType = string.IsNullOrWhiteSpace(report.VehicleTypeAtCheck)
-            ? vehicle?.VehicleType ?? "Not set"
-            : report.VehicleTypeAtCheck;
+        var vehicleType = vehicle is null
+            ? string.IsNullOrWhiteSpace(report.VehicleTypeAtCheck) ? "Not set" : report.VehicleTypeAtCheck
+            : VehicleTaxonomyService.DisplayClassification(vehicle);
 
         return new ChecklistReportRow
         {
@@ -519,11 +560,23 @@ public class ChecklistReportsModel : PageModel
                 !string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) ||
                 !string.IsNullOrWhiteSpace(check.IssueNotes)),
             RecordedAtUtc = recordedAt,
-            TemplateName = report.ChecklistTemplate?.Name ?? "Not linked",
+            TemplateName = GetTemplateDisplayName(report),
             TemplateVersion = report.ChecklistTemplateVersion ?? report.ChecklistTemplate?.Version ?? "N/A",
             VehicleSameAsPreviousShiftUsed = report.VehicleSameAsPreviousShiftUsed || report.SameAsPreviousShiftUsed,
             EquipmentSameAsPreviousShiftUsed = report.EquipmentSameAsPreviousShiftUsed
         };
+    }
+
+    private static string GetTemplateDisplayName(DailyVehicleReadinessReport report)
+    {
+        if (report.ChecklistTemplate is not null)
+        {
+            return ChecklistDisplayService.TemplateName(report.ChecklistTemplate.Name);
+        }
+
+        return report.ChecklistTemplateId.HasValue
+            ? "Historical snapshot - template unavailable"
+            : "Historical snapshot - no template link";
     }
 
     private static string GetEvidenceStatusLabel(string? workflowStatus)
@@ -572,7 +625,10 @@ public class ChecklistReportsModel : PageModel
                 .ThenInclude(user => user!.AssignedOperationalArea)
             .Include(report => report.ChecklistTemplate)
             .Include(report => report.EquipmentChecks)
-            .FirstOrDefaultAsync(report => report.CompanyId == companyId && report.Id == reportId);
+            .FirstOrDefaultAsync(report =>
+                report.CompanyId == companyId &&
+                report.Id == reportId &&
+                report.WorkflowStatus != "Deleted");
     }
 
     private async Task<bool> CanAccessReportAsync(AppUser currentUser, DailyVehicleReadinessReport report)
@@ -650,6 +706,11 @@ public class ChecklistReportsModel : PageModel
         Add(nameof(SelectedReportDate), date.Date.ToString("yyyy-MM-dd"));
 
         return parameters.Count == 0 ? "/ChecklistReports" : $"/ChecklistReports?{string.Join("&", parameters)}";
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private sealed record AreaScopeItem(int Id, string Name, string AreaType);

@@ -38,7 +38,7 @@
                 </div>
                 <div class="report-actions">
                     <a class="report-link" href="/ChecklistReports">Back to Reports</a>
-                    <a class="report-link primary" href="/ChecklistReports?handler=Pdf&id=@report.Id">Download PDF</a>
+                    <a class="report-link primary" asp-page="/ChecklistReports" asp-page-handler="Pdf" asp-route-id="@report.Id">Download PDF</a>
                 </div>
             </div>
 
@@ -71,7 +71,7 @@
                     <div><span>Shift</span><strong>@Model.Text(report.ShiftName)</strong></div>
                     <div><span>Shift started</span><strong>@Model.FormatDateTime(report.ShiftStartedAtUtc)</strong></div>
                     <div><span>Shift ended</span><strong>@Model.FormatDateTime(report.ShiftEndsAtUtc)</strong></div>
-                    <div><span>Template</span><strong>@(template?.Name ?? "Not linked") v@(report.ChecklistTemplateVersion ?? template?.Version ?? "N/A")</strong></div>
+                    <div><span>Template</span><strong>@Model.TemplateName(report) v@Model.TemplateVersion(report)</strong></div>
                 </div>
             </section>
 
@@ -86,9 +86,9 @@
                     <div><span>Staff ID</span><strong>@Model.Text(performedBy?.StaffIdentifier)</strong></div>
                     <div><span>Clinical qualification / scope</span><strong>@Model.Text(performedBy?.QualificationFunction)</strong></div>
                     <div><span>Practitioner Number</span><strong>@Model.Text(performedBy?.PractitionerNumber)</strong></div>
-                    <div><span>Annual licence expiry</span><strong>@Model.FormatDate(performedBy?.AnnualLicenseExpiryDate)</strong></div>
+                    <div><span>Annual licence expiry</span><strong data-date-status-field="licence">@Model.FormatDate(performedBy?.AnnualLicenseExpiryDate)</strong></div>
                     <div><span>CPD compliance</span><strong>@Model.Text(performedBy?.CpdComplianceStatus)</strong></div>
-                    <div><span>CPD valid until</span><strong>@Model.FormatDate(performedBy?.CpdComplianceExpiryDate)</strong></div>
+                    <div><span>CPD valid until</span><strong data-date-status-field="cpd">@Model.FormatDate(performedBy?.CpdComplianceExpiryDate)</strong></div>
                     <div><span>Assigned area</span><strong>@(performedBy?.AssignedOperationalArea?.Name ?? "Not set")</strong></div>
                 </div>
             </section>
@@ -103,7 +103,7 @@
                     <div><span>Vehicle type</span><strong>@Model.Text(report.VehicleTypeAtCheck)</strong></div>
                     <div><span>Area / base</span><strong>@areaName</strong></div>
                     <div><span>Unit schematic</span><strong>@Model.Text(report.SchematicTypeAtCheck)</strong></div>
-                    <div><span>Next service at check</span><strong>@Model.FormatDate(report.VehicleNextServiceDateAtCheck)</strong></div>
+                    <div><span>Next service at check</span><strong data-date-status-field="service">@Model.FormatDate(report.VehicleNextServiceDateAtCheck)</strong></div>
                 </div>
             </section>
 
@@ -153,7 +153,7 @@
                                     <span>@Model.Text(check.EquipmentType) | @Model.Text(check.Model)</span>
                                 </div>
                                 <div><span>S/N / ID</span><strong>@Model.Text(check.SerialOrAssetId)</strong></div>
-                                <div><span>Next service</span><strong>@Model.FormatDate(check.NextServiceDateAtCheck)</strong></div>
+                                <div><span>Next service</span><strong data-date-status-field="service">@Model.FormatDate(check.NextServiceDateAtCheck)</strong></div>
                                 <div><span>Battery</span><strong>@Model.Text(check.BatteryStatus)</strong></div>
                                 <div><span>Operational</span><strong class="status-chip @Model.EquipmentStatusClass(check)">@Model.YesNo(check.IsOperational)</strong></div>
                                 <div><span>Impact</span><strong>@Model.Text(check.ReadinessImpact)</strong></div>

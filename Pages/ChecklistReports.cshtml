@@ -131,18 +131,32 @@
                         <span>Issues</span>
                     </div>
 
-                    @foreach (var row in Model.SelectedReportRows)
+                    @foreach (var areaGroup in Model.SelectedReportAreaGroups)
                     {
-                        <a class="register-row register-item" role="row" href="/ChecklistReportDetail?id=@row.Id">
-                            <span role="cell">@row.RecordedAtUtc.ToLocalTime().ToString("HH:mm")</span>
-                            <span role="cell">@row.AreaName</span>
-                            <span role="cell"><strong>@row.Callsign</strong></span>
-                            <span role="cell">@row.RegistrationNumber</span>
-                            <span role="cell">@row.VehicleType</span>
-                            <span role="cell">@row.PerformedByName</span>
-                            <span role="cell"><mark class="status-chip @row.ReadinessStatusClass">@row.ReadinessStatus</mark></span>
-                            <span role="cell">@row.IssueSummary</span>
-                        </a>
+                        <div class="register-row register-group-row" role="row">
+                            <span class="group-cell" role="cell">@areaGroup.AreaName - @areaGroup.TotalReports report@(areaGroup.TotalReports == 1 ? string.Empty : "s")</span>
+                        </div>
+
+                        @foreach (var callsignGroup in areaGroup.CallsignGroups)
+                        {
+                            <div class="register-row register-subgroup-row" role="row">
+                                <span class="group-cell" role="cell">@callsignGroup.Callsign - @callsignGroup.TotalReports report@(callsignGroup.TotalReports == 1 ? string.Empty : "s")</span>
+                            </div>
+
+                            @foreach (var row in callsignGroup.Rows)
+                            {
+                                <a class="register-row register-item" role="row" href="/ChecklistReportDetail?id=@row.Id">
+                                    <span role="cell">@row.RecordedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                                    <span role="cell">@row.AreaName</span>
+                                    <span role="cell"><strong>@row.Callsign</strong></span>
+                                    <span role="cell">@row.RegistrationNumber</span>
+                                    <span role="cell">@row.VehicleType</span>
+                                    <span role="cell">@row.PerformedByName</span>
+                                    <span role="cell"><mark class="status-chip @row.ReadinessStatusClass">@row.ReadinessStatus</mark></span>
+                                    <span role="cell">@row.IssueSummary</span>
+                                </a>
+                            }
+                        }
                     }
                 </div>
             }
@@ -177,11 +191,18 @@
 .section-heading span { color: #52606d; font-size: 13px; font-weight: 900; }
 .empty-panel { padding: 16px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; color: #52606d; font-size: 13px; font-weight: 900; text-align: center; }
 .report-register { width: 100%; border: 1px solid rgba(66, 84, 102, .14); border-radius: 6px; overflow-x: auto; background: #fff; }
+.report-scroll-proxy { display: none; pointer-events: none; }
+.report-scroll-proxy.is-active { display: block; position: fixed; z-index: 30; bottom: 78px; padding: 8px 10px; border: 1px solid rgba(66, 84, 102, .18); border-radius: 10px; background: rgba(248, 250, 252, .96); box-shadow: 0 10px 26px rgba(31, 41, 55, .18); pointer-events: auto; }
+.report-scroll-track { width: 100%; height: 18px; overflow-x: auto; overflow-y: hidden; scrollbar-width: auto; }
+.report-scroll-spacer { height: 1px; min-width: 100%; }
 .register-row { display: grid; align-items: center; min-width: 1040px; }
 .date-register .register-row { grid-template-columns: 140px 90px 80px 90px 140px 80px minmax(250px, 1fr); }
 .entry-register .register-row { grid-template-columns: 70px 110px 88px 92px minmax(150px, 1fr) minmax(150px, 1fr) 96px minmax(190px, 1.2fr); }
 .register-header { min-height: 34px; background: #334155; color: #fff; }
 .register-header span { padding: 0 9px; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+.register-group-row { min-height: 32px; background: rgba(51, 65, 85, .08); border-top: 1px solid rgba(66, 84, 102, .16); }
+.register-subgroup-row { min-height: 30px; background: rgba(18, 108, 132, .06); border-top: 1px solid rgba(66, 84, 102, .1); }
+.group-cell { grid-column: 1 / -1; padding: 0 9px; color: #334155; font-size: 12px; font-weight: 900; text-align: left; }
 .register-item { min-height: 34px; border-top: 1px solid rgba(66, 84, 102, .1); color: #1f2937; text-decoration: none; }
 .register-item:hover { background: rgba(18, 108, 132, .06); color: #1f2937; }
 .selected-register-item { background: rgba(18, 108, 132, .08); box-shadow: inset 4px 0 0 #126C84; }
@@ -204,6 +225,8 @@
     .checklist-report-filter, .summary-strip { grid-template-columns: 1fr; }
     .wide-filter { grid-column: span 1; }
     .section-heading { align-items: flex-start; flex-direction: column; }
+    .report-scroll-proxy.is-active { bottom: 92px; padding: 10px; }
+    .report-scroll-track { height: 22px; }
 }
 </style>
 
@@ -216,4 +239,86 @@
         }
         form?.submit();
     });
+
+    (function () {
+        const shells = Array.from(document.querySelectorAll(".report-register"));
+        if (!shells.length) {
+            return;
+        }
+
+        const proxy = document.createElement("div");
+        const track = document.createElement("div");
+        const spacer = document.createElement("div");
+        let activeShell = null;
+        let isSyncing = false;
+
+        proxy.className = "report-scroll-proxy";
+        track.className = "report-scroll-track";
+        spacer.className = "report-scroll-spacer";
+        track.tabIndex = 0;
+
+        track.appendChild(spacer);
+        proxy.appendChild(track);
+        document.body.appendChild(proxy);
+
+        function visibleShell() {
+            return shells.find(function (shell) {
+                const hasOverflow = shell.scrollWidth > shell.clientWidth + 2;
+                const rect = shell.getBoundingClientRect();
+                return hasOverflow && rect.top < window.innerHeight - 106 && rect.bottom > 112;
+            }) || null;
+        }
+
+        function updateProxy() {
+            const shell = visibleShell();
+            activeShell = shell;
+
+            if (!shell) {
+                proxy.classList.remove("is-active");
+                return;
+            }
+
+            const rect = shell.getBoundingClientRect();
+            const left = Math.max(12, rect.left);
+            const right = Math.min(window.innerWidth - 12, rect.right);
+
+            proxy.style.left = `${left}px`;
+            proxy.style.width = `${Math.max(180, right - left)}px`;
+            spacer.style.width = `${shell.scrollWidth}px`;
+            proxy.classList.add("is-active");
+
+            if (Math.abs(track.scrollLeft - shell.scrollLeft) > 1) {
+                track.scrollLeft = shell.scrollLeft;
+            }
+        }
+
+        shells.forEach(function (shell) {
+            shell.addEventListener("scroll", function () {
+                if (isSyncing) {
+                    return;
+                }
+
+                isSyncing = true;
+                if (activeShell === shell) {
+                    track.scrollLeft = shell.scrollLeft;
+                }
+                isSyncing = false;
+                updateProxy();
+            }, { passive: true });
+        });
+
+        track.addEventListener("scroll", function () {
+            if (isSyncing || !activeShell) {
+                return;
+            }
+
+            isSyncing = true;
+            activeShell.scrollLeft = track.scrollLeft;
+            isSyncing = false;
+        }, { passive: true });
+
+        window.addEventListener("scroll", updateProxy, { passive: true });
+        window.addEventListener("resize", updateProxy);
+        updateProxy();
+    })();
 </script>

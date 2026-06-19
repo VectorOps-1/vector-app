@@ -32,12 +32,6 @@ public class ReadinessAlertService
         var rules = await LoadManagerAlertRulesAsync(report.CompanyId);
         if (rules.Count == 0)
         {
-            await ReadinessEngineService.EnsureDefaultPublishedEngineAsync(_db, report.CompanyId, null);
-            rules = await LoadManagerAlertRulesAsync(report.CompanyId);
-        }
-
-        if (rules.Count == 0)
-        {
             return 0;
         }
 
@@ -66,14 +60,6 @@ public class ReadinessAlertService
                 equipmentCheck);
         }
 
-        async Task ApplyOperationalCheckIfNeededAsync(string? value, string itemName, string fieldKey)
-        {
-            if (IsProblemStatus(value, "Operational", "Pass", "Passed", "OK", "Good", "N/A", "Not applicable"))
-            {
-                await AddAlertAsync("Vehicle", "Vehicle inspection", itemName, fieldKey, "Failed / not operational", value);
-            }
-        }
-
         if (IsUnavailable(report.Vehicle.Status))
         {
             await AddAlertAsync("Vehicle", "Vehicle register", "Vehicle", "Status", "Out of service / unavailable", report.Vehicle.Status);
@@ -83,12 +69,6 @@ public class ReadinessAlertService
         {
             await AddAlertAsync("Vehicle", "Vehicle register", "Next service date", "NextServiceDate", "Service overdue", report.Vehicle.NextServiceDate.Value.ToString("yyyy-MM-dd"));
         }
-
-        await ApplyOperationalCheckIfNeededAsync(report.LightsStatus, "Lights", "LightsStatus");
-        await ApplyOperationalCheckIfNeededAsync(report.SirensStatus, "Sirens", "SirensStatus");
-        await ApplyOperationalCheckIfNeededAsync(report.WarningLightsStatus, "Warning lights", "WarningLightsStatus");
-        await ApplyOperationalCheckIfNeededAsync(report.TyresStatus, "Tyres", "TyresStatus");
-        await ApplyOperationalCheckIfNeededAsync(report.RadioConnectivityStatus, "Ops radio", "RadioConnectivityStatus");
 
         if (IsUnavailable(report.ReadinessStatus) || report.CriticalIssueCount > 0)
         {
@@ -393,7 +373,7 @@ public class ReadinessAlertService
     private static bool MatchesTarget(ReadinessEngineRule rule, Vehicle vehicle)
     {
         if (!string.IsNullOrWhiteSpace(rule.TargetVehicleType) &&
-            !Matches(rule.TargetVehicleType, vehicle.VehicleType))
+            !VehicleTaxonomyService.MatchesClassification(vehicle, rule.TargetVehicleType))
         {
             return false;
         }
@@ -406,7 +386,7 @@ public class ReadinessAlertService
 
         return string.Equals(rule.AppliesTo, "All", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(rule.AppliesTo) ||
-            Matches(rule.AppliesTo, vehicle.VehicleType) ||
+            VehicleTaxonomyService.MatchesClassification(vehicle, rule.AppliesTo) ||
             Matches(rule.AppliesTo, vehicle.Callsign) ||
             Matches(rule.AppliesTo, vehicle.RegistrationNumber);
     }

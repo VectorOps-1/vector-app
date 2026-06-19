@@ -67,7 +67,7 @@ public class ReadinessMetricDetailModel : PageModel
         {
             Callsign = string.IsNullOrWhiteSpace(vehicle.Callsign) ? vehicle.RegistrationNumber : vehicle.Callsign,
             RegistrationNumber = vehicle.RegistrationNumber,
-            VehicleType = vehicle.VehicleType,
+            VehicleType = VehicleTaxonomyService.DisplayClassification(vehicle),
             AreaName = vehicle.CurrentOperationalArea?.Name ?? "Unallocated",
             AssignedManager = await LoadAssignedManagerAsync(currentUser.CompanyId, vehicle.CurrentOperationalAreaId)
         };

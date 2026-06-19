@@ -42,27 +42,41 @@
                     <span>Action</span>
                 </div>
 
-                @foreach (var alert in Model.Alerts)
+                @foreach (var dateGroup in Model.AlertDateGroups)
                 {
-                    <form class="variance-row variance-item" method="post" asp-page-handler="Review" role="row">
-                        <input type="hidden" name="alertId" value="@alert.Id" />
-                        <span role="cell">@alert.SourceDateUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
-                        <span role="cell"><strong>@alert.Callsign</strong></span>
-                        <span role="cell">@alert.RegistrationNumber</span>
-                        <span role="cell">@alert.AreaName</span>
-                        <span role="cell" title="@alert.AssetLabel">@alert.AssetLabel</span>
-                        <span role="cell" title="@alert.FieldKey">@alert.FieldKey</span>
-                        <span role="cell" title="@(alert.PreviousValue ?? "N/A")">@(alert.PreviousValue ?? "N/A")</span>
-                        <span role="cell" title="@(alert.NewValue ?? "N/A")">@(alert.NewValue ?? "N/A")</span>
-                        <span role="cell" title="@(alert.RegisterValue ?? "N/A")">@(alert.RegisterValue ?? "N/A")</span>
-                        <span role="cell">@alert.DetectedForName</span>
-                        <span role="cell"><a class="source-link" href="/ChecklistReportDetail?id=@alert.ReportId">Report</a></span>
-                        <span role="cell"><input class="review-input" name="reviewNote" placeholder="Review note" /></span>
-                        <span class="action-cell" role="cell">
-                            <button class="approve-btn" type="submit" name="decision" value="approve">Approve</button>
-                            <button class="reject-btn" type="submit" name="decision" value="reject">Reject</button>
-                        </span>
-                    </form>
+                    <div class="variance-row variance-group-row" role="row">
+                        <span class="group-cell" role="cell">@dateGroup.DateLabel - @dateGroup.TotalAlerts alert@(dateGroup.TotalAlerts == 1 ? string.Empty : "s")</span>
+                    </div>
+
+                    @foreach (var callsignGroup in dateGroup.CallsignGroups)
+                    {
+                        <div class="variance-row variance-subgroup-row" role="row">
+                            <span class="group-cell" role="cell">@callsignGroup.Callsign - @callsignGroup.TotalAlerts alert@(callsignGroup.TotalAlerts == 1 ? string.Empty : "s")</span>
+                        </div>
+
+                        @foreach (var alert in callsignGroup.Alerts)
+                        {
+                            <form class="variance-row variance-item" method="post" asp-page-handler="Review" role="row">
+                                <input type="hidden" name="alertId" value="@alert.Id" />
+                                <span role="cell">@alert.SourceDateUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                                <span role="cell"><strong>@alert.Callsign</strong></span>
+                                <span role="cell">@alert.RegistrationNumber</span>
+                                <span role="cell">@alert.AreaName</span>
+                                <span role="cell" title="@alert.AssetLabel">@alert.AssetLabel</span>
+                                <span role="cell" title="@alert.FieldKey">@alert.FieldKey</span>
+                                <span role="cell" title="@(alert.PreviousValue ?? "N/A")">@(alert.PreviousValue ?? "N/A")</span>
+                                <span role="cell" title="@(alert.NewValue ?? "N/A")">@(alert.NewValue ?? "N/A")</span>
+                                <span role="cell" title="@(alert.RegisterValue ?? "N/A")">@(alert.RegisterValue ?? "N/A")</span>
+                                <span role="cell">@alert.DetectedForName</span>
+                                <span role="cell"><a class="source-link" href="/ChecklistReportDetail?id=@alert.ReportId">Report</a></span>
+                                <span role="cell"><input class="review-input" name="reviewNote" placeholder="Review note" /></span>
+                                <span class="action-cell" role="cell">
+                                    <button class="approve-btn" type="submit" name="decision" value="approve">Approve</button>
+                                    <button class="reject-btn" type="submit" name="decision" value="reject">Reject</button>
+                                </span>
+                            </form>
+                        }
+                    }
                 }
             </div>
         }
@@ -82,6 +96,9 @@
 .variance-row { display: grid; grid-template-columns: 135px 86px 95px 110px minmax(145px, 1fr) 100px 105px 105px 105px 140px 76px 150px 140px; align-items: center; min-width: 1480px; }
 .variance-header { min-height: 34px; background: #334155; color: #fff; }
 .variance-header span { padding: 0 8px; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+.variance-group-row { min-height: 32px; background: rgba(51, 65, 85, .08); border-top: 1px solid rgba(66,84,102,.16); }
+.variance-subgroup-row { min-height: 30px; background: rgba(18, 108, 132, .06); border-top: 1px solid rgba(66,84,102,.1); }
+.group-cell { grid-column: 1 / -1; padding: 0 8px; color: #334155; font-size: 12px; font-weight: 900; text-align: left; }
 .variance-item { min-height: 36px; margin: 0; border-top: 1px solid rgba(66,84,102,.1); color: #1f2937; }
 .variance-item:nth-child(even) { background: rgba(248,250,252,.72); }
 .variance-item span { padding: 0 8px; color: #52606d; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -53,7 +53,7 @@ public class ReportIssueModel : PageModel
     [BindProperty] public string? NotificationMethod { get; set; }
     [BindProperty] public string? IssueType { get; set; }
     [BindProperty] public string? IssueTypeOther { get; set; }
-    [BindProperty] public string? RelatedItem { get; set; }
+    [BindProperty(SupportsGet = true)] public string? RelatedItem { get; set; }
     [BindProperty] public string? Location { get; set; }
     [BindProperty] public string? Severity { get; set; }
     [BindProperty] public string? OperationalStatus { get; set; }

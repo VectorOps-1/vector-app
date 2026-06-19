@@ -24,6 +24,7 @@ public class ChecklistVarianceAlertsModel : PageModel
     }
 
     public List<VarianceAlertItem> Alerts { get; private set; } = new();
+    public List<VarianceAlertDateGroup> AlertDateGroups { get; private set; } = new();
     public string? SuccessMessage { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
@@ -84,6 +85,31 @@ public class ChecklistVarianceAlertsModel : PageModel
             .ThenBy(alert => alert.AssetLabel)
             .ToList();
 
+        AlertDateGroups = Alerts
+            .GroupBy(alert => alert.SourceDateUtc.ToLocalTime().Date)
+            .OrderByDescending(group => group.Key)
+            .Select(dateGroup => new VarianceAlertDateGroup
+            {
+                Date = dateGroup.Key,
+                DateLabel = dateGroup.Key.ToString("yyyy-MM-dd"),
+                TotalAlerts = dateGroup.Count(),
+                CallsignGroups = dateGroup
+                    .GroupBy(alert => string.IsNullOrWhiteSpace(alert.Callsign) ? "No callsign" : alert.Callsign)
+                    .OrderBy(group => group.Key)
+                    .Select(callsignGroup => new VarianceAlertCallsignGroup
+                    {
+                        Callsign = callsignGroup.Key,
+                        TotalAlerts = callsignGroup.Count(),
+                        Alerts = callsignGroup
+                            .OrderBy(alert => alert.AreaName)
+                            .ThenBy(alert => alert.AssetLabel)
+                            .ThenBy(alert => alert.FieldKey)
+                            .ToList()
+                    })
+                    .ToList()
+            })
+            .ToList();
+
         return Page();
     }
 
@@ -120,5 +146,20 @@ public class ChecklistVarianceAlertsModel : PageModel
         public string? RegisterValue { get; set; }
         public bool RequiresRegisterUpdate { get; set; }
         public DateTime CreatedAtUtc { get; set; }
+    }
+
+    public class VarianceAlertDateGroup
+    {
+        public DateTime Date { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public int TotalAlerts { get; set; }
+        public List<VarianceAlertCallsignGroup> CallsignGroups { get; set; } = new();
+    }
+
+    public class VarianceAlertCallsignGroup
+    {
+        public string Callsign { get; set; } = string.Empty;
+        public int TotalAlerts { get; set; }
+        public List<VarianceAlertItem> Alerts { get; set; } = new();
     }
 }

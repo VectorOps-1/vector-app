@@ -73,7 +73,7 @@ public class ChecklistReportPdfService
         yield return string.Empty;
 
         yield return "Checklist Template";
-        yield return $"Template: {template?.Name ?? "Not linked"}";
+        yield return $"Template: {TemplateName(report)}";
         yield return $"Template type: {template?.ChecklistType ?? "Not linked"}";
         yield return $"Template vehicle target: {template?.TargetVehicleType ?? "Not linked"}";
         yield return $"Template version at check: {Text(report.ChecklistTemplateVersion)}";
@@ -91,13 +91,8 @@ public class ChecklistReportPdfService
         yield return $"Equipment copied summary: {Text(report.EquipmentSameAsPreviousCopiedSummary)}";
         yield return string.Empty;
 
-        yield return "Operational Section";
-        yield return $"Lights: {Text(report.LightsStatus)}";
-        yield return $"Sirens: {Text(report.SirensStatus)}";
-        yield return $"Warning lights: {Text(report.WarningLightsStatus)}";
-        yield return $"Tyres: {Text(report.TyresStatus)}";
-        yield return $"Ops radio connectivity: {Text(report.RadioConnectivityStatus)}";
-        yield return $"Operational notes: {Text(report.OperationalNotes)}";
+        yield return "Checklist Evidence";
+        yield return $"Checklist responses: {Text(report.OperationalNotes)}";
         yield return string.Empty;
 
         yield return "Damage / Unit Schematic / General Notes";
@@ -268,6 +263,18 @@ public class ChecklistReportPdfService
     private static string Text(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "N/A" : value.Trim();
+    }
+
+    private static string TemplateName(DailyVehicleReadinessReport report)
+    {
+        if (report.ChecklistTemplate is not null)
+        {
+            return ChecklistDisplayService.TemplateName(report.ChecklistTemplate.Name);
+        }
+
+        return report.ChecklistTemplateId.HasValue
+            ? "Historical snapshot - template unavailable"
+            : "Historical snapshot - no template link";
     }
 
     private static string YesNo(bool value)

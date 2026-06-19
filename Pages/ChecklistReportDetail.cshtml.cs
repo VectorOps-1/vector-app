@@ -73,6 +73,23 @@ public class ChecklistReportDetailModel : PageModel
         return value ? "Yes" : "No";
     }
 
+    public string TemplateName(DailyVehicleReadinessReport report)
+    {
+        if (report.ChecklistTemplate is not null)
+        {
+            return ChecklistDisplayService.TemplateName(report.ChecklistTemplate.Name);
+        }
+
+        return report.ChecklistTemplateId.HasValue
+            ? "Historical snapshot - template unavailable"
+            : "Historical snapshot - no template link";
+    }
+
+    public string TemplateVersion(DailyVehicleReadinessReport report)
+    {
+        return report.ChecklistTemplateVersion ?? report.ChecklistTemplate?.Version ?? "N/A";
+    }
+
     public string ReadinessStatusClass(string? readinessStatus)
     {
         if (string.Equals(readinessStatus, "Operational", StringComparison.OrdinalIgnoreCase) ||

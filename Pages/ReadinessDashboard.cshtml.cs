@@ -198,10 +198,6 @@ public class ReadinessDashboardModel : PageModel
                 .ToList();
         }
 
-        var vehicleRows = vehicles
-            .Select(vehicle => BuildVehicleRow(vehicle, latestReports.GetValueOrDefault(vehicle.Id), openIssues))
-            .ToList();
-
         var engineSummary = await _readinessScoring.ScoreDashboardAsync(companyId, vehicles, latestReports, openIssues);
         Summary = new DashboardSummary
         {
@@ -215,141 +211,6 @@ public class ReadinessDashboardModel : PageModel
             ScorePercent = engineSummary.ScorePercent,
             ScoreClass = engineSummary.ScoreClass
         };
-    }
-
-    private static VehicleReadinessRow BuildVehicleRow(
-        Vehicle vehicle,
-        DailyVehicleReadinessReport? report,
-        List<IssueReport> openIssues)
-    {
-        var openIssueCount = openIssues.Count(issue =>
-            MatchesIssue(issue, vehicle.RegistrationNumber) ||
-            MatchesIssue(issue, vehicle.Callsign));
-
-        var checkedThisShift = IsReadinessCheckComplete(report);
-        var vehicleUnavailable = IsUnavailable(vehicle.Status);
-        var reportUnavailable = report is not null &&
-            (IsUnavailable(report.ReadinessStatus) || report.CriticalIssueCount > 0);
-        var equipmentIssue = report is not null && HasEquipmentIssue(report);
-        var warningCount = report?.WarningIssueCount ?? 0;
-
-        var critical = !checkedThisShift || vehicleUnavailable || reportUnavailable;
-        var warning = !critical && (warningCount > 0 || equipmentIssue || openIssueCount > 0 || !IsOperational(report?.ReadinessStatus));
-        var readinessLabel = critical ? "Not ready" : warning ? "Attention" : "Ready";
-
-        var issueParts = new List<string>();
-        if (!checkedThisShift)
-        {
-            issueParts.Add("check missing");
-        }
-        if (vehicleUnavailable)
-        {
-            issueParts.Add("vehicle unavailable");
-        }
-        if (reportUnavailable)
-        {
-            issueParts.Add("critical check issue");
-        }
-        if (equipmentIssue)
-        {
-            issueParts.Add("equipment attention");
-        }
-        if (openIssueCount > 0)
-        {
-            issueParts.Add($"{openIssueCount} open issue{(openIssueCount == 1 ? string.Empty : "s")}");
-        }
-
-        return new VehicleReadinessRow
-        {
-            VehicleId = vehicle.Id,
-            RegistrationNumber = vehicle.RegistrationNumber,
-            Callsign = vehicle.Callsign,
-            VehicleType = vehicle.VehicleType,
-            AreaName = vehicle.CurrentOperationalArea?.Name ?? "Unallocated",
-            VehicleStatus = vehicle.Status,
-            CheckedThisShift = checkedThisShift,
-            LastCheckAtUtc = report?.SubmittedAtUtc ?? report?.InspectionDateUtc,
-            LastCheckedByName = report?.PerformedByUser?.FullName,
-            ReadinessStatus = readinessLabel,
-            StatusClass = critical ? "critical" : warning ? "warning" : "ready",
-            EquipmentIssue = equipmentIssue,
-            OpenIssueCount = openIssueCount,
-            IssueSummary = issueParts.Count == 0 ? "No blocking data captured" : string.Join(", ", issueParts)
-        };
-    }
-
-    private static DashboardSummary BuildSummary(List<VehicleReadinessRow> rows, int openIssueCount)
-    {
-        var totalVehicles = rows.Count;
-        var readyVehicles = rows.Count(row => row.StatusClass == "ready");
-        var checkedVehicles = rows.Count(row => row.CheckedThisShift);
-        var unavailableVehicles = rows.Count(row => row.StatusClass == "critical");
-        var equipmentWarnings = rows.Count(row => row.EquipmentIssue);
-        var missingChecks = rows.Count(row => !row.CheckedThisShift);
-        var score = totalVehicles == 0 ? 0 : (int)Math.Round((double)readyVehicles / totalVehicles * 100);
-
-        return new DashboardSummary
-        {
-            TotalVehicles = totalVehicles,
-            CheckedVehicles = checkedVehicles,
-            ReadyVehicles = readyVehicles,
-            UnavailableVehicles = unavailableVehicles,
-            MissingChecks = missingChecks,
-            OpenIssues = openIssueCount,
-            EquipmentWarnings = equipmentWarnings,
-            ScorePercent = score,
-            ScoreClass = score >= 90 ? "score-green" : score >= 75 ? "score-teal" : score >= 50 ? "score-amber" : "score-red"
-        };
-    }
-
-    private static bool HasEquipmentIssue(DailyVehicleReadinessReport report)
-    {
-        if (!report.EquipmentChecks.Any())
-        {
-            return true;
-        }
-
-        return report.EquipmentChecks.Any(check =>
-            !check.IsOperational ||
-            IsProblemStatus(check.PresentStatus, "Present") ||
-            IsProblemStatus(check.BatteryStatus, "Full", "Acceptable", "Charging", "Not applicable", "N/A") ||
-            IsProblemStatus(check.DamageStatus, "No damage", "None", "Good", "Not applicable", "N/A") ||
-            IsProblemStatus(check.ReadinessImpact, "None"));
-    }
-
-    private static bool IsReadinessCheckComplete(DailyVehicleReadinessReport? report)
-    {
-        return report is not null &&
-            !string.Equals(report.WorkflowStatus, "Draft", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(report.LastSavedSection, "Equipment", StringComparison.OrdinalIgnoreCase) &&
-            report.EquipmentChecks.Any();
-    }
-
-    private static bool IsProblemStatus(string? value, params string[] acceptedValues)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return !acceptedValues.Any(accepted => string.Equals(value, accepted, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool IsOperational(string? value)
-    {
-        return string.Equals(value, "Operational", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsUnavailable(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return value.Contains("out of service", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("inactive", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool MatchesIssue(IssueReport issue, string? needle)
@@ -387,21 +248,4 @@ public class ReadinessDashboardModel : PageModel
         public string ScoreClass { get; set; } = "score-red";
     }
 
-    public sealed class VehicleReadinessRow
-    {
-        public int VehicleId { get; set; }
-        public string RegistrationNumber { get; set; } = string.Empty;
-        public string Callsign { get; set; } = string.Empty;
-        public string VehicleType { get; set; } = string.Empty;
-        public string AreaName { get; set; } = string.Empty;
-        public string VehicleStatus { get; set; } = string.Empty;
-        public bool CheckedThisShift { get; set; }
-        public DateTime? LastCheckAtUtc { get; set; }
-        public string? LastCheckedByName { get; set; }
-        public string ReadinessStatus { get; set; } = string.Empty;
-        public string StatusClass { get; set; } = string.Empty;
-        public bool EquipmentIssue { get; set; }
-        public int OpenIssueCount { get; set; }
-        public string IssueSummary { get; set; } = string.Empty;
-    }
 }
