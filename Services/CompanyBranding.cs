@@ -5,7 +5,8 @@ namespace vector_app_local.Services;
 public static class CompanyBranding
 {
     private const string DefaultLogoPath = "/acuityops-app-icon-light.png";
-    public const string DefaultCompanyName = "Company name not set";
+    private const string CompanyLogoFileName = "company-logo.png";
+    public const string DefaultCompanyName = "Not configured yet";
 
     public static string GetLogoPath(IWebHostEnvironment environment)
     {
@@ -14,27 +15,18 @@ public static class CompanyBranding
 
     public static string GetLogoPath(IWebHostEnvironment environment, Company? company)
     {
-        if (company is not null)
-        {
-            var uploadedCompanyLogoPath = GetUploadedCompanyLogoPath(environment, company.Id);
-            if (uploadedCompanyLogoPath is not null)
-            {
-                return uploadedCompanyLogoPath;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(company?.LogoStoragePath) &&
-            !IsSeedXMedLogo(company.LogoStoragePath))
-        {
-            return WithVersion(environment, company.LogoStoragePath) ?? company.LogoStoragePath;
-        }
-
-        if (company is not null)
+        if (company is null)
         {
             return DefaultLogoPath;
         }
 
-        return GetLegacyLogoPath(environment);
+        var storedLogoPath = company.LogoStoragePath;
+        if (IsCompanyScopedLogoPath(company, storedLogoPath))
+        {
+            return WithVersion(environment, storedLogoPath!) ?? DefaultLogoPath;
+        }
+
+        return DefaultLogoPath;
     }
 
     public static string GetDisplayCompanyName(Company? company)
@@ -58,48 +50,21 @@ public static class CompanyBranding
 
         var normalized = companyName.Trim();
         return string.Equals(normalized, "X Med", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "Random Med", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(normalized, "Client Business Name", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? GetUploadedCompanyLogoPath(IWebHostEnvironment environment, int companyId)
+    private static bool IsCompanyScopedLogoPath(Company company, string? logoStoragePath)
     {
-        var uploadFolder = Path.Combine(environment.WebRootPath, "uploads", "company", companyId.ToString());
-        if (!Directory.Exists(uploadFolder))
+        if (string.IsNullOrWhiteSpace(logoStoragePath))
         {
-            return null;
+            return false;
         }
 
-        var logoFile = Directory.GetFiles(uploadFolder, "company-logo.*")
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .FirstOrDefault();
-        if (logoFile is null)
-        {
-            return null;
-        }
+        var cleanPath = logoStoragePath.Split('?', 2)[0];
+        var expectedPath = $"/uploads/company/{company.Id}/{CompanyLogoFileName}";
 
-        return $"/uploads/company/{companyId}/{Path.GetFileName(logoFile)}?v={File.GetLastWriteTimeUtc(logoFile).Ticks}";
-    }
-
-    private static bool IsSeedXMedLogo(string? logoStoragePath)
-    {
-        return string.Equals(logoStoragePath?.Split('?', 2)[0], "/x-med-logo.svg", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string GetLegacyLogoPath(IWebHostEnvironment environment)
-    {
-        var uploadFolder = Path.Combine(environment.WebRootPath, "uploads", "company");
-        if (!Directory.Exists(uploadFolder))
-        {
-            return DefaultLogoPath;
-        }
-
-        var logoFile = Directory.GetFiles(uploadFolder, "company-logo.*").FirstOrDefault();
-        if (logoFile is null)
-        {
-            return DefaultLogoPath;
-        }
-
-        return $"/uploads/company/{Path.GetFileName(logoFile)}?v={File.GetLastWriteTimeUtc(logoFile).Ticks}";
+        return string.Equals(cleanPath, expectedPath, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? WithVersion(IWebHostEnvironment environment, string logoStoragePath)
@@ -117,19 +82,5 @@ public static class CompanyBranding
         }
 
         return $"{logoStoragePath.Split('?', 2)[0]}?v={File.GetLastWriteTimeUtc(filePath).Ticks}";
-    }
-
-    public static string GetCompanyName(IWebHostEnvironment environment)
-    {
-        return DefaultCompanyName;
-    }
-
-    public static void SaveCompanyName(IWebHostEnvironment environment, string companyName)
-    {
-        var profileFolder = Path.Combine(environment.WebRootPath, "uploads", "company");
-        Directory.CreateDirectory(profileFolder);
-
-        var namePath = Path.Combine(profileFolder, "company-name.txt");
-        File.WriteAllText(namePath, companyName.Trim());
     }
 }

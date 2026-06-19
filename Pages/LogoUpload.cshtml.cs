@@ -33,6 +33,7 @@ public class LogoUploadModel : PageModel
 
     public string? ExistingLogoPath { get; private set; }
     public string? StatusMessage { get; private set; }
+    public bool CanRemoveLogo { get; private set; }
     public bool ActionSaved { get; private set; }
     public string ActionConfirmationMessage { get; private set; } = "Company logo saved.";
     public string MaxLogoSizeLabel { get; } = "4 MB";
@@ -45,8 +46,7 @@ public class LogoUploadModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
-        await AdoptLegacyUploadIfNeededAsync(company);
-        ExistingLogoPath = GetExistingLogoPath(company);
+        ApplyLogoState(company);
         return Page();
     }
 
@@ -75,7 +75,7 @@ public class LogoUploadModel : PageModel
         StatusMessage = "Logo removed. Default AcuityOps branding will be used until a new company logo is uploaded.";
         ActionSaved = true;
         ActionConfirmationMessage = "Company logo removed.";
-        ExistingLogoPath = GetExistingLogoPath(company);
+        ApplyLogoState(company);
         return Page();
     }
 
@@ -90,7 +90,7 @@ public class LogoUploadModel : PageModel
         if (LogoFile is null || LogoFile.Length == 0)
         {
             StatusMessage = "Choose a transparent PNG logo before saving.";
-            ExistingLogoPath = GetExistingLogoPath(company);
+            ApplyLogoState(company);
             return Page();
         }
 
@@ -98,14 +98,14 @@ public class LogoUploadModel : PageModel
         if (!AllowedExtensions.Contains(extension) || !AllowedContentTypes.Contains(LogoFile.ContentType))
         {
             StatusMessage = "Only PNG logo files are supported. Use a transparent PNG for the cleanest borderless result.";
-            ExistingLogoPath = GetExistingLogoPath(company);
+            ApplyLogoState(company);
             return Page();
         }
 
         if (LogoFile.Length > MaxLogoBytes)
         {
             StatusMessage = $"The logo file is too large. Upload a PNG smaller than {MaxLogoSizeLabel}.";
-            ExistingLogoPath = GetExistingLogoPath(company);
+            ApplyLogoState(company);
             return Page();
         }
 
@@ -135,8 +135,14 @@ public class LogoUploadModel : PageModel
 
         StatusMessage = "Logo saved.";
         ActionSaved = true;
-        ExistingLogoPath = GetExistingLogoPath(company);
+        ApplyLogoState(company);
         return Page();
+    }
+
+    private void ApplyLogoState(Company company)
+    {
+        ExistingLogoPath = GetExistingLogoPath(company);
+        CanRemoveLogo = !string.IsNullOrWhiteSpace(company.LogoStoragePath);
     }
 
     private string? GetExistingLogoPath(Company company)
@@ -146,61 +152,6 @@ public class LogoUploadModel : PageModel
         return logoPath.StartsWith("/acuityops-app-icon-light.png", StringComparison.OrdinalIgnoreCase)
             ? null
             : logoPath;
-    }
-
-    private async Task AdoptLegacyUploadIfNeededAsync(Company company)
-    {
-        if (!ShouldAdoptLegacyUpload(company))
-        {
-            return;
-        }
-
-        var legacyFolder = Path.Combine(_environment.WebRootPath, "uploads", "company");
-        if (!Directory.Exists(legacyFolder))
-        {
-            return;
-        }
-
-        var legacyFile = Directory.GetFiles(legacyFolder, "company-logo.*")
-            .OrderByDescending(System.IO.File.GetLastWriteTimeUtc)
-            .FirstOrDefault();
-
-        if (legacyFile is null)
-        {
-            return;
-        }
-
-        var extension = Path.GetExtension(legacyFile).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(extension))
-        {
-            return;
-        }
-
-        var uploadFolder = GetCompanyLogoFolder(company.Id);
-        Directory.CreateDirectory(uploadFolder);
-
-        var fileName = $"company-logo{extension}";
-        var destinationPath = Path.Combine(uploadFolder, fileName);
-        System.IO.File.Copy(legacyFile, destinationPath, overwrite: true);
-
-        company.LogoStoragePath = $"/uploads/company/{company.Id}/{fileName}";
-        company.UpdatedAtUtc = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
-    }
-
-    private static bool ShouldAdoptLegacyUpload(Company company)
-    {
-        if (string.IsNullOrWhiteSpace(company.LogoStoragePath))
-        {
-            return false;
-        }
-
-        if (company.LogoStoragePath.Equals("/x-med-logo.svg", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return company.LogoStoragePath.StartsWith("/uploads/company/company-logo.", StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetCompanyLogoFolder(int companyId)

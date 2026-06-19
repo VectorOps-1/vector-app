@@ -10,6 +10,8 @@ public class AccessModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private const string AcuityOpsWorkspaceName = "AcuityOps";
+    private const string AcuityOpsLogoPath = "/acuityops-app-icon-light.png";
 
     public AccessModel(VectorDbContext db, IWebHostEnvironment environment)
     {
@@ -17,9 +19,9 @@ public class AccessModel : PageModel
         _environment = environment;
     }
 
-    public string Workspace { get; private set; } = "Selected Workspace";
+    public string Workspace { get; private set; } = AcuityOpsWorkspaceName;
     public bool ShowSplash { get; private set; }
-    public string LogoPath { get; private set; } = "/acuityops-app-icon-light.png";
+    public string LogoPath { get; private set; } = AcuityOpsLogoPath;
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -57,10 +59,9 @@ public class AccessModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
-        Workspace = CompanyBranding.GetDisplayCompanyName(company);
-        LogoPath = CompanyBranding.GetLogoPath(_environment, company);
+        Workspace = AcuityOpsWorkspaceName;
+        LogoPath = AcuityOpsLogoPath;
         ViewData["ClientName"] = Workspace;
-        HttpContext.Session.SetString("Vector.CompanyName", Workspace);
 
         return Page();
     }

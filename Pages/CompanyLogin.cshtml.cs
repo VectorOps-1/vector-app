@@ -29,7 +29,7 @@ public class CompanyLoginModel : PageModel
 
     public string? LoginError { get; private set; }
     public bool ShowLoginForm { get; private set; }
-    public string ClientName { get; private set; } = "Company Workspace";
+    public string WorkspaceContext { get; private set; } = "AcuityOps company access gate";
     public string LogoPath { get; private set; } = AccessGateLogoPath;
     public string PageSubtitle { get; private set; } = "Use the company workspace link issued during onboarding";
     public string SecurityNote { get; private set; } = "This company-level access gate is separate from individual staff, operational management, and senior management logins.";
@@ -49,9 +49,8 @@ public class CompanyLoginModel : PageModel
         }
 
         ShowLoginForm = true;
-        PageSubtitle = GetAccessCodeSubtitle(company);
+        PageSubtitle = "Enter the company access code issued during onboarding";
         CompanyAccessCode = company.WorkspaceAccessCode;
-        ApplyCompanyBranding(company);
     }
 
     public async Task<IActionResult> OnPostAsync(string? workspaceSlug)
@@ -69,8 +68,7 @@ public class CompanyLoginModel : PageModel
         }
 
         ShowLoginForm = true;
-        PageSubtitle = GetAccessCodeSubtitle(company);
-        ApplyCompanyBranding(company);
+        PageSubtitle = "Enter the company access code issued during onboarding";
 
         if (!CompanyWorkspaceAccess.AccessCodeMatches(company, CompanyAccessCode))
         {
@@ -94,21 +92,6 @@ public class CompanyLoginModel : PageModel
             $"{CompanyBranding.GetDisplayCompanyName(company)} company-level login accepted.");
 
         return RedirectToPage("/Access");
-    }
-
-    private void ApplyCompanyBranding(vector_app_local.Models.Company company)
-    {
-        ClientName = CompanyBranding.GetDisplayCompanyName(company);
-        LogoPath = AccessGateLogoPath;
-        ViewData["ClientName"] = ClientName;
-    }
-
-    private static string GetAccessCodeSubtitle(vector_app_local.Models.Company company)
-    {
-        var savedCompanyName = CompanyBranding.GetSavedCompanyName(company);
-        return savedCompanyName is null
-            ? "Enter the company access code for this workspace"
-            : $"Enter the company access code for {savedCompanyName}";
     }
 
     private async Task<vector_app_local.Models.Company?> LoadCompanyFromWorkspaceAsync(string? workspaceSlug)
