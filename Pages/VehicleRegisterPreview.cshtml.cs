@@ -43,7 +43,6 @@ public class VehicleRegisterPreviewModel : PageModel
             FileName = fileName;
         }
 
-        LocationOptions = await _locationOptions.GetOperationalAreaOptionsAsync(currentUser.CompanyId);
-        return Page();
+        return RedirectToPage("/VehicleRegister", new { view = "register", confirmation = "vehicle-source-uploaded" });
     }
 }

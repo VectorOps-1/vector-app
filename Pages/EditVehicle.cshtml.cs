@@ -30,7 +30,6 @@ public class EditVehicleModel : PageModel
     [BindProperty] public string? VehicleSubtype { get; set; }
     [BindProperty] public string? CustomVehicleSubtype { get; set; }
     [BindProperty] public string? QualificationLevel { get; set; }
-    [BindProperty] public string? UnitSchematicKey { get; set; }
     [BindProperty] public string? VinNumber { get; set; }
     [BindProperty] public string? ChassisNumber { get; set; }
     [BindProperty] public string? LicenseNumber { get; set; }
@@ -46,7 +45,6 @@ public class EditVehicleModel : PageModel
     public bool ActionSaved { get; private set; }
     public List<SelectListItem> LocationOptions { get; private set; } = new();
     public List<SelectListItem> VehicleSubtypeOptions { get; private set; } = new();
-    public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
 
     public async Task<IActionResult> OnGetAsync(int vehicleId, string? returnUrl)
     {
@@ -142,7 +140,6 @@ public class EditVehicleModel : PageModel
         vehicle.VehicleSubtype = subtype;
         vehicle.VehicleType = string.IsNullOrWhiteSpace(vehicleType) ? "Vehicle" : vehicleType.Trim();
         vehicle.QualificationLevel = NormalizeOptional(QualificationLevel);
-        vehicle.SchematicType = NormalizeOptional(UnitSchematicKey);
         vehicle.VinNumber = NormalizeOptional(VinNumber);
         vehicle.ChassisNumber = NormalizeOptional(ChassisNumber);
         vehicle.LicenseNumber = NormalizeOptional(LicenseNumber);
@@ -214,7 +211,6 @@ public class EditVehicleModel : PageModel
         VehicleFunction = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
         VehicleSubtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
         QualificationLevel = vehicle.QualificationLevel;
-        UnitSchematicKey = vehicle.SchematicType;
         VinNumber = vehicle.VinNumber;
         ChassisNumber = vehicle.ChassisNumber;
         LicenseNumber = vehicle.LicenseNumber;

@@ -8,6 +8,8 @@ public class VehicleSchematicAssignmentService
 {
     public const string FunctionScope = "Function";
     public const string SubtypeScope = "Subtype";
+    public const string AreaScope = "Area";
+    public const string VehicleScope = "Vehicle";
 
     private readonly VectorDbContext _db;
 
@@ -18,14 +20,43 @@ public class VehicleSchematicAssignmentService
 
     public async Task<VehicleSchematicDefinition?> ResolveForVehicleAsync(int companyId, Vehicle vehicle)
     {
-        var specific = VehicleSchematicLibrary.Find(vehicle.SchematicType ?? string.Empty);
-        if (specific is not null)
+        var vehicleKey = await _db.VehicleSchematicAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.CompanyId == companyId &&
+                assignment.ScopeType == VehicleScope &&
+                assignment.VehicleId == vehicle.Id)
+            .OrderByDescending(assignment => assignment.UpdatedAtUtc ?? assignment.CreatedAtUtc)
+            .Select(assignment => assignment.SchematicKey)
+            .FirstOrDefaultAsync();
+
+        var vehicleSchematic = VehicleSchematicLibrary.Find(vehicleKey ?? string.Empty);
+        if (vehicleSchematic is not null)
         {
-            return specific;
+            return vehicleSchematic;
         }
 
         var function = Normalize(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
         var subtype = Normalize(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
+
+        if (vehicle.CurrentOperationalAreaId.HasValue)
+        {
+            var areaKey = await _db.VehicleSchematicAssignments
+                .AsNoTracking()
+                .Where(assignment =>
+                    assignment.CompanyId == companyId &&
+                    assignment.ScopeType == AreaScope &&
+                    assignment.OperationalAreaId == vehicle.CurrentOperationalAreaId.Value)
+                .OrderByDescending(assignment => assignment.UpdatedAtUtc ?? assignment.CreatedAtUtc)
+                .Select(assignment => assignment.SchematicKey)
+                .FirstOrDefaultAsync();
+
+            var areaSchematic = VehicleSchematicLibrary.Find(areaKey ?? string.Empty);
+            if (areaSchematic is not null)
+            {
+                return areaSchematic;
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(subtype))
         {
@@ -70,48 +101,79 @@ public class VehicleSchematicAssignmentService
     {
         var normalizedFunction = Normalize(vehicleFunction)
             ?? throw new InvalidOperationException("Vehicle function is required.");
-        await UpsertAssignmentAsync(companyId, userId, FunctionScope, normalizedFunction, null, schematicKey);
+        await UpsertAssignmentAsync(companyId, userId, FunctionScope, normalizedFunction, null, null, null, schematicKey);
     }
 
     public async Task AssignSubtypeAsync(int companyId, int userId, string? vehicleFunction, string vehicleSubtype, string schematicKey)
     {
         var normalizedSubtype = Normalize(vehicleSubtype)
             ?? throw new InvalidOperationException("Vehicle subtype is required.");
-        await UpsertAssignmentAsync(companyId, userId, SubtypeScope, Normalize(vehicleFunction), normalizedSubtype, schematicKey);
+        await UpsertAssignmentAsync(companyId, userId, SubtypeScope, Normalize(vehicleFunction), normalizedSubtype, null, null, schematicKey);
     }
 
-    public async Task UnassignFunctionAsync(int companyId, string vehicleFunction)
+    public async Task AssignAreaAsync(int companyId, int userId, int operationalAreaId, string schematicKey)
     {
-        var normalizedFunction = Normalize(vehicleFunction);
-        if (normalizedFunction is null)
+        var areaExists = await _db.OperationalAreas.AnyAsync(area =>
+            area.CompanyId == companyId &&
+            area.Id == operationalAreaId);
+        if (!areaExists)
         {
-            return;
+            throw new InvalidOperationException("Selected area is not configured.");
         }
 
-        await _db.VehicleSchematicAssignments
-            .Where(assignment =>
-                assignment.CompanyId == companyId &&
-                assignment.ScopeType == FunctionScope &&
-                assignment.VehicleFunction == normalizedFunction)
-            .ExecuteDeleteAsync();
+        await UpsertAssignmentAsync(companyId, userId, AreaScope, null, null, operationalAreaId, null, schematicKey);
     }
 
-    public async Task UnassignSubtypeAsync(int companyId, string? vehicleFunction, string vehicleSubtype)
+    public async Task AssignVehicleAsync(int companyId, int userId, int vehicleId, string schematicKey)
     {
-        var normalizedSubtype = Normalize(vehicleSubtype);
-        if (normalizedSubtype is null)
+        var vehicle = await _db.Vehicles.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.Id == vehicleId);
+        if (vehicle is null)
         {
-            return;
+            throw new InvalidOperationException("Selected vehicle is not configured.");
         }
 
-        var normalizedFunction = Normalize(vehicleFunction);
-        await _db.VehicleSchematicAssignments
-            .Where(assignment =>
-                assignment.CompanyId == companyId &&
-                assignment.ScopeType == SubtypeScope &&
-                assignment.VehicleSubtype == normalizedSubtype &&
-                assignment.VehicleFunction == normalizedFunction)
-            .ExecuteDeleteAsync();
+        vehicle.SchematicType = null;
+        vehicle.UpdatedAtUtc = DateTime.UtcNow;
+
+        await UpsertAssignmentAsync(
+            companyId,
+            userId,
+            VehicleScope,
+            Normalize(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType),
+            Normalize(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType),
+            null,
+            vehicle.Id,
+            schematicKey);
+    }
+
+    public async Task<bool> UnassignAssignmentAsync(int companyId, int assignmentId)
+    {
+        var assignment = await _db.VehicleSchematicAssignments.FirstOrDefaultAsync(item =>
+            item.CompanyId == companyId &&
+            item.Id == assignmentId);
+        if (assignment is null)
+        {
+            return false;
+        }
+
+        _db.VehicleSchematicAssignments.Remove(assignment);
+
+        if (assignment.ScopeType == VehicleScope && assignment.VehicleId.HasValue)
+        {
+            var vehicle = await _db.Vehicles.FirstOrDefaultAsync(item =>
+                item.CompanyId == companyId &&
+                item.Id == assignment.VehicleId.Value);
+            if (vehicle is not null && !string.IsNullOrWhiteSpace(vehicle.SchematicType))
+            {
+                vehicle.SchematicType = null;
+                vehicle.UpdatedAtUtc = DateTime.UtcNow;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     private async Task UpsertAssignmentAsync(
@@ -120,6 +182,8 @@ public class VehicleSchematicAssignmentService
         string scopeType,
         string? vehicleFunction,
         string? vehicleSubtype,
+        int? operationalAreaId,
+        int? vehicleId,
         string schematicKey)
     {
         var schematic = VehicleSchematicLibrary.Find(schematicKey)
@@ -130,7 +194,9 @@ public class VehicleSchematicAssignmentService
             item.CompanyId == companyId &&
             item.ScopeType == scopeType &&
             item.VehicleFunction == vehicleFunction &&
-            item.VehicleSubtype == vehicleSubtype);
+            item.VehicleSubtype == vehicleSubtype &&
+            item.OperationalAreaId == operationalAreaId &&
+            item.VehicleId == vehicleId);
 
         if (assignment is null)
         {
@@ -140,6 +206,8 @@ public class VehicleSchematicAssignmentService
                 ScopeType = scopeType,
                 VehicleFunction = vehicleFunction,
                 VehicleSubtype = vehicleSubtype,
+                OperationalAreaId = operationalAreaId,
+                VehicleId = vehicleId,
                 CreatedByUserId = userId,
                 CreatedAtUtc = now
             };

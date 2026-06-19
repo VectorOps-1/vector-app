@@ -30,6 +30,7 @@ public class VehicleSchematicLibraryModel : PageModel
     public IReadOnlyList<string> Categories => OrderedCategories;
     public IReadOnlyList<string> FunctionOptions { get; private set; } = [];
     public IReadOnlyList<VehicleSubtypeOption> SubtypeOptions { get; private set; } = [];
+    public IReadOnlyList<OperationalAreaOption> OperationalAreaOptions { get; private set; } = [];
     public IReadOnlyList<VehicleOption> VehicleOptions { get; private set; } = [];
     public Dictionary<string, IReadOnlyList<SchematicAssignmentView>> AssignmentsBySchematicKey { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -108,6 +109,41 @@ public class VehicleSchematicLibraryModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostAssignAreaAsync(string schematicKey, int operationalAreaId)
+    {
+        var currentUser = await RequireCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        var schematic = VehicleSchematicLibrary.Find(schematicKey);
+        if (schematic is null)
+        {
+            StatusMessage = "Select a valid unit schematic before assigning it.";
+            return RedirectToPage();
+        }
+
+        var area = await _db.OperationalAreas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item =>
+                item.CompanyId == currentUser.CompanyId &&
+                item.Id == operationalAreaId &&
+                item.Status != "Inactive");
+        if (area is null)
+        {
+            StatusMessage = "Select an active area before assigning the schematic.";
+            return RedirectToPage();
+        }
+
+        await _schematicAssignments.AssignAreaAsync(currentUser.CompanyId, currentUser.Id, area.Id, schematic.Key);
+        AddAuditLog(currentUser, "Unit schematic area assignment", $"{currentUser.FullName} assigned {schematic.DisplayName} to area {area.Name}.");
+        await _db.SaveChangesAsync();
+
+        StatusMessage = $"{schematic.DisplayName} assigned to {area.Name}.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostAssignVehicleAsync(string schematicKey, int vehicleId)
     {
         var currentUser = await RequireCurrentUserAsync();
@@ -132,8 +168,7 @@ public class VehicleSchematicLibraryModel : PageModel
             return RedirectToPage();
         }
 
-        vehicle.SchematicType = schematic.Key;
-        vehicle.UpdatedAtUtc = DateTime.UtcNow;
+        await _schematicAssignments.AssignVehicleAsync(currentUser.CompanyId, currentUser.Id, vehicle.Id, schematic.Key);
         AddAuditLog(currentUser, "Unit schematic vehicle override", $"{currentUser.FullName} assigned {schematic.DisplayName} directly to {vehicle.Callsign} / {vehicle.RegistrationNumber}.");
         await _db.SaveChangesAsync();
 
@@ -141,11 +176,7 @@ public class VehicleSchematicLibraryModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostUnassignAsync(
-        string scopeType,
-        string? vehicleFunction,
-        string? vehicleSubtype,
-        int? vehicleId)
+    public async Task<IActionResult> OnPostUnassignAsync(int? assignmentId)
     {
         var currentUser = await RequireCurrentUserAsync();
         if (currentUser is null)
@@ -153,41 +184,46 @@ public class VehicleSchematicLibraryModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
-        var normalizedScope = Normalize(scopeType);
-        if (string.Equals(normalizedScope, VehicleSchematicAssignmentService.FunctionScope, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(vehicleFunction))
+        if (!assignmentId.HasValue)
         {
-            await _schematicAssignments.UnassignFunctionAsync(currentUser.CompanyId, vehicleFunction);
-            AddAuditLog(currentUser, "Unit schematic function unassigned", $"{currentUser.FullName} unassigned the function schematic for {vehicleFunction}.");
-            await _db.SaveChangesAsync();
-            StatusMessage = $"Function schematic unassigned for {vehicleFunction}.";
+            StatusMessage = "Select an exact schematic assignment link to unassign.";
             return RedirectToPage();
         }
 
-        if (string.Equals(normalizedScope, VehicleSchematicAssignmentService.SubtypeScope, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(vehicleSubtype))
-        {
-            await _schematicAssignments.UnassignSubtypeAsync(currentUser.CompanyId, vehicleFunction, vehicleSubtype);
-            AddAuditLog(currentUser, "Unit schematic subtype unassigned", $"{currentUser.FullName} unassigned the subtype schematic for {vehicleSubtype}.");
-            await _db.SaveChangesAsync();
-            StatusMessage = $"Subtype schematic unassigned for {vehicleSubtype}.";
-            return RedirectToPage();
-        }
-
-        if (string.Equals(normalizedScope, "Vehicle", StringComparison.OrdinalIgnoreCase) && vehicleId.HasValue)
-        {
-            var vehicle = await _db.Vehicles.FirstOrDefaultAsync(item =>
+        var assignment = await _db.VehicleSchematicAssignments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item =>
                 item.CompanyId == currentUser.CompanyId &&
-                item.Id == vehicleId.Value);
-            if (vehicle is not null)
-            {
-                vehicle.SchematicType = null;
-                vehicle.UpdatedAtUtc = DateTime.UtcNow;
-                AddAuditLog(currentUser, "Unit schematic vehicle override unassigned", $"{currentUser.FullName} cleared the direct schematic override for {vehicle.Callsign} / {vehicle.RegistrationNumber}.");
-                await _db.SaveChangesAsync();
-                StatusMessage = $"Direct schematic override cleared for {vehicle.Callsign} / {vehicle.RegistrationNumber}.";
-            }
+                item.Id == assignmentId.Value);
+        if (assignment is null)
+        {
+            StatusMessage = "Schematic assignment link was not found.";
+            return RedirectToPage();
         }
+
+        var areas = await _db.OperationalAreas
+            .AsNoTracking()
+            .Where(area => area.CompanyId == currentUser.CompanyId)
+            .ToListAsync();
+        var vehicles = await _db.Vehicles
+            .AsNoTracking()
+            .Where(vehicle =>
+                vehicle.CompanyId == currentUser.CompanyId &&
+                vehicle.Status != "Deleted")
+            .ToListAsync();
+        var schematicName = VehicleSchematicLibrary.Find(assignment.SchematicKey)?.DisplayName ?? assignment.SchematicKey;
+        var scopeLabel = AssignmentLabel(assignment, areas, vehicles);
+
+        var removed = await _schematicAssignments.UnassignAssignmentAsync(currentUser.CompanyId, assignment.Id);
+        if (!removed)
+        {
+            StatusMessage = "Schematic assignment link was not found.";
+            return RedirectToPage();
+        }
+
+        AddAuditLog(currentUser, "Unit schematic assignment unassigned", $"{currentUser.FullName} unassigned {schematicName} from {assignment.ScopeType}: {scopeLabel}.");
+        await _db.SaveChangesAsync();
+        StatusMessage = $"{schematicName} unassigned from {scopeLabel}.";
 
         return RedirectToPage();
     }
@@ -212,7 +248,9 @@ public class VehicleSchematicLibraryModel : PageModel
     {
         var vehicles = await _db.Vehicles
             .AsNoTracking()
-            .Where(vehicle => vehicle.CompanyId == companyId)
+            .Where(vehicle =>
+                vehicle.CompanyId == companyId &&
+                vehicle.Status != "Deleted")
             .OrderBy(vehicle => vehicle.VehicleFunction)
             .ThenBy(vehicle => vehicle.VehicleSubtype)
             .ThenBy(vehicle => vehicle.Callsign)
@@ -254,6 +292,22 @@ public class VehicleSchematicLibraryModel : PageModel
                 Normalize(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType)))
             .ToList();
 
+        var operationalAreas = await _db.OperationalAreas
+            .AsNoTracking()
+            .Where(area =>
+                area.CompanyId == companyId &&
+                area.Status != "Inactive")
+            .OrderBy(area => area.Name)
+            .ToListAsync();
+
+        OperationalAreaOptions = operationalAreas
+            .Select(area => new OperationalAreaOption(
+                area.Id,
+                area.Name,
+                area.AreaType,
+                vehicles.Count(vehicle => vehicle.CurrentOperationalAreaId == area.Id)))
+            .ToList();
+
         var scopedAssignments = await _db.VehicleSchematicAssignments
             .AsNoTracking()
             .Where(assignment => assignment.CompanyId == companyId)
@@ -269,35 +323,21 @@ public class VehicleSchematicLibraryModel : PageModel
             }
 
             var matchingVehicles = vehicles.Where(vehicle => AssignmentMatchesVehicle(assignment, vehicle)).ToList();
+            var scopeLabel = AssignmentLabel(assignment, operationalAreas, vehicles);
             assignmentRows.Add(new SchematicAssignmentView(
+                assignment.Id,
                 schematic.Key,
                 assignment.ScopeType,
-                AssignmentLabel(assignment),
-                MatchingVehicleSummary(matchingVehicles),
+                scopeLabel,
+                AffectedVehicleSummary(matchingVehicles),
                 matchingVehicles.Count,
-                string.Join(", ", matchingVehicles.Select(vehicle => vehicle.Callsign).Where(value => !string.IsNullOrWhiteSpace(value)).Take(5)),
-                null,
+                AffectedCallsignSummary(matchingVehicles),
+                "Explicit assignment rule",
+                assignment.OperationalAreaId,
+                assignment.VehicleId,
                 assignment.VehicleFunction,
                 assignment.VehicleSubtype));
         }
-
-        assignmentRows.AddRange(vehicles
-            .Select(vehicle => new
-            {
-                Vehicle = vehicle,
-                Schematic = VehicleSchematicLibrary.Find(vehicle.SchematicType ?? string.Empty)
-            })
-            .Where(item => item.Schematic is not null)
-            .Select(item => new SchematicAssignmentView(
-                item.Schematic!.Key,
-                "Vehicle",
-                $"{item.Vehicle.Callsign} / {item.Vehicle.RegistrationNumber}",
-                $"{Normalize(item.Vehicle.VehicleFunction) ?? "Unassigned function"} | {Normalize(item.Vehicle.VehicleSubtype) ?? "Unassigned subtype"}",
-                1,
-                item.Vehicle.Callsign,
-                item.Vehicle.Id,
-                item.Vehicle.VehicleFunction,
-                item.Vehicle.VehicleSubtype)));
 
         AssignmentsBySchematicKey = assignmentRows
             .GroupBy(item => item.SchematicKey, StringComparer.OrdinalIgnoreCase)
@@ -335,6 +375,9 @@ public class VehicleSchematicLibraryModel : PageModel
 
         return assignment.ScopeType switch
         {
+            VehicleSchematicAssignmentService.VehicleScope => assignment.VehicleId == vehicle.Id,
+            VehicleSchematicAssignmentService.AreaScope => assignment.OperationalAreaId.HasValue &&
+                assignment.OperationalAreaId == vehicle.CurrentOperationalAreaId,
             VehicleSchematicAssignmentService.FunctionScope => string.Equals(assignment.VehicleFunction, vehicleFunction, StringComparison.OrdinalIgnoreCase),
             VehicleSchematicAssignmentService.SubtypeScope => string.Equals(assignment.VehicleSubtype, vehicleSubtype, StringComparison.OrdinalIgnoreCase) &&
                 (string.IsNullOrWhiteSpace(assignment.VehicleFunction) || string.Equals(assignment.VehicleFunction, vehicleFunction, StringComparison.OrdinalIgnoreCase)),
@@ -342,7 +385,10 @@ public class VehicleSchematicLibraryModel : PageModel
         };
     }
 
-    private static string AssignmentLabel(VehicleSchematicAssignment assignment)
+    private static string AssignmentLabel(
+        VehicleSchematicAssignment assignment,
+        IReadOnlyList<OperationalArea> operationalAreas,
+        IReadOnlyList<Vehicle> vehicles)
     {
         if (assignment.ScopeType == VehicleSchematicAssignmentService.FunctionScope)
         {
@@ -356,17 +402,44 @@ public class VehicleSchematicLibraryModel : PageModel
                 : $"{assignment.VehicleFunction} / {assignment.VehicleSubtype}";
         }
 
+        if (assignment.ScopeType == VehicleSchematicAssignmentService.AreaScope)
+        {
+            return operationalAreas.FirstOrDefault(area => area.Id == assignment.OperationalAreaId)?.Name
+                ?? "Unknown area";
+        }
+
+        if (assignment.ScopeType == VehicleSchematicAssignmentService.VehicleScope)
+        {
+            var vehicle = vehicles.FirstOrDefault(item => item.Id == assignment.VehicleId);
+            return vehicle is null
+                ? "Unknown vehicle"
+                : $"{vehicle.Callsign} / {vehicle.RegistrationNumber}";
+        }
+
         return "Assignment";
     }
 
-    private static string MatchingVehicleSummary(IReadOnlyList<Vehicle> vehicles)
+    private static string AffectedVehicleSummary(IReadOnlyList<Vehicle> vehicles)
     {
         if (vehicles.Count == 0)
         {
-            return "No registered vehicles currently match this assignment.";
+            return "No registered vehicles are currently affected by this explicit rule.";
         }
 
-        return $"{vehicles.Count} registered vehicle(s) currently match this assignment.";
+        return $"{vehicles.Count} registered vehicle(s) currently affected by this rule.";
+    }
+
+    private static string AffectedCallsignSummary(IReadOnlyList<Vehicle> vehicles)
+    {
+        var callsigns = vehicles
+            .Select(vehicle => vehicle.Callsign)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Take(5)
+            .ToList();
+
+        return callsigns.Count == 0
+            ? string.Empty
+            : $"Affected callsigns: {string.Join(", ", callsigns)}";
     }
 
     private static (string? Function, string? Subtype) ParseSubtypeSelection(string? value)
@@ -387,10 +460,11 @@ public class VehicleSchematicLibraryModel : PageModel
 
     private static int ScopeSort(string scopeType) => scopeType switch
     {
-        "Vehicle" => 1,
-        VehicleSchematicAssignmentService.SubtypeScope => 2,
-        VehicleSchematicAssignmentService.FunctionScope => 3,
-        _ => 4
+        VehicleSchematicAssignmentService.VehicleScope => 1,
+        VehicleSchematicAssignmentService.AreaScope => 2,
+        VehicleSchematicAssignmentService.SubtypeScope => 3,
+        VehicleSchematicAssignmentService.FunctionScope => 4,
+        _ => 5
     };
 
     private static string? Normalize(string? value)
@@ -411,13 +485,21 @@ public class VehicleSchematicLibraryModel : PageModel
         public string Label => $"{Callsign} / {Registration} - {Function ?? "Unassigned"} / {Subtype ?? "Unassigned"}";
     }
 
+    public sealed record OperationalAreaOption(int Id, string Name, string AreaType, int VehicleCount)
+    {
+        public string Label => $"{Name} ({AreaType}) - {VehicleCount} vehicle{(VehicleCount == 1 ? string.Empty : "s")}";
+    }
+
     public sealed record SchematicAssignmentView(
+        int AssignmentId,
         string SchematicKey,
         string ScopeType,
         string ScopeLabel,
         string Detail,
         int VehicleCount,
         string ExampleCallsigns,
+        string AssignmentState,
+        int? OperationalAreaId,
         int? VehicleId,
         string? VehicleFunction,
         string? VehicleSubtype);

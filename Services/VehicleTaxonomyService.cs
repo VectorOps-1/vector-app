@@ -45,6 +45,43 @@ public static class VehicleTaxonomyService
             : normalized;
     }
 
+    public static string? CurrentFunction(Vehicle vehicle)
+    {
+        return NormalizeOptional(vehicle.VehicleFunction) ?? InferFunction(vehicle.VehicleType);
+    }
+
+    public static string? CurrentSubtype(Vehicle vehicle)
+    {
+        return NormalizeOptional(vehicle.VehicleSubtype) ?? InferSubtype(vehicle.VehicleType);
+    }
+
+    public static string DisplayClassification(Vehicle vehicle)
+    {
+        return CurrentSubtype(vehicle) ??
+            CurrentFunction(vehicle) ??
+            NormalizeOptional(vehicle.VehicleType) ??
+            "Vehicle";
+    }
+
+    public static bool MatchesClassification(Vehicle vehicle, string? target)
+    {
+        var normalizedTarget = NormalizeOptional(target);
+        if (normalizedTarget is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(normalizedTarget, "All Vehicles", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalizedTarget, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(CurrentFunction(vehicle), normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(CurrentSubtype(vehicle), normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(NormalizeOptional(vehicle.VehicleType), normalizedTarget, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool Backfill(Vehicle vehicle)
     {
         var changed = false;
@@ -70,5 +107,10 @@ public static class VehicleTaxonomyService
         }
 
         return changed;
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

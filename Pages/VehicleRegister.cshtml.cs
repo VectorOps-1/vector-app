@@ -12,11 +12,16 @@ public class VehicleRegisterModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly VehicleSchematicAssignmentService _schematicAssignments;
 
-    public VehicleRegisterModel(VectorDbContext db, CurrentUserService currentUser)
+    public VehicleRegisterModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        VehicleSchematicAssignmentService schematicAssignments)
     {
         _db = db;
         _currentUser = currentUser;
+        _schematicAssignments = schematicAssignments;
     }
 
     [BindProperty(SupportsGet = true)] public string? SearchTerm { get; set; }
@@ -64,7 +69,6 @@ public class VehicleRegisterModel : PageModel
                 || (vehicle.VehicleFunction != null && vehicle.VehicleFunction.Contains(search))
                 || (vehicle.VehicleSubtype != null && vehicle.VehicleSubtype.Contains(search))
                 || (vehicle.QualificationLevel != null && vehicle.QualificationLevel.Contains(search))
-                || (vehicle.SchematicType != null && vehicle.SchematicType.Contains(search))
                 || (vehicle.VinNumber != null && vehicle.VinNumber.Contains(search))
                 || (vehicle.ChassisNumber != null && vehicle.ChassisNumber.Contains(search))
                 || (vehicle.LicenseNumber != null && vehicle.LicenseNumber.Contains(search))
@@ -104,7 +108,6 @@ public class VehicleRegisterModel : PageModel
                 VehicleFunction = vehicle.VehicleFunction,
                 VehicleSubtype = vehicle.VehicleSubtype,
                 QualificationLevel = vehicle.QualificationLevel,
-                SchematicType = vehicle.SchematicType,
                 VinNumber = vehicle.VinNumber,
                 ChassisNumber = vehicle.ChassisNumber,
                 LicenseNumber = vehicle.LicenseNumber,
@@ -134,6 +137,34 @@ public class VehicleRegisterModel : PageModel
                 Notes = vehicle.Notes
             })
             .ToListAsync();
+
+        var schematicLookupVehicles = await query
+            .Select(vehicle => new Vehicle
+            {
+                Id = vehicle.Id,
+                CompanyId = vehicle.CompanyId,
+                VehicleType = vehicle.VehicleType,
+                VehicleFunction = vehicle.VehicleFunction,
+                VehicleSubtype = vehicle.VehicleSubtype,
+                CurrentOperationalAreaId = vehicle.CurrentOperationalAreaId
+            })
+            .ToListAsync();
+        var resolvedSchematics = new Dictionary<int, string>();
+        foreach (var vehicle in schematicLookupVehicles)
+        {
+            var schematic = await _schematicAssignments.ResolveForVehicleAsync(currentUser.CompanyId, vehicle);
+            if (schematic is not null)
+            {
+                resolvedSchematics[vehicle.Id] = schematic.DisplayName;
+            }
+        }
+
+        foreach (var vehicle in Vehicles)
+        {
+            vehicle.AssignedSchematicName = resolvedSchematics.TryGetValue(vehicle.Id, out var schematicName)
+                ? schematicName
+                : null;
+        }
 
         return Page();
     }
@@ -220,7 +251,7 @@ public class VehicleRegisterModel : PageModel
         public string? VehicleFunction { get; set; }
         public string? VehicleSubtype { get; set; }
         public string? QualificationLevel { get; set; }
-        public string? SchematicType { get; set; }
+        public string? AssignedSchematicName { get; set; }
         public string? VinNumber { get; set; }
         public string? ChassisNumber { get; set; }
         public string? LicenseNumber { get; set; }
