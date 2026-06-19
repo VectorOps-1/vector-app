@@ -381,10 +381,17 @@
             padding: 20px;
             background: rgba(15, 23, 42, 0.28);
             box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 180ms ease;
         }
 
         .action-confirmation.visible {
             display: flex;
+            opacity: 1;
+        }
+
+        .action-confirmation.leaving {
+            opacity: 0;
         }
 
         .confirmation-card {
@@ -422,6 +429,109 @@
             font-size: 15px;
             font-weight: 700;
             color: #52606d;
+        }
+
+        .in-app-confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1600;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.36);
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 180ms ease;
+        }
+
+        .in-app-confirm-modal.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        .in-app-confirm-modal.leaving {
+            opacity: 0;
+        }
+
+        .in-app-confirm-card {
+            width: min(460px, 94vw);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+            padding: 22px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 48px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .in-app-confirm-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #9B2C2C;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 900;
+        }
+
+        .in-app-confirm-copy h2 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 900;
+            color: #1f2937;
+        }
+
+        .in-app-confirm-copy p {
+            margin: 0;
+            color: #52606d;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.45;
+        }
+
+        .in-app-confirm-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 6px;
+        }
+
+        .in-app-confirm-cancel,
+        .in-app-confirm-accept {
+            min-height: 40px;
+            min-width: 112px;
+            border-radius: 8px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .in-app-confirm-cancel {
+            border: 1px solid rgba(66, 84, 102, 0.22);
+            background: #ffffff;
+            color: #1f2937;
+        }
+
+        .in-app-confirm-accept {
+            border: 1px solid #9B2C2C;
+            background: #9B2C2C;
+            color: #ffffff;
+        }
+
+        .in-app-confirm-cancel:hover {
+            background: rgba(66, 84, 102, 0.06);
+        }
+
+        .in-app-confirm-accept:hover {
+            background: #7f2424;
         }
 
         @@media (max-width: 780px) {
@@ -503,6 +613,21 @@
                 gap: 10px;
                 justify-content: flex-end;
                 flex-wrap: wrap;
+            }
+
+            .in-app-confirm-card {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .in-app-confirm-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .in-app-confirm-cancel,
+            .in-app-confirm-accept {
+                width: 100%;
             }
         }
     </style>
@@ -641,6 +766,20 @@
         </div>
     </div>
 
+    <div id="inAppConfirmModal" class="in-app-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="inAppConfirmTitle" aria-describedby="inAppConfirmMessage" aria-hidden="true">
+        <div class="in-app-confirm-card" role="document">
+            <div class="in-app-confirm-icon" aria-hidden="true">!</div>
+            <div class="in-app-confirm-copy">
+                <h2 id="inAppConfirmTitle">Confirm action</h2>
+                <p id="inAppConfirmMessage">Confirm this action?</p>
+            </div>
+            <div class="in-app-confirm-actions">
+                <button id="inAppConfirmCancel" type="button" class="in-app-confirm-cancel">Cancel</button>
+                <button id="inAppConfirmAccept" type="button" class="in-app-confirm-accept">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -681,19 +820,31 @@
                 const settings = options || {};
                 const overlay = document.getElementById("actionConfirmation");
                 const message = document.getElementById("confirmationMessage");
-                const redirectUrl = getReturnUrl(settings.redirectUrl);
+                const redirectUrl = settings.redirectUrl === null
+                    ? null
+                    : getReturnUrl(settings.redirectUrl);
 
                 if (!overlay || !message) {
-                    window.location.href = redirectUrl;
+                    if (redirectUrl) {
+                        window.location.href = redirectUrl;
+                    }
                     return;
                 }
 
                 message.textContent = settings.message || "Your action has been completed.";
+                overlay.classList.remove("leaving");
                 overlay.classList.add("visible");
                 overlay.setAttribute("aria-hidden", "false");
 
                 window.setTimeout(function () {
-                    window.location.href = redirectUrl;
+                    overlay.classList.add("leaving");
+                    window.setTimeout(function () {
+                        overlay.classList.remove("visible", "leaving");
+                        overlay.setAttribute("aria-hidden", "true");
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    }, Number(settings.fadeDelay || 220));
                 }, settings.delay || 1250);
             }
 
@@ -777,37 +928,40 @@
                             ] },
                             { name: "Daily Work", actions: [
                                 { label: "Daily Vehicle & Equipment Check", url: "/DailyVehicleChecklist", access: "staff,manager,senior" },
-                                { label: "Equipment Check Section", url: "/DailyEquipmentChecklist", access: "staff,manager,senior" },
-                                { label: "My Profile", url: myProfileUrl, access: "staff,manager,senior" }
+                                { label: "My Profile", url: myProfileUrl, access: "staff,manager,senior", aliases: ["/MyProfile", "/PersonalDocuments"] }
                             ] },
                             { name: "Tasks & Issues", actions: [
-                                { label: "My Tasks", url: "/TaskInbox", access: "staff,manager,senior" },
+                                { label: "Tasks & Issues Module", url: "/TasksIssues", access: "manager,senior" },
+                                { label: "My Tasks", url: "/TaskInbox", access: "staff,manager,senior", aliases: ["/TaskAction"] },
                                 { label: "Task Feedback", url: "/TaskFeedback", access: "staff,manager,senior" },
                                 { label: "Send Task", url: "/SendTask", access: "manager,senior" },
                                 { label: "Report Issue", url: "/ReportIssue?module=general", access: "staff,manager,senior" },
                                 { label: "My Assigned Issues", url: "/IssueInbox", access: "manager,senior" },
-                                { label: "All Open Issues", url: "/IssueReports", access: "manager,senior" }
+                                { label: "All Open Issues", url: "/IssueReports", access: "manager,senior", aliases: ["/IssueReportAction"] }
                             ] },
                             { name: "Readiness", actions: [
+                                { label: "Readiness Module", url: "/Readiness", access: "manager,senior" },
                                 { label: "Shift Readiness Dashboard", url: "/ReadinessDashboard", access: "manager,senior" },
-                                { label: "Readiness Alerts", url: "/ReadinessAlerts", access: "manager,senior" },
+                                { label: "Readiness Alerts", url: "/ReadinessAlerts", access: "manager,senior", aliases: ["/ReadinessMetric", "/ReadinessMetricDetail"] },
                                 { label: "Expiry Notifications", url: "/ExpiryNotifications", access: "staff,manager,senior" },
                                 { label: "Variance Alerts", url: "/ChecklistVarianceAlerts", access: "manager,senior" },
                                 { label: "Operational Reports", url: "/OperationsReports", access: "manager,senior" },
                                 { label: "Readiness Engine", url: "/ReadinessEngine", access: "manager,senior" }
                             ] },
                             { name: "Checklist Management", actions: [
-                                { label: "Checklist Management", url: "/EditChecklist", access: "manager,senior" },
-                                { label: "Checklist Register", url: "/EditChecklist?view=register", access: "manager,senior" },
+                                { label: "Checklist Management", url: "/EditChecklist", access: "manager,senior", aliases: ["/EditEquipmentChecklist"] },
+                                { label: "Checklist Register", url: "/EditChecklist?view=register", access: "manager,senior", aliases: ["/ChecklistTemplateView"] },
                                 { label: "Build New Checklist", url: "/EditVehicleChecklist?checklist=daily-vehicle&mode=build", access: "manager,senior" },
-                                { label: "Publish Checklist", url: "/EditChecklist?view=register", access: "senior" },
-                                { label: "Checklist Reports", url: "/ChecklistReports", access: "manager,senior" },
-                                { label: "Upload Existing Checklist", url: "/UploadChecklist", access: "senior" },
+                                { label: "Edit Checklist Matrix", url: "/EditChecklist?view=register", access: "manager,senior", aliases: ["/EditVehicleChecklist"] },
+                                { label: "Publish Checklist", url: "/EditChecklist?view=register", access: "senior", aliases: ["/PublishChecklist"] },
+                                { label: "Checklist Reports", url: "/ChecklistReports", access: "manager,senior", aliases: ["/ChecklistReportDetail"] },
+                                { label: "Upload Existing Checklist", url: "/UploadChecklist", access: "senior", aliases: ["/ChecklistPreview"] },
+                                { label: "Checklist Approvals", url: "/ChecklistApproval", access: "senior" },
                                 { label: "Unit Schematic Library", url: "/VehicleSchematicLibrary", access: "senior" }
                             ] },
                             { name: "Vehicles", actions: [
                                 { label: "Vehicle Module", url: "/Vehicles", access: "manager,senior" },
-                                { label: "Vehicle Register", url: "/VehicleRegister", access: "manager,senior" },
+                                { label: "Vehicle Register", url: "/VehicleRegister", access: "manager,senior", aliases: ["/EditVehicle"] },
                                 { label: "Add Vehicle", url: "/AddItem?type=vehicle", access: "manager,senior" },
                                 { label: "Reassign Callsign", url: "/ReassignVehicleCallsign", access: "manager,senior" },
                                 { label: "Move / Reallocate Vehicle", url: "/MoveAsset?asset=vehicle", access: "manager,senior" },
@@ -815,7 +969,7 @@
                             ] },
                             { name: "Equipment", actions: [
                                 { label: "Equipment Module", url: "/Equipment", access: "manager,senior" },
-                                { label: "Equipment Register", url: "/EquipmentRegister?view=register", access: "manager,senior" },
+                                { label: "Equipment Register", url: "/EquipmentRegister?view=register", access: "manager,senior", aliases: ["/EquipmentRegister", "/EditEquipmentItem"] },
                                 { label: "Add Equipment", url: "/AddItem?type=equipment", access: "manager,senior" },
                                 { label: "Update Service Dates", url: "/EquipmentService", access: "manager,senior" },
                                 { label: "Move / Reallocate Equipment", url: "/MoveAsset?asset=equipment", access: "manager,senior" },
@@ -823,28 +977,28 @@
                             ] },
                             { name: "Staff", actions: [
                                 { label: "Staff Module", url: "/Staff", access: "manager,senior" },
-                                { label: "Staff Register", url: "/StaffRegister", access: "manager,senior" },
+                                { label: "Staff Register", url: "/StaffRegister", access: "manager,senior", aliases: ["/StaffRecordsSearch", "/EditStaffProfile", "/StaffFiles", "/StaffFilesPreview", "/UploadStaffFiles"] },
                                 { label: "Add Staff Profile", url: "/AddItem?type=staff", access: "manager,senior" }
                             ] },
                             { name: "Stock", actions: [
                                 { label: "Stock Module", url: "/Stock", access: "manager,senior" },
-                                { label: "Stock Register", url: "/StockRegister?view=register", access: "manager,senior" },
-                                { label: "Stock Orders & Distribution", url: "/StockOrders", access: "manager,senior" },
+                                { label: "Stock Register", url: "/StockRegister?view=register", access: "manager,senior", aliases: ["/StockRegister", "/EditStockItem"] },
+                                { label: "Stock Orders & Distribution", url: "/StockOrders", access: "manager,senior", aliases: ["/StockOrderAction", "/PlaceStockOrder", "/SupplierDetails"] },
                                 { label: "Add Stock Item", url: "/AddItem?type=stock", access: "manager,senior" },
                                 { label: "Move / Reallocate Stock", url: "/MoveAsset?asset=stock", access: "manager,senior" },
                                 { label: "Report Stock Issue", url: "/ReportIssue?module=stock", access: "staff,manager,senior" }
                             ] },
                             { name: "Medication", actions: [
                                 { label: "Medication Module", url: "/Medication", access: "manager,senior" },
-                                { label: "Medication Register", url: "/MedicationRegister?view=register", access: "manager,senior" },
+                                { label: "Medication Register", url: "/MedicationRegister?view=register", access: "manager,senior", aliases: ["/MedicationRegister", "/EditMedicationItem"] },
                                 { label: "Add Medication", url: "/AddItem?type=medication", access: "manager,senior" },
                                 { label: "Move / Reallocate Medication", url: "/MoveAsset?asset=medication", access: "manager,senior" },
                                 { label: "Report Medication Issue", url: "/ReportIssue?module=medication", access: "staff,manager,senior" }
                             ] },
                             { name: "System Setup", actions: [
-                                { label: "Master Setup", url: "/MasterSetup", access: "senior" },
-                                { label: "Company Profile", url: "/CompanyProfile", access: "senior" },
-                                { label: "Area / Manager Control", url: "/AreaManagerControl", access: "senior", aliases: ["/OperationalAreas", "/ManagerAreas", "/CreateManagerAccess", "/CreateOperationalStaffAccess"] },
+                                { label: "Master Setup", url: "/MasterSetup", access: "senior", aliases: ["/UploadVehicleRegister", "/VehicleRegisterPreview", "/UploadEquipmentRegister", "/EquipmentRegisterPreview", "/UploadStaffRegister", "/StaffRegisterPreview", "/UploadStockRegister", "/StockRegisterPreview", "/UploadMedicationRegister", "/MedicationRegisterPreview"] },
+                                { label: "Company Profile", url: "/CompanyProfile", access: "senior", aliases: ["/CompanyName", "/LogoUpload"] },
+                                { label: "Area / Manager Control", url: "/AreaManagerControl", access: "senior", aliases: ["/OperationalAreas", "/CreateManagerAccess", "/CreateOperationalStaffAccess"] },
                                 { label: "Task Communication", url: "/TaskCommunicationSetup", access: "senior" },
                                 { label: "Audit Log", url: "/AuditLog", access: "senior" }
                             ] }

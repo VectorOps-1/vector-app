@@ -26,20 +26,11 @@
                 <a class="control-action primary" href="/OperationalAreas">Open Areas</a>
             </article>
 
-            <article class="control-card">
-                <div>
-                    <span class="control-kicker">Manager scope</span>
-                    <h3>Manager Areas</h3>
-                    <p>Link operational managers to the areas they are responsible for so dashboards, reports, issues, and staff views respect their scope.</p>
-                </div>
-                <a class="control-action primary" href="/ManagerAreas">Assign Managers</a>
-            </article>
-
             <article class="control-card access-card">
                 <div>
-                    <span class="control-kicker">Login access</span>
+                    <span class="control-kicker">Access and scope</span>
                     <h3>Access Setup</h3>
-                    <p>View every user, their current access permission, assigned area, and manager scope. Edit access from the staff register source of truth.</p>
+                    <p>View every user, their access permission, assigned area, manager scope, and action permissions from one source-of-truth control point.</p>
                 </div>
                 <a class="control-action primary" href="/CreateManagerAccess">Access Register</a>
             </article>
@@ -107,7 +98,7 @@
 
 .control-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     text-align: left;
 }

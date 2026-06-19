@@ -25,6 +25,21 @@
             <p>Search any button, term, or function before using the system.</p>
         </section>
 
+        @if (Model.PermissionSetupRequired)
+        {
+            <section class="home-access-alert setup-required" role="status">
+                <strong>Saved action permissions are not initialized for this profile.</strong>
+                <span>Ask senior management to open Area / Manager Control &gt; Access Setup and initialize or force role defaults before permission testing.</span>
+            </section>
+        }
+        else if (Model.PermissionDenied)
+        {
+            <section class="home-access-alert denied" role="alert">
+                <strong>Action permission denied.</strong>
+                <span>Your saved access permissions do not allow that action. Ask senior management to update Access Setup if this is incorrect.</span>
+            </section>
+        }
+
         <section class="dashboard-section">
             <div class="management-section-label">Operational Work</div>
 
@@ -57,11 +72,8 @@
                             <h2>Readiness</h2>
                             <span class="category-index">00</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/ReadinessDashboard">Shift Readiness Dashboard</a>
-                            <a class="category-action" href="/EditChecklist">Checklist Management</a>
-                            <a class="category-action" href="/OperationsReports">Operational Reports</a>
-                            <a class="category-action" href="/ExpiryNotifications">Expiry Notifications</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/Readiness">Readiness Module</a>
                         </div>
                     </section>
 
@@ -120,9 +132,8 @@
                             <h2>Tasks & Issues</h2>
                             <span class="category-index">06</span>
                         </div>
-                        <div class="category-actions">
-                            <a class="category-action primary" href="/SendTask">Send Task</a>
-                            <a class="category-action" href="/IssueReports">All Open Issues</a>
+                        <div class="category-actions single-action">
+                            <a class="category-action primary" href="/TasksIssues">Tasks &amp; Issues Module</a>
                         </div>
                     </section>
                 </div>
@@ -262,6 +273,38 @@
     font-weight: 800;
     line-height: 1.4;
     text-align: left;
+}
+
+.home-access-alert {
+    width: min(940px, 100%);
+    margin: -10px auto 24px auto;
+    padding: 14px 16px;
+    display: grid;
+    gap: 4px;
+    border-radius: 8px;
+    text-align: left;
+    box-sizing: border-box;
+    font-weight: 800;
+}
+
+.home-access-alert strong {
+    color: #102a3a;
+    font-size: 14px;
+}
+
+.home-access-alert span {
+    color: #52606d;
+    font-size: 13px;
+}
+
+.home-access-alert.setup-required {
+    border: 1px solid rgba(180, 83, 9, .28);
+    background: #fff7ed;
+}
+
+.home-access-alert.denied {
+    border: 1px solid rgba(153, 27, 27, .24);
+    background: #fff5f5;
 }
 
 .home-subtitle {

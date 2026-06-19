@@ -1,0 +1,138 @@
+@page
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Tasks & Issues";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+    var companyLogoPath = branding.LogoPath;
+    var companyName = branding.ClientName;
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <img class="page-logo" src="@companyLogoPath" alt="Company Logo" />
+        <div class="client-line">Client: @companyName</div>
+        <div class="home-label">Management Module</div>
+        <h2 class="page-title">Tasks &amp; Issues</h2>
+        <p class="page-subtitle">Send operational tasks and review the issue pool from one module.</p>
+
+        <div class="module-grid">
+            <a class="module-card primary" href="/SendTask">
+                <strong>Send Task</strong>
+                <span>Create and assign a task to staff or managers within the permitted operational scope.</span>
+            </a>
+
+            <a class="module-card" href="/IssueReports">
+                <strong>All Open Issues</strong>
+                <span>Review issue reports available to your access level and assigned area scope.</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.module-screen {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.module-inner {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px 30px 20px;
+    box-sizing: border-box;
+}
+
+.page-logo {
+    width: 320px;
+    max-width: 72%;
+    max-height: 180px;
+    object-fit: contain;
+    margin: 0 auto 12px auto;
+    display: block;
+}
+
+.client-line {
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.home-label {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5f6b7a;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 32px;
+    font-weight: 900;
+    color: #1f2937;
+}
+
+.page-subtitle {
+    margin: 0 auto 28px auto;
+    max-width: 720px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    text-align: left;
+}
+
+.module-card {
+    display: block;
+    min-height: 118px;
+    padding: 22px 24px;
+    border: 1px solid #d5dde6;
+    border-radius: 8px;
+    background: #fff;
+    color: #13233a;
+    text-decoration: none;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.module-card.primary {
+    border-top: 5px solid #13788a;
+}
+
+.module-card strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.module-card span {
+    display: block;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+@@media (max-width: 760px) {
+    .module-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .module-card {
+        min-height: auto;
+    }
+}
+</style>

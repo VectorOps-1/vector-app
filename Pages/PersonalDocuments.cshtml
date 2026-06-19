@@ -24,8 +24,8 @@
             <small>@Model.SignedInStaffIdentifier</small>
             <small>@Model.SignedInClinicalScope</small>
             <small>@Model.SignedInPractitionerNumber</small>
-            <small>Licence expiry: @(Model.SignedInAnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</small>
-            <small>CPD: @Model.SignedInCpdComplianceStatus / @(Model.SignedInCpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</small>
+            <small data-date-status-field="licence">Licence expiry: @(Model.SignedInAnnualLicenseExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</small>
+            <small data-date-status-field="cpd">CPD: @Model.SignedInCpdComplianceStatus / @(Model.SignedInCpdComplianceExpiryDate?.ToString("yyyy-MM-dd") ?? "N/A")</small>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -86,7 +86,7 @@
                         <input asp-for="DocumentTypeOther" type="text" placeholder="Example: Vaccination Record" />
                     </label>
                     <label>Certificate / accreditation name<input asp-for="CertificateName" type="text" placeholder="Manual name, if applicable" /></label>
-                    <label>Expiry date<input asp-for="ExpiryDate" type="date" /></label>
+                    <label>Expiry date<input asp-for="ExpiryDate" type="date" data-date-status-field="expiry" /></label>
                 </div>
 
                 <label class="upload-box" for="personalFiles">

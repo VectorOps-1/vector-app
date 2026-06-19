@@ -86,16 +86,11 @@
 {
     <script>
         window.addEventListener("DOMContentLoaded", function () {
-            const overlay = document.getElementById("actionConfirmation");
-            const message = document.getElementById("confirmationMessage");
-            if (overlay && message) {
-                message.textContent = @Json.Serialize(Model.SuccessMessage);
-                overlay.classList.add("visible");
-                overlay.setAttribute("aria-hidden", "false");
-                window.setTimeout(function () {
-                    window.location.href = "/TaskInbox";
-                }, 1400);
-            }
+            window.VectorActionConfirmation?.show({
+                message: @Json.Serialize(Model.SuccessMessage),
+                redirectUrl: "/TaskInbox",
+                delay: 1200
+            });
         });
     </script>
 }
