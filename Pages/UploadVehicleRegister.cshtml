@@ -15,7 +15,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Master Setup</div>
         <h2 class="page-title">Upload Vehicle Register</h2>
-        <p class="page-subtitle">Upload an Excel vehicle register to generate editable AcuityOps vehicle records</p>
+        <p class="page-subtitle">Upload an Excel vehicle register as setup source material. Add or edit live records in the vehicle register.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -29,7 +29,7 @@
                 <input id="vehicleRegisterFile" asp-for="VehicleRegisterFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
-            <button class="menu-btn vehicle-btn continue-btn" type="submit">Generate Vehicle Register Preview</button>
+            <button class="menu-btn vehicle-btn continue-btn" type="submit">Upload Vehicle Source</button>
         </form>
     </div>
 </div>

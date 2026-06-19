@@ -15,7 +15,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Master Setup</div>
         <h2 class="page-title">Upload Equipment Register</h2>
-        <p class="page-subtitle">Upload an Excel equipment register to generate editable AcuityOps asset records</p>
+        <p class="page-subtitle">Upload an Excel equipment register as setup source material. Add or edit live records in the equipment register.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -29,7 +29,7 @@
                 <input id="equipmentRegisterFile" asp-for="EquipmentRegisterFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
-            <button class="menu-btn equipment-btn continue-btn" type="submit">Generate Equipment Register Preview</button>
+            <button class="menu-btn equipment-btn continue-btn" type="submit">Upload Equipment Source</button>
         </form>
     </div>
 </div>

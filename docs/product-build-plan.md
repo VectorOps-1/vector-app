@@ -416,7 +416,7 @@ Included:
 - readiness trend analysis by base, region, vehicle class, and shift
 - anonymised benchmarking against similar services once enough customers exist
 - QR/barcode scanning for vehicle, equipment, stock, medication, and movement confirmation
-- executive monthly reports
+- scheduled executive reports
 - compliance packs for audits and inspections
 - advanced notification rules
 - API/integration options for suppliers, HR systems, finance systems, and external dashboards
@@ -502,7 +502,7 @@ Required:
 - equipment and vehicle service forecasting
 - recurring issue detection
 - QR/barcode scanning
-- executive monthly reports
+- scheduled executive reports
 - compliance packs
 - anonymised benchmarking
 - API/integration layer

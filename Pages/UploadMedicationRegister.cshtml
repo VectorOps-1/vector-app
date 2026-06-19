@@ -15,7 +15,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Master Setup</div>
         <h2 class="page-title">Upload Medication Register</h2>
-        <p class="page-subtitle">Upload an Excel medication register to generate editable AcuityOps medication records</p>
+        <p class="page-subtitle">Upload an Excel medication register as setup source material. Add or edit live records in the medication register.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -29,7 +29,7 @@
                 <input id="medicationRegisterFile" asp-for="MedicationRegisterFile" type="file" accept=".xlsx,.xls,.csv" />
             </label>
 
-            <button class="menu-btn stock-btn continue-btn" type="submit">Generate Medication Register Preview</button>
+            <button class="menu-btn stock-btn continue-btn" type="submit">Upload Medication Source</button>
         </form>
     </div>
 </div>
