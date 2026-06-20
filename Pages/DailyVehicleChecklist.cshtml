@@ -132,7 +132,14 @@
                 }
                 else
                 {
-                    <div id="checklistTemplateName" class="template-loaded-note">Select a registration, confirm the callsign, then select the vehicle to load the active checklist.</div>
+                    @if (Model.VehicleRegisterOptions.Count == 0)
+                    {
+                        <div id="checklistTemplateName" class="template-loaded-note unavailable">No assigned checklist available.</div>
+                    }
+                    else
+                    {
+                        <div id="checklistTemplateName" class="template-loaded-note">Select a registration, confirm the callsign, then select the vehicle to load the active checklist.</div>
+                    }
                 }
             </section>
 

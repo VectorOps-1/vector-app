@@ -2177,28 +2177,11 @@ public class EditVehicleChecklistModel : PageModel
 
         if (IsScratchBuildMode)
         {
-            VehicleChecklistSections = BlankStarterSections();
+            VehicleChecklistSections = new List<ChecklistSectionEditorInput>();
             return;
         }
 
-        VehicleChecklistSections = BlankStarterSections();
-    }
-
-    private static List<ChecklistSectionEditorInput> BlankStarterSections()
-    {
-        return new List<ChecklistSectionEditorInput>
-        {
-            new(
-                "Vehicle",
-                "Starter blank section. Rename, open, add fields, or remove this section.",
-                ChecklistSectionKind.Fields,
-                new List<ChecklistFieldEditorInput>()),
-            new(
-                "Equipment",
-                "Starter blank matrix section. Rename, open, add rows and columns, or remove this section.",
-                ChecklistSectionKind.EquipmentTable,
-                new List<ChecklistFieldEditorInput>())
-        };
+        VehicleChecklistSections = new List<ChecklistSectionEditorInput>();
     }
 
     private void NormalizeChecklistSectionEditors()
