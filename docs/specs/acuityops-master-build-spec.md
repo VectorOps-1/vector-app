@@ -14,6 +14,27 @@ This file is the controlling execution spec for AcuityOps. Work must follow this
 8. Keep `http://localhost:5000` as the stable local app URL for verification.
 9. Commit only intentional source changes in logical slices after verification.
 10. If a change reveals a better product decision, report it as a suggested improvement before continuing.
+11. `docs/specs/execution-tracker.md` is the mandatory execution gate for this spec. Codex must not perform product source, database, or runtime changes unless the requested work maps to an existing tracker row.
+12. Codex must not invent phase numbers, step numbers, or continuation steps. If the user instruction does not match a tracker row, Codex must stop and report the mismatch before doing any implementation work.
+13. A tracker row may be worked only when the user explicitly authorizes that exact phase and step. Broad requests must be translated into tracker rows before work starts.
+14. Before implementation, Codex must run the tracker pre-flight check: confirm the active row, confirm allowed files, confirm forbidden files, confirm verification required, and confirm the exact stop condition.
+15. After implementation or a blocked attempt, Codex must update the tracker status and report the exact next tracker instruction. The status report must include the app-readiness percentage requested by the user.
+16. Documentation-only changes to the spec or tracker are allowed only when explicitly requested. They must not be mixed with product source code changes.
+
+## Execution Tracker Gate
+
+The master spec defines the product, rules, and roadmap. The execution tracker at `docs/specs/execution-tracker.md` controls what may be executed in the current work sequence.
+
+Mandatory operating rules:
+
+1. No active tracker row means no product implementation.
+2. The user instruction must match the tracker `ID` or exact phase/step wording before work starts.
+3. If the instruction is broader than one tracker row, Codex must ask the user to choose or must propose the next exact tracker instruction without editing product source.
+4. If a required step is missing from the tracker, Codex must update the tracker first, then wait for the user to authorize that row.
+5. If implementation reveals additional required work, Codex must add it as a new tracker row or suggested tracker change. It must not execute the new work in the same step unless the user explicitly authorizes it.
+6. Phase gates in the tracker must be expanded into child rows before implementation starts for that phase.
+7. Tracker status values are limited to `Not started`, `In progress`, `Blocked`, and `Done`.
+8. A row can be marked `Done` only after the acceptance criteria and verification stated in the master spec and tracker row are satisfied.
 
 ## Required Step Completion Protocol
 
