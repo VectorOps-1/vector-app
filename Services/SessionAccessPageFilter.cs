@@ -32,9 +32,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/TaskAction"] = AllSignedInAccess,
         ["/TaskFeedback"] = AllSignedInAccess,
         ["/CompleteChecklist"] = AllSignedInAccess,
-        ["/DailyChecklist"] = AllSignedInAccess,
         ["/DailyVehicleChecklist"] = AllSignedInAccess,
-        ["/DailyEquipmentChecklist"] = AllSignedInAccess,
         ["/FullAudit"] = AllSignedInAccess,
         ["/FullAuditVehicleChecklist"] = AllSignedInAccess,
         ["/FullAuditEquipmentChecklist"] = AllSignedInAccess,
@@ -86,7 +84,6 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/EditChecklist"] = ManagementAccess,
         ["/PublishChecklist"] = ManagementAccess,
         ["/EditVehicleChecklist"] = ManagementAccess,
-        ["/EditEquipmentChecklist"] = ManagementAccess,
         ["/AddItem"] = ManagementAccess,
         ["/UploadStaffFiles"] = ManagementAccess,
 
@@ -94,7 +91,6 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/AreaManagerControl"] = SeniorAccess,
         ["/ChecklistApproval"] = SeniorAccess,
         ["/OperationalAreas"] = SeniorAccess,
-        ["/ManagerAreas"] = SeniorAccess,
         ["/CompanyProfile"] = SeniorAccess,
         ["/CompanyName"] = SeniorAccess,
         ["/LogoUpload"] = SeniorAccess,
@@ -307,7 +303,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         return pagePath switch
         {
-            "/DailyVehicleChecklist" or "/DailyEquipmentChecklist" or "/FullAudit" or "/FullAuditVehicleChecklist" or "/FullAuditEquipmentChecklist"
+            "/DailyVehicleChecklist" or "/FullAudit" or "/FullAuditVehicleChecklist" or "/FullAuditEquipmentChecklist"
                 => PermissionRequirement.All(UserActionPermissions.DailyChecksComplete),
 
             "/Vehicles" or "/VehicleRegister" or "/Equipment" or "/EquipmentRegister" or "/Stock" or "/StockRegister" or "/Medication" or "/MedicationRegister" or "/Staff" or "/StaffRegister"
@@ -401,7 +397,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/AreaManagerControl"
                 => PermissionRequirement.Any(UserActionPermissions.SetupAreas, UserActionPermissions.SetupAccess),
 
-            "/OperationalAreas" or "/ManagerAreas"
+            "/OperationalAreas"
                 => PermissionRequirement.All(UserActionPermissions.SetupAreas),
 
             "/CreateManagerAccess" or "/CreateOperationalStaffAccess"

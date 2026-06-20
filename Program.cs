@@ -92,6 +92,37 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthorization();
 
+app.MapMethods("/DailyChecklist", ["GET", "POST"], (HttpRequest request) =>
+    Results.Redirect(BuildDailyChecklistRedirect(request)));
+app.MapMethods("/DailyEquipmentChecklist", ["GET", "POST"], (HttpRequest request) =>
+    Results.Redirect(BuildDailyChecklistRedirect(request)));
+app.MapMethods("/EditEquipmentChecklist", ["GET", "POST"], () =>
+    Results.Redirect("/EditChecklist"));
+app.MapMethods("/ManagerAreas", ["GET", "POST"], () =>
+    Results.Redirect("/AreaManagerControl"));
+
 app.MapRazorPages();
 
 app.Run();
+
+static string BuildDailyChecklistRedirect(HttpRequest request)
+{
+    var query = new List<string>();
+    AddQueryValue(query, "frequency", request.Query["frequency"].FirstOrDefault() ?? "daily");
+    AddQueryValue(query, "registration", request.Query["registration"].FirstOrDefault());
+    AddQueryValue(query, "callsign", request.Query["callsign"].FirstOrDefault());
+
+    return query.Count == 0
+        ? "/DailyVehicleChecklist"
+        : $"/DailyVehicleChecklist?{string.Join("&", query)}";
+}
+
+static void AddQueryValue(List<string> query, string key, string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return;
+    }
+
+    query.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value.Trim())}");
+}
