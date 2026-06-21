@@ -14,7 +14,7 @@ public class LogoUploadModel : PageModel
     private readonly AuditTrailService _auditTrail;
     private const long MaxLogoBytes = 4 * 1024 * 1024;
     private static readonly string[] AllowedExtensions = [".png"];
-    private static readonly string[] AllowedContentTypes = ["image/png"];
+    private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
 
     public LogoUploadModel(
         VectorDbContext db,
@@ -97,7 +97,7 @@ public class LogoUploadModel : PageModel
         }
 
         var extension = Path.GetExtension(LogoFile.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(extension) || !AllowedContentTypes.Contains(LogoFile.ContentType))
+        if (!AllowedExtensions.Contains(extension) || !await IsPngFileAsync(LogoFile))
         {
             StatusMessage = "Only PNG logo files are supported. Use a transparent PNG for the cleanest borderless result.";
             ApplyLogoState(company);
@@ -116,13 +116,13 @@ public class LogoUploadModel : PageModel
 
         DeleteCompanyLogoFiles(company.Id);
 
-        var fileName = $"company-logo{extension}";
+        var fileName = CompanyBranding.CompanyLogoFileName;
         var filePath = Path.Combine(uploadFolder, fileName);
 
         await using var stream = System.IO.File.Create(filePath);
         await LogoFile.CopyToAsync(stream);
 
-        company.LogoStoragePath = $"/uploads/company/{company.Id}/{fileName}";
+        company.LogoStoragePath = CompanyBranding.GetStoredLogoPath(company.Id);
         company.LogoRemoved = false;
         company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
         company.UpdatedAtUtc = DateTime.UtcNow;
@@ -153,14 +153,14 @@ public class LogoUploadModel : PageModel
     {
         var logoPath = CompanyBranding.GetLogoPath(_environment, company);
 
-        return logoPath.StartsWith("/acuityops-app-icon-light.png", StringComparison.OrdinalIgnoreCase)
+        return CompanyBranding.IsDefaultLogoPath(logoPath)
             ? null
             : logoPath;
     }
 
     private string GetCompanyLogoFolder(int companyId)
     {
-        return Path.Combine(_environment.WebRootPath, "uploads", "company", companyId.ToString());
+        return CompanyBranding.GetLogoUploadFolder(_environment, companyId);
     }
 
     private void DeleteCompanyLogoFiles(int companyId)
@@ -175,5 +175,19 @@ public class LogoUploadModel : PageModel
         {
             System.IO.File.Delete(existingFile);
         }
+    }
+
+    private static async Task<bool> IsPngFileAsync(IFormFile file)
+    {
+        if (file.Length < PngSignature.Length)
+        {
+            return false;
+        }
+
+        var buffer = new byte[PngSignature.Length];
+        await using var stream = file.OpenReadStream();
+        var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
+
+        return bytesRead == PngSignature.Length && buffer.SequenceEqual(PngSignature);
     }
 }

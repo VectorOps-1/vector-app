@@ -81,7 +81,6 @@ public class CompanyLoginModel : PageModel
         HttpContext.Session.Remove(CurrentUserService.RoleNameSessionKey);
         HttpContext.Session.Remove(CurrentUserService.AccessViewSessionKey);
         HttpContext.Session.SetInt32(CurrentUserService.CompanyIdSessionKey, company.Id);
-        HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
 
         await _auditTrail.RecordAndSaveAsync(
             company.Id,

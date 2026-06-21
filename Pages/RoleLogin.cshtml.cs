@@ -154,11 +154,9 @@ public class RoleLoginModel : PageModel
         if (company is null)
         {
             HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
-            HttpContext.Session.Remove("Vector.CompanyName");
             return null;
         }
 
-        HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
         return company;
     }
 }

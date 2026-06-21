@@ -4,8 +4,8 @@ namespace vector_app_local.Services;
 
 public static class CompanyBranding
 {
-    private const string DefaultLogoPath = "/acuityops-app-icon-light.png";
-    private const string CompanyLogoFileName = "company-logo.png";
+    public const string DefaultLogoPath = "/acuityops-app-icon-light.png";
+    public const string CompanyLogoFileName = "company-logo.png";
     public const string DefaultCompanyName = "Company workspace";
     public const string BrandingStatusConfigured = "Configured";
     public const string BrandingStatusIncomplete = "Incomplete";
@@ -29,6 +29,22 @@ public static class CompanyBranding
         }
 
         return DefaultLogoPath;
+    }
+
+    public static string GetStoredLogoPath(int companyId)
+    {
+        return $"/uploads/company/{companyId}/{CompanyLogoFileName}";
+    }
+
+    public static string GetLogoUploadFolder(IWebHostEnvironment environment, int companyId)
+    {
+        return Path.Combine(environment.WebRootPath, "uploads", "company", companyId.ToString());
+    }
+
+    public static bool IsDefaultLogoPath(string? logoPath)
+    {
+        return string.IsNullOrWhiteSpace(logoPath)
+            || logoPath.StartsWith(DefaultLogoPath, StringComparison.OrdinalIgnoreCase);
     }
 
     public static string GetDisplayCompanyName(Company? company)
@@ -63,7 +79,7 @@ public static class CompanyBranding
         }
 
         var cleanPath = logoStoragePath.Split('?', 2)[0];
-        var expectedPath = $"/uploads/company/{company.Id}/{CompanyLogoFileName}";
+        var expectedPath = GetStoredLogoPath(company.Id);
 
         return string.Equals(cleanPath, expectedPath, StringComparison.OrdinalIgnoreCase);
     }

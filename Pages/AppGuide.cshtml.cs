@@ -16,7 +16,7 @@ public class AppGuideModel : PageModel
     }
 
     public string ClientName { get; private set; } = "Company Workspace";
-    public string CompanyLogoPath { get; private set; } = "/acuityops-app-icon-light.png";
+    public string CompanyLogoPath { get; private set; } = CompanyBranding.DefaultLogoPath;
     public string AccessView { get; private set; } = CurrentUserService.OperationalManagementAccess;
     public bool IsStaff => AccessView == CurrentUserService.StaffAccess;
     public bool IsOperationalManagement => AccessView == CurrentUserService.OperationalManagementAccess;
@@ -36,8 +36,9 @@ public class AppGuideModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView) });
         }
 
-        ClientName = CompanyBranding.GetDisplayCompanyName(currentUser.Company);
-        CompanyLogoPath = CompanyBranding.GetLogoPath(_environment, currentUser.Company);
+        var branding = await _currentUser.GetCurrentCompanyBrandingAsync(_environment);
+        ClientName = branding.ClientName;
+        CompanyLogoPath = branding.LogoPath;
         AccessView = CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView);
         ViewData["ClientName"] = ClientName;
 

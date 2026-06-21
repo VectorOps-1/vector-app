@@ -24,7 +24,7 @@ public class HomeModel : PageModel
     public string? SignedInRole { get; private set; }
     public int? SignedInUserId { get; private set; }
     public string ClientName { get; private set; } = "Company Workspace";
-    public string CompanyLogoPath { get; private set; } = "/acuityops-app-icon-light.png";
+    public string CompanyLogoPath { get; private set; } = CompanyBranding.DefaultLogoPath;
     public bool PermissionDenied { get; private set; }
     public bool PermissionSetupRequired { get; private set; }
 
@@ -36,8 +36,9 @@ public class HomeModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.NormalizeAccessView(access) });
         }
 
-        ClientName = CompanyBranding.GetDisplayCompanyName(currentUser.Company);
-        CompanyLogoPath = CompanyBranding.GetLogoPath(_environment, currentUser.Company);
+        var branding = await _currentUser.GetCurrentCompanyBrandingAsync(_environment);
+        ClientName = branding.ClientName;
+        CompanyLogoPath = branding.LogoPath;
         ViewData["ClientName"] = ClientName;
 
         AccessView = CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView);
