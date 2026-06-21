@@ -62,14 +62,23 @@ The next implementation instruction must name one row from the tracker below.
 
 | ID | Status | Master Spec Step | Authorized Scope | Verification Required | Notes |
 | --- | --- | --- | --- | --- | --- |
-| P1-01 | Not started | Run full git/worktree audit and separate source files from runtime, generated, and database files. | Read-only audit only. | Git/worktree report. | Prior work must be reconciled before marking done. |
-| P1-02 | Not started | Update `.gitignore` so SQLite files, backups, logs, `bin/`, `obj/`, artifacts, uploads, and runtime clutter do not appear in git status. | Hygiene docs/config only. | Git status before/after. | Do not delete database/runtime files. |
-| P1-03 | Not started | Remove tracked generated files from git index without deleting local runtime files. | Git index cleanup only. | Git status before/after. | No local file deletion unless separately authorized. |
-| P1-04 | Not started | Create a clean source checkpoint commit for hygiene only. | Commit hygiene slice only. | Commit hash and clean/expected status. | No feature code in hygiene commit. |
-| P1-05 | Not started | Stop all normal startup/sample seed mutation. | Source changes limited to startup/seed paths. | Build and source scan. | No database cleanup in this row. |
-| P1-06 | Not started | Remove schema/data repair calls from normal page requests. | Source changes limited to request-time repair paths. | Build and route/source scan. | No database cleanup in this row. |
-| P1-07 | Not started | Preserve current login accounts, but remove stale seeded company, register, checklist, schematic-assignment, and readiness artifacts from the active dev database. | Database cleanup only after backup. | Backup evidence, cleanup report, login verification. | This row explicitly permits database write only when authorized. |
-| P1-08 | Not started | Verify the app starts cleanly without recreating old seed data. | Verification only unless failures require a new tracker row. | App start, browser verification, seed/fallback scan. | Do not fix discovered defects inside this row. |
+| P1-01 | Done | Run full git/worktree audit and separate source files from runtime, generated, and database files. | Read-only audit only. | Git/worktree report. | Reconciled by git status, ignored-file scan, tracked-runtime scan, and source/runtime split review before Phase 1 checkpoint. |
+| P1-02 | Done | Update `.gitignore` so SQLite files, backups, logs, `bin/`, `obj/`, artifacts, uploads, and runtime clutter do not appear in git status. | Hygiene docs/config only. | Git status before/after. | Hygiene committed in `c70ab96`; ignored runtime/database clutter verified after cleanup. |
+| P1-03 | Done | Remove tracked generated files from git index without deleting local runtime files. | Git index cleanup only. | Git status before/after. | Tracked generated/runtime/database scan returned no tracked `bin`, `obj`, `artifacts`, logs, uploads, or SQLite files. |
+| P1-04 | Done | Create a clean source checkpoint commit for hygiene only. | Commit hygiene slice only. | Commit hash and clean/expected status. | Hygiene checkpoint exists at `c70ab96`; spec guardrails committed separately at `c350d35`. |
+| P1-05 | Done | Stop all normal startup/sample seed mutation. | Source changes limited to startup/seed paths. | Build and source scan. | Normal startup mutation removed; development repair remains explicit via `--dev-db-repair`; source checkpoint committed at `dbc4b30`; build passed with 0 warnings and 0 errors. |
+| P1-06 | Done | Remove schema/data repair calls from normal page requests. | Source changes limited to request-time repair paths. | Build and route/source scan. | Legacy route/request repair cleanup committed at `dbc4b30`; route/source scan found no normal page-request repair flow; build passed with 0 warnings and 0 errors. |
+| P1-07 | Done | Preserve current login accounts, but remove stale seeded company, register, checklist, schematic-assignment, and readiness artifacts from the active dev database. | Database cleanup only after backup. | Backup evidence, cleanup report, login verification. | Active dev database was backed up to `vector-dev.backup-before-p1-07-seed-artifact-cleanup-20260621-060810.db`; login records preserved; stale seeded company/register/checklist/schematic-assignment/readiness artifacts removed. |
+| P1-08 | Done | Verify the app starts cleanly without recreating old seed data. | Verification only unless failures require a new tracker row. | App start, browser verification, seed/fallback scan. | Controlled `http://localhost:5000` verification completed with `P1-08 failures: none`; live empty states and no seed recreation were verified. |
+
+## Phase 1 Closure Evidence
+
+- Hygiene/spec commits: `c70ab96 chore: clean repository hygiene`, `f0ec80c docs: add AcuityOps master build spec`, `c350d35 Add spec execution tracker guardrails`.
+- Register-driven checklist and legacy-route cleanup commits: `0729f80 fix: redirect legacy app routes`, `9ccbda2 fix: enforce register-driven checklist starts`, `dbc4b30 chore: checkpoint phase 1 cleanup`.
+- Build verification: `dotnet build vector-app-local.csproj` completed with 0 warnings and 0 errors before the Phase 1 cleanup checkpoint commit.
+- Database cleanup evidence: active dev database backup `vector-dev.backup-before-p1-07-seed-artifact-cleanup-20260621-060810.db` was created before stale seed artifact cleanup.
+- Runtime verification evidence: P1-08 controlled verification on `http://localhost:5000` reported `P1-08 failures: none`.
+- Current Phase 1 close condition: source tree was clean after `dbc4b30` before this docs-only tracker reconciliation.
 
 ## Phase Gates Requiring Child-Step Expansion Before Implementation
 
