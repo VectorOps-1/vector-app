@@ -599,6 +599,7 @@ public class EditVehicleChecklistModel : PageModel
                 .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
             .Include(scope => scope.PublishedByUser)
             .Where(scope =>
+                scope.CompanyId == companyId &&
                 scope.ChecklistTemplateId == SelectedTemplateId.Value &&
                 scope.IsActive &&
                 scope.RetiredAtUtc == null &&
@@ -628,6 +629,7 @@ public class EditVehicleChecklistModel : PageModel
             .Include(scope => scope.Vehicle)
                 .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
             .Where(scope =>
+                scope.CompanyId == companyId &&
                 scope.IsActive &&
                 scope.RetiredAtUtc == null &&
                 scope.ChecklistTemplate != null &&
@@ -1063,6 +1065,7 @@ public class EditVehicleChecklistModel : PageModel
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = currentUser.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = currentUser.Id,
             EventType = "Sent",

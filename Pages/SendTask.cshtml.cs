@@ -113,6 +113,7 @@ public class SendTaskModel : PageModel
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = assignedBy.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = assignedBy.Id,
             EventType = status == "Draft" ? "DraftCreated" : "Sent",

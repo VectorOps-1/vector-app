@@ -59,6 +59,7 @@ public class TaskInboxModel : PageModel
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = currentUser.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = currentUser.Id,
             EventType = "Deleted",

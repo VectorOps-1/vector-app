@@ -46,6 +46,7 @@ public class Company
 
     public ICollection<AppUser> Users { get; set; } = new List<AppUser>();
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+    public ICollection<TaskEvent> TaskEvents { get; set; } = new List<TaskEvent>();
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
     public ICollection<OperationalArea> OperationalAreas { get; set; } = new List<OperationalArea>();
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
@@ -58,6 +59,8 @@ public class Company
     public ICollection<DailyVehicleReadinessReport> DailyVehicleReadinessReports { get; set; } = new List<DailyVehicleReadinessReport>();
     public ICollection<DailyVehicleEquipmentCheck> DailyVehicleEquipmentChecks { get; set; } = new List<DailyVehicleEquipmentCheck>();
     public ICollection<ChecklistTemplate> ChecklistTemplates { get; set; } = new List<ChecklistTemplate>();
+    public ICollection<ChecklistPublishScope> ChecklistPublishScopes { get; set; } = new List<ChecklistPublishScope>();
+    public ICollection<UploadedFile> UploadedFiles { get; set; } = new List<UploadedFile>();
     public ICollection<CatalogueItem> CatalogueItems { get; set; } = new List<CatalogueItem>();
     public ICollection<CustomDropdownOption> CustomDropdownOptions { get; set; } = new List<CustomDropdownOption>();
     public ICollection<ChecklistVarianceAlert> ChecklistVarianceAlerts { get; set; } = new List<ChecklistVarianceAlert>();

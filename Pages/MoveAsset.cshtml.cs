@@ -174,6 +174,7 @@ public class MoveAssetModel : PageModel
 
                 _db.TaskEvents.Add(new TaskEvent
                 {
+                    CompanyId = currentUser.CompanyId,
                     TaskItemId = task.Id,
                     PerformedByUserId = currentUser.Id,
                     EventType = "Completed",
@@ -270,6 +271,7 @@ public class MoveAssetModel : PageModel
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = currentUser.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = currentUser.Id,
             EventType = "Sent",

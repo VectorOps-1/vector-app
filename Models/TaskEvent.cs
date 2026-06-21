@@ -6,6 +6,9 @@ public class TaskEvent
 {
     public int Id { get; set; }
 
+    public int CompanyId { get; set; }
+    public Company? Company { get; set; }
+
     public int TaskItemId { get; set; }
     public TaskItem? TaskItem { get; set; }
 

@@ -90,6 +90,7 @@ public class ChecklistApprovalModel : PageModel
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = currentUser.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = currentUser.Id,
             EventType = "Returned",
@@ -166,6 +167,7 @@ public class ChecklistApprovalModel : PageModel
             task.OpenedAtUtc = DateTime.UtcNow;
             _db.TaskEvents.Add(new TaskEvent
             {
+                CompanyId = currentUser.CompanyId,
                 TaskItemId = task.Id,
                 PerformedByUserId = currentUser.Id,
                 EventType = "Opened",

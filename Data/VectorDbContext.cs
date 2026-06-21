@@ -150,6 +150,15 @@ public class VectorDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<TaskEvent>()
+            .HasIndex(taskEvent => new { taskEvent.CompanyId, taskEvent.TaskItemId, taskEvent.CreatedAtUtc });
+
+        modelBuilder.Entity<TaskEvent>()
+            .HasOne(taskEvent => taskEvent.Company)
+            .WithMany(company => company.TaskEvents)
+            .HasForeignKey(taskEvent => taskEvent.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TaskEvent>()
             .HasOne(taskEvent => taskEvent.TaskItem)
             .WithMany(task => task.Events)
             .HasForeignKey(taskEvent => taskEvent.TaskItemId)
@@ -606,7 +615,13 @@ public class VectorDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<ChecklistPublishScope>()
-            .HasIndex(scope => new { scope.ChecklistTemplateId, scope.ScopeType, scope.IsActive });
+            .HasIndex(scope => new { scope.CompanyId, scope.ChecklistTemplateId, scope.ScopeType, scope.IsActive });
+
+        modelBuilder.Entity<ChecklistPublishScope>()
+            .HasOne(scope => scope.Company)
+            .WithMany(company => company.ChecklistPublishScopes)
+            .HasForeignKey(scope => scope.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ChecklistPublishScope>()
             .HasOne(scope => scope.ChecklistTemplate)
@@ -841,6 +856,15 @@ public class VectorDbContext : DbContext
             .HasOne(request => request.ReadinessEngineRule)
             .WithMany()
             .HasForeignKey(request => request.ReadinessEngineRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<UploadedFile>()
+            .HasIndex(file => new { file.CompanyId, file.ChecklistTemplateId, file.UploadedAtUtc });
+
+        modelBuilder.Entity<UploadedFile>()
+            .HasOne(file => file.Company)
+            .WithMany(company => company.UploadedFiles)
+            .HasForeignKey(file => file.CompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<UploadedFile>()

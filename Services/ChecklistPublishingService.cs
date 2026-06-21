@@ -93,6 +93,7 @@ public class ChecklistPublishingService
             .Include(scope => scope.Vehicle)
                 .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
             .Where(scope =>
+                scope.CompanyId == actor.CompanyId &&
                 scope.IsActive &&
                 scope.RetiredAtUtc == null &&
                 scope.ChecklistTemplate != null &&
@@ -139,6 +140,7 @@ public class ChecklistPublishingService
 
         var newScope = new ChecklistPublishScope
         {
+            CompanyId = actor.CompanyId,
             ChecklistTemplate = template,
             ScopeType = scopeType,
             OperationalAreaId = scopeType == ScopeOperationalArea ? selectedArea?.Id : null,
@@ -260,6 +262,7 @@ public class ChecklistPublishingService
 
         _db.TaskEvents.Add(new TaskEvent
         {
+            CompanyId = actor.CompanyId,
             TaskItemId = task.Id,
             PerformedByUserId = actor.Id,
             EventType = "Approved",

@@ -289,6 +289,7 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "ChecklistPublishScopes" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_ChecklistPublishScopes" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL DEFAULT 0,
                 "ChecklistTemplateId" INTEGER NOT NULL,
                 "ScopeType" TEXT NOT NULL,
                 "OperationalAreaId" INTEGER NULL,
@@ -298,6 +299,32 @@ public static class DevelopmentDatabase
                 "IsActive" INTEGER NOT NULL DEFAULT 1,
                 "PublishedAtUtc" TEXT NOT NULL,
                 "RetiredAtUtc" TEXT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "TaskEvents" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_TaskEvents" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL DEFAULT 0,
+                "TaskItemId" INTEGER NOT NULL,
+                "PerformedByUserId" INTEGER NOT NULL,
+                "EventType" TEXT NOT NULL,
+                "Notes" TEXT NULL,
+                "EvidenceStoragePath" TEXT NULL,
+                "CreatedAtUtc" TEXT NOT NULL
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "UploadedFiles" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_UploadedFiles" PRIMARY KEY AUTOINCREMENT,
+                "CompanyId" INTEGER NOT NULL DEFAULT 0,
+                "ChecklistTemplateId" INTEGER NOT NULL,
+                "OriginalFileName" TEXT NOT NULL,
+                "ContentType" TEXT NOT NULL,
+                "StoragePath" TEXT NOT NULL,
+                "SizeBytes" INTEGER NOT NULL,
+                "UploadedAtUtc" TEXT NOT NULL
             );
             """);
 
@@ -594,6 +621,9 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "PublishScopeSummary", """ALTER TABLE "ChecklistTemplates" ADD "PublishScopeSummary" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "PublishNotes", """ALTER TABLE "ChecklistTemplates" ADD "PublishNotes" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "ChecklistTemplates", "UpdatedAtUtc", """ALTER TABLE "ChecklistTemplates" ADD "UpdatedAtUtc" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "ChecklistPublishScopes", "CompanyId", """ALTER TABLE "ChecklistPublishScopes" ADD "CompanyId" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "TaskEvents", "CompanyId", """ALTER TABLE "TaskEvents" ADD "CompanyId" INTEGER NOT NULL DEFAULT 0;""");
+        await EnsureSqliteColumnAsync(db, "UploadedFiles", "CompanyId", """ALTER TABLE "UploadedFiles" ADD "CompanyId" INTEGER NOT NULL DEFAULT 0;""");
         await EnsureSqliteColumnAsync(db, "ChecklistItems", "ItemKind", """ALTER TABLE "ChecklistItems" ADD "ItemKind" TEXT NOT NULL DEFAULT 'Field';""");
         await EnsureSqliteColumnAsync(db, "ChecklistItems", "ParentChecklistItemId", """ALTER TABLE "ChecklistItems" ADD "ParentChecklistItemId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "ChecklistItems", "CatalogueItemId", """ALTER TABLE "ChecklistItems" ADD "CatalogueItemId" INTEGER NULL;""");
@@ -616,6 +646,36 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "StockItems", "IsReadinessCritical", """ALTER TABLE "StockItems" ADD "IsReadinessCritical" INTEGER NOT NULL DEFAULT 0;""");
         await EnsureSqliteColumnAsync(db, "MedicationItems", "CurrentOperationalAreaId", """ALTER TABLE "MedicationItems" ADD "CurrentOperationalAreaId" INTEGER NULL;""");
         await EnsureSqliteColumnAsync(db, "ReadinessEngineRules", "ReadinessScope", """ALTER TABLE "ReadinessEngineRules" ADD "ReadinessScope" TEXT NOT NULL DEFAULT 'Active shift';""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+            UPDATE "ChecklistPublishScopes"
+            SET "CompanyId" = COALESCE((
+                SELECT "CompanyId"
+                FROM "ChecklistTemplates"
+                WHERE "ChecklistTemplates"."Id" = "ChecklistPublishScopes"."ChecklistTemplateId"
+            ), 0)
+            WHERE "CompanyId" = 0;
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            UPDATE "TaskEvents"
+            SET "CompanyId" = COALESCE((
+                SELECT "CompanyId"
+                FROM "TaskItems"
+                WHERE "TaskItems"."Id" = "TaskEvents"."TaskItemId"
+            ), 0)
+            WHERE "CompanyId" = 0;
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            UPDATE "UploadedFiles"
+            SET "CompanyId" = COALESCE((
+                SELECT "CompanyId"
+                FROM "ChecklistTemplates"
+                WHERE "ChecklistTemplates"."Id" = "UploadedFiles"."ChecklistTemplateId"
+            ), 0)
+            WHERE "CompanyId" = 0;
+            """);
 
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_MedicationItems_CompanyId" ON "MedicationItems" ("CompanyId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_AppUsers_CompanyId_StaffIdentifier" ON "AppUsers" ("CompanyId", "StaffIdentifier");""");
@@ -646,7 +706,9 @@ public static class DevelopmentDatabase
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistTemplates_CompanyId_ChecklistType_TargetVehicleType_Name" ON "ChecklistTemplates" ("CompanyId", "ChecklistType", "TargetVehicleType", "Name");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistItems_ParentChecklistItemId" ON "ChecklistItems" ("ParentChecklistItemId");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistColumnDefinitions_ChecklistItemId_SortOrder" ON "ChecklistColumnDefinitions" ("ChecklistItemId", "SortOrder");""");
-        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistPublishScopes_ChecklistTemplateId_ScopeType_IsActive" ON "ChecklistPublishScopes" ("ChecklistTemplateId", "ScopeType", "IsActive");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistPublishScopes_CompanyId_ChecklistTemplateId_ScopeType_IsActive" ON "ChecklistPublishScopes" ("CompanyId", "ChecklistTemplateId", "ScopeType", "IsActive");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_TaskEvents_CompanyId_TaskItemId_CreatedAtUtc" ON "TaskEvents" ("CompanyId", "TaskItemId", "CreatedAtUtc");""");
+        await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_UploadedFiles_CompanyId_ChecklistTemplateId_UploadedAtUtc" ON "UploadedFiles" ("CompanyId", "ChecklistTemplateId", "UploadedAtUtc");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_CatalogueItems_CompanyId_CatalogueType_Category_ItemName" ON "CatalogueItems" ("CompanyId", "CatalogueType", "Category", "ItemName");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ChecklistVarianceAlerts_CompanyId_AssignedToUserId_Status_CreatedAtUtc" ON "ChecklistVarianceAlerts" ("CompanyId", "AssignedToUserId", "Status", "CreatedAtUtc");""");
         await db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_ReadinessAlerts_CompanyId_AssignedToUserId_Status_CreatedAtUtc" ON "ReadinessAlerts" ("CompanyId", "AssignedToUserId", "Status", "CreatedAtUtc");""");

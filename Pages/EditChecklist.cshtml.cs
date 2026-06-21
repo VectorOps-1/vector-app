@@ -322,6 +322,7 @@ public class EditChecklistModel : PageModel
             .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
             .Include(scope => scope.PublishedByUser)
             .Where(scope =>
+                scope.CompanyId == currentUser.CompanyId &&
                 scope.IsActive &&
                 scope.RetiredAtUtc == null &&
                 scope.ChecklistTemplate != null &&
