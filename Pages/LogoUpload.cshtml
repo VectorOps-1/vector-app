@@ -54,16 +54,27 @@
             <div class="status-message">@Model.StatusMessage</div>
         }
 
-        @if (!string.IsNullOrWhiteSpace(Model.ExistingLogoPath))
+        @if (Model.HasLogoPreview)
         {
             <div class="logo-preview-wrap">
                 <img class="logo-preview" src="@Model.ExistingLogoPath" alt="Current company logo" />
             </div>
         }
+        else
+        {
+            <div class="logo-empty-state" role="status">
+                <strong>@(Model.HasStoredLogoReference ? "Logo reference needs attention" : "No active company logo")</strong>
+                <span>@Model.LogoStateMessage</span>
+            </div>
+        }
 
         @if (Model.CanRemoveLogo)
         {
-            <form method="post" asp-page-handler="Remove" class="remove-logo-form">
+            <form method="post"
+                  asp-page-handler="Remove"
+                  class="remove-logo-form"
+                  data-confirm-message="Remove the stored company logo reference? Logged-in pages will use default AcuityOps branding until a new transparent PNG is uploaded."
+                  data-confirm-accept-label="Remove logo">
                 <button class="remove-logo-btn" type="submit">Remove Logo</button>
             </form>
         }
@@ -212,6 +223,36 @@
     max-height: 100%;
     object-fit: contain;
     display: block;
+}
+
+.logo-empty-state {
+    width: min(540px, 90%);
+    margin: 0 auto 26px auto;
+    padding: 18px;
+    border: 1px dashed rgba(66, 84, 102, 0.24);
+    border-radius: 8px;
+    background: rgba(248, 250, 252, 0.92);
+    color: #52606d;
+    text-align: left;
+}
+
+.logo-empty-state strong,
+.logo-empty-state span {
+    display: block;
+}
+
+.logo-empty-state strong {
+    margin-bottom: 6px;
+    color: #10233f;
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.logo-empty-state span {
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.45;
 }
 
 .upload-form {

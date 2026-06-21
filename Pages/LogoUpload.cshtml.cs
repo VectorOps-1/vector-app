@@ -33,6 +33,9 @@ public class LogoUploadModel : PageModel
 
     public string? ExistingLogoPath { get; private set; }
     public string? StatusMessage { get; private set; }
+    public string LogoStateMessage { get; private set; } = "No company logo saved. Logged-in pages use default AcuityOps branding until a transparent PNG is uploaded.";
+    public bool HasLogoPreview => !string.IsNullOrWhiteSpace(ExistingLogoPath);
+    public bool HasStoredLogoReference { get; private set; }
     public bool CanRemoveLogo { get; private set; }
     public bool ActionSaved { get; private set; }
     public string ActionConfirmationMessage { get; private set; } = "Company logo saved.";
@@ -58,6 +61,8 @@ public class LogoUploadModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
+        var hadStoredLogoReference = !string.IsNullOrWhiteSpace(company.LogoStoragePath);
+
         DeleteCompanyLogoFiles(company.Id);
         company.LogoStoragePath = null;
         company.LogoRemoved = true;
@@ -74,7 +79,9 @@ public class LogoUploadModel : PageModel
             company.Id,
             $"{CompanyBranding.GetDisplayCompanyName(company)} company logo removed.");
 
-        StatusMessage = "Logo removed. Default AcuityOps branding will be used until a new company logo is uploaded.";
+        StatusMessage = hadStoredLogoReference
+            ? "Logo removed. Default AcuityOps branding will be used until a new company logo is uploaded."
+            : "No company logo was stored. Default AcuityOps branding is active.";
         ActionSaved = true;
         ActionConfirmationMessage = "Company logo removed.";
         ApplyLogoState(company);
@@ -146,7 +153,28 @@ public class LogoUploadModel : PageModel
     private void ApplyLogoState(Company company)
     {
         ExistingLogoPath = GetExistingLogoPath(company);
-        CanRemoveLogo = !string.IsNullOrWhiteSpace(company.LogoStoragePath);
+        HasStoredLogoReference = !string.IsNullOrWhiteSpace(company.LogoStoragePath);
+        CanRemoveLogo = HasStoredLogoReference;
+
+        if (HasLogoPreview)
+        {
+            LogoStateMessage = "Current company logo is active on logged-in pages.";
+            return;
+        }
+
+        if (HasStoredLogoReference && company.LogoRemoved)
+        {
+            LogoStateMessage = "Company logo is marked as removed, but a stored reference still exists. Remove it to clear the reference completely.";
+            return;
+        }
+
+        if (HasStoredLogoReference)
+        {
+            LogoStateMessage = "A stored company logo reference exists, but no renderable logo file is available. Remove it to clear the reference or upload a new transparent PNG.";
+            return;
+        }
+
+        LogoStateMessage = "No company logo saved. Logged-in pages use default AcuityOps branding until a transparent PNG is uploaded.";
     }
 
     private string? GetExistingLogoPath(Company company)
