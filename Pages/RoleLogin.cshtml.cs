@@ -144,7 +144,7 @@ public class RoleLoginModel : PageModel
         var companyId = HttpContext.Session.GetInt32(CurrentUserService.CompanyIdSessionKey);
         if (!companyId.HasValue)
         {
-            return await LoadDevelopmentCompanyAsync();
+            return null;
         }
 
         var company = await _db.Companies
@@ -155,32 +155,10 @@ public class RoleLoginModel : PageModel
         {
             HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
             HttpContext.Session.Remove("Vector.CompanyName");
-            return await LoadDevelopmentCompanyAsync();
-        }
-
-        HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
-        return company;
-    }
-
-    private async Task<Company?> LoadDevelopmentCompanyAsync()
-    {
-        if (!_environment.IsDevelopment())
-        {
             return null;
         }
 
-        var company = await _db.Companies
-            .AsNoTracking()
-            .Where(item => item.Status == "Active")
-            .OrderBy(item => item.Id)
-            .FirstOrDefaultAsync();
-
-        if (company is not null)
-        {
-            HttpContext.Session.SetInt32(CurrentUserService.CompanyIdSessionKey, company.Id);
-            HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
-        }
-
+        HttpContext.Session.SetString("Vector.CompanyName", CompanyBranding.GetDisplayCompanyName(company));
         return company;
     }
 }
