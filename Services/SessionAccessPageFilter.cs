@@ -82,7 +82,6 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/IssueReports"] = ManagementAccess,
         ["/IssueReportAction"] = ManagementAccess,
         ["/EditChecklist"] = ManagementAccess,
-        ["/PublishChecklist"] = ManagementAccess,
         ["/EditVehicleChecklist"] = ManagementAccess,
         ["/AddItem"] = ManagementAccess,
         ["/UploadStaffFiles"] = ManagementAccess,
@@ -370,7 +369,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/ChecklistVarianceAlerts"
                 => PermissionRequirement.All(UserActionPermissions.ChecklistsVarianceReview),
 
-            "/PublishChecklist" or "/ChecklistApproval"
+            "/ChecklistApproval"
                 => PermissionRequirement.All(UserActionPermissions.ChecklistsPublish),
 
             "/UploadChecklist" or "/ChecklistPreview"

@@ -100,7 +100,7 @@
                                 <a href="/EditVehicleChecklist?checklist=@template.ChecklistRoute&mode=edit&templateId=@template.Id">Edit</a>
                                 @if (Model.CanPublishChecklist)
                                 {
-                                    <a href="/PublishChecklist?templateId=@template.Id">Publish</a>
+                                    <a href="/EditChecklist?view=register&publishTemplateId=@template.Id">Publish</a>
                                 }
                                 @if (Model.CanDeleteChecklist)
                                 {
@@ -128,12 +128,187 @@
                     }
                 </div>
             }
+
+            @if (Model.PublishTemplate is not null)
+            {
+                <section class="publish-register-panel" id="publish-checklist">
+                    <div class="publish-register-header">
+                        <div>
+                            <div class="source-label">Publish checklist</div>
+                            <h3>@Model.PublishTemplate.TargetVehicleType - @ChecklistDisplayService.TemplateName(Model.PublishTemplate.Name)</h3>
+                            <p>Choose where this saved checklist becomes the live daily check.</p>
+                        </div>
+                        <a class="source-secondary-btn" href="/EditChecklist?view=register">Close publish</a>
+                    </div>
+
+                    <div class="publish-grid">
+                        <section class="publish-subpanel">
+                            <div class="panel-heading compact">
+                                <div>
+                                    <div class="source-label">Current live use</div>
+                                    <h4>Where this checklist is currently active</h4>
+                                </div>
+                                <span>@Model.CurrentUses.Count active</span>
+                            </div>
+
+                            @if (Model.CurrentUses.Count == 0)
+                            {
+                                <div class="empty-template-state">This checklist is not currently being used live.</div>
+                            }
+                            else
+                            {
+                                <div class="usage-list">
+                                    <div class="usage-row usage-header">
+                                        <span>Scope</span>
+                                        <span>Target</span>
+                                        <span>Published</span>
+                                        <span>By</span>
+                                    </div>
+                                    @foreach (var use in Model.CurrentUses)
+                                    {
+                                        <div class="usage-row">
+                                            <span>@use.ScopeType</span>
+                                            <strong>@use.Target</strong>
+                                            <span>@use.PublishedAtUtc.ToString("yyyy-MM-dd HH:mm")</span>
+                                            <span>@use.PublishedBy</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </section>
+
+                        <section class="publish-subpanel">
+                            <div class="source-label">Set live use</div>
+                            <p class="plain-warning">Publishing creates the live checklist crews will use for the selected target. If another daily check already covers that target, this checklist will replace it for daily use at that target.</p>
+
+                            <form method="post" asp-page-handler="Publish" class="publish-form">
+                                <input asp-for="TemplateId" type="hidden" />
+                                <input asp-for="TaskAccess" type="hidden" />
+                                <input asp-for="TaskId" type="hidden" />
+
+                                <div class="publish-form-grid">
+                                    <label>
+                                        Publish for
+                                        <select asp-for="ScopeType" id="scopeTypeSelect">
+                                            <option value="@Model.TemplateTargetScopeType">@Model.TemplateTargetScopeLabel</option>
+                                            <option value="@ChecklistPublishingService.ScopeOperationalArea">Specific area / base</option>
+                                            <option value="@ChecklistPublishingService.ScopeVehicle">Specific callsign / registration</option>
+                                            @if (Model.TemplateTargetScopeType != ChecklistPublishingService.ScopeAllAreas)
+                                            {
+                                                <option value="@ChecklistPublishingService.ScopeAllAreas">All operational areas</option>
+                                            }
+                                        </select>
+                                    </label>
+
+                                    <label class="target-field" data-target-field="@ChecklistPublishingService.ScopeOperationalArea">
+                                        Area / base
+                                        <select asp-for="OperationalAreaId" id="operationalAreaSelect">
+                                            <option value="">Select area / base</option>
+                                            @foreach (var area in Model.OperationalAreaOptions)
+                                            {
+                                                <option value="@area.Id">@area.Name (@area.Type)</option>
+                                            }
+                                        </select>
+                                    </label>
+
+                                    <label class="target-field" data-target-field="@ChecklistPublishingService.ScopeVehicle">
+                                        Callsign / registration
+                                        <select asp-for="VehicleId" id="vehicleSelect">
+                                            <option value="">Select callsign / registration</option>
+                                            @foreach (var vehicle in Model.VehicleOptions)
+                                            {
+                                                <option value="@vehicle.Id">@vehicle.Callsign / @vehicle.Registration - @vehicle.VehicleType - @vehicle.AreaName</option>
+                                            }
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        Publish note
+                                        <textarea asp-for="PublishNote" rows="4" placeholder="Reason for publishing, replacement note, or instruction for managers"></textarea>
+                                    </label>
+                                </div>
+
+                                <div class="replacement-warning-list" aria-live="polite">
+                                    @foreach (var warning in Model.ConflictWarnings)
+                                    {
+                                        <div class="replacement-warning" data-conflict-key="@warning.ScopeKey" hidden>@warning.Message</div>
+                                    }
+                                </div>
+
+                                @if (!Model.CanPublishChecklist)
+                                {
+                                    <div class="authority-warning">Only senior management, or an operational manager with a delegated publish task, can publish a checklist for live operational use.</div>
+                                }
+
+                                <div class="publish-actions">
+                                    <a class="source-secondary-btn" href="/EditChecklist?view=register">Cancel</a>
+                                    <button class="publish-button" type="submit" disabled="@(!Model.CanPublishChecklist)">Publish for Live Use</button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+                </section>
+            }
         </section>
         }
     </div>
 </div>
 
 <script>
+(() => {
+    const scopeSelect = document.getElementById("scopeTypeSelect");
+    const areaSelect = document.getElementById("operationalAreaSelect");
+    const vehicleSelect = document.getElementById("vehicleSelect");
+    const targetFields = document.querySelectorAll("[data-target-field]");
+    const warnings = document.querySelectorAll("[data-conflict-key]");
+    const templateTarget = "@Model.PublishTemplate?.TargetVehicleType";
+
+    function selectedConflictKey() {
+        if (!scopeSelect) {
+            return "";
+        }
+
+        if (scopeSelect.value === "@ChecklistPublishingService.ScopeOperationalArea") {
+            return areaSelect?.value ? `@ChecklistPublishingService.ScopeOperationalArea:${areaSelect.value}` : "";
+        }
+
+        if (scopeSelect.value === "@ChecklistPublishingService.ScopeVehicle") {
+            return vehicleSelect?.value ? `@ChecklistPublishingService.ScopeVehicle:${vehicleSelect.value}` : "";
+        }
+
+        if (scopeSelect.value === "@ChecklistPublishingService.ScopeVehicleFunction" || scopeSelect.value === "@ChecklistPublishingService.ScopeVehicleSubtype") {
+            return `${scopeSelect.value}:${templateTarget}`;
+        }
+
+        return "@ChecklistPublishingService.ScopeAllAreas";
+    }
+
+    function syncPublishTargetUi() {
+        if (!scopeSelect) {
+            return;
+        }
+
+        const scope = scopeSelect.value;
+        targetFields.forEach((field) => {
+            const isVisible = field.dataset.targetField === scope;
+            field.hidden = !isVisible;
+            field.querySelectorAll("select, input, textarea").forEach((input) => {
+                input.disabled = !isVisible;
+            });
+        });
+
+        const key = selectedConflictKey();
+        warnings.forEach((warning) => {
+            warning.hidden = warning.dataset.conflictKey !== key;
+        });
+    }
+
+    scopeSelect?.addEventListener("change", syncPublishTargetUi);
+    areaSelect?.addEventListener("change", syncPublishTargetUi);
+    vehicleSelect?.addEventListener("change", syncPublishTargetUi);
+    syncPublishTargetUi();
+})();
+
 document.querySelectorAll("[data-checklist-delete-open]").forEach(function (button) {
     button.addEventListener("click", function () {
         const form = button.closest(".template-delete-form");
@@ -212,7 +387,33 @@ document.querySelectorAll("[data-checklist-delete-cancel]").forEach(function (bu
 .template-confirm-delete, .template-cancel-delete { min-height: 28px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 900; }
 .template-confirm-delete { border: 1px solid rgba(148,57,57,.36); background: #943939; color: #ffffff; }
 .template-cancel-delete { border: 1px solid rgba(66,84,102,.18); background: #ffffff; color: #425466; }
+.publish-register-panel { margin-top: 16px; padding: 16px; border: 1px solid rgba(14,94,122,.22); border-radius: 8px; background: rgba(14,94,122,.04); scroll-margin-top: 88px; }
+.publish-register-header { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.publish-register-header h3 { margin: 0 0 4px 0; color: #1f2937; font-size: 18px; line-height: 1.2; font-weight: 900; }
+.publish-register-header p, .plain-warning { margin: 0; color: #52606d; font-size: 12px; line-height: 1.42; font-weight: 800; }
+.publish-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 12px; }
+.publish-subpanel { padding: 14px; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; background: #ffffff; }
+.panel-heading.compact { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.panel-heading.compact h4 { margin: 0; color: #1f2937; font-size: 15px; font-weight: 900; }
+.panel-heading.compact span { color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.usage-list { border: 1px solid rgba(66,84,102,.14); border-radius: 8px; overflow-x: auto; }
+.usage-row { display: grid; grid-template-columns: 130px minmax(170px, 1fr) 130px 130px; gap: 8px; align-items: center; min-width: 560px; min-height: 36px; padding: 7px 9px; border-top: 1px solid rgba(66,84,102,.1); color: #334155; font-size: 11px; font-weight: 800; }
+.usage-row:first-child { border-top: none; }
+.usage-header { background: #334155; color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .7px; }
+.publish-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.publish-form-grid label { display: flex; flex-direction: column; gap: 7px; color: #52606d; font-size: 11px; font-weight: 900; }
+.publish-form-grid select, .publish-form-grid textarea { width: 100%; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; color: #1f2937; font-size: 13px; font-weight: 750; box-sizing: border-box; }
+.publish-form-grid textarea { padding-top: 10px; resize: vertical; }
+.target-field[hidden] { display: none; }
+.replacement-warning-list { margin-top: 12px; }
+.replacement-warning { padding: 10px 12px; border: 1px solid rgba(148,57,57,.28); border-radius: 8px; background: rgba(148,57,57,.08); color: #7f2f2f; font-size: 12px; font-weight: 900; line-height: 1.42; }
+.replacement-warning[hidden] { display: none; }
+.authority-warning { margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(180,113,28,.26); border-radius: 8px; background: rgba(180,113,28,.08); color: #8a4f10; font-size: 12px; font-weight: 900; }
+.publish-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.publish-button { min-height: 38px; padding: 0 16px; border: 0; border-radius: 8px; background: #0E5E7A; color: #ffffff; font-size: 12px; font-weight: 900; cursor: pointer; }
+.publish-button:disabled { opacity: .48; cursor: not-allowed; }
 @@media (max-width: 980px) { .register-item { grid-template-columns: 1fr; align-items: stretch; } .template-actions { justify-content: flex-start; flex-wrap: wrap; } }
+@@media (max-width: 900px) { .publish-grid { grid-template-columns: 1fr; } .publish-form-grid { grid-template-columns: 1fr; } }
 @@media (max-width: 900px) { .checklist-path-grid { grid-template-columns: 1fr; } }
-@@media (max-width: 760px) { .path-card { min-height: 140px; } .source-header { align-items: stretch; flex-direction: column; } .source-actions { flex-direction: column; justify-content: stretch; } .source-upload-btn, .source-secondary-btn { text-align: center; } }
+@@media (max-width: 760px) { .path-card { min-height: 140px; } .source-header, .publish-register-header { align-items: stretch; flex-direction: column; } .source-actions, .publish-actions { flex-direction: column; justify-content: stretch; } .source-upload-btn, .source-secondary-btn, .publish-button { text-align: center; width: 100%; } }
 </style>

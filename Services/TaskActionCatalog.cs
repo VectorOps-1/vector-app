@@ -184,7 +184,7 @@ public static class TaskActionCatalog
     {
         if (actionType.Contains("Checklist approval request", StringComparison.OrdinalIgnoreCase) &&
             (string.Equals(pagePath, "/ChecklistApproval", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(pagePath, "/PublishChecklist", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pagePath, "/EditChecklist", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(pagePath, "/ChecklistTemplateView", StringComparison.OrdinalIgnoreCase)))
         {
             return true;

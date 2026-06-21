@@ -33,7 +33,7 @@ public class ChecklistApprovalModel : PageModel
     public string SubmittedBy => ApprovalTask?.AssignedByUser?.FullName ?? "Operational manager";
     public string ApproverName => ApprovalTask?.AssignedToUser?.FullName ?? "Senior manager";
     public string CrewViewUrl => Template is null ? "#" : $"/ChecklistTemplateView?templateId={Template.Id}&taskAccess=true&taskId={TaskId}";
-    public string PublishUrl => Template is null ? "#" : $"/PublishChecklist?templateId={Template.Id}&taskAccess=true&taskId={TaskId}";
+    public string PublishUrl => Template is null ? "#" : $"/EditChecklist?view=register&publishTemplateId={Template.Id}&taskAccess=true&taskId={TaskId}";
 
     public async Task<IActionResult> OnGetAsync(int taskId)
     {
