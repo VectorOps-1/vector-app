@@ -19,15 +19,18 @@ public class TaskNotificationCountModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var currentUserId = _currentUser.CurrentUserId;
-        if (!currentUserId.HasValue)
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
         {
             return new JsonResult(new { count = 0, url = "/TaskInbox" });
         }
 
         var openTasks = await _db.TaskItems
             .AsNoTracking()
-            .Where(t => t.AssignedToUserId == currentUserId.Value && t.Status == "Open")
+            .Where(t =>
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open")
             .OrderByDescending(t => t.ActionType == "Checklist approval request")
             .ThenByDescending(t => t.CreatedAtUtc)
             .Select(t => new

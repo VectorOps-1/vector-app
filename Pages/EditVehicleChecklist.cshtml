@@ -939,9 +939,9 @@
     (function () {
         const vehicleToggle = document.getElementById("allowSameAsPreviousVehicleInspectionToggle");
         const equipmentToggle = document.getElementById("allowSameAsPreviousEquipmentCheckToggle");
-        const legacySameShiftSettingKey = "vectorAllowSameAsPreviousShift";
-        const vehicleSameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
-        const equipmentSameShiftSettingKey = "vectorAllowSameAsPreviousEquipmentCheck";
+        const tenantStoragePrefix = @Json.Serialize(Model.CompanyStorageKeyPrefix);
+        const vehicleSameShiftSettingKey = tenantStoragePrefix + ":vectorAllowSameAsPreviousVehicleInspection";
+        const equipmentSameShiftSettingKey = tenantStoragePrefix + ":vectorAllowSameAsPreviousEquipmentCheck";
         const layoutBuilder = document.querySelector(".layout-builder");
         const editorForm = document.querySelector("[data-checklist-editor-form]");
         const templateSelect = document.getElementById("templateSelect");
@@ -1982,11 +1982,9 @@
 
         if (vehicleToggle && !vehicleToggle.disabled) {
             localStorage.setItem(vehicleSameShiftSettingKey, String(vehicleToggle.checked));
-            localStorage.setItem(legacySameShiftSettingKey, String(vehicleToggle.checked));
 
             vehicleToggle.addEventListener("change", function () {
                 localStorage.setItem(vehicleSameShiftSettingKey, String(vehicleToggle.checked));
-                localStorage.setItem(legacySameShiftSettingKey, String(vehicleToggle.checked));
             });
         }
 

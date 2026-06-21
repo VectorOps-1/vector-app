@@ -164,7 +164,10 @@ public class ChecklistPublishingService
                 continue;
             }
 
-            var retiredTemplate = await _db.ChecklistTemplates.FirstOrDefaultAsync(item => item.Id == retiredTemplateId);
+            var retiredTemplate = await _db.ChecklistTemplates
+                .FirstOrDefaultAsync(item =>
+                    item.Id == retiredTemplateId &&
+                    item.CompanyId == actor.CompanyId);
             if (retiredTemplate is null)
             {
                 continue;

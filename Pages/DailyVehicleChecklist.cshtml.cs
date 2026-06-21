@@ -40,6 +40,7 @@ public class DailyVehicleChecklistModel : PageModel
     public bool AllowSameAsPreviousVehicleInspection { get; private set; } = true;
     public bool HasSelectedVehicle => SelectedVehicleOption is not null;
     public string DraftStorageKey { get; private set; } = "daily-vehicle-readiness:anonymous";
+    public string CompanyStorageKeyPrefix { get; private set; } = "company-anonymous";
     public string FreshChecklistUrl => $"/DailyVehicleChecklist?frequency={Uri.EscapeDataString(NormalizeFrequency(Frequency))}";
     public string FrequencyLabel => NormalizeFrequency(Frequency) == "full-audit" ? "Full Audit" : "Daily Check";
     public string InspectionTitle => NormalizeFrequency(Frequency) == "full-audit" ? "Full Audit" : "Daily Vehicle & Equipment Check";
@@ -138,7 +139,8 @@ public class DailyVehicleChecklistModel : PageModel
     private void ApplyUserDraftContext(AppUser currentUser)
     {
         var accessView = CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView);
-        DraftStorageKey = $"daily-vehicle-readiness:user-{currentUser.Id}:access-{accessView}:frequency-{Frequency}";
+        CompanyStorageKeyPrefix = $"company-{currentUser.CompanyId}";
+        DraftStorageKey = $"{CompanyStorageKeyPrefix}:daily-vehicle-readiness:user-{currentUser.Id}:access-{accessView}:frequency-{Frequency}";
     }
 
     private async Task LoadSameAsPreviousSettingAsync(int companyId)

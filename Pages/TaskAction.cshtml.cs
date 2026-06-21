@@ -35,7 +35,11 @@ public class TaskActionModel : PageModel
         TaskDetails = await _db.TaskItems
             .Include(t => t.AssignedByUser)
             .Include(t => t.AssignedToUser)
-            .Where(t => t.Id == taskId.Value && t.AssignedToUserId == currentUser.Id && t.Status == "Open")
+            .Where(t =>
+                t.Id == taskId.Value &&
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open")
             .Select(t => new TaskActionDetails
             {
                 Id = t.Id,

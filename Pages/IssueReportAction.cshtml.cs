@@ -74,7 +74,15 @@ public class IssueReportActionModel : PageModel
 
         var issueId = IssueId.GetValueOrDefault();
         var issue = await _db.IssueReports
-            .FirstAsync(report => report.Id == issueId && report.Status == "Open");
+            .FirstOrDefaultAsync(report =>
+                report.Id == issueId &&
+                report.CompanyId == currentUser.CompanyId &&
+                report.Status == "Open");
+        if (issue is null)
+        {
+            return RedirectToPage("/IssueInbox", new { confirmation = "issue-not-found" });
+        }
+
         var now = DateTime.UtcNow;
 
         issue.Status = "Resolved";

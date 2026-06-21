@@ -148,6 +148,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
         var session = context.HttpContext.Session;
         var userId = session.GetInt32(CurrentUserService.UserIdSessionKey);
+        var companyId = session.GetInt32(CurrentUserService.CompanyIdSessionKey);
         var accessView = session.GetString(CurrentUserService.AccessViewSessionKey);
 
         if (!userId.HasValue || string.IsNullOrWhiteSpace(accessView))
@@ -156,7 +157,31 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return;
         }
 
-        if (allowedAccessViews.Contains(accessView))
+        if (!companyId.HasValue)
+        {
+            ClearCurrentUserSession(session);
+            context.Result = new RedirectToPageResult("/CompanyLogin");
+            return;
+        }
+
+        var db = context.HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
+        var roleName = await db.AppUsers
+            .AsNoTracking()
+            .Where(user =>
+                user.Id == userId.Value &&
+                user.CompanyId == companyId.Value &&
+                user.Status == "Active")
+            .Select(user => user.AppRole == null ? null : user.AppRole.Name)
+            .FirstOrDefaultAsync();
+
+        if (roleName is null || !CurrentUserService.AccessAllowsRole(accessView, roleName))
+        {
+            ClearCurrentUserSession(session);
+            context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
+            return;
+        }
+
+        if (allowedAccessViews.Contains(accessView, StringComparer.OrdinalIgnoreCase))
         {
             if (await HasRequiredActionPermissionAsync(context, pagePath))
             {
@@ -167,7 +192,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         }
 
         if (string.Equals(accessView, CurrentUserService.StaffAccess, StringComparison.OrdinalIgnoreCase)
-            && await HasValidTaskAccessAsync(context, pagePath, userId.Value))
+            && await HasValidTaskAccessAsync(context, pagePath, userId.Value, companyId.Value))
         {
             await next();
             return;
@@ -472,7 +497,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         return string.IsNullOrWhiteSpace(formValue) ? null : formValue;
     }
 
-    private static async Task<bool> HasValidTaskAccessAsync(PageHandlerExecutingContext context, string pagePath, int currentUserId)
+    private static async Task<bool> HasValidTaskAccessAsync(PageHandlerExecutingContext context, string pagePath, int currentUserId, int currentCompanyId)
     {
         var request = context.HttpContext.Request;
         var handlerName = context.HandlerMethod?.Name ?? string.Empty;
@@ -502,6 +527,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             .AsNoTracking()
             .Where(taskItem =>
                 taskItem.Id == taskId
+                && taskItem.CompanyId == currentCompanyId
                 && taskItem.AssignedToUserId == currentUserId
                 && taskItem.Status == "Open")
             .Select(taskItem => new
@@ -527,5 +553,13 @@ public class SessionAccessPageFilter : IAsyncPageFilter
     private static bool QueryEquals(IQueryCollection query, string key, string expectedValue)
     {
         return string.Equals(query[key].ToString(), expectedValue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ClearCurrentUserSession(ISession session)
+    {
+        session.Remove(CurrentUserService.UserIdSessionKey);
+        session.Remove(CurrentUserService.FullNameSessionKey);
+        session.Remove(CurrentUserService.RoleNameSessionKey);
+        session.Remove(CurrentUserService.AccessViewSessionKey);
     }
 }

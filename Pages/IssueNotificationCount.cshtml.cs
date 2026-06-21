@@ -19,14 +19,15 @@ public class IssueNotificationCountModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var currentUserId = _currentUser.CurrentUserId;
-        if (!currentUserId.HasValue)
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
         {
             return new JsonResult(new { count = 0 });
         }
 
         var count = await _db.IssueReports.CountAsync(issue =>
-            issue.AssignedToUserId == currentUserId.Value &&
+            issue.CompanyId == currentUser.CompanyId &&
+            issue.AssignedToUserId == currentUser.Id &&
             issue.Status == "Open");
 
         return new JsonResult(new { count });

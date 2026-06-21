@@ -534,16 +534,20 @@
         },
         bindForm: function (form, options) {
             const settings = options || {};
-            const storageKey = "vectorShiftDraft:" + (settings.key || window.location.pathname);
             const ttlMilliseconds = Number(settings.ttlMilliseconds || 12 * 60 * 60 * 1000);
             const statusElement = settings.statusElement || null;
             const fields = Array.from(form?.querySelectorAll("input[name], select[name], textarea[name]") || []);
             let saveTimer = null;
             let disabled = false;
 
-            if (!form || fields.length === 0) {
+            if (!form || fields.length === 0 || !settings.key) {
                 return;
             }
+
+            const rawStorageKey = String(settings.key);
+            const storageKey = rawStorageKey.startsWith("vectorShiftDraft:")
+                ? rawStorageKey
+                : "vectorShiftDraft:" + rawStorageKey;
 
             this.activeDrafts[storageKey] = {
                 clear: function () {

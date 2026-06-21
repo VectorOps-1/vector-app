@@ -15,6 +15,17 @@ public class ReadinessAlertService
 
     public async Task<int> CreateAlertsForReportAsync(int reportId, int performedByUserId)
     {
+        var performedByCompanyId = await _db.AppUsers
+            .AsNoTracking()
+            .Where(user => user.Id == performedByUserId && user.Status == "Active")
+            .Select(user => (int?)user.CompanyId)
+            .FirstOrDefaultAsync();
+
+        if (!performedByCompanyId.HasValue)
+        {
+            return 0;
+        }
+
         var report = await _db.DailyVehicleReadinessReports
             .Include(item => item.Vehicle)
                 .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
@@ -22,7 +33,10 @@ public class ReadinessAlertService
                 .ThenInclude(user => user!.AppRole)
             .Include(item => item.EquipmentChecks)
                 .ThenInclude(check => check.EquipmentItem)
-            .FirstOrDefaultAsync(item => item.Id == reportId);
+            .FirstOrDefaultAsync(item =>
+                item.Id == reportId &&
+                item.CompanyId == performedByCompanyId.Value &&
+                item.PerformedByUserId == performedByUserId);
 
         if (report?.Vehicle is null)
         {

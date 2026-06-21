@@ -15,13 +15,27 @@ public class ChecklistVarianceService
 
     public async Task<int> CreateEquipmentVarianceAlertsAsync(int reportId, int performedByUserId)
     {
+        var performedByCompanyId = await _db.AppUsers
+            .AsNoTracking()
+            .Where(user => user.Id == performedByUserId && user.Status == "Active")
+            .Select(user => (int?)user.CompanyId)
+            .FirstOrDefaultAsync();
+
+        if (!performedByCompanyId.HasValue)
+        {
+            return 0;
+        }
+
         var report = await _db.DailyVehicleReadinessReports
             .Include(item => item.Vehicle)
             .Include(item => item.PerformedByUser)
                 .ThenInclude(user => user!.AppRole)
             .Include(item => item.EquipmentChecks)
                 .ThenInclude(check => check.EquipmentItem)
-            .FirstOrDefaultAsync(item => item.Id == reportId);
+            .FirstOrDefaultAsync(item =>
+                item.Id == reportId &&
+                item.CompanyId == performedByCompanyId.Value &&
+                item.PerformedByUserId == performedByUserId);
 
         if (report is null || report.EquipmentChecks.Count == 0)
         {

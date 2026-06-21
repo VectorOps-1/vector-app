@@ -494,8 +494,7 @@
         const sameAsPreviousShiftInput = document.getElementById("sameAsPreviousShiftInput");
         const previousVehicleReportIdInput = document.getElementById("previousVehicleReportIdInput");
         const previousShiftPanel = sameAsPreviousShiftButton?.closest(".previous-shift-panel");
-        const sameShiftSettingKey = "vectorAllowSameAsPreviousVehicleInspection";
-        const legacySameShiftSettingKey = "vectorAllowSameAsPreviousShift";
+        const sameShiftSettingKey = @Json.Serialize($"{Model.CompanyStorageKeyPrefix}:vectorAllowSameAsPreviousVehicleInspection");
         let schematicMarks = {};
         let activeSchematicStroke = null;
         let schematicIsDrawing = false;
@@ -810,7 +809,7 @@
                 return;
             }
 
-            const storedSetting = localStorage.getItem(sameShiftSettingKey) ?? localStorage.getItem(legacySameShiftSettingKey);
+            const storedSetting = localStorage.getItem(sameShiftSettingKey);
             const defaultAllowed = sameAsPreviousShiftButton.dataset.defaultAllowed === "true";
             const isAllowed = storedSetting === null ? defaultAllowed : storedSetting === "true";
 

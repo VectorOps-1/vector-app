@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
 
@@ -14,6 +15,15 @@ public class AccessModel : PageModel
 
     public IActionResult OnGet()
     {
+        if (!HttpContext.Session.GetInt32(CurrentUserService.CompanyIdSessionKey).HasValue)
+        {
+            HttpContext.Session.Remove(CurrentUserService.UserIdSessionKey);
+            HttpContext.Session.Remove(CurrentUserService.FullNameSessionKey);
+            HttpContext.Session.Remove(CurrentUserService.RoleNameSessionKey);
+            HttpContext.Session.Remove(CurrentUserService.AccessViewSessionKey);
+            return RedirectToPage("/CompanyLogin");
+        }
+
         Workspace = AcuityOpsWorkspaceName;
         LogoPath = AcuityOpsLogoPath;
         ViewData["ClientName"] = Workspace;

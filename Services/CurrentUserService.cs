@@ -28,6 +28,8 @@ public class CurrentUserService
 
     public int? CurrentUserId => _httpContextAccessor.HttpContext?.Session.GetInt32(UserIdSessionKey);
 
+    public int? CurrentCompanyId => _httpContextAccessor.HttpContext?.Session.GetInt32(CompanyIdSessionKey);
+
     public string? CurrentAccessView => _httpContextAccessor.HttpContext?.Session.GetString(AccessViewSessionKey);
 
     public async Task<CompanyBrandingContext> GetCurrentCompanyBrandingAsync(IWebHostEnvironment environment)
@@ -41,16 +43,17 @@ public class CurrentUserService
 
     public async Task<Company?> GetCurrentCompanyAsync()
     {
+        var companyId = CurrentCompanyId;
+        if (!companyId.HasValue)
+        {
+            SignOutCurrentUserOnly();
+            return null;
+        }
+
         var currentUser = await GetCurrentUserAsync();
         if (currentUser?.Company is not null)
         {
             return currentUser.Company;
-        }
-
-        var companyId = _httpContextAccessor.HttpContext?.Session.GetInt32(CompanyIdSessionKey);
-        if (!companyId.HasValue)
-        {
-            return null;
         }
 
         return await _db.Companies.FirstOrDefaultAsync(company => company.Id == companyId.Value);
@@ -59,15 +62,31 @@ public class CurrentUserService
     public async Task<AppUser?> GetCurrentUserAsync()
     {
         var userId = CurrentUserId;
-        if (!userId.HasValue)
+        var companyId = CurrentCompanyId;
+        if (!userId.HasValue || !companyId.HasValue)
         {
+            if (userId.HasValue && !companyId.HasValue)
+            {
+                SignOutCurrentUserOnly();
+            }
+
             return null;
         }
 
-        return await _db.AppUsers
+        var currentUser = await _db.AppUsers
             .Include(user => user.AppRole)
             .Include(user => user.Company)
-            .FirstOrDefaultAsync(user => user.Id == userId.Value && user.Status == "Active");
+            .FirstOrDefaultAsync(user =>
+                user.Id == userId.Value &&
+                user.CompanyId == companyId.Value &&
+                user.Status == "Active");
+
+        if (currentUser is null)
+        {
+            SignOutCurrentUserOnly();
+        }
+
+        return currentUser;
     }
 
     public void SignIn(AppUser user, string accessView)

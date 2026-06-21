@@ -36,6 +36,7 @@ public class CompanyLoginModel : PageModel
 
     public async Task OnGetAsync(string? workspaceSlug)
     {
+        ClearCompanyAndUserSession();
         WorkspaceSlug = workspaceSlug;
         ViewData["ClientName"] = "Company Workspace";
 
@@ -50,7 +51,7 @@ public class CompanyLoginModel : PageModel
 
         ShowLoginForm = true;
         PageSubtitle = "Enter the company access code issued during onboarding";
-        CompanyAccessCode = company.WorkspaceAccessCode;
+        CompanyAccessCode = string.Empty;
     }
 
     public async Task<IActionResult> OnPostAsync(string? workspaceSlug)
@@ -61,6 +62,7 @@ public class CompanyLoginModel : PageModel
         var company = await LoadCompanyFromWorkspaceAsync(WorkspaceSlug);
         if (company is null)
         {
+            ClearCompanyAndUserSession();
             ShowLoginForm = false;
             LoginError = "A valid company workspace link is required.";
             SecurityNote = "The company login is hidden unless opened from the workspace link created during onboarding.";
@@ -76,10 +78,7 @@ public class CompanyLoginModel : PageModel
             return Page();
         }
 
-        HttpContext.Session.Remove(CurrentUserService.UserIdSessionKey);
-        HttpContext.Session.Remove(CurrentUserService.FullNameSessionKey);
-        HttpContext.Session.Remove(CurrentUserService.RoleNameSessionKey);
-        HttpContext.Session.Remove(CurrentUserService.AccessViewSessionKey);
+        ClearCompanyAndUserSession();
         HttpContext.Session.SetInt32(CurrentUserService.CompanyIdSessionKey, company.Id);
 
         await _auditTrail.RecordAndSaveAsync(
@@ -106,5 +105,14 @@ public class CompanyLoginModel : PageModel
             .FirstOrDefaultAsync(item =>
                 item.WorkspaceSlug == normalizedSlug &&
                 item.Status == "Active");
+    }
+
+    private void ClearCompanyAndUserSession()
+    {
+        HttpContext.Session.Remove(CurrentUserService.UserIdSessionKey);
+        HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
+        HttpContext.Session.Remove(CurrentUserService.FullNameSessionKey);
+        HttpContext.Session.Remove(CurrentUserService.RoleNameSessionKey);
+        HttpContext.Session.Remove(CurrentUserService.AccessViewSessionKey);
     }
 }

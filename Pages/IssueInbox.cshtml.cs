@@ -38,7 +38,10 @@ public class IssueInboxModel : PageModel
 
         OpenIssues = await _db.IssueReports
             .Include(issue => issue.ReportedByUser)
-            .Where(issue => issue.AssignedToUserId == currentUser.Id && issue.Status == "Open")
+            .Where(issue =>
+                issue.CompanyId == currentUser.CompanyId &&
+                issue.AssignedToUserId == currentUser.Id &&
+                issue.Status == "Open")
             .OrderByDescending(issue => issue.CreatedAtUtc)
             .Select(issue => new IssueInboxItem
             {
@@ -69,6 +72,7 @@ public class IssueInboxModel : PageModel
         var issue = await _db.IssueReports
             .FirstOrDefaultAsync(report =>
                 report.Id == issueId &&
+                report.CompanyId == currentUser.CompanyId &&
                 report.AssignedToUserId == currentUser.Id &&
                 report.Status == "Open");
 

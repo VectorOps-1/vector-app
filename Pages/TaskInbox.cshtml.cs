@@ -46,7 +46,11 @@ public class TaskInboxModel : PageModel
             .Include(t => t.Company)
             .Include(t => t.AssignedByUser)
                 .ThenInclude(user => user!.AppRole)
-            .FirstOrDefaultAsync(t => t.Id == taskId && t.AssignedToUserId == currentUser.Id && t.Status == "Open");
+            .FirstOrDefaultAsync(t =>
+                t.Id == taskId &&
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open");
 
         if (task is null || !CurrentUserService.CanSendTasks(task.AssignedByUser?.AppRole?.Name))
         {
@@ -97,7 +101,10 @@ public class TaskInboxModel : PageModel
             .Include(t => t.AssignedByUser)
                 .ThenInclude(user => user!.AppRole)
             .Include(t => t.AssignedToUser)
-            .Where(t => t.AssignedToUserId == currentUser.Id && t.Status == "Open")
+            .Where(t =>
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open")
             .OrderByDescending(t => t.CreatedAtUtc)
             .Select(t => new TaskInboxItem
             {

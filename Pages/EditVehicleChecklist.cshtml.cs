@@ -84,6 +84,7 @@ public class EditVehicleChecklistModel : PageModel
     public List<VehicleTargetSubtypeOption> TargetVehicleSubtypeOptions { get; private set; } = new();
     public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
     public string DefaultUnitSchematicKey => ResolveDefaultSchematicKey(TargetVehicleType);
+    public string CompanyStorageKeyPrefix { get; private set; } = "company-anonymous";
     public List<string> ChecklistNameOptions { get; private set; } = new();
     public IReadOnlyList<string> TargetVehicleTypeOptions { get; private set; } = new[] { "All Vehicles" };
 
@@ -976,6 +977,10 @@ public class EditVehicleChecklistModel : PageModel
         var currentUser = await _currentUser.GetCurrentUserAsync();
         IsSeniorChecklistPublisher = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
         HasDelegatedPublishAccess = currentUser is not null && await HasChecklistPublishTaskAccessAsync(currentUser);
+        if (currentUser is not null)
+        {
+            CompanyStorageKeyPrefix = $"company-{currentUser.CompanyId}";
+        }
 
         if (loadPublishedSettings && currentUser is not null)
         {

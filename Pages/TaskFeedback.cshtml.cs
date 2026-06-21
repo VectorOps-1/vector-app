@@ -53,8 +53,8 @@ public class TaskFeedbackModel : PageModel
         }
 
         SelectedMode = NormalizeMode(Mode, TaskId);
-        await LoadOpenTasksAsync(currentUser.Id);
-        await LoadTaskAsync(currentUser.Id);
+        await LoadOpenTasksAsync(currentUser);
+        await LoadTaskAsync(currentUser);
 
         if (TaskId.HasValue && TaskDetails is null)
         {
@@ -78,8 +78,8 @@ public class TaskFeedbackModel : PageModel
         }
 
         SelectedMode = NormalizeMode(FeedbackMode ?? Mode, TaskId);
-        await LoadOpenTasksAsync(currentUser.Id);
-        await LoadTaskAsync(currentUser.Id);
+        await LoadOpenTasksAsync(currentUser);
+        await LoadTaskAsync(currentUser);
 
         if (string.IsNullOrWhiteSpace(Outcome))
         {
@@ -119,7 +119,11 @@ public class TaskFeedbackModel : PageModel
     private async Task<IActionResult> SubmitTaskFeedbackAsync(AppUser currentUser)
     {
         var task = await _db.TaskItems
-            .FirstOrDefaultAsync(t => t.Id == TaskId!.Value && t.AssignedToUserId == currentUser.Id && t.Status == "Open");
+            .FirstOrDefaultAsync(t =>
+                t.Id == TaskId!.Value &&
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open");
 
         if (task is null)
         {
@@ -235,11 +239,14 @@ public class TaskFeedbackModel : PageModel
         return savedEvidence;
     }
 
-    private async Task LoadOpenTasksAsync(int currentUserId)
+    private async Task LoadOpenTasksAsync(AppUser currentUser)
     {
         OpenTaskOptions = await _db.TaskItems
             .AsNoTracking()
-            .Where(t => t.AssignedToUserId == currentUserId && t.Status == "Open")
+            .Where(t =>
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open")
             .OrderByDescending(t => t.CreatedAtUtc)
             .Select(t => new OpenTaskFeedbackOption
             {
@@ -261,7 +268,7 @@ public class TaskFeedbackModel : PageModel
             TaskId == task.Id)));
     }
 
-    private async Task LoadTaskAsync(int currentUserId)
+    private async Task LoadTaskAsync(AppUser currentUser)
     {
         if (!TaskId.HasValue)
         {
@@ -270,7 +277,11 @@ public class TaskFeedbackModel : PageModel
 
         TaskDetails = await _db.TaskItems
             .Include(t => t.AssignedByUser)
-            .Where(t => t.Id == TaskId.Value && t.AssignedToUserId == currentUserId && t.Status == "Open")
+            .Where(t =>
+                t.Id == TaskId.Value &&
+                t.CompanyId == currentUser.CompanyId &&
+                t.AssignedToUserId == currentUser.Id &&
+                t.Status == "Open")
             .Select(t => new TaskFeedbackDetails
             {
                 Id = t.Id,
