@@ -60,7 +60,7 @@ Start-Sleep -Milliseconds 500
 
 Write-Host ""
 Write-Host "Open:"
-Write-Host "  http://127.0.0.1:$Port/CompanyLogin?workspace=x-med"
+Write-Host "  http://localhost:$Port/Access"
 Write-Host ""
 Write-Host "Starting app..."
 

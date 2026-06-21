@@ -56,7 +56,7 @@ fi
 
 echo
 echo "Open:"
-echo "  http://127.0.0.1:$PORT/CompanyLogin?workspace=x-med"
+echo "  http://localhost:$PORT/Access"
 echo
 echo "Starting app..."
 
