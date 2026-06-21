@@ -551,6 +551,11 @@ public static class DevelopmentDatabase
         await EnsureSqliteColumnAsync(db, "Companies", "WorkspaceSlug", """ALTER TABLE "Companies" ADD "WorkspaceSlug" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Companies", "WorkspaceAccessCode", """ALTER TABLE "Companies" ADD "WorkspaceAccessCode" TEXT NULL;""");
         await EnsureSqliteColumnAsync(db, "Companies", "LogoStoragePath", """ALTER TABLE "Companies" ADD "LogoStoragePath" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "TradingName", """ALTER TABLE "Companies" ADD "TradingName" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "Country", """ALTER TABLE "Companies" ADD "Country" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "Timezone", """ALTER TABLE "Companies" ADD "Timezone" TEXT NULL;""");
+        await EnsureSqliteColumnAsync(db, "Companies", "BrandingStatus", """ALTER TABLE "Companies" ADD "BrandingStatus" TEXT NOT NULL DEFAULT 'Incomplete';""");
+        await EnsureSqliteColumnAsync(db, "Companies", "LogoRemoved", """ALTER TABLE "Companies" ADD "LogoRemoved" INTEGER NOT NULL DEFAULT 0;""");
         await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousVehicleInspection", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousVehicleInspection" INTEGER NOT NULL DEFAULT 1;""");
         await EnsureSqliteColumnAsync(db, "Companies", "AllowSameAsPreviousEquipmentCheck", """ALTER TABLE "Companies" ADD "AllowSameAsPreviousEquipmentCheck" INTEGER NOT NULL DEFAULT 1;""");
         await EnsureSqliteColumnAsync(db, "DailyVehicleReadinessReports", "ShiftStartedAtUtc", """ALTER TABLE "DailyVehicleReadinessReports" ADD "ShiftStartedAtUtc" TEXT NULL;""");

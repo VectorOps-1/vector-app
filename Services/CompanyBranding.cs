@@ -6,7 +6,9 @@ public static class CompanyBranding
 {
     private const string DefaultLogoPath = "/acuityops-app-icon-light.png";
     private const string CompanyLogoFileName = "company-logo.png";
-    public const string DefaultCompanyName = "Not configured yet";
+    public const string DefaultCompanyName = "Company workspace";
+    public const string BrandingStatusConfigured = "Configured";
+    public const string BrandingStatusIncomplete = "Incomplete";
 
     public static string GetLogoPath(IWebHostEnvironment environment)
     {
@@ -15,7 +17,7 @@ public static class CompanyBranding
 
     public static string GetLogoPath(IWebHostEnvironment environment, Company? company)
     {
-        if (company is null)
+        if (company is null || company.LogoRemoved)
         {
             return DefaultLogoPath;
         }
@@ -43,15 +45,14 @@ public static class CompanyBranding
 
     public static bool IsPlaceholderCompanyName(string? companyName)
     {
-        if (string.IsNullOrWhiteSpace(companyName))
-        {
-            return true;
-        }
+        return string.IsNullOrWhiteSpace(companyName);
+    }
 
-        var normalized = companyName.Trim();
-        return string.Equals(normalized, "X Med", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(normalized, "Random Med", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(normalized, "Client Business Name", StringComparison.OrdinalIgnoreCase);
+    public static string GetBrandingStatus(Company company)
+    {
+        return !string.IsNullOrWhiteSpace(GetSavedCompanyName(company))
+            ? BrandingStatusConfigured
+            : BrandingStatusIncomplete;
     }
 
     private static bool IsCompanyScopedLogoPath(Company company, string? logoStoragePath)

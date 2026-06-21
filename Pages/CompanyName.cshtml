@@ -1,14 +1,14 @@
 @page
 @model CompanyNameModel
 @{
-    ViewData["Title"] = "Company Name";
+    ViewData["Title"] = "Company Identity";
 }
 
 <div class="name-screen">
     <div class="name-inner">
         <div class="home-label">Company Profile</div>
-        <h2 class="page-title">Company Name</h2>
-        <p class="page-subtitle">This name appears across AcuityOps after access selection</p>
+        <h2 class="page-title">Company Identity</h2>
+        <p class="page-subtitle">Master Setup is the source of truth for company identity, workspace, and branding settings.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -16,9 +16,52 @@
         }
 
         <form method="post" class="name-form">
-            <label class="field-label" asp-for="CompanyName">Company name</label>
-            <input class="name-input" asp-for="CompanyName" maxlength="160" />
-            <button class="menu-btn equipment-btn save-name-btn" type="submit">Save Name</button>
+            <div class="identity-grid">
+                <div class="field-block">
+                    <label class="field-label" asp-for="CompanyName">Company name</label>
+                    <input class="name-input" asp-for="CompanyName" maxlength="160" autocomplete="organization" />
+                </div>
+
+                <div class="field-block">
+                    <label class="field-label" asp-for="TradingName">Trading name</label>
+                    <input class="name-input" asp-for="TradingName" maxlength="160" autocomplete="organization" />
+                </div>
+
+                <div class="field-block">
+                    <label class="field-label" asp-for="Country">Country</label>
+                    <input class="name-input" asp-for="Country" maxlength="80" autocomplete="country-name" />
+                </div>
+
+                <div class="field-block">
+                    <label class="field-label" asp-for="Timezone">Default timezone</label>
+                    <input class="name-input" asp-for="Timezone" maxlength="80" list="timezone-options" placeholder="Africa/Johannesburg" />
+                    <datalist id="timezone-options">
+                        <option value="Africa/Johannesburg"></option>
+                        <option value="Africa/Harare"></option>
+                        <option value="Africa/Nairobi"></option>
+                        <option value="Europe/London"></option>
+                        <option value="Australia/Sydney"></option>
+                        <option value="UTC"></option>
+                    </datalist>
+                </div>
+            </div>
+
+            <div class="settings-summary">
+                <div>
+                    <strong>Workspace slug</strong>
+                    <span>@Model.WorkspaceSlug</span>
+                </div>
+                <div>
+                    <strong>Company access code</strong>
+                    <span>@Model.WorkspaceAccessCode</span>
+                </div>
+                <div>
+                    <strong>Branding status</strong>
+                    <span>@Model.BrandingStatus</span>
+                </div>
+            </div>
+
+            <button class="menu-btn equipment-btn save-name-btn" type="submit">Save Company Identity</button>
         </form>
     </div>
 </div>
@@ -34,7 +77,7 @@
 
 .name-inner {
     width: 100%;
-    max-width: 760px;
+    max-width: 980px;
     margin: 0 auto;
     text-align: center;
     padding: 40px 20px 30px 20px;
@@ -79,11 +122,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 18px;
+}
+
+.identity-grid {
+    width: min(860px, 96%);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
 }
 
+.field-block {
+    min-width: 0;
+}
+
 .field-label {
-    width: min(520px, 90%);
+    width: 100%;
+    display: block;
+    margin-bottom: 7px;
     text-align: left;
     font-size: 13px;
     font-weight: 700;
@@ -91,7 +147,8 @@
 }
 
 .name-input {
-    width: min(520px, 90%);
+    width: 100%;
+    box-sizing: border-box;
     padding: 14px 16px;
     border: 1px solid rgba(66, 84, 102, 0.24);
     border-radius: 8px;
@@ -100,9 +157,53 @@
     color: #111827;
 }
 
+.settings-summary {
+    width: min(860px, 96%);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.settings-summary div {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.76);
+    text-align: left;
+}
+
+.settings-summary strong,
+.settings-summary span {
+    display: block;
+}
+
+.settings-summary strong {
+    margin-bottom: 5px;
+    color: #425466;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
+.settings-summary span {
+    color: #10233f;
+    font-size: 13px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
 .save-name-btn {
     margin-top: 8px;
     border: none;
+}
+
+@@media (max-width: 760px) {
+    .identity-grid,
+    .settings-summary {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -110,7 +211,7 @@
 {
     <script>
         window.VectorActionConfirmation?.show({
-            message: "Company name saved.",
+            message: "Company identity saved.",
             redirectUrl: window.VectorActionConfirmation.getReturnUrl(),
             delay: 1300
         });

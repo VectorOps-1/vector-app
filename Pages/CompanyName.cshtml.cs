@@ -24,6 +24,18 @@ public class CompanyNameModel : PageModel
     [BindProperty]
     public string CompanyName { get; set; } = string.Empty;
 
+    [BindProperty]
+    public string TradingName { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string Country { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string Timezone { get; set; } = string.Empty;
+
+    public string WorkspaceSlug { get; private set; } = string.Empty;
+    public string WorkspaceAccessCode { get; private set; } = string.Empty;
+    public string BrandingStatus { get; private set; } = CompanyBranding.BrandingStatusIncomplete;
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
 
@@ -36,6 +48,7 @@ public class CompanyNameModel : PageModel
         }
 
         CompanyName = CompanyBranding.GetSavedCompanyName(company) ?? string.Empty;
+        ApplyCompanySettings(company);
         return Page();
     }
 
@@ -48,7 +61,15 @@ public class CompanyNameModel : PageModel
         }
 
         var submittedName = CompanyName?.Trim() ?? string.Empty;
+        var submittedTradingName = NormalizeOptionalSetting(TradingName);
+        var submittedCountry = NormalizeOptionalSetting(Country);
+        var submittedTimezone = NormalizeOptionalSetting(Timezone);
+
         company.Name = submittedName;
+        company.TradingName = submittedTradingName;
+        company.Country = submittedCountry;
+        company.Timezone = submittedTimezone;
+        company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
         company.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -62,17 +83,36 @@ public class CompanyNameModel : PageModel
             await _auditTrail.RecordAndSaveAsync(
                 currentUser.CompanyId,
                 currentUser.Id,
-                "Company display name updated",
+                "Company identity updated",
                 "Company",
                 currentUser.CompanyId,
-                auditDetail);
+                $"{auditDetail} Tenant settings updated from Master Setup.");
         }
 
         StatusMessage = string.IsNullOrWhiteSpace(submittedName)
-            ? "Company name cleared. AcuityOps will show a neutral placeholder until a name is saved."
-            : "Company name saved.";
+            ? "Company identity saved. A neutral company workspace label will show until a company name is saved."
+            : "Company identity saved.";
         ActionSaved = true;
         CompanyName = submittedName;
+        ApplyCompanySettings(company);
         return Page();
+    }
+
+    private void ApplyCompanySettings(vector_app_local.Models.Company company)
+    {
+        TradingName = company.TradingName ?? string.Empty;
+        Country = company.Country ?? string.Empty;
+        Timezone = company.Timezone ?? string.Empty;
+        WorkspaceSlug = company.WorkspaceSlug ?? "Not generated yet";
+        WorkspaceAccessCode = string.IsNullOrWhiteSpace(company.WorkspaceAccessCode) ? "Not generated yet" : "Generated";
+        BrandingStatus = string.IsNullOrWhiteSpace(company.BrandingStatus)
+            ? CompanyBranding.GetBrandingStatus(company)
+            : company.BrandingStatus;
+    }
+
+    private static string? NormalizeOptionalSetting(string? value)
+    {
+        var cleaned = value?.Trim();
+        return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
     }
 }

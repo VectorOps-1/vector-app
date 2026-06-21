@@ -9,6 +9,18 @@ public class Company
     [MaxLength(160)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(160)]
+    public string? TradingName { get; set; }
+
+    [MaxLength(80)]
+    public string? Country { get; set; }
+
+    [MaxLength(80)]
+    public string? Timezone { get; set; }
+
+    [MaxLength(80)]
+    public string BrandingStatus { get; set; } = "Incomplete";
+
     [MaxLength(80)]
     public string Status { get; set; } = "Active";
 
@@ -23,6 +35,8 @@ public class Company
 
     [MaxLength(260)]
     public string? LogoStoragePath { get; set; }
+
+    public bool LogoRemoved { get; set; }
 
     public bool AllowSameAsPreviousVehicleInspection { get; set; } = true;
     public bool AllowSameAsPreviousEquipmentCheck { get; set; } = true;

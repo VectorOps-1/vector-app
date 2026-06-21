@@ -60,6 +60,8 @@ public class LogoUploadModel : PageModel
 
         DeleteCompanyLogoFiles(company.Id);
         company.LogoStoragePath = null;
+        company.LogoRemoved = true;
+        company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
         company.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -121,6 +123,8 @@ public class LogoUploadModel : PageModel
         await LogoFile.CopyToAsync(stream);
 
         company.LogoStoragePath = $"/uploads/company/{company.Id}/{fileName}";
+        company.LogoRemoved = false;
+        company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
         company.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
