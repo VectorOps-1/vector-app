@@ -86,7 +86,7 @@ The rows below are locked phase gates. Before implementation starts inside any o
 
 | ID | Status | Master Spec Section | Gate Requirement |
 | --- | --- | --- | --- |
-| P2-GATE | Not started | Phase 2: Company And Tenant Source Of Truth | Expand steps 9-15 into tracker rows before implementation. |
+| P2-GATE | Done | Phase 2: Company And Tenant Source Of Truth | Expanded into child rows `P2-09` through `P2-15`; implementation remains locked until one child row is explicitly authorized. |
 | P2A-GATE | Not started | Phase 2A: New Client Setup Wizard | Expand steps 15A-15R into tracker rows before implementation. |
 | P3-GATE | Not started | Phase 3: Access And Permissions | Expand steps 16-23 into tracker rows before implementation. |
 | P4-GATE | Not started | Phase 4: Navigation And Route Cleanup | Expand steps 24-30 into tracker rows before implementation. |
@@ -121,6 +121,20 @@ The rows below are locked phase gates. Before implementation starts inside any o
 | P16I-GATE | Not started | Phase 16I: Production Website And Marketing-Content Truth Control | Expand website claims, pricing, demo request, SEO, analytics, and legal review rows before implementation. |
 | P17-GATE | Not started | Phase 17: Website And Launch | Expand website execution and launch rows after Phase 16I truth-control is done. |
 | P18-GATE | Not started | Phase 18: Final Release Gate | Expand final audit, release, tagging, and production verification rows before implementation. |
+
+## Phase 2: Company And Tenant Source Of Truth
+
+These rows come from `docs/specs/acuityops-master-build-spec.md`, Phase 2 steps 9-15 and the mandatory Phase 2 expansion block. Phase 2 must make the company/tenant settings record the only source of truth for company name, workspace identity, logo, and logged-in branding. No row below may reintroduce seed branding, file-based branding, company-name string matching as a security boundary, or tenant leakage.
+
+| ID | Status | Master Spec Step | Authorized Scope | Verification Required | Notes |
+| --- | --- | --- | --- | --- | --- |
+| P2-09 | Not started | Make Master Setup the only source of company name, logo, workspace settings, and branding. | Product source and migrations only if required for one company/tenant settings record. No database data cleanup unless separately authorized. | Build, schema/source review, and browser check of Master Setup company settings. | The settings record must own company name, trading name, workspace slug, logo reference, logo removed state, country, timezone, and branding status. |
+| P2-10 | Not started | Remove all X Med or seed branding restoration paths. | Product source only. No database writes and no seed repair commands. | Source scan proving no startup/request/login path restores X Med or seed logo/name. | Hardcoded demo labels may exist only in clearly named demo fixtures that are not loaded in normal app use. |
+| P2-11 | Not started | Keep AcuityOps branding on pre-company-login screens. | Product source/UI only for pre-authentication pages. | Browser verification of Index, Access, CompanyLogin, and role/access gate before company authentication. | Pre-company-login screens must not show a tenant logo because the tenant is not authenticated yet. |
+| P2-12 | Not started | Make uploaded logos persist and render across all logged-in pages. | Product source, storage-path handling, and migrations only if required. | Upload/preview/save/replace verification, restart/reload verification, and logged-in page branding scan. | Logged-in pages must render company name/logo from the settings record only. |
+| P2-13 | Not started | Add remove-logo functionality. | Product source/UI and stored logo reference handling only. | Browser verification that remove clears the stored logo reference and logged-in pages show a clean no-logo state. | Removing a logo must not restore X Med or any previous seed/default logo. |
+| P2-14 | Not started | Verify company name and logo changes survive restart and reload. | Verification only unless failures require a new tracker row. App startup is allowed only when this row is explicitly authorized. | Browser verification after refresh and controlled restart; report failures only. | Empty company name must render clean neutral copy until Master Setup is completed. |
+| P2-15 | Not started | Confirm company data is scoped by tenant/company ID everywhere. | Read-only source audit first; source changes only if a specific follow-up row is authorized. | Tenant/company scoping audit across pages, services, queries, uploads, branding, and workspace resolution. | Company names and workspace slugs must not be used as tenant isolation boundaries. |
 
 ## Tracker Update Rules
 
