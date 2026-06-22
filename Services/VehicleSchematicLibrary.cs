@@ -38,26 +38,6 @@ public static class VehicleSchematicLibrary
             "/images/schematics/toyota-quantum-hiace-high-roof/library/toyota-quantum-hiace-high-roof-library-collage.png")
     ];
 
-    private static readonly IReadOnlyDictionary<string, string> LegacyAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["response-pickup"] = "pickup-rv",
-        ["response-sedan"] = "pickup-rv",
-        ["rescue-vehicle"] = "pickup-rv",
-        ["response vehicle"] = "pickup-rv",
-        ["response pickup"] = "pickup-rv",
-        ["response sedan"] = "pickup-rv",
-        ["rescue vehicle"] = "pickup-rv",
-        ["pickup rv"] = "pickup-rv",
-        ["ops-ambulance"] = "toyota-quantum-hiace-high-roof",
-        ["operational ambulance"] = "toyota-quantum-hiace-high-roof",
-        ["ops ambulance"] = "toyota-quantum-hiace-high-roof",
-        ["ambulance"] = "toyota-quantum-hiace-high-roof",
-        ["toyota quantum"] = "toyota-quantum-hiace-high-roof",
-        ["toyota hiace"] = "toyota-quantum-hiace-high-roof",
-        ["quantum ambulance"] = "toyota-quantum-hiace-high-roof",
-        ["hiace ambulance"] = "toyota-quantum-hiace-high-roof"
-    };
-
     public static IReadOnlyList<VehicleSchematicDefinition> Published =>
         All.Where(schematic => schematic.IsPublished).ToList();
 
@@ -74,8 +54,7 @@ public static class VehicleSchematicLibrary
 
     private static string NormalizeKey(string? key)
     {
-        var normalized = string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
-        return LegacyAliases.TryGetValue(normalized, out var currentKey) ? currentKey : normalized;
+        return string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
     }
 }
 

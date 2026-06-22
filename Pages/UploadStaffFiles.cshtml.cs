@@ -89,6 +89,19 @@ public class UploadStaffFilesModel : PageModel
             return Page();
         }
 
+        foreach (var file in StaffFiles.Where(file => file.Length > 0))
+        {
+            try
+            {
+                await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.StaffDocument);
+            }
+            catch (FileStorageValidationException ex)
+            {
+                StatusMessage = ex.Message;
+                return Page();
+            }
+        }
+
         var now = DateTime.UtcNow;
         var category = await _customDropdownOptions.ResolveSelectionAsync(
             currentUser.CompanyId,
@@ -107,7 +120,11 @@ public class UploadStaffFilesModel : PageModel
 
         foreach (var file in StaffFiles.Where(file => file.Length > 0))
         {
-            var storedFile = await _fileStorage.SaveAsync(file, $"staff-{StaffUserId.Value}");
+            var storedFile = await _fileStorage.SaveAsync(
+                file,
+                currentUser.CompanyId,
+                $"staff-{StaffUserId.Value}",
+                FileStorageValidationOptions.StaffDocument);
             _db.AssetFiles.Add(new AssetFile
             {
                 CompanyId = currentUser.CompanyId,

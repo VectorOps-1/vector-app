@@ -102,6 +102,19 @@ public class TaskFeedbackModel : PageModel
             return Page();
         }
 
+        foreach (var file in EvidenceFiles.Where(file => file.Length > 0))
+        {
+            try
+            {
+                await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.TaskEvidence);
+            }
+            catch (FileStorageValidationException ex)
+            {
+                StatusMessage = ex.Message;
+                return Page();
+            }
+        }
+
         if (SelectedMode == GeneralFeedbackMode)
         {
             return await SubmitGeneralFeedbackAsync(currentUser);
@@ -216,7 +229,11 @@ public class TaskFeedbackModel : PageModel
 
         foreach (var file in EvidenceFiles.Where(file => file.Length > 0))
         {
-            var storedFile = await _fileStorage.SaveAsync(file, $"{linkedEntityType}-{linkedEntityId}");
+            var storedFile = await _fileStorage.SaveAsync(
+                file,
+                currentUser.CompanyId,
+                $"{linkedEntityType}-{linkedEntityId}",
+                FileStorageValidationOptions.TaskEvidence);
             _db.AssetFiles.Add(new AssetFile
             {
                 CompanyId = currentUser.CompanyId,

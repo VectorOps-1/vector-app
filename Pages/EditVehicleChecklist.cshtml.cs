@@ -83,7 +83,6 @@ public class EditVehicleChecklistModel : PageModel
     public List<SelectListItem> TargetVehicleFunctionOptions { get; private set; } = new();
     public List<VehicleTargetSubtypeOption> TargetVehicleSubtypeOptions { get; private set; } = new();
     public IReadOnlyList<VehicleSchematicDefinition> PublishedUnitSchematics => VehicleSchematicLibrary.Published;
-    public string DefaultUnitSchematicKey => ResolveDefaultSchematicKey(TargetVehicleType);
     public string CompanyStorageKeyPrefix { get; private set; } = "company-anonymous";
     public List<string> ChecklistNameOptions { get; private set; } = new();
     public IReadOnlyList<string> TargetVehicleTypeOptions { get; private set; } = new[] { "All Vehicles" };
@@ -2146,24 +2145,6 @@ public class EditVehicleChecklistModel : PageModel
     {
         return field.Type.Contains("Schematic", StringComparison.OrdinalIgnoreCase) ||
             field.Label.Contains("Unit Schematic", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ResolveDefaultSchematicKey(string? targetVehicleType)
-    {
-        var target = NormalizeOptional(targetVehicleType) ?? string.Empty;
-
-        if (target.Contains("Pickup", StringComparison.OrdinalIgnoreCase) ||
-            target.Contains("RV", StringComparison.OrdinalIgnoreCase) ||
-            target.Contains("Response", StringComparison.OrdinalIgnoreCase) ||
-            target.Contains("Sedan", StringComparison.OrdinalIgnoreCase) ||
-            target.Contains("Rescue", StringComparison.OrdinalIgnoreCase))
-        {
-            return VehicleSchematicLibrary.Find("pickup-rv")?.Key ?? VehicleSchematicLibrary.Published.FirstOrDefault()?.Key ?? string.Empty;
-        }
-
-        return VehicleSchematicLibrary.Published
-            .FirstOrDefault(schematic => string.Equals(schematic.Category, "Ambulance", StringComparison.OrdinalIgnoreCase))
-            ?.Key ?? string.Empty;
     }
 
     private static string FieldKey(string value)

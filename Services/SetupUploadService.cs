@@ -94,8 +94,21 @@ public class SetupUploadService
             return SetupUploadResult.Failed("Accepted file types are .xlsx, .xls, and .csv.");
         }
 
+        StoredFileResult storedFile;
+        try
+        {
+            storedFile = await _fileStorage.SaveAsync(
+                file,
+                currentUser.CompanyId,
+                $"{linkedEntityType}-{category}",
+                FileStorageValidationOptions.SetupImport);
+        }
+        catch (FileStorageValidationException ex)
+        {
+            return SetupUploadResult.Failed(ex.Message);
+        }
+
         var now = DateTime.UtcNow;
-        var storedFile = await _fileStorage.SaveAsync(file, $"{linkedEntityType}-{category}");
         var assetFile = new AssetFile
         {
             CompanyId = currentUser.CompanyId,

@@ -960,7 +960,6 @@
         const useCustomTargetVehicleTypeToggle = document.getElementById("useCustomTargetVehicleTypeToggle");
         const customTargetVehicleTypeInput = document.getElementById("customTargetVehicleTypeInput");
         const publishedSchematics = @Html.Raw(JsonSerializer.Serialize(schematicOptions));
-        const defaultUnitSchematicKey = "@(Model.IsScratchBuildMode ? string.Empty : Model.DefaultUnitSchematicKey)";
 
         function syncTargetVehicleTypeValue() {
             if (!targetVehicleTypeValue) {
@@ -1306,7 +1305,7 @@
         }
 
         function schematicOptionsHtml(selectedKey) {
-            const selected = selectedKey || defaultUnitSchematicKey || "";
+            const selected = selectedKey || "";
             const blankOption = `<option value=""${selected ? "" : " selected"}>No schematic selected</option>`;
             return blankOption + publishedSchematics.map(function (schematic) {
                 const isSelected = schematic.Key === selected ? " selected" : "";

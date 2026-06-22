@@ -153,6 +153,19 @@ public class PersonalDocumentsModel : PageModel
             return Page();
         }
 
+        foreach (var file in PersonalFiles.Where(file => file.Length > 0))
+        {
+            try
+            {
+                await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.StaffDocument);
+            }
+            catch (FileStorageValidationException ex)
+            {
+                StatusMessage = ex.Message;
+                return Page();
+            }
+        }
+
         var documentName = string.IsNullOrWhiteSpace(CertificateName) ? resolvedDocumentType : CertificateName;
         var category = resolvedDocumentType;
         var notes = BuildNotes(CertificateName, ExpiryDate, Notes);
@@ -161,7 +174,11 @@ public class PersonalDocumentsModel : PageModel
 
         foreach (var file in PersonalFiles.Where(file => file.Length > 0))
         {
-            var storedFile = await _fileStorage.SaveAsync(file, $"staff-{currentUser.Id}");
+            var storedFile = await _fileStorage.SaveAsync(
+                file,
+                currentUser.CompanyId,
+                $"staff-{currentUser.Id}",
+                FileStorageValidationOptions.StaffDocument);
             _db.AssetFiles.Add(new AssetFile
             {
                 CompanyId = currentUser.CompanyId,

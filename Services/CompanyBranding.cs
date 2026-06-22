@@ -33,6 +33,8 @@ public static class CompanyBranding
 
     public static string GetStoredLogoPath(int companyId)
     {
+        // Company logos are public branding assets, not confidential tenant documents.
+        // Protected client uploads use IFileStorageService tenant-scoped storage paths.
         return $"/uploads/company/{companyId}/{CompanyLogoFileName}";
     }
 

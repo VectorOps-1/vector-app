@@ -35,6 +35,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
 builder.Services.AddScoped<IUserActionPermissionService, UserActionPermissionService>();
+builder.Services.AddScoped<IFileSecurityScanner, NoOpFileSecurityScanner>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<LocationOptionService>();
 builder.Services.AddScoped<SetupUploadService>();

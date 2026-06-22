@@ -451,6 +451,19 @@ public class AddItemModel : PageModel
             return Page();
         }
 
+        foreach (var file in StaffFiles.Where(file => file.Length > 0))
+        {
+            try
+            {
+                await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.StaffDocument);
+            }
+            catch (FileStorageValidationException ex)
+            {
+                StatusMessage = ex.Message;
+                return Page();
+            }
+        }
+
         var email = StaffEmail.Trim();
         var duplicateExists = await _db.AppUsers.AnyAsync(user =>
             user.CompanyId == currentUser.CompanyId &&
@@ -518,7 +531,11 @@ public class AddItemModel : PageModel
 
         foreach (var file in StaffFiles.Where(file => file.Length > 0))
         {
-            var storedFile = await _fileStorage.SaveAsync(file, $"staff-{staffProfile.Id}");
+            var storedFile = await _fileStorage.SaveAsync(
+                file,
+                currentUser.CompanyId,
+                $"staff-{staffProfile.Id}",
+                FileStorageValidationOptions.StaffDocument);
             _db.AssetFiles.Add(new AssetFile
             {
                 CompanyId = currentUser.CompanyId,
