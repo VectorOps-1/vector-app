@@ -133,21 +133,13 @@ public partial class AddTenantKeysForChecklistScopesTaskEventsAndUploads : Migra
             table: "UploadedFiles",
             columns: new[] { "CompanyId", "ChecklistTemplateId", "UploadedAtUtc" });
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_ChecklistPublishScopes_Companies_CompanyId",
-            table: "ChecklistPublishScopes",
-            column: "CompanyId",
-            principalTable: "Companies",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+        // SQLite cannot add a foreign key to an existing table without rebuilding it.
+        // The tenant key and index are still applied here; relational integrity is
+        // enforced by application queries and by fresh schema creation.
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropForeignKey(
-            name: "FK_ChecklistPublishScopes_Companies_CompanyId",
-            table: "ChecklistPublishScopes");
-
         migrationBuilder.DropTable(
             name: "TaskEvents");
 
