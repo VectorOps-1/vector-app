@@ -20,6 +20,11 @@ public class VehicleSchematicAssignmentService
 
     public async Task<VehicleSchematicDefinition?> ResolveForVehicleAsync(int companyId, Vehicle vehicle)
     {
+        if (vehicle.CompanyId != companyId)
+        {
+            return null;
+        }
+
         var vehicleKey = await _db.VehicleSchematicAssignments
             .AsNoTracking()
             .Where(assignment =>
