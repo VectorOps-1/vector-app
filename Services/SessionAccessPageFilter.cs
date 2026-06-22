@@ -28,6 +28,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
     private static readonly Dictionary<string, string[]> AccessRules = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["/Home"] = AllSignedInAccess,
         ["/TaskInbox"] = AllSignedInAccess,
         ["/TaskAction"] = AllSignedInAccess,
         ["/TaskFeedback"] = AllSignedInAccess,
@@ -42,6 +43,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/EditStaffProfile"] = AllSignedInAccess,
         ["/ReportIssue"] = AllSignedInAccess,
         ["/ExpiryNotifications"] = AllSignedInAccess,
+        ["/SetupWizard"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
@@ -114,6 +116,14 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/Onboarding"] = SeniorAccess
     };
 
+    private static readonly HashSet<string> CompanySetupAllowedPages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/SetupWizard",
+        "/CompanyProfile",
+        "/CompanyName",
+        "/LogoUpload"
+    };
+
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
     {
         "/AddItem",
@@ -181,6 +191,12 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return;
         }
 
+        if (await ShouldRedirectToSetupWizardAsync(db, companyId.Value, pagePath))
+        {
+            context.Result = new RedirectToPageResult("/SetupWizard");
+            return;
+        }
+
         if (allowedAccessViews.Contains(accessView, StringComparer.OrdinalIgnoreCase))
         {
             if (await HasRequiredActionPermissionAsync(context, pagePath))
@@ -199,6 +215,22 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         }
 
         context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
+    }
+
+    private static async Task<bool> ShouldRedirectToSetupWizardAsync(VectorDbContext db, int companyId, string pagePath)
+    {
+        if (CompanySetupAllowedPages.Contains(pagePath))
+        {
+            return false;
+        }
+
+        var setupStatus = await db.Companies
+            .AsNoTracking()
+            .Where(company => company.Id == companyId && company.Status == "Active")
+            .Select(company => company.BrandingStatus)
+            .FirstOrDefaultAsync();
+
+        return CompanySetupState.RequiresSetupWizard(setupStatus);
     }
 
     private static async Task<bool> HasRequiredActionPermissionAsync(PageHandlerExecutingContext context, string pagePath)
