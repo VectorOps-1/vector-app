@@ -16,6 +16,7 @@
             <div>
                 <span class="status-label">Setup status</span>
                 <strong>@Model.SetupStatus</strong>
+                <span>@Model.CompletedStepKeys.Count completed step(s)</span>
             </div>
             <div>
                 <span class="status-label">Signed in</span>
@@ -25,11 +26,11 @@
         </div>
 
         <div class="setup-step-card">
-            <div class="step-number">1</div>
+            <div class="step-number">@Model.CurrentStep.Number</div>
             <div class="step-copy">
-                <span class="status-label">Required first step</span>
-                <h3>Company identity</h3>
-                <p>Company identity is the current setup gate. Normal Home access remains locked until the company record is configured.</p>
+                <span class="status-label">Resume setup here</span>
+                <h3>@Model.CurrentStep.Title</h3>
+                <p>@Model.CurrentStep.Description Normal Home access remains locked until the company record is configured.</p>
             </div>
             @if (Model.CanManageSetup)
             {

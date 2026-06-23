@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using vector_app_local.Data;
 using vector_app_local.Models;
 using vector_app_local.Services;
 
@@ -8,11 +9,13 @@ namespace vector_app_local.Pages;
 public class SetupWizardModel : PageModel
 {
     private readonly CurrentUserService _currentUser;
+    private readonly VectorDbContext _db;
     private readonly IWebHostEnvironment _environment;
 
-    public SetupWizardModel(CurrentUserService currentUser, IWebHostEnvironment environment)
+    public SetupWizardModel(CurrentUserService currentUser, VectorDbContext db, IWebHostEnvironment environment)
     {
         _currentUser = currentUser;
+        _db = db;
         _environment = environment;
     }
 
@@ -22,6 +25,8 @@ public class SetupWizardModel : PageModel
     public string SignedInName { get; private set; } = string.Empty;
     public string SignedInRole { get; private set; } = string.Empty;
     public bool CanManageSetup { get; private set; }
+    public SetupWizardStepDefinition CurrentStep { get; private set; } = SetupWizardProgress.Steps[0];
+    public IReadOnlySet<string> CompletedStepKeys { get; private set; } = new HashSet<string>();
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -42,6 +47,11 @@ public class SetupWizardModel : PageModel
             return RedirectToPage("/Home");
         }
 
+        if (SetupWizardProgress.EnsureCurrentStep(company))
+        {
+            await _db.SaveChangesAsync();
+        }
+
         ApplyPageState(company, currentUser);
         return Page();
     }
@@ -54,6 +64,8 @@ public class SetupWizardModel : PageModel
         SignedInName = currentUser.FullName;
         SignedInRole = currentUser.AppRole?.Name ?? string.Empty;
         CanManageSetup = CurrentUserService.IsSeniorAccessRole(SignedInRole);
+        CurrentStep = SetupWizardProgress.GetCurrentStep(company);
+        CompletedStepKeys = SetupWizardProgress.GetCompletedStepKeys(company);
         ViewData["ClientName"] = ClientName;
     }
 }

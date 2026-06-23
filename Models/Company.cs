@@ -22,6 +22,14 @@ public class Company
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]
+    public string? SetupWizardCurrentStepKey { get; set; }
+
+    [MaxLength(1000)]
+    public string? SetupWizardCompletedStepKeys { get; set; }
+
+    public DateTime? SetupWizardUpdatedAtUtc { get; set; }
+
+    [MaxLength(80)]
     public string Status { get; set; } = "Active";
 
     [MaxLength(40)]
