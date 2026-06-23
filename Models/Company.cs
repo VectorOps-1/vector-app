@@ -30,6 +30,18 @@ public class Company
     [MaxLength(80)]
     public string? OperationalStructureMode { get; set; }
 
+    [MaxLength(120)]
+    public string? StaffIdFormat { get; set; }
+
+    public bool StaffPractitionerNumberRequired { get; set; }
+
+    public bool StaffAnnualLicenseExpiryRequired { get; set; }
+
+    public bool StaffCpdTrackingRequired { get; set; }
+
+    [MaxLength(1000)]
+    public string? StaffDefaultProfileFields { get; set; }
+
     [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
@@ -70,6 +82,7 @@ public class Company
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
     public ICollection<OperationalArea> OperationalAreas { get; set; } = new List<OperationalArea>();
     public ICollection<StorageLocation> StorageLocations { get; set; } = new List<StorageLocation>();
+    public ICollection<StaffQualificationSetup> StaffQualificationSetups { get; set; } = new List<StaffQualificationSetup>();
     public ICollection<VehicleFunctionSetup> VehicleFunctionSetups { get; set; } = new List<VehicleFunctionSetup>();
     public ICollection<VehicleSubtypeSetup> VehicleSubtypeSetups { get; set; } = new List<VehicleSubtypeSetup>();
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();

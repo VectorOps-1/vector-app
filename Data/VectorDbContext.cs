@@ -18,6 +18,7 @@ public class VectorDbContext : DbContext
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<OperationalArea> OperationalAreas => Set<OperationalArea>();
     public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
+    public DbSet<StaffQualificationSetup> StaffQualificationSetups => Set<StaffQualificationSetup>();
     public DbSet<VehicleFunctionSetup> VehicleFunctionSetups => Set<VehicleFunctionSetup>();
     public DbSet<VehicleSubtypeSetup> VehicleSubtypeSetups => Set<VehicleSubtypeSetup>();
     public DbSet<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments => Set<ManagerOperationalAreaAssignment>();
@@ -242,6 +243,19 @@ public class VectorDbContext : DbContext
             .HasOne(location => location.OperationalArea)
             .WithMany(area => area.StorageLocations)
             .HasForeignKey(location => location.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StaffQualificationSetup>()
+            .HasIndex(qualification => new { qualification.CompanyId, qualification.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<StaffQualificationSetup>()
+            .HasIndex(qualification => new { qualification.CompanyId, qualification.Status, qualification.SortOrder });
+
+        modelBuilder.Entity<StaffQualificationSetup>()
+            .HasOne(qualification => qualification.Company)
+            .WithMany(company => company.StaffQualificationSetups)
+            .HasForeignKey(qualification => qualification.CompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<VehicleFunctionSetup>()

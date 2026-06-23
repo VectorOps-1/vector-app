@@ -74,15 +74,33 @@
                     </label>
                     <label>
                         Clinical qualification / scope
-                        <input asp-for="QualificationFunction" type="text" list="clinicalScopeOptions" readonly="@(!Model.CanEditManagerFields)" placeholder="Example: ECP, CCA, AEA, ILS, BLS" />
+                        @if (Model.CanEditManagerFields)
+                        {
+                            <select asp-for="QualificationFunction" asp-items="Model.StaffQualificationOptions">
+                                <option value="">Select clinical qualification / scope</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <select asp-for="QualificationFunction" asp-items="Model.StaffQualificationOptions" disabled>
+                                <option value="">Select clinical qualification / scope</option>
+                            </select>
+                        }
+                        <span asp-validation-for="QualificationFunction"></span>
                     </label>
+                    @if (Model.CanEditManagerFields && Model.StaffQualificationOptions.Count <= 1)
+                    {
+                        <div class="field-note">No company clinical scope options have been configured yet. Add them in Setup Wizard &gt; Staff Structure.</div>
+                    }
                     <label>
                         Practitioner Number
                         <input asp-for="PractitionerNumber" type="text" readonly="@(!Model.CanEditManagerFields)" placeholder="Professional council / practitioner number" />
+                        <span asp-validation-for="PractitionerNumber"></span>
                     </label>
                     <label>
                         Annual licence expiry
                         <input asp-for="AnnualLicenseExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" data-date-status-field="licence" />
+                        <span asp-validation-for="AnnualLicenseExpiryDate"></span>
                     </label>
                     <label>
                         CPD compliance
@@ -99,6 +117,10 @@
                         CPD valid until
                         <input asp-for="CpdComplianceExpiryDate" type="date" readonly="@(!Model.CanEditManagerFields)" data-date-status-field="cpd" />
                     </label>
+                    @if (!string.IsNullOrWhiteSpace(Model.StaffIdFormat))
+                    {
+                        <div class="field-note">Configured staff ID format: @Model.StaffIdFormat</div>
+                    }
                     <label>
                         Assigned area
                         @if (Model.CanEditManagerFields)
@@ -132,21 +154,6 @@
     </div>
 </div>
 
-<datalist id="clinicalScopeOptions">
-    <option value="N/A - non-clinical"></option>
-    <option value="Emergency Care Practitioner (ECP)"></option>
-    <option value="Critical Care Assistant (CCA)"></option>
-    <option value="Advanced Life Support (ALS)"></option>
-    <option value="Advanced Emergency Assistant (AEA)"></option>
-    <option value="Intermediate Life Support (ILS)"></option>
-    <option value="Basic Life Support (BLS)"></option>
-    <option value="Basic Ambulance Assistant (BAA)"></option>
-    <option value="Emergency Care Technician (ECT)"></option>
-    <option value="Registered Nurse"></option>
-    <option value="Driver / support"></option>
-    <option value="Dispatcher / control room"></option>
-</datalist>
-
 <style>
 .edit-staff-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
 .edit-staff-inner { width: 100%; max-width: 980px; margin: 0 auto; text-align: center; padding: 40px 20px; box-sizing: border-box; }
@@ -167,6 +174,7 @@
 label { display: flex; flex-direction: column; gap: 7px; color: #425466; font-size: 13px; font-weight: 900; }
 input, select { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 12px; background: #fff; color: #1f2937; font-size: 14px; font-weight: 700; box-sizing: border-box; }
 input[readonly], select:disabled { background: #f3f6f9; color: #64748b; cursor: not-allowed; }
+.field-note { display: flex; align-items: center; min-height: 46px; border: 1px dashed rgba(14,94,122,.24); border-radius: 8px; padding: 10px 14px; background: rgba(14,94,122,.06); color: #52606d; font-size: 13px; font-weight: 800; box-sizing: border-box; }
 span[data-valmsg-for], .field-validation-error { color: #8F3A3A; font-size: 12px; font-weight: 900; }
 .action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; position: sticky; bottom: 0; padding-top: 12px; background: linear-gradient(180deg, rgba(244,247,251,0), #F4F7FB 44%); }
 .action-row .menu-btn { width: 100%; border: 1px solid rgba(66,84,102,.18); }

@@ -84,6 +84,10 @@
                     {
                         <a class="menu-btn equipment-btn" asp-page="/VehicleStructureSetup">Open Vehicle Structure</a>
                     }
+                    else if (Model.CurrentStep.Key == SetupWizardProgress.StaffStructureStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/StaffStructureSetup">Open Staff Structure</a>
+                    }
                 </div>
             }
             else

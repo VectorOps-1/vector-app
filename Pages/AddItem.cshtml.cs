@@ -18,6 +18,7 @@ public class AddItemModel : PageModel
     private readonly IFileStorageService _fileStorage;
     private readonly CustomDropdownOptionService _customDropdownOptions;
     private readonly VehicleStructureSetupService _vehicleStructure;
+    private readonly StaffStructureSetupService _staffStructure;
 
     public AddItemModel(
         VectorDbContext db,
@@ -25,7 +26,8 @@ public class AddItemModel : PageModel
         LocationOptionService locationOptions,
         IFileStorageService fileStorage,
         CustomDropdownOptionService customDropdownOptions,
-        VehicleStructureSetupService vehicleStructure)
+        VehicleStructureSetupService vehicleStructure,
+        StaffStructureSetupService staffStructure)
     {
         _db = db;
         _currentUser = currentUser;
@@ -33,6 +35,7 @@ public class AddItemModel : PageModel
         _fileStorage = fileStorage;
         _customDropdownOptions = customDropdownOptions;
         _vehicleStructure = vehicleStructure;
+        _staffStructure = staffStructure;
     }
 
     private static readonly HashSet<string> AllowedStaffFileExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -79,7 +82,13 @@ public class AddItemModel : PageModel
     public List<SelectListItem> LocationOptions { get; private set; } = new();
     public List<SelectListItem> VehicleFunctionOptions { get; private set; } = new();
     public List<VehicleSubtypeSetupOption> VehicleSubtypeOptions { get; private set; } = new();
+    public List<SelectListItem> StaffQualificationOptions { get; private set; } = new();
     public List<SelectListItem> StaffFileCategoryOptions { get; private set; } = new();
+    public StaffStructureSetupSnapshot? StaffStructureSnapshot { get; private set; }
+    public bool StaffPractitionerNumberRequired => StaffStructureSnapshot?.PractitionerNumberRequired ?? false;
+    public bool StaffAnnualLicenseExpiryRequired => StaffStructureSnapshot?.AnnualLicenseExpiryRequired ?? false;
+    public bool StaffCpdTrackingRequired => StaffStructureSnapshot?.CpdTrackingRequired ?? false;
+    public string? StaffIdFormat => StaffStructureSnapshot?.StaffIdFormat;
     public bool IsStaffProfile => NormalizedType == "staff";
     public bool IsVehicleEntry => NormalizedType == "vehicle";
 
@@ -497,6 +506,40 @@ public class AddItemModel : PageModel
 
         var now = DateTime.UtcNow;
         var assignedArea = await _locationOptions.FindOperationalAreaAsync(currentUser.CompanyId, Location);
+        var clinicalScope = NormalizeOptional(StaffQualificationFunction);
+        if (clinicalScope is null)
+        {
+            StatusMessage = "Select the staff member's clinical qualification / scope before saving.";
+            return Page();
+        }
+
+        if (clinicalScope != "N/A" &&
+            StaffQualificationOptions.All(option => !string.Equals(option.Value, clinicalScope, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "Select a configured clinical qualification / scope from Staff Structure setup.";
+            return Page();
+        }
+
+        var isClinicalScope = !string.Equals(clinicalScope, "N/A", StringComparison.OrdinalIgnoreCase);
+
+        if (isClinicalScope && StaffPractitionerNumberRequired && string.IsNullOrWhiteSpace(StaffPractitionerNumber))
+        {
+            StatusMessage = "Practitioner number is required by the company staff setup rules.";
+            return Page();
+        }
+
+        if (isClinicalScope && StaffAnnualLicenseExpiryRequired && !StaffAnnualLicenseExpiryDate.HasValue)
+        {
+            StatusMessage = "Annual licence expiry is required by the company staff setup rules.";
+            return Page();
+        }
+
+        if (isClinicalScope && StaffCpdTrackingRequired && (string.IsNullOrWhiteSpace(StaffCpdComplianceStatus) || !StaffCpdComplianceExpiryDate.HasValue))
+        {
+            StatusMessage = "CPD compliance status and CPD valid-until date are required by the company staff setup rules.";
+            return Page();
+        }
+
         var staffProfile = new AppUser
         {
             CompanyId = currentUser.CompanyId,
@@ -506,7 +549,7 @@ public class AddItemModel : PageModel
             StaffIdentifier = NormalizeOptional(ReferenceNumber),
             NationalId = NormalizeOptional(NationalId),
             CellNumber = NormalizeOptional(CellNumber),
-            QualificationFunction = NormalizeOptional(StaffQualificationFunction),
+            QualificationFunction = clinicalScope,
             PractitionerNumber = NormalizeOptional(StaffPractitionerNumber),
             AnnualLicenseExpiryDate = StaffAnnualLicenseExpiryDate,
             CpdComplianceStatus = NormalizeOptional(StaffCpdComplianceStatus),
@@ -616,6 +659,7 @@ public class AddItemModel : PageModel
 
         if (Type == "staff")
         {
+            await LoadStaffStructureOptionsAsync(companyId);
             StaffFileCategoryOptions = await _customDropdownOptions.BuildOptionsAsync(
                 companyId,
                 CustomDropdownOptionService.StaffFileCategoryKey,
@@ -637,6 +681,22 @@ public class AddItemModel : PageModel
             .ToList();
 
         VehicleSubtypeOptions = snapshot.Subtypes.ToList();
+    }
+
+    private async Task LoadStaffStructureOptionsAsync(int companyId)
+    {
+        StaffStructureSnapshot = await _staffStructure.GetSnapshotAsync(companyId);
+        StaffQualificationOptions = new List<SelectListItem>
+        {
+            new() { Value = "N/A", Text = "N/A", Selected = string.Equals(StaffQualificationFunction, "N/A", StringComparison.OrdinalIgnoreCase) }
+        };
+
+        StaffQualificationOptions.AddRange(StaffStructureSnapshot.Qualifications.Select(option => new SelectListItem
+        {
+            Value = option.Name,
+            Text = option.Name,
+            Selected = string.Equals(StaffQualificationFunction, option.Name, StringComparison.OrdinalIgnoreCase)
+        }));
     }
 
     private string? ResolveSubmittedVehicleSubtype()

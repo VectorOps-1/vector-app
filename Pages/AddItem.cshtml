@@ -33,7 +33,16 @@
                     <label>National ID<input asp-for="NationalId" type="text" placeholder="National ID or passport number" /></label>
                     <label>Email<input asp-for="StaffEmail" type="email" placeholder="name@example.com" /></label>
                     <label>Cell Number<input asp-for="CellNumber" type="tel" placeholder="Mobile / cell number" /></label>
-                    <label>Clinical qualification / scope<input asp-for="StaffQualificationFunction" type="text" list="clinicalScopeOptions" placeholder="Example: ECP, CCA, AEA, ILS, BLS" /></label>
+                    <label>
+                        Clinical qualification / scope
+                        <select asp-for="StaffQualificationFunction" asp-items="Model.StaffQualificationOptions">
+                            <option value="">Select clinical qualification / scope</option>
+                        </select>
+                    </label>
+                    @if (Model.StaffQualificationOptions.Count <= 1)
+                    {
+                        <div class="field-note">No company clinical scope options have been configured yet. Add them in Setup Wizard &gt; Staff Structure.</div>
+                    }
                     <label>Practitioner Number<input asp-for="StaffPractitionerNumber" type="text" placeholder="Professional council / practitioner number" /></label>
                     <label>Annual licence expiry<input asp-for="StaffAnnualLicenseExpiryDate" type="date" data-date-status-field="licence" /></label>
                     <label>
@@ -48,6 +57,10 @@
                         </select>
                     </label>
                     <label>CPD valid until<input asp-for="StaffCpdComplianceExpiryDate" type="date" data-date-status-field="cpd" /></label>
+                    @if (!string.IsNullOrWhiteSpace(Model.StaffIdFormat))
+                    {
+                        <div class="field-note">Configured staff ID format: @Model.StaffIdFormat</div>
+                    }
                     <label>
                         Assigned area
                         <select asp-for="Location" asp-items="Model.LocationOptions">
@@ -157,24 +170,6 @@
         </form>
     </div>
 </div>
-
-@if (Model.IsStaffProfile)
-{
-    <datalist id="clinicalScopeOptions">
-        <option value="N/A - non-clinical"></option>
-        <option value="Emergency Care Practitioner (ECP)"></option>
-        <option value="Critical Care Assistant (CCA)"></option>
-        <option value="Advanced Life Support (ALS)"></option>
-        <option value="Advanced Emergency Assistant (AEA)"></option>
-        <option value="Intermediate Life Support (ILS)"></option>
-        <option value="Basic Life Support (BLS)"></option>
-        <option value="Basic Ambulance Assistant (BAA)"></option>
-        <option value="Emergency Care Technician (ECT)"></option>
-        <option value="Registered Nurse"></option>
-        <option value="Driver / support"></option>
-        <option value="Dispatcher / control room"></option>
-    </datalist>
-}
 
 <style>
 .add-item-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: center; }

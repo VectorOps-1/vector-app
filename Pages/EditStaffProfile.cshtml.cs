@@ -12,11 +12,16 @@ public class EditStaffProfileModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly StaffStructureSetupService _staffStructure;
 
-    public EditStaffProfileModel(VectorDbContext db, CurrentUserService currentUser)
+    public EditStaffProfileModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        StaffStructureSetupService staffStructure)
     {
         _db = db;
         _currentUser = currentUser;
+        _staffStructure = staffStructure;
     }
 
     [BindProperty(SupportsGet = true)] public int? StaffUserId { get; set; }
@@ -56,6 +61,12 @@ public class EditStaffProfileModel : PageModel
         new("Expired", "Expired"),
         new("Under review", "Under review")
     };
+    public List<SelectListItem> StaffQualificationOptions { get; private set; } = new();
+    public StaffStructureSetupSnapshot? StaffStructureSnapshot { get; private set; }
+    public bool StaffPractitionerNumberRequired => StaffStructureSnapshot?.PractitionerNumberRequired ?? false;
+    public bool StaffAnnualLicenseExpiryRequired => StaffStructureSnapshot?.AnnualLicenseExpiryRequired ?? false;
+    public bool StaffCpdTrackingRequired => StaffStructureSnapshot?.CpdTrackingRequired ?? false;
+    public string? StaffIdFormat => StaffStructureSnapshot?.StaffIdFormat;
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -127,8 +138,41 @@ public class EditStaffProfileModel : PageModel
 
         if (CanEditManagerFields)
         {
+            var clinicalScope = NormalizeOptional(QualificationFunction);
+            if (clinicalScope is null)
+            {
+                ModelState.AddModelError(nameof(QualificationFunction), "Select the clinical qualification / scope.");
+                return Page();
+            }
+
+            if (clinicalScope != "N/A" &&
+                StaffQualificationOptions.All(option => !string.Equals(option.Value, clinicalScope, StringComparison.OrdinalIgnoreCase)))
+            {
+                ModelState.AddModelError(nameof(QualificationFunction), "Select a configured clinical qualification / scope.");
+                return Page();
+            }
+
+            var isClinicalScope = !string.Equals(clinicalScope, "N/A", StringComparison.OrdinalIgnoreCase);
+            if (isClinicalScope && StaffPractitionerNumberRequired && string.IsNullOrWhiteSpace(PractitionerNumber))
+            {
+                ModelState.AddModelError(nameof(PractitionerNumber), "Practitioner number is required by the company staff setup rules.");
+                return Page();
+            }
+
+            if (isClinicalScope && StaffAnnualLicenseExpiryRequired && !AnnualLicenseExpiryDate.HasValue)
+            {
+                ModelState.AddModelError(nameof(AnnualLicenseExpiryDate), "Annual licence expiry is required by the company staff setup rules.");
+                return Page();
+            }
+
+            if (isClinicalScope && StaffCpdTrackingRequired && (string.IsNullOrWhiteSpace(CpdComplianceStatus) || !CpdComplianceExpiryDate.HasValue))
+            {
+                ModelState.AddModelError(nameof(CpdComplianceStatus), "CPD compliance status and CPD valid-until date are required by the company staff setup rules.");
+                return Page();
+            }
+
             targetUser.StaffIdentifier = NormalizeOptional(StaffIdentifier);
-            targetUser.QualificationFunction = NormalizeOptional(QualificationFunction);
+            targetUser.QualificationFunction = clinicalScope;
             targetUser.PractitionerNumber = NormalizeOptional(PractitionerNumber);
             targetUser.AnnualLicenseExpiryDate = AnnualLicenseExpiryDate;
             targetUser.CpdComplianceStatus = NormalizeOptional(CpdComplianceStatus);
@@ -205,6 +249,7 @@ public class EditStaffProfileModel : PageModel
             : "Self edit: personal profile details";
 
         await LoadAreaOptionsAsync(currentUser, targetUser, assignedAreaIds, isSenior);
+        await LoadStaffStructureOptionsAsync(currentUser.CompanyId, targetUser.QualificationFunction);
     }
 
     private void LoadForm(AppUser targetUser)
@@ -317,5 +362,27 @@ public class EditStaffProfileModel : PageModel
         }
 
         CpdStatusOptions.Add(new SelectListItem(value, value));
+    }
+
+    private async Task LoadStaffStructureOptionsAsync(int companyId, string? selectedValue)
+    {
+        StaffStructureSnapshot = await _staffStructure.GetSnapshotAsync(companyId);
+        StaffQualificationOptions = new List<SelectListItem>
+        {
+            new() { Value = "N/A", Text = "N/A", Selected = string.Equals(selectedValue, "N/A", StringComparison.OrdinalIgnoreCase) }
+        };
+
+        StaffQualificationOptions.AddRange(StaffStructureSnapshot.Qualifications.Select(option => new SelectListItem
+        {
+            Value = option.Name,
+            Text = option.Name,
+            Selected = string.Equals(selectedValue, option.Name, StringComparison.OrdinalIgnoreCase)
+        }));
+
+        if (!string.IsNullOrWhiteSpace(selectedValue) &&
+            StaffQualificationOptions.All(option => !string.Equals(option.Value, selectedValue, StringComparison.OrdinalIgnoreCase)))
+        {
+            StaffQualificationOptions.Add(new SelectListItem(selectedValue, selectedValue, selected: true));
+        }
     }
 }
