@@ -28,8 +28,23 @@
                 </div>
 
                 <div class="field-block">
+                    <label class="field-label" asp-for="ContactEmail">Contact email</label>
+                    <input class="name-input" asp-for="ContactEmail" type="email" maxlength="160" autocomplete="email" />
+                </div>
+
+                <div class="field-block">
+                    <label class="field-label" asp-for="ContactPhone">Contact phone</label>
+                    <input class="name-input" asp-for="ContactPhone" type="tel" maxlength="60" autocomplete="tel" />
+                </div>
+
+                <div class="field-block">
                     <label class="field-label" asp-for="Country">Country</label>
                     <input class="name-input" asp-for="Country" maxlength="80" autocomplete="country-name" />
+                </div>
+
+                <div class="field-block">
+                    <label class="field-label" asp-for="Region">Region / province</label>
+                    <input class="name-input" asp-for="Region" maxlength="120" autocomplete="address-level1" />
                 </div>
 
                 <div class="field-block">
@@ -44,6 +59,14 @@
                         <option value="UTC"></option>
                     </datalist>
                 </div>
+            </div>
+
+            <div class="logo-summary">
+                <div>
+                    <strong>Company logo</strong>
+                    <span>Logo upload is stored against the same company identity record and appears after company login.</span>
+                </div>
+                <a class="menu-btn" asp-page="/LogoUpload">Open Logo Upload</a>
             </div>
 
             <div class="settings-summary">
@@ -164,6 +187,41 @@
     gap: 10px;
 }
 
+.logo-summary {
+    width: min(860px, 96%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: rgba(248, 250, 252, 0.9);
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.logo-summary strong,
+.logo-summary span {
+    display: block;
+}
+
+.logo-summary strong {
+    margin-bottom: 5px;
+    color: #425466;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
+.logo-summary span {
+    color: #10233f;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
 .settings-summary div {
     min-width: 0;
     padding: 12px;
@@ -201,7 +259,8 @@
 
 @@media (max-width: 760px) {
     .identity-grid,
-    .settings-summary {
+    .settings-summary,
+    .logo-summary {
         grid-template-columns: 1fr;
     }
 }

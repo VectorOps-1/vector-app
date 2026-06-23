@@ -12,8 +12,17 @@ public class Company
     [MaxLength(160)]
     public string? TradingName { get; set; }
 
+    [MaxLength(160)]
+    public string? ContactEmail { get; set; }
+
+    [MaxLength(60)]
+    public string? ContactPhone { get; set; }
+
     [MaxLength(80)]
     public string? Country { get; set; }
+
+    [MaxLength(120)]
+    public string? Region { get; set; }
 
     [MaxLength(80)]
     public string? Timezone { get; set; }

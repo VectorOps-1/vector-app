@@ -28,7 +28,16 @@ public class CompanyNameModel : PageModel
     public string TradingName { get; set; } = string.Empty;
 
     [BindProperty]
+    public string ContactEmail { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string ContactPhone { get; set; } = string.Empty;
+
+    [BindProperty]
     public string Country { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string Region { get; set; } = string.Empty;
 
     [BindProperty]
     public string Timezone { get; set; } = string.Empty;
@@ -62,12 +71,18 @@ public class CompanyNameModel : PageModel
 
         var submittedName = CompanyName?.Trim() ?? string.Empty;
         var submittedTradingName = NormalizeOptionalSetting(TradingName);
+        var submittedContactEmail = NormalizeOptionalSetting(ContactEmail);
+        var submittedContactPhone = NormalizeOptionalSetting(ContactPhone);
         var submittedCountry = NormalizeOptionalSetting(Country);
+        var submittedRegion = NormalizeOptionalSetting(Region);
         var submittedTimezone = NormalizeOptionalSetting(Timezone);
 
         company.Name = submittedName;
         company.TradingName = submittedTradingName;
+        company.ContactEmail = submittedContactEmail;
+        company.ContactPhone = submittedContactPhone;
         company.Country = submittedCountry;
+        company.Region = submittedRegion;
         company.Timezone = submittedTimezone;
         company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
         company.UpdatedAtUtc = DateTime.UtcNow;
@@ -94,6 +109,9 @@ public class CompanyNameModel : PageModel
             : "Company identity saved.";
         ActionSaved = true;
         CompanyName = submittedName;
+        ContactEmail = submittedContactEmail ?? string.Empty;
+        ContactPhone = submittedContactPhone ?? string.Empty;
+        Region = submittedRegion ?? string.Empty;
         ApplyCompanySettings(company);
         return Page();
     }
@@ -101,7 +119,10 @@ public class CompanyNameModel : PageModel
     private void ApplyCompanySettings(vector_app_local.Models.Company company)
     {
         TradingName = company.TradingName ?? string.Empty;
+        ContactEmail = company.ContactEmail ?? string.Empty;
+        ContactPhone = company.ContactPhone ?? string.Empty;
         Country = company.Country ?? string.Empty;
+        Region = company.Region ?? string.Empty;
         Timezone = company.Timezone ?? string.Empty;
         WorkspaceSlug = company.WorkspaceSlug ?? "Not generated yet";
         WorkspaceAccessCode = string.IsNullOrWhiteSpace(company.WorkspaceAccessCode) ? "Not generated yet" : "Generated";

@@ -8,7 +8,7 @@ public static class SetupWizardProgress
 
     private static readonly IReadOnlyList<SetupWizardStepDefinition> StepDefinitions =
     [
-        new(CompanyIdentityStepKey, 1, "Company identity", "Confirm company identity and logo before normal app use starts.")
+        new(CompanyIdentityStepKey, 1, "Company identity", "Confirm company name, trading name, contact details, country, region, timezone, and logo before normal app use starts.")
     ];
 
     public static IReadOnlyList<SetupWizardStepDefinition> Steps => StepDefinitions;
