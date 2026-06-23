@@ -62,8 +62,10 @@
                         Function
                         <select asp-for="VehicleFunction" id="vehicleFunctionSelect">
                             <option value="">Select function</option>
-                            <option value="@VehicleTaxonomyService.AmbulanceFunction">Ambulance</option>
-                            <option value="@VehicleTaxonomyService.ResponseVehicleFunction">Response Vehicle</option>
+                            @foreach (var option in Model.VehicleFunctionOptions)
+                            {
+                                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                            }
                         </select>
                     </label>
                     <label>
@@ -72,15 +74,15 @@
                             <option value="">Select subtype</option>
                             @foreach (var option in Model.VehicleSubtypeOptions)
                             {
-                                <option value="@option.Value">@option.Text</option>
+                                <option value="@option.Name"
+                                        data-function="@option.FunctionName"
+                                        selected="@(string.Equals(Model.VehicleSubtype, option.Name, StringComparison.OrdinalIgnoreCase))">
+                                    @option.Label
+                                </option>
                             }
-                            <option value="@AddItemModel.CustomSubtypeValue">Create custom subtype</option>
                         </select>
                     </label>
-                    <label class="custom-subtype-field @(Model.VehicleSubtype == AddItemModel.CustomSubtypeValue ? "" : "is-hidden")" data-custom-subtype-field>
-                        Custom subtype
-                        <input asp-for="CustomVehicleSubtype" id="customVehicleSubtypeInput" type="text" placeholder="Example: Primary Ops Ambulance, IFT Ambulance, ALS RV" />
-                    </label>
+                    <input asp-for="CustomVehicleSubtype" type="hidden" value="" />
                     <div class="field-note">Unit schematics are assigned in Checklist Management &gt; Unit Schematic Library after the vehicle is saved.</div>
                     <label>
                         Assigned area
@@ -209,53 +211,28 @@
         (function () {
             const functionSelect = document.getElementById("vehicleFunctionSelect");
             const subtypeSelect = document.getElementById("vehicleSubtypeSelect");
-            const customField = document.querySelector("[data-custom-subtype-field]");
-            const customInput = document.getElementById("customVehicleSubtypeInput");
-            const schematicSelect = document.getElementById("unitSchematicSelect");
-            if (!functionSelect || !subtypeSelect || !customField || !customInput || !schematicSelect) {
+            if (!functionSelect || !subtypeSelect) {
                 return;
             }
 
-            function syncCustomSubtype() {
-                const isCustom = subtypeSelect.value === @Json.Serialize(AddItemModel.CustomSubtypeValue);
-                customField.classList.toggle("is-hidden", !isCustom);
-                customInput.disabled = !isCustom;
-                if (!isCustom) {
-                    customInput.value = "";
+            function syncSubtypeOptions() {
+                const selectedFunction = (functionSelect.value || "").toLowerCase();
+                Array.from(subtypeSelect.options).forEach(option => {
+                    if (!option.dataset.function) {
+                        return;
+                    }
+
+                    option.hidden = !!selectedFunction && option.dataset.function.toLowerCase() !== selectedFunction;
+                });
+
+                const selectedOption = subtypeSelect.selectedOptions[0];
+                if (selectedOption && selectedOption.hidden) {
+                    subtypeSelect.value = "";
                 }
             }
 
-            function suggestSchematic() {
-                if (schematicSelect.value) {
-                    return;
-                }
-
-                const subtype = subtypeSelect.value.toLowerCase();
-                const functionValue = functionSelect.value.toLowerCase();
-                const schematicKey = subtype.includes("pickup") ||
-                    subtype.includes("response") ||
-                    subtype.includes("rv") ||
-                    functionValue.includes("response")
-                    ? "pickup-rv"
-                    : functionValue.includes("ambulance") || subtype.includes("ambulance")
-                        ? "toyota-quantum-hiace-high-roof"
-                        : "";
-                if (!schematicKey) {
-                    return;
-                }
-
-                const matchingOption = Array.from(schematicSelect.options).find(option => option.value === schematicKey);
-                if (matchingOption) {
-                    schematicSelect.value = matchingOption.value;
-                }
-            }
-
-            subtypeSelect.addEventListener("change", function () {
-                syncCustomSubtype();
-                suggestSchematic();
-            });
-            functionSelect.addEventListener("change", suggestSchematic);
-            syncCustomSubtype();
+            functionSelect.addEventListener("change", syncSubtypeOptions);
+            syncSubtypeOptions();
         })();
     </script>
 }

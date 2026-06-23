@@ -18,6 +18,8 @@ public class VectorDbContext : DbContext
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<OperationalArea> OperationalAreas => Set<OperationalArea>();
     public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
+    public DbSet<VehicleFunctionSetup> VehicleFunctionSetups => Set<VehicleFunctionSetup>();
+    public DbSet<VehicleSubtypeSetup> VehicleSubtypeSetups => Set<VehicleSubtypeSetup>();
     public DbSet<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments => Set<ManagerOperationalAreaAssignment>();
     public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
     public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
@@ -240,6 +242,38 @@ public class VectorDbContext : DbContext
             .HasOne(location => location.OperationalArea)
             .WithMany(area => area.StorageLocations)
             .HasForeignKey(location => location.OperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleFunctionSetup>()
+            .HasIndex(vehicleFunction => new { vehicleFunction.CompanyId, vehicleFunction.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<VehicleFunctionSetup>()
+            .HasIndex(vehicleFunction => new { vehicleFunction.CompanyId, vehicleFunction.Status, vehicleFunction.SortOrder });
+
+        modelBuilder.Entity<VehicleFunctionSetup>()
+            .HasOne(vehicleFunction => vehicleFunction.Company)
+            .WithMany(company => company.VehicleFunctionSetups)
+            .HasForeignKey(vehicleFunction => vehicleFunction.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleSubtypeSetup>()
+            .HasIndex(vehicleSubtype => new { vehicleSubtype.CompanyId, vehicleSubtype.VehicleFunctionSetupId, vehicleSubtype.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<VehicleSubtypeSetup>()
+            .HasIndex(vehicleSubtype => new { vehicleSubtype.CompanyId, vehicleSubtype.Status, vehicleSubtype.SortOrder });
+
+        modelBuilder.Entity<VehicleSubtypeSetup>()
+            .HasOne(vehicleSubtype => vehicleSubtype.Company)
+            .WithMany(company => company.VehicleSubtypeSetups)
+            .HasForeignKey(vehicleSubtype => vehicleSubtype.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<VehicleSubtypeSetup>()
+            .HasOne(vehicleSubtype => vehicleSubtype.VehicleFunctionSetup)
+            .WithMany(vehicleFunction => vehicleFunction.Subtypes)
+            .HasForeignKey(vehicleSubtype => vehicleSubtype.VehicleFunctionSetupId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ManagerOperationalAreaAssignment>()

@@ -6,11 +6,13 @@ public static class SetupWizardProgress
 {
     public const string CompanyIdentityStepKey = "company-identity";
     public const string OperationalStructureStepKey = "operational-structure";
+    public const string VehicleStructureStepKey = "vehicle-structure";
 
     private static readonly IReadOnlyList<SetupWizardStepDefinition> StepDefinitions =
     [
         new(CompanyIdentityStepKey, 1, "Company identity", "Confirm company name, trading name, contact details, country, region, timezone, and logo before normal app use starts."),
-        new(OperationalStructureStepKey, 2, "Operational structure", "Capture bases, regions, operational areas, storage spaces, and whether areas sit flat or under regions or bases.")
+        new(OperationalStructureStepKey, 2, "Operational structure", "Capture bases, regions, operational areas, storage spaces, and whether areas sit flat or under regions or bases."),
+        new(VehicleStructureStepKey, 3, "Vehicle structure", "Capture vehicle functions, client-defined subtypes, and optional default unit schematic assignments by function or subtype.")
     ];
 
     public static IReadOnlyList<SetupWizardStepDefinition> Steps => StepDefinitions;

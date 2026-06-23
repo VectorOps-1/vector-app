@@ -181,6 +181,58 @@ public class VehicleSchematicAssignmentService
         return true;
     }
 
+    public async Task<bool> UnassignFunctionAsync(int companyId, string vehicleFunction)
+    {
+        var normalizedFunction = Normalize(vehicleFunction);
+        if (normalizedFunction is null)
+        {
+            return false;
+        }
+
+        var assignments = await _db.VehicleSchematicAssignments
+            .Where(item =>
+                item.CompanyId == companyId &&
+                item.ScopeType == FunctionScope &&
+                item.VehicleFunction == normalizedFunction)
+            .ToListAsync();
+
+        if (assignments.Count == 0)
+        {
+            return false;
+        }
+
+        _db.VehicleSchematicAssignments.RemoveRange(assignments);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> UnassignSubtypeAsync(int companyId, string? vehicleFunction, string vehicleSubtype)
+    {
+        var normalizedFunction = Normalize(vehicleFunction);
+        var normalizedSubtype = Normalize(vehicleSubtype);
+        if (normalizedSubtype is null)
+        {
+            return false;
+        }
+
+        var assignments = await _db.VehicleSchematicAssignments
+            .Where(item =>
+                item.CompanyId == companyId &&
+                item.ScopeType == SubtypeScope &&
+                item.VehicleFunction == normalizedFunction &&
+                item.VehicleSubtype == normalizedSubtype)
+            .ToListAsync();
+
+        if (assignments.Count == 0)
+        {
+            return false;
+        }
+
+        _db.VehicleSchematicAssignments.RemoveRange(assignments);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     private async Task UpsertAssignmentAsync(
         int companyId,
         int userId,

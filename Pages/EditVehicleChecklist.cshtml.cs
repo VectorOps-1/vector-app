@@ -21,15 +21,18 @@ public class EditVehicleChecklistModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly ChecklistPublishingService _checklistPublishing;
+    private readonly VehicleStructureSetupService _vehicleStructure;
 
     public EditVehicleChecklistModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        ChecklistPublishingService checklistPublishing)
+        ChecklistPublishingService checklistPublishing,
+        VehicleStructureSetupService vehicleStructure)
     {
         _db = db;
         _currentUser = currentUser;
         _checklistPublishing = checklistPublishing;
+        _vehicleStructure = vehicleStructure;
     }
 
     [BindProperty] public string? ChecklistName { get; set; }
@@ -357,29 +360,16 @@ public class EditVehicleChecklistModel : PageModel
 
     private async Task LoadTargetVehicleOptionsAsync(int companyId)
     {
-        var vehicles = await _db.Vehicles
-            .AsNoTracking()
-            .Where(vehicle => vehicle.CompanyId == companyId && vehicle.Status != "Deleted")
-            .Select(vehicle => new
-            {
-                vehicle.VehicleFunction,
-                vehicle.VehicleSubtype,
-                vehicle.VehicleType
-            })
-            .ToListAsync();
-
-        var functions = new[]
-            {
-                VehicleTaxonomyService.AmbulanceFunction,
-                VehicleTaxonomyService.ResponseVehicleFunction
-            }
-            .Concat(vehicles.Select(vehicle =>
-                NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType) ?? string.Empty))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value == VehicleTaxonomyService.AmbulanceFunction ? 0 : value == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
-            .ThenBy(value => value)
+        var vehicleStructure = await _vehicleStructure.GetSnapshotAsync(companyId);
+        var functions = vehicleStructure.Functions
+            .Select(function => function.Name)
             .ToList();
+
+        if (!string.IsNullOrWhiteSpace(TargetVehicleFunction) &&
+            !functions.Contains(TargetVehicleFunction, StringComparer.OrdinalIgnoreCase))
+        {
+            functions.Add(TargetVehicleFunction);
+        }
 
         TargetVehicleFunctionOptions = new List<SelectListItem>
         {
@@ -392,19 +382,8 @@ public class EditVehicleChecklistModel : PageModel
             Selected = string.Equals(TargetVehicleFunction, function, StringComparison.OrdinalIgnoreCase)
         }));
 
-        var subtypes = vehicles
-            .Select(vehicle =>
-            {
-                var function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType);
-                var subtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType);
-                return new VehicleTargetSubtypeOption(function, subtype ?? string.Empty);
-            })
-            .Where(option => !string.IsNullOrWhiteSpace(option.Subtype))
-            .GroupBy(option => $"{option.Function ?? string.Empty}||{option.Subtype}", StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(option => option.Function == VehicleTaxonomyService.AmbulanceFunction ? 0 : option.Function == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
-            .ThenBy(option => option.Function)
-            .ThenBy(option => option.Subtype)
+        var subtypes = vehicleStructure.Subtypes
+            .Select(subtype => new VehicleTargetSubtypeOption(subtype.FunctionName, subtype.Name))
             .ToList();
 
         var target = NormalizeOptional(TargetVehicleType);
@@ -414,7 +393,7 @@ public class EditVehicleChecklistModel : PageModel
             !subtypes.Any(option => string.Equals(option.Subtype, target, StringComparison.OrdinalIgnoreCase)))
         {
             subtypes.Add(new VehicleTargetSubtypeOption(
-                VehicleTaxonomyService.InferFunction(target),
+                NormalizeOptional(TargetVehicleFunction),
                 target));
         }
 
@@ -468,26 +447,17 @@ public class EditVehicleChecklistModel : PageModel
             })
             .ToList();
 
-        var functionValues = vehicles
-            .Select(vehicle => NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType))
-            .Where(function => !string.IsNullOrWhiteSpace(function))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(function => function == VehicleTaxonomyService.AmbulanceFunction ? 0 : function == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
-            .ThenBy(function => function)
+        var vehicleStructure = await _vehicleStructure.GetSnapshotAsync(companyId);
+        var functionValues = vehicleStructure.Functions
+            .Select(function => function.Name)
             .ToList();
 
-        var subtypeValues = vehicles
-            .Select(vehicle => new
+        var subtypeValues = vehicleStructure.Subtypes
+            .Select(subtype => new
             {
-                Function = NormalizeOptional(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType),
-                Subtype = NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType) ?? vehicle.VehicleType
+                Function = subtype.FunctionName,
+                Subtype = subtype.Name
             })
-            .Where(item => !string.IsNullOrWhiteSpace(item.Subtype))
-            .GroupBy(item => $"{item.Function ?? string.Empty}||{item.Subtype}", StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(item => item.Function == VehicleTaxonomyService.AmbulanceFunction ? 0 : item.Function == VehicleTaxonomyService.ResponseVehicleFunction ? 1 : 50)
-            .ThenBy(item => item.Function)
-            .ThenBy(item => item.Subtype)
             .ToList();
 
         if (PublishVehicleFunction is null &&
@@ -1273,11 +1243,9 @@ public class EditVehicleChecklistModel : PageModel
 
     private static string ResolveLegacyScopeLabel(string targetVehicleType)
     {
-        return string.Equals(targetVehicleType, VehicleTaxonomyService.AmbulanceFunction, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(targetVehicleType, VehicleTaxonomyService.ResponseVehicleFunction, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(targetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase)
-            ? "Vehicle function"
-            : "Vehicle subtype";
+        return string.Equals(targetVehicleType, "All Vehicles", StringComparison.OrdinalIgnoreCase)
+            ? "All areas / eligible vehicles"
+            : "Vehicle target";
     }
 
     private static string LiveUseTargetLabel(ChecklistPublishScope scope)

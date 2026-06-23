@@ -45,6 +45,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ExpiryNotifications"] = AllSignedInAccess,
         ["/SetupWizard"] = AllSignedInAccess,
         ["/OperationalStructureSetup"] = AllSignedInAccess,
+        ["/VehicleStructureSetup"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
@@ -123,7 +124,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/CompanyProfile",
         "/CompanyName",
         "/LogoUpload",
-        "/OperationalStructureSetup"
+        "/OperationalStructureSetup",
+        "/VehicleStructureSetup"
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
@@ -454,7 +456,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/AreaManagerControl"
                 => PermissionRequirement.Any(UserActionPermissions.SetupAreas, UserActionPermissions.SetupAccess),
 
-            "/OperationalAreas" or "/OperationalStructureSetup"
+            "/OperationalAreas" or "/OperationalStructureSetup" or "/VehicleStructureSetup"
                 => PermissionRequirement.All(UserActionPermissions.SetupAreas),
 
             "/CreateManagerAccess" or "/CreateOperationalStaffAccess"

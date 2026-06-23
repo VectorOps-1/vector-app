@@ -70,6 +70,8 @@ public class Company
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
     public ICollection<OperationalArea> OperationalAreas { get; set; } = new List<OperationalArea>();
     public ICollection<StorageLocation> StorageLocations { get; set; } = new List<StorageLocation>();
+    public ICollection<VehicleFunctionSetup> VehicleFunctionSetups { get; set; } = new List<VehicleFunctionSetup>();
+    public ICollection<VehicleSubtypeSetup> VehicleSubtypeSetups { get; set; } = new List<VehicleSubtypeSetup>();
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
     public ICollection<MedicationItem> MedicationItems { get; set; } = new List<MedicationItem>();
     public ICollection<StockItem> StockItems { get; set; } = new List<StockItem>();

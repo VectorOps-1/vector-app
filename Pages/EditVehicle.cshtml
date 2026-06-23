@@ -36,8 +36,10 @@
                         Function
                         <select asp-for="VehicleFunction" id="vehicleFunctionSelect">
                             <option value="">Select function</option>
-                            <option value="@VehicleTaxonomyService.AmbulanceFunction">Ambulance</option>
-                            <option value="@VehicleTaxonomyService.ResponseVehicleFunction">Response Vehicle</option>
+                            @foreach (var option in Model.VehicleFunctionOptions)
+                            {
+                                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                            }
                         </select>
                     </label>
                     <label>
@@ -46,15 +48,15 @@
                             <option value="">Select subtype</option>
                             @foreach (var option in Model.VehicleSubtypeOptions)
                             {
-                                <option value="@option.Value">@option.Text</option>
+                                <option value="@option.Name"
+                                        data-function="@option.FunctionName"
+                                        selected="@(string.Equals(Model.VehicleSubtype, option.Name, StringComparison.OrdinalIgnoreCase))">
+                                    @option.Label
+                                </option>
                             }
-                            <option value="@EditVehicleModel.CustomSubtypeValue">Create custom subtype</option>
                         </select>
                     </label>
-                    <label class="custom-subtype-field @(Model.VehicleSubtype == EditVehicleModel.CustomSubtypeValue ? "" : "is-hidden")" data-custom-subtype-field>
-                        Custom subtype
-                        <input asp-for="CustomVehicleSubtype" id="customVehicleSubtypeInput" type="text" placeholder="Example: Primary Ops Ambulance, IFT Ambulance, ALS RV" />
-                    </label>
+                    <input asp-for="CustomVehicleSubtype" type="hidden" value="" />
                     <label>Qualification level<input asp-for="QualificationLevel" type="text" placeholder="Optional" /></label>
                     <div class="field-note">Unit schematics are assigned from Checklist Management &gt; Unit Schematic Library by function, subtype, area, or specific vehicle.</div>
                 </div>
@@ -116,24 +118,30 @@
 
 <script>
     (function () {
+        const functionSelect = document.getElementById("vehicleFunctionSelect");
         const subtypeSelect = document.getElementById("vehicleSubtypeSelect");
-        const customField = document.querySelector("[data-custom-subtype-field]");
-        const customInput = document.getElementById("customVehicleSubtypeInput");
-        if (!subtypeSelect || !customField || !customInput) {
+        if (!functionSelect || !subtypeSelect) {
             return;
         }
 
-        function syncCustomSubtype() {
-            const isCustom = subtypeSelect.value === @Json.Serialize(EditVehicleModel.CustomSubtypeValue);
-            customField.classList.toggle("is-hidden", !isCustom);
-            customInput.disabled = !isCustom;
-            if (!isCustom) {
-                customInput.value = "";
+        function syncSubtypeOptions() {
+            const selectedFunction = (functionSelect.value || "").toLowerCase();
+            Array.from(subtypeSelect.options).forEach(option => {
+                if (!option.dataset.function) {
+                    return;
+                }
+
+                option.hidden = !!selectedFunction && option.dataset.function.toLowerCase() !== selectedFunction;
+            });
+
+            const selectedOption = subtypeSelect.selectedOptions[0];
+            if (selectedOption && selectedOption.hidden) {
+                subtypeSelect.value = "";
             }
         }
 
-        subtypeSelect.addEventListener("change", syncCustomSubtype);
-        syncCustomSubtype();
+        functionSelect.addEventListener("change", syncSubtypeOptions);
+        syncSubtypeOptions();
     })();
 </script>
 

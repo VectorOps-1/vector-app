@@ -47,6 +47,7 @@ builder.Services.AddScoped<ReadinessEngineService>();
 builder.Services.AddScoped<ReadinessEngineScoringService>();
 builder.Services.AddScoped<ChecklistPublishingService>();
 builder.Services.AddScoped<VehicleSchematicAssignmentService>();
+builder.Services.AddScoped<VehicleStructureSetupService>();
 builder.Services.AddScoped<CustomDropdownOptionService>();
 builder.Services.AddScoped<ExpiryPressureService>();
 builder.Services.AddDbContext<VectorDbContext>(options =>

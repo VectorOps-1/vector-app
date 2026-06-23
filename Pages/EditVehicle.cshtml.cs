@@ -15,12 +15,18 @@ public class EditVehicleModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly VehicleStructureSetupService _vehicleStructure;
 
-    public EditVehicleModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public EditVehicleModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        VehicleStructureSetupService vehicleStructure)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _vehicleStructure = vehicleStructure;
     }
 
     [BindProperty] public int VehicleId { get; set; }
@@ -44,7 +50,8 @@ public class EditVehicleModel : PageModel
     public string? StatusMessage { get; private set; }
     public bool ActionSaved { get; private set; }
     public List<SelectListItem> LocationOptions { get; private set; } = new();
-    public List<SelectListItem> VehicleSubtypeOptions { get; private set; } = new();
+    public List<SelectListItem> VehicleFunctionOptions { get; private set; } = new();
+    public List<VehicleSubtypeSetupOption> VehicleSubtypeOptions { get; private set; } = new();
 
     public async Task<IActionResult> OnGetAsync(int vehicleId, string? returnUrl)
     {
@@ -131,7 +138,23 @@ public class EditVehicleModel : PageModel
             return Page();
         }
 
-        var function = NormalizeOptional(VehicleFunction) ?? VehicleTaxonomyService.InferFunction(subtype);
+        var function = NormalizeOptional(VehicleFunction);
+        if (function is null)
+        {
+            StatusMessage = "Select a configured vehicle function before saving.";
+            PrepareSubtypeSelection();
+            return Page();
+        }
+
+        if (!VehicleSubtypeOptions.Any(option =>
+                string.Equals(option.FunctionName, function, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(option.Name, subtype, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "Select a subtype that belongs to the selected vehicle function.";
+            PrepareSubtypeSelection();
+            return Page();
+        }
+
         var vehicleType = subtype ?? vehicle.VehicleType;
 
         vehicle.RegistrationNumber = registration;
@@ -178,29 +201,16 @@ public class EditVehicleModel : PageModel
     {
         LocationOptions = await _locationOptions.GetOperationalAreaOptionsAsync(companyId);
 
-        var vehicles = await _db.Vehicles
-            .AsNoTracking()
-            .Where(vehicle =>
-                vehicle.CompanyId == companyId &&
-                vehicle.Status != "Deleted")
-            .Select(vehicle => new
+        var snapshot = await _vehicleStructure.GetSnapshotAsync(companyId);
+        VehicleFunctionOptions = snapshot.Functions
+            .Select(option => new SelectListItem
             {
-                vehicle.VehicleSubtype,
-                vehicle.VehicleType
+                Value = option.Name,
+                Text = option.Name,
+                Selected = string.Equals(VehicleFunction, option.Name, StringComparison.OrdinalIgnoreCase)
             })
-            .ToListAsync();
-
-        var subtypes = vehicles
-            .Select(vehicle => NormalizeOptional(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value)
             .ToList();
-
-        VehicleSubtypeOptions = subtypes
-            .Select(value => new SelectListItem(value, value))
-            .ToList();
+        VehicleSubtypeOptions = snapshot.Subtypes.ToList();
     }
 
     private void LoadFromVehicle(Vehicle vehicle, string? returnUrl)
@@ -243,7 +253,7 @@ public class EditVehicleModel : PageModel
             return;
         }
 
-        if (VehicleSubtypeOptions.Any(option => string.Equals(option.Value, subtype, StringComparison.OrdinalIgnoreCase)))
+        if (VehicleSubtypeOptions.Any(option => string.Equals(option.Name, subtype, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }

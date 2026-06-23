@@ -14,15 +14,18 @@ public class VehicleSchematicLibraryModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly VehicleSchematicAssignmentService _schematicAssignments;
+    private readonly VehicleStructureSetupService _vehicleStructure;
 
     public VehicleSchematicLibraryModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        VehicleSchematicAssignmentService schematicAssignments)
+        VehicleSchematicAssignmentService schematicAssignments,
+        VehicleStructureSetupService vehicleStructure)
     {
         _db = db;
         _currentUser = currentUser;
         _schematicAssignments = schematicAssignments;
+        _vehicleStructure = vehicleStructure;
     }
 
     public IReadOnlyList<VehicleSchematicDefinition> Schematics => VehicleSchematicLibrary.All;
@@ -71,6 +74,16 @@ public class VehicleSchematicLibraryModel : PageModel
             return RedirectToPage();
         }
 
+        var functionExists = await _db.VehicleFunctionSetups.AnyAsync(item =>
+            item.CompanyId == currentUser.CompanyId &&
+            item.Status == "Active" &&
+            item.Name == normalizedFunction);
+        if (!functionExists)
+        {
+            StatusMessage = "Select a configured vehicle function before assigning the schematic.";
+            return RedirectToPage();
+        }
+
         await _schematicAssignments.AssignFunctionAsync(currentUser.CompanyId, currentUser.Id, normalizedFunction, schematic.Key);
         AddAuditLog(currentUser, "Unit schematic function assignment", $"{currentUser.FullName} assigned {schematic.DisplayName} to function {normalizedFunction}.");
         await _db.SaveChangesAsync();
@@ -98,6 +111,21 @@ public class VehicleSchematicLibraryModel : PageModel
         if (vehicleSubtype is null)
         {
             StatusMessage = "Select a subtype before assigning the schematic.";
+            return RedirectToPage();
+        }
+
+        var subtypeExists = await _db.VehicleSubtypeSetups
+            .Include(item => item.VehicleFunctionSetup)
+            .AnyAsync(item =>
+                item.CompanyId == currentUser.CompanyId &&
+                item.Status == "Active" &&
+                item.Name == vehicleSubtype &&
+                item.VehicleFunctionSetup != null &&
+                item.VehicleFunctionSetup.Status == "Active" &&
+                (vehicleFunction == null || item.VehicleFunctionSetup.Name == vehicleFunction));
+        if (!subtypeExists)
+        {
+            StatusMessage = "Select a configured vehicle subtype before assigning the schematic.";
             return RedirectToPage();
         }
 
@@ -246,6 +274,7 @@ public class VehicleSchematicLibraryModel : PageModel
 
     private async Task LoadAssignmentDataAsync(int companyId)
     {
+        var vehicleStructure = await _vehicleStructure.GetSnapshotAsync(companyId);
         var vehicles = await _db.Vehicles
             .AsNoTracking()
             .Where(vehicle =>
@@ -256,31 +285,23 @@ public class VehicleSchematicLibraryModel : PageModel
             .ThenBy(vehicle => vehicle.Callsign)
             .ToListAsync();
 
-        FunctionOptions = new[]
-            {
-                VehicleTaxonomyService.AmbulanceFunction,
-                VehicleTaxonomyService.ResponseVehicleFunction
-            }
-            .Concat(vehicles.Select(vehicle => Normalize(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType) ?? string.Empty))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value)
+        FunctionOptions = vehicleStructure.Functions
+            .Select(function => function.Name)
             .ToList();
 
-        SubtypeOptions = vehicles
-            .Select(vehicle => new
-            {
-                Function = Normalize(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType),
-                Subtype = Normalize(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType)
-            })
-            .Where(item => !string.IsNullOrWhiteSpace(item.Subtype))
-            .GroupBy(item => new { item.Function, item.Subtype })
-            .OrderBy(group => group.Key.Function)
-            .ThenBy(group => group.Key.Subtype)
-            .Select(group => new VehicleSubtypeOption(
-                group.Key.Function,
-                group.Key.Subtype!,
-                group.Count()))
+        SubtypeOptions = vehicleStructure.Subtypes
+            .Select(subtype => new VehicleSubtypeOption(
+                subtype.FunctionName,
+                subtype.Name,
+                vehicles.Count(vehicle =>
+                    string.Equals(
+                        Normalize(vehicle.VehicleFunction) ?? VehicleTaxonomyService.InferFunction(vehicle.VehicleType),
+                        subtype.FunctionName,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(
+                        Normalize(vehicle.VehicleSubtype) ?? VehicleTaxonomyService.InferSubtype(vehicle.VehicleType),
+                        subtype.Name,
+                        StringComparison.OrdinalIgnoreCase))))
             .ToList();
 
         VehicleOptions = vehicles
