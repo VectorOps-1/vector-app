@@ -13,12 +13,18 @@ public class StockOrderActionModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly IUserActionPermissionService _permissionService;
 
-    public StockOrderActionModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public StockOrderActionModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        IUserActionPermissionService permissionService)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _permissionService = permissionService;
     }
 
     [BindProperty] public int? AuthorisedUserId { get; set; }
@@ -27,6 +33,7 @@ public class StockOrderActionModel : PageModel
     public StockOrderDetail? Order { get; private set; }
     public List<SelectListItem> OperationalManagers { get; private set; } = [];
     public bool IsSeniorManager { get; private set; }
+    public bool CanApproveStockOrders { get; private set; }
     public bool CanEnterRegister { get; private set; }
     public string? SuccessMessage { get; private set; }
     public List<SelectListItem> LocationOptions { get; private set; } = [];
@@ -45,9 +52,9 @@ public class StockOrderActionModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
         }
 
-        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        if (!await _permissionService.HasPermissionAsync(currentUser, UserActionPermissions.StockOrdersApprove))
         {
-            TempData["SuccessMessage"] = "Only senior management can approve stock orders.";
+            TempData["SuccessMessage"] = "You do not have permission to approve stock orders.";
             return RedirectToPage(new { orderId });
         }
 
@@ -256,6 +263,7 @@ public class StockOrderActionModel : PageModel
         }
 
         IsSeniorManager = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
+        CanApproveStockOrders = await _permissionService.HasPermissionAsync(currentUser, UserActionPermissions.StockOrdersApprove);
 
         var order = await _db.StockOrders
             .AsNoTracking()

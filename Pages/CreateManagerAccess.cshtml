@@ -32,6 +32,26 @@
             <div class="status-message" data-action-status>@Model.StatusMessage</div>
         }
 
+        <section class="form-panel access-defaults-panel">
+            <div class="section-label">Current Access Model Defaults</div>
+            <div class="access-defaults-grid">
+                <div>
+                    <span>Senior management</span>
+                    <strong>@Model.SeniorDefaultSummary</strong>
+                </div>
+                <div>
+                    <span>Operational management</span>
+                    <strong>@Model.OperationalDefaultSummary</strong>
+                    <small>Scope: @Model.DefaultScopeSummary</small>
+                </div>
+                <div>
+                    <span>Staff</span>
+                    <strong>@Model.StaffDefaultSummary</strong>
+                </div>
+            </div>
+            <p class="source-note">These defaults come from Setup Wizard Step 5. Saved user-specific permissions below remain the enforcement source for live app actions.</p>
+        </section>
+
         <section class="form-panel permission-setup-warning">
             <div>
                 <div class="section-label">Saved Permission Baseline</div>
@@ -396,6 +416,46 @@
     flex-wrap: wrap;
     gap: 10px;
     justify-content: flex-end;
+}
+
+.access-defaults-panel {
+    margin-bottom: 18px;
+}
+
+.access-defaults-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.access-defaults-grid > div {
+    min-height: 96px;
+    padding: 12px;
+    border: 1px solid rgba(66, 84, 102, 0.16);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.access-defaults-grid span,
+.access-defaults-grid small {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.access-defaults-grid strong {
+    display: block;
+    margin-top: 8px;
+    color: #10233f;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.access-defaults-grid small {
+    margin-top: 8px;
+    text-transform: none;
 }
 
 .permission-setup-warning .menu-btn {
@@ -802,6 +862,7 @@ button:disabled,
     .selector-grid,
     .form-grid,
     .profile-grid,
+    .access-defaults-grid,
     .permission-overview-grid,
     .permission-grid {
         grid-template-columns: 1fr;

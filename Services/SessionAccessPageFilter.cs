@@ -97,6 +97,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/CompanyProfile"] = SeniorAccess,
         ["/CompanyName"] = SeniorAccess,
         ["/LogoUpload"] = SeniorAccess,
+        ["/StaffStructureSetup"] = SeniorAccess,
+        ["/AccessModelSetup"] = SeniorAccess,
         ["/SupplierDetails"] = SeniorAccess,
         ["/UploadChecklist"] = SeniorAccess,
         ["/ChecklistPreview"] = SeniorAccess,
@@ -125,7 +127,9 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/CompanyName",
         "/LogoUpload",
         "/OperationalStructureSetup",
-        "/VehicleStructureSetup"
+        "/VehicleStructureSetup",
+        "/StaffStructureSetup",
+        "/AccessModelSetup"
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
@@ -350,6 +354,23 @@ public class SessionAccessPageFilter : IAsyncPageFilter
                     UserActionPermissions.ChecklistsReports);
         }
 
+        if (pagePath == "/StockOrderAction")
+        {
+            if (handlerName.Contains("Approve", StringComparison.OrdinalIgnoreCase))
+            {
+                return PermissionRequirement.All(UserActionPermissions.StockOrdersApprove);
+            }
+
+            if (!isPost)
+            {
+                return PermissionRequirement.Any(
+                    UserActionPermissions.RegistersStockEdit,
+                    UserActionPermissions.StockOrdersApprove);
+            }
+
+            return PermissionRequirement.All(UserActionPermissions.RegistersStockEdit);
+        }
+
         if (pagePath == "/TaskInbox" && isDeleteHandler)
         {
             return PermissionRequirement.All(UserActionPermissions.TasksManage);
@@ -374,7 +395,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/EditEquipmentItem"
                 => PermissionRequirement.All(UserActionPermissions.RegistersEquipmentEdit),
 
-            "/EditStockItem" or "/PlaceStockOrder" or "/StockOrders" or "/StockOrderAction"
+            "/EditStockItem" or "/PlaceStockOrder" or "/StockOrders"
                 => PermissionRequirement.All(UserActionPermissions.RegistersStockEdit),
 
             "/EditMedicationItem"
@@ -456,10 +477,13 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/AreaManagerControl"
                 => PermissionRequirement.Any(UserActionPermissions.SetupAreas, UserActionPermissions.SetupAccess),
 
-            "/OperationalAreas" or "/OperationalStructureSetup" or "/VehicleStructureSetup"
+            "/OperationalAreas" or "/OperationalStructureSetup" or "/VehicleStructureSetup" or "/StaffStructureSetup"
                 => PermissionRequirement.All(UserActionPermissions.SetupAreas),
 
             "/CreateManagerAccess" or "/CreateOperationalStaffAccess"
+                => PermissionRequirement.All(UserActionPermissions.SetupAccess),
+
+            "/AccessModelSetup"
                 => PermissionRequirement.All(UserActionPermissions.SetupAccess),
 
             "/CompanyProfile" or "/CompanyName" or "/LogoUpload" or "/SupplierDetails"

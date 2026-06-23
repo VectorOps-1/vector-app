@@ -30,6 +30,7 @@ public static class UserActionPermissions
     public const string TasksSend = "tasks.send";
     public const string TasksManage = "tasks.manage";
     public const string TasksFeedback = "tasks.feedback";
+    public const string StockOrdersApprove = "stock.orders.approve";
 
     public const string DashboardReadiness = "dashboard.readiness";
     public const string ReportsOperations = "reports.operations";
@@ -63,6 +64,7 @@ public static class UserActionPermissions
         TasksSend,
         TasksManage,
         TasksFeedback,
+        StockOrdersApprove,
         DashboardReadiness,
         ReportsOperations,
         ReadinessEngine,

@@ -51,11 +51,11 @@
                 </div>
             </section>
 
-            @if (Model.IsSeniorManager)
+            @if (Model.CanApproveStockOrders)
             {
                 <section class="form-panel">
-                    <div class="section-label">Senior Approval</div>
-                    <p class="helper-text">Approve operational manager requests before they are sent to the supplier.</p>
+                    <div class="section-label">Stock Order Approval</div>
+                    <p class="helper-text">Approve this stock order before it is sent to the supplier. This action requires the stock order approval permission.</p>
                     <div class="button-row">
                         <form method="post" asp-page-handler="Approve" asp-route-orderId="@order.Id">
                             <button class="menu-btn equipment-btn" type="submit">Approve Order</button>

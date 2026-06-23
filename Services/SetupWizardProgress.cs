@@ -8,13 +8,15 @@ public static class SetupWizardProgress
     public const string OperationalStructureStepKey = "operational-structure";
     public const string VehicleStructureStepKey = "vehicle-structure";
     public const string StaffStructureStepKey = "staff-structure";
+    public const string AccessModelStepKey = "access-model";
 
     private static readonly IReadOnlyList<SetupWizardStepDefinition> StepDefinitions =
     [
         new(CompanyIdentityStepKey, 1, "Company identity", "Confirm company name, trading name, contact details, country, region, timezone, and logo before normal app use starts."),
         new(OperationalStructureStepKey, 2, "Operational structure", "Capture bases, regions, operational areas, storage spaces, and whether areas sit flat or under regions or bases."),
         new(VehicleStructureStepKey, 3, "Vehicle structure", "Capture vehicle functions, client-defined subtypes, and optional default unit schematic assignments by function or subtype."),
-        new(StaffStructureStepKey, 4, "Staff structure", "Capture clinical qualification and scope options, staff ID format, practitioner-number requirements, licensing expiry, CPD tracking, and default profile fields.")
+        new(StaffStructureStepKey, 4, "Staff structure", "Capture clinical qualification and scope options, staff ID format, practitioner-number requirements, licensing expiry, CPD tracking, and default profile fields."),
+        new(AccessModelStepKey, 5, "Access model", "Capture default permissions for company owner, senior management, operational management, and staff before real users begin operating.")
     ];
 
     public static IReadOnlyList<SetupWizardStepDefinition> Steps => StepDefinitions;

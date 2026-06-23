@@ -17,64 +17,20 @@ public class CreateManagerAccessModel : PageModel
         [CurrentUserService.SeniorManagementAccess] = "Senior Management"
     };
 
-    private static readonly IReadOnlyList<AccessPermissionGroup> PermissionCatalog = new List<AccessPermissionGroup>
-    {
-        new("Registers", new[]
-        {
-            new AccessPermissionOption("registers.view", "View registers", "Open vehicle, equipment, stock, medication, and staff registers in permitted scope."),
-            new AccessPermissionOption("registers.vehicle.edit", "Edit vehicle register", "Add or edit vehicle source-of-truth records."),
-            new AccessPermissionOption("registers.equipment.edit", "Edit equipment register", "Add or edit equipment source-of-truth records."),
-            new AccessPermissionOption("registers.stock.edit", "Edit stock register", "Add or edit disposable stock source-of-truth records."),
-            new AccessPermissionOption("registers.medication.edit", "Edit medication register", "Add or edit medication source-of-truth records."),
-            new AccessPermissionOption("registers.staff.edit", "Edit staff register", "Add or edit staff profiles and register-controlled staff fields."),
-            new AccessPermissionOption("registers.delete", "Delete register records", "Remove register records where deletion is allowed."),
-            new AccessPermissionOption("assets.move", "Move / reallocate assets", "Move vehicles, equipment, stock, and medication between areas, vehicles, and storage."),
-            new AccessPermissionOption("assets.service.update", "Update service / expiry dates", "Update service dates, expiry dates, licensing, and similar register dates.")
-        }),
-        new("Checklist Management", new[]
-        {
-            new AccessPermissionOption("checklists.build", "Build checklists", "Create new checklist templates manually."),
-            new AccessPermissionOption("checklists.edit", "Edit saved checklists", "Edit existing checklist templates."),
-            new AccessPermissionOption("checklists.publish", "Publish checklists", "Publish active checklists for areas, functions, subtypes, or vehicles."),
-            new AccessPermissionOption("checklists.upload", "Upload checklists / registers", "Upload existing checklist and register source files."),
-            new AccessPermissionOption("checklists.reports", "View checklist reports", "Open submitted checklist evidence and PDF reports."),
-            new AccessPermissionOption("checklists.variance.review", "Review checklist variance alerts", "Approve or reject captured differences that may update registers.")
-        }),
-        new("Daily Operations", new[]
-        {
-            new AccessPermissionOption("daily.checks.complete", "Complete daily checks", "Complete assigned live vehicle and equipment checks."),
-            new AccessPermissionOption("daily.sameprevious", "Use same as previous shift", "Use same-as-previous-shift controls where enabled."),
-            new AccessPermissionOption("issues.report", "Report issues", "Create operational issues from inside the app."),
-            new AccessPermissionOption("issues.manage", "Manage issues", "Assign, resolve, delete, or close issues in permitted scope."),
-            new AccessPermissionOption("tasks.send", "Send tasks", "Send tasks to users in permitted scope."),
-            new AccessPermissionOption("tasks.manage", "Manage tasks", "Delete, close, or update tasks in permitted scope."),
-            new AccessPermissionOption("tasks.feedback", "Submit task feedback", "Submit feedback on assigned tasks or general app work.")
-        }),
-        new("Oversight And Setup", new[]
-        {
-            new AccessPermissionOption("dashboard.readiness", "View readiness dashboard", "Open readiness score, metrics, and readiness variables."),
-            new AccessPermissionOption("reports.operations", "View operational reports", "Open operational reports for permitted scope."),
-            new AccessPermissionOption("readiness.engine", "Use readiness engine", "Edit or request scoring rules and readiness weightings."),
-            new AccessPermissionOption("setup.areas", "Manage areas / manager control", "Create areas and manage manager area assignment."),
-            new AccessPermissionOption("setup.company", "Manage company profile", "Edit client details, logo, workspace, and company-level settings."),
-            new AccessPermissionOption("setup.audit", "View audit log", "Open app audit logs."),
-            new AccessPermissionOption("setup.access", "Manage access setup", "Change roles, areas, and granular permissions for users below own access level.")
-        })
-    };
-
-    private static readonly IReadOnlyDictionary<string, string> PermissionNames = PermissionCatalog
-        .SelectMany(group => group.Options)
-        .ToDictionary(option => option.Key, option => option.Name, StringComparer.OrdinalIgnoreCase);
-
     private sealed record PermissionSelection(IReadOnlyList<string> AllowedKeys, bool HasSavedRows);
 
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly AccessModelSetupService _accessModel;
 
-    public CreateManagerAccessModel(VectorDbContext db, CurrentUserService currentUser)
+    public CreateManagerAccessModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        AccessModelSetupService accessModel)
     {
         _db = db;
         _currentUser = currentUser;
+        _accessModel = accessModel;
     }
 
     [BindProperty(SupportsGet = true)] public int? StaffUserId { get; set; }
@@ -87,7 +43,11 @@ public class CreateManagerAccessModel : PageModel
     public List<SelectListItem> AccessLevelOptions { get; private set; } = new();
     public List<SelectListItem> AreaOptions { get; private set; } = new();
     public List<AccessRegisterRow> AccessRows { get; private set; } = new();
-    public IReadOnlyList<AccessPermissionGroup> PermissionGroups => PermissionCatalog;
+    public IReadOnlyList<AccessPermissionGroup> PermissionGroups => AccessPermissionCatalog.Groups;
+    public string DefaultScopeSummary { get; private set; } = string.Empty;
+    public string SeniorDefaultSummary { get; private set; } = string.Empty;
+    public string OperationalDefaultSummary { get; private set; } = string.Empty;
+    public string StaffDefaultSummary { get; private set; } = string.Empty;
     public HashSet<string> SelectedPermissionKeySet { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public StaffAccessProfile? SelectedStaff { get; private set; }
     public bool CanEditSelectedStaff { get; private set; }
@@ -123,6 +83,9 @@ public class CreateManagerAccessModel : PageModel
         }
 
         var now = DateTime.UtcNow;
+        var company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == currentUser.CompanyId);
         var staffUsers = await _db.AppUsers
             .Include(user => user.AppRole)
             .Where(user =>
@@ -156,7 +119,7 @@ public class CreateManagerAccessModel : PageModel
             }
 
             var accessLevel = RoleNameToAccessView(staffUser.AppRole?.Name);
-            var defaultPermissionKeys = DefaultPermissionKeysForAccess(accessLevel).ToList();
+            var defaultPermissionKeys = _accessModel.GetDefaultPermissionKeys(company, accessLevel, staffUser.AppRole?.Name).ToList();
             await SyncAccessPermissionsAsync(currentUser, staffUser, defaultPermissionKeys, now);
             initializedCount++;
         }
@@ -196,6 +159,9 @@ public class CreateManagerAccessModel : PageModel
         }
 
         var now = DateTime.UtcNow;
+        var company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == currentUser.CompanyId);
         var staffUsers = await _db.AppUsers
             .Include(user => user.AppRole)
             .Where(user =>
@@ -213,7 +179,7 @@ public class CreateManagerAccessModel : PageModel
             }
 
             var accessLevel = RoleNameToAccessView(staffUser.AppRole?.Name);
-            var defaultPermissionKeys = DefaultPermissionKeysForAccess(accessLevel).ToList();
+            var defaultPermissionKeys = _accessModel.GetDefaultPermissionKeys(company, accessLevel, staffUser.AppRole?.Name).ToList();
             await SyncAccessPermissionsAsync(currentUser, staffUser, defaultPermissionKeys, now);
             forcedCount++;
         }
@@ -259,7 +225,7 @@ public class CreateManagerAccessModel : PageModel
             ModelState.AddModelError(nameof(AccessLevel), "Select a valid access level.");
         }
 
-        SelectedPermissionKeys = NormalizePermissionKeys(SelectedPermissionKeys).ToList();
+        SelectedPermissionKeys = AccessPermissionCatalog.NormalizePermissionKeys(SelectedPermissionKeys).ToList();
 
         var staffUser = StaffUserId.HasValue
             ? await _db.AppUsers
@@ -345,6 +311,14 @@ public class CreateManagerAccessModel : PageModel
     private async Task LoadPageDataAsync(AppUser currentUser, bool useRegisterValues)
     {
         var companyId = currentUser.CompanyId;
+        var company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == companyId);
+        var accessDefaults = _accessModel.GetSnapshot(company);
+        DefaultScopeSummary = AccessModelSetupService.DescribeScopeBehavior(accessDefaults.OperationalManagerScopeBehavior);
+        SeniorDefaultSummary = AccessPermissionCatalog.DescribePermissionSummary(accessDefaults.SeniorManagerPermissionKeys);
+        OperationalDefaultSummary = AccessPermissionCatalog.DescribePermissionSummary(accessDefaults.OperationalManagerPermissionKeys);
+        StaffDefaultSummary = AccessPermissionCatalog.DescribePermissionSummary(accessDefaults.StaffPermissionKeys);
 
         var staffOptionRows = await _db.AppUsers
             .AsNoTracking()
@@ -444,7 +418,7 @@ public class CreateManagerAccessModel : PageModel
 
         if (!useRegisterValues)
         {
-            SelectedPermissionKeys = NormalizePermissionKeys(SelectedPermissionKeys).ToList();
+            SelectedPermissionKeys = AccessPermissionCatalog.NormalizePermissionKeys(SelectedPermissionKeys).ToList();
             SelectedPermissionKeySet = new HashSet<string>(SelectedPermissionKeys, StringComparer.OrdinalIgnoreCase);
             return;
         }
@@ -456,7 +430,7 @@ public class CreateManagerAccessModel : PageModel
         SelectedStaffHasSavedPermissions = permissionSelection.HasSavedRows;
         SelectedPermissionKeys = permissionSelection.HasSavedRows
             ? permissionSelection.AllowedKeys.ToList()
-            : DefaultPermissionKeysForAccess(AccessLevel).ToList();
+            : _accessModel.GetDefaultPermissionKeys(company, AccessLevel, SelectedStaff.RoleName).ToList();
 
         SelectedPermissionKeySet = new HashSet<string>(SelectedPermissionKeys, StringComparer.OrdinalIgnoreCase);
 
@@ -565,7 +539,7 @@ public class CreateManagerAccessModel : PageModel
 
             row.PermissionCount = permissionKeys.Count;
             row.PermissionSummary = hasSavedPermissions
-                ? DescribePermissionSummary(permissionKeys)
+                ? AccessPermissionCatalog.DescribePermissionSummary(permissionKeys)
                 : "Not initialized - save defaults or edit access";
         }
     }
@@ -656,12 +630,9 @@ public class CreateManagerAccessModel : PageModel
 
     private async Task SyncAccessPermissionsAsync(AppUser currentUser, AppUser staffUser, IReadOnlyCollection<string> permissionKeys, DateTime now)
     {
-        var selectedKeys = NormalizePermissionKeys(permissionKeys).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var selectedKeys = AccessPermissionCatalog.NormalizePermissionKeys(permissionKeys).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var originallySelectedKeys = selectedKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var validKeys = PermissionCatalog
-            .SelectMany(group => group.Options)
-            .Select(option => option.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var validKeys = AccessPermissionCatalog.ValidKeys;
         var existingPermissions = await _db.AppUserAccessPermissions
             .Where(permission =>
                 permission.CompanyId == currentUser.CompanyId &&
@@ -712,44 +683,6 @@ public class CreateManagerAccessModel : PageModel
                 UpdatedAtUtc = now
             });
         }
-    }
-
-    private static IEnumerable<string> NormalizePermissionKeys(IEnumerable<string>? permissionKeys)
-    {
-        var validKeys = PermissionCatalog
-            .SelectMany(group => group.Options)
-            .Select(option => option.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        return (permissionKeys ?? Enumerable.Empty<string>())
-            .Where(key => validKeys.Contains(key))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(key => key);
-    }
-
-    private static IEnumerable<string> DefaultPermissionKeysForAccess(string accessLevel)
-    {
-        return UserActionPermissions.DefaultForAccess(accessLevel);
-    }
-
-    private static string DescribePermissionSummary(IReadOnlyCollection<string> permissionKeys)
-    {
-        if (permissionKeys.Count == 0)
-        {
-            return "No action permissions";
-        }
-
-        var permissionNames = permissionKeys
-            .Select(key => PermissionNames.TryGetValue(key, out var name) ? name : key)
-            .OrderBy(name => name)
-            .ToList();
-
-        var visibleNames = permissionNames.Take(4);
-        var suffix = permissionNames.Count > 4
-            ? $" + {permissionNames.Count - 4} more"
-            : string.Empty;
-
-        return string.Join(", ", visibleNames) + suffix;
     }
 
     private static string RoleNameToAccessView(string? roleName)
@@ -814,8 +747,4 @@ public class CreateManagerAccessModel : PageModel
         public bool HasSavedPermissionRows { get; set; }
         public bool CanEdit { get; set; }
     }
-
-    public sealed record AccessPermissionGroup(string Name, IReadOnlyList<AccessPermissionOption> Options);
-
-    public sealed record AccessPermissionOption(string Key, string Name, string Description);
 }

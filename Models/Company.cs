@@ -43,6 +43,23 @@ public class Company
     public string? StaffDefaultProfileFields { get; set; }
 
     [MaxLength(80)]
+    public string? OperationalManagerScopeBehavior { get; set; }
+
+    [MaxLength(4000)]
+    public string? CompanyOwnerDefaultPermissionKeys { get; set; }
+
+    [MaxLength(4000)]
+    public string? SeniorManagerDefaultPermissionKeys { get; set; }
+
+    [MaxLength(4000)]
+    public string? OperationalManagerDefaultPermissionKeys { get; set; }
+
+    [MaxLength(4000)]
+    public string? StaffDefaultPermissionKeys { get; set; }
+
+    public bool AccessModelDefaultsConfigured { get; set; }
+
+    [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]

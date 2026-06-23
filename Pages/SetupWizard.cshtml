@@ -88,6 +88,10 @@
                     {
                         <a class="menu-btn equipment-btn" asp-page="/StaffStructureSetup">Open Staff Structure</a>
                     }
+                    else if (Model.CurrentStep.Key == SetupWizardProgress.AccessModelStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/AccessModelSetup">Open Access Model</a>
+                    }
                 </div>
             }
             else
