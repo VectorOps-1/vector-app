@@ -44,6 +44,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ReportIssue"] = AllSignedInAccess,
         ["/ExpiryNotifications"] = AllSignedInAccess,
         ["/SetupWizard"] = AllSignedInAccess,
+        ["/OperationalStructureSetup"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
@@ -121,7 +122,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/SetupWizard",
         "/CompanyProfile",
         "/CompanyName",
-        "/LogoUpload"
+        "/LogoUpload",
+        "/OperationalStructureSetup"
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
@@ -224,13 +226,12 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return false;
         }
 
-        var setupStatus = await db.Companies
+        var company = await db.Companies
             .AsNoTracking()
             .Where(company => company.Id == companyId && company.Status == "Active")
-            .Select(company => company.BrandingStatus)
             .FirstOrDefaultAsync();
 
-        return CompanySetupState.RequiresSetupWizard(setupStatus);
+        return company is null || CompanySetupState.RequiresSetupWizard(company);
     }
 
     private static async Task<bool> HasRequiredActionPermissionAsync(PageHandlerExecutingContext context, string pagePath)
@@ -453,7 +454,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/AreaManagerControl"
                 => PermissionRequirement.Any(UserActionPermissions.SetupAreas, UserActionPermissions.SetupAccess),
 
-            "/OperationalAreas"
+            "/OperationalAreas" or "/OperationalStructureSetup"
                 => PermissionRequirement.All(UserActionPermissions.SetupAreas),
 
             "/CreateManagerAccess" or "/CreateOperationalStaffAccess"

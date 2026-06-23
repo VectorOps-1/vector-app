@@ -35,6 +35,7 @@ public class MoveAssetModel : PageModel
 
     public List<SelectListItem> AssetOptions { get; private set; } = new();
     public List<SelectListItem> OperationalAreaOptions { get; private set; } = new();
+    public List<SelectListItem> StorageLocationOptions { get; private set; } = new();
     public List<SelectListItem> DestinationOptions { get; private set; } = new();
     public List<SelectListItem> Recipients { get; private set; } = new();
     public List<MovementRecord> RecentMovements { get; private set; } = new();
@@ -506,6 +507,34 @@ public class MoveAssetModel : PageModel
                 area.Name);
         }
 
+        if (string.Equals(parts[0], "storage", StringComparison.OrdinalIgnoreCase))
+        {
+            var storage = await _db.StorageLocations
+                .AsNoTracking()
+                .Include(item => item.OperationalArea)
+                .FirstOrDefaultAsync(item =>
+                    item.Id == destinationId &&
+                    item.CompanyId == companyId &&
+                    item.Status == "Active" &&
+                    item.OperationalArea != null &&
+                    item.OperationalArea.Status == "Active");
+
+            if (storage?.OperationalArea is null)
+            {
+                return null;
+            }
+
+            ToOperationalAreaId = storage.OperationalAreaId;
+            return new MovementDestination(
+                BuildStorageDestinationKey(storage.Id),
+                "Storage",
+                storage.OperationalAreaId,
+                null,
+                storage.Name,
+                storage.OperationalArea.Name,
+                BuildExistingLocation(storage.OperationalArea.Name, storage.Name) ?? storage.Name);
+        }
+
         if (!string.Equals(parts[0], "vehicle", StringComparison.OrdinalIgnoreCase) ||
             NormalizedAssetType == AssetTypes.Vehicle)
         {
@@ -553,6 +582,25 @@ public class MoveAssetModel : PageModel
             {
                 Value = area.Id.ToString(),
                 Text = area.Address == null ? $"{area.Name} ({area.AreaType})" : $"{area.Name} ({area.AreaType}) - {area.Address}"
+            })
+            .ToListAsync();
+
+        StorageLocationOptions = await _db.StorageLocations
+            .AsNoTracking()
+            .Include(location => location.OperationalArea)
+            .Where(location =>
+                location.CompanyId == companyId &&
+                location.Status == "Active" &&
+                location.OperationalArea != null &&
+                location.OperationalArea.Status == "Active")
+            .OrderBy(location => location.OperationalArea!.AreaType)
+            .ThenBy(location => location.OperationalArea!.Name)
+            .ThenBy(location => location.StorageType)
+            .ThenBy(location => location.Name)
+            .Select(location => new SelectListItem
+            {
+                Value = location.Id.ToString(),
+                Text = $"{location.OperationalArea!.Name} - {location.Name} ({location.StorageType})"
             })
             .ToListAsync();
 
@@ -609,7 +657,8 @@ public class MoveAssetModel : PageModel
     private List<SelectListItem> BuildDestinationOptions()
     {
         var areaGroup = new SelectListGroup { Name = "Bases / operational areas" };
-        return OperationalAreaOptions
+        var storageGroup = new SelectListGroup { Name = "Storage spaces" };
+        var options = OperationalAreaOptions
             .Select(area => new SelectListItem
             {
                 Value = BuildAreaDestinationKey(int.Parse(area.Value)),
@@ -617,6 +666,15 @@ public class MoveAssetModel : PageModel
                 Group = areaGroup
             })
             .ToList();
+
+        options.AddRange(StorageLocationOptions.Select(storage => new SelectListItem
+        {
+            Value = BuildStorageDestinationKey(int.Parse(storage.Value)),
+            Text = storage.Text,
+            Group = storageGroup
+        }));
+
+        return options;
     }
 
     private async Task<List<SelectListItem>> LoadVehicleDestinationOptionsAsync(int companyId)
@@ -785,13 +843,19 @@ public class MoveAssetModel : PageModel
         return $"vehicle:{vehicleId}";
     }
 
+    private static string BuildStorageDestinationKey(int storageLocationId)
+    {
+        return $"storage:{storageLocationId}";
+    }
+
     private static string? NormalizeDestinationKey(string? destinationKey, int areaId)
     {
         if (!string.IsNullOrWhiteSpace(destinationKey))
         {
             var trimmed = destinationKey.Trim();
             if (trimmed.StartsWith("area:", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("vehicle:", StringComparison.OrdinalIgnoreCase))
+                trimmed.StartsWith("vehicle:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("storage:", StringComparison.OrdinalIgnoreCase))
             {
                 return trimmed;
             }

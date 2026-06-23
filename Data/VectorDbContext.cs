@@ -17,6 +17,7 @@ public class VectorDbContext : DbContext
     public DbSet<IssueReport> IssueReports => Set<IssueReport>();
     public DbSet<IssueReportEvent> IssueReportEvents => Set<IssueReportEvent>();
     public DbSet<OperationalArea> OperationalAreas => Set<OperationalArea>();
+    public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
     public DbSet<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments => Set<ManagerOperationalAreaAssignment>();
     public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
     public DbSet<MedicationItem> MedicationItems => Set<MedicationItem>();
@@ -211,9 +212,34 @@ public class VectorDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<OperationalArea>()
+            .HasIndex(area => new { area.CompanyId, area.AreaType, area.ParentOperationalAreaId });
+
+        modelBuilder.Entity<OperationalArea>()
             .HasOne(area => area.Company)
             .WithMany(company => company.OperationalAreas)
             .HasForeignKey(area => area.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OperationalArea>()
+            .HasOne(area => area.ParentOperationalArea)
+            .WithMany(area => area.ChildOperationalAreas)
+            .HasForeignKey(area => area.ParentOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StorageLocation>()
+            .HasIndex(location => new { location.CompanyId, location.OperationalAreaId, location.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<StorageLocation>()
+            .HasOne(location => location.Company)
+            .WithMany(company => company.StorageLocations)
+            .HasForeignKey(location => location.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StorageLocation>()
+            .HasOne(location => location.OperationalArea)
+            .WithMany(area => area.StorageLocations)
+            .HasForeignKey(location => location.OperationalAreaId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ManagerOperationalAreaAssignment>()

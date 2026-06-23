@@ -1,5 +1,6 @@
 @page
 @model SetupWizardModel
+@using vector_app_local.Services
 @{
     ViewData["Title"] = "Setup Wizard";
 }
@@ -70,8 +71,15 @@
             @if (Model.CanManageSetup)
             {
                 <div class="step-actions">
-                    <a class="menu-btn equipment-btn" asp-page="/CompanyName">Open Identity & Contacts</a>
-                    <a class="menu-btn" asp-page="/LogoUpload">Open Logo Upload</a>
+                    @if (Model.CurrentStep.Key == SetupWizardProgress.CompanyIdentityStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/CompanyName">Open Identity & Contacts</a>
+                        <a class="menu-btn" asp-page="/LogoUpload">Open Logo Upload</a>
+                    }
+                    else if (Model.CurrentStep.Key == SetupWizardProgress.OperationalStructureStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/OperationalStructureSetup">Open Operational Structure</a>
+                    }
                 </div>
             }
             else

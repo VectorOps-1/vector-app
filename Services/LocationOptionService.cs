@@ -37,6 +37,36 @@ public class LocationOptionService
     {
         var options = await GetOperationalAreaOptionsAsync(companyId);
 
+        var storageLocations = await _db.StorageLocations
+            .AsNoTracking()
+            .Include(location => location.OperationalArea)
+            .Where(location =>
+                location.CompanyId == companyId &&
+                location.Status == "Active" &&
+                location.OperationalArea != null &&
+                location.OperationalArea.Status == "Active")
+            .OrderBy(location => location.OperationalArea!.AreaType)
+            .ThenBy(location => location.OperationalArea!.Name)
+            .ThenBy(location => location.StorageType)
+            .ThenBy(location => location.Name)
+            .Select(location => new
+            {
+                ParentName = location.OperationalArea == null ? string.Empty : location.OperationalArea.Name,
+                location.Name,
+                location.StorageType
+            })
+            .ToListAsync();
+
+        options.AddRange(storageLocations.Select(location =>
+        {
+            var value = BuildStorageLocationValue(location.ParentName, location.Name);
+            return new SelectListItem
+            {
+                Value = value,
+                Text = $"{value} ({location.StorageType})"
+            };
+        }));
+
         var vehicles = await _db.Vehicles
             .AsNoTracking()
             .Where(vehicle => vehicle.CompanyId == companyId && vehicle.Status != "Deleted")
@@ -86,6 +116,17 @@ public class LocationOptionService
                 .Select(value => value!.Trim()));
 
         return VehicleLocationPrefix + (string.IsNullOrWhiteSpace(label) ? "Unspecified vehicle" : label);
+    }
+
+    public static string BuildStorageLocationValue(string? parentName, string? storageName)
+    {
+        var label = string.Join(
+            " - ",
+            new[] { parentName, storageName }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
+
+        return string.IsNullOrWhiteSpace(label) ? "Storage space" : label;
     }
 
     public static string? NormalizeSelectedLocation(string? selectedLocation)

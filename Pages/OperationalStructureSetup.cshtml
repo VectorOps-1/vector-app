@@ -1,0 +1,216 @@
+@page
+@model OperationalStructureSetupModel
+@{
+    ViewData["Title"] = "Operational Structure Setup";
+}
+
+<div class="module-screen">
+    <div class="module-inner">
+        <div class="client-line">Client: @Model.ClientName</div>
+        <div class="home-label">Setup Wizard</div>
+        <h2 class="page-title">Operational Structure</h2>
+        <p class="page-subtitle">Create the regions, bases, operating areas, and storage spaces that become selectable throughout registers, movements, reports, and manager scope.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message">@Model.StatusMessage</div>
+        }
+
+        <form method="post" asp-page-handler="SaveMode" class="setup-panel">
+            <div class="section-header">
+                <div>
+                    <span class="section-label">Structure mode</span>
+                    <h3>How areas are organised</h3>
+                </div>
+                <button class="menu-btn equipment-btn compact-btn" type="submit">Save Mode</button>
+            </div>
+            <label class="field-label" asp-for="OperationalStructureMode">Area nesting rule</label>
+            <select class="text-input" asp-for="OperationalStructureMode" asp-items="Model.StructureModeOptions"></select>
+            <p class="help-text">Flat means bases, regions, and areas stand independently. Nested modes let clients place areas under regions, bases, or both.</p>
+        </form>
+
+        <div class="setup-grid">
+            <form method="post" asp-page-handler="AddRegion" class="setup-panel">
+                <input type="hidden" asp-for="OperationalStructureMode" />
+                <span class="section-label">Regions</span>
+                <h3>Add region</h3>
+                <label class="field-label" asp-for="RegionName">Region name</label>
+                <input class="text-input" asp-for="RegionName" placeholder="North, Gauteng, Western Region" />
+                <label class="field-label" asp-for="RegionAddress">Region detail</label>
+                <input class="text-input" asp-for="RegionAddress" placeholder="Optional region address or description" />
+                <label class="field-label" asp-for="RegionNotes">Notes</label>
+                <textarea class="message-input" asp-for="RegionNotes"></textarea>
+                <button class="menu-btn compact-btn" type="submit">Add Region</button>
+            </form>
+
+            <form method="post" asp-page-handler="AddBase" class="setup-panel">
+                <input type="hidden" asp-for="OperationalStructureMode" />
+                <span class="section-label">Bases</span>
+                <h3>Add base</h3>
+                <label class="field-label" asp-for="BaseName">Base name</label>
+                <input class="text-input" asp-for="BaseName" placeholder="Main Base, East Base" />
+                <label class="field-label" asp-for="BaseParentRegionId">Parent region</label>
+                <select class="text-input" asp-for="BaseParentRegionId" asp-items="Model.RegionOptions"></select>
+                <label class="field-label" asp-for="BaseAddress">Address</label>
+                <input class="text-input" asp-for="BaseAddress" placeholder="Optional physical address" />
+                <label class="field-label" asp-for="BaseNotes">Notes</label>
+                <textarea class="message-input" asp-for="BaseNotes"></textarea>
+                <button class="menu-btn compact-btn" type="submit">Add Base</button>
+            </form>
+
+            <form method="post" asp-page-handler="AddArea" class="setup-panel">
+                <input type="hidden" asp-for="OperationalStructureMode" />
+                <span class="section-label">Operational areas</span>
+                <h3>Add operational area</h3>
+                <label class="field-label" asp-for="AreaName">Area name</label>
+                <input class="text-input" asp-for="AreaName" placeholder="East Ops, Airport Standby" />
+                <label class="field-label" asp-for="AreaParentOperationalAreaId">Parent region or base</label>
+                <select class="text-input" asp-for="AreaParentOperationalAreaId" asp-items="Model.ParentAreaOptions"></select>
+                <label class="field-label" asp-for="AreaAddress">Area detail</label>
+                <input class="text-input" asp-for="AreaAddress" placeholder="Optional address or description" />
+                <label class="field-label" asp-for="AreaNotes">Notes</label>
+                <textarea class="message-input" asp-for="AreaNotes"></textarea>
+                <button class="menu-btn compact-btn" type="submit">Add Area</button>
+            </form>
+
+            <form method="post" asp-page-handler="AddStorage" class="setup-panel">
+                <input type="hidden" asp-for="OperationalStructureMode" />
+                <span class="section-label">Storage spaces</span>
+                <h3>Add storage space</h3>
+                <label class="field-label" asp-for="StorageName">Storage name</label>
+                <input class="text-input" asp-for="StorageName" placeholder="Main stock room, Medication safe, Oxygen cage" />
+                <label class="field-label" asp-for="StorageOperationalAreaId">Stored under</label>
+                <select class="text-input" asp-for="StorageOperationalAreaId" asp-items="Model.StorageParentOptions"></select>
+                <label class="field-label" asp-for="StorageType">Storage type</label>
+                <select class="text-input" asp-for="StorageType">
+                    <option>N/A</option>
+                    <option>General store</option>
+                    <option>Equipment store</option>
+                    <option>Medication safe</option>
+                    <option>Stock room</option>
+                    <option>Oxygen cage</option>
+                    <option>Vehicle bay</option>
+                </select>
+                <label class="field-label" asp-for="StorageNotes">Notes</label>
+                <textarea class="message-input" asp-for="StorageNotes"></textarea>
+                <button class="menu-btn compact-btn" type="submit">Add Storage Space</button>
+            </form>
+        </div>
+
+        <section class="setup-panel">
+            <div class="section-header">
+                <div>
+                    <span class="section-label">Current structure</span>
+                    <h3>Regions, bases, and operational areas</h3>
+                </div>
+                <span>@Model.StructureRows.Count item(s)</span>
+            </div>
+            @if (Model.StructureRows.Count == 0)
+            {
+                <div class="empty-state">No regions, bases, or operational areas have been added yet.</div>
+            }
+            else
+            {
+                <div class="list-table">
+                    <div class="list-head">
+                        <span>Type</span>
+                        <span>Name</span>
+                        <span>Parent</span>
+                        <span>Status</span>
+                    </div>
+                    @foreach (var row in Model.StructureRows)
+                    {
+                        <div class="list-row">
+                            <span>@row.AreaType</span>
+                            <strong>@row.Name</strong>
+                            <span>@(string.IsNullOrWhiteSpace(row.ParentName) ? "N/A" : row.ParentName)</span>
+                            <span>@row.Status</span>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="setup-panel">
+            <div class="section-header">
+                <div>
+                    <span class="section-label">Current storage</span>
+                    <h3>Storage spaces</h3>
+                </div>
+                <span>@Model.StorageRows.Count item(s)</span>
+            </div>
+            @if (Model.StorageRows.Count == 0)
+            {
+                <div class="empty-state">No storage spaces have been added yet.</div>
+            }
+            else
+            {
+                <div class="list-table">
+                    <div class="list-head">
+                        <span>Type</span>
+                        <span>Name</span>
+                        <span>Stored under</span>
+                        <span>Status</span>
+                    </div>
+                    @foreach (var row in Model.StorageRows)
+                    {
+                        <div class="list-row">
+                            <span>@row.StorageType</span>
+                            <strong>@row.Name</strong>
+                            <span>@row.ParentName</span>
+                            <span>@row.Status</span>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <form method="post" asp-page-handler="CompleteStep" class="completion-panel">
+            <input type="hidden" asp-for="OperationalStructureMode" />
+            <a class="menu-btn" asp-page="/SetupWizard">Back to Setup Wizard</a>
+            <button class="menu-btn equipment-btn" type="submit">Mark Operational Structure Complete</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.module-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.module-inner { width: 100%; max-width: 1180px; margin: 0 auto; text-align: center; padding: 34px 18px 30px; box-sizing: border-box; }
+.client-line { margin-bottom: 10px; color: #5f6b7a; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.home-label, .section-label { color: #5f6b7a; font-size: 12px; font-weight: 900; letter-spacing: 1.1px; text-transform: uppercase; }
+.page-title { margin: 8px 0; color: #10233f; font-size: 32px; font-weight: 900; }
+.page-subtitle { max-width: 780px; margin: 0 auto 22px; color: #5f6b7a; font-size: 16px; font-weight: 700; line-height: 1.45; }
+.status-message, .empty-state { border: 1px solid rgba(18, 119, 140, .18); border-radius: 8px; background: rgba(18, 119, 140, .08); color: #0f6f83; font-weight: 900; padding: 12px 14px; }
+.status-message { width: min(760px, 94%); margin: 0 auto 18px; }
+.setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.setup-panel, .completion-panel { border: 1px solid rgba(66, 84, 102, .18); border-radius: 8px; background: rgba(255,255,255,.86); padding: 16px; text-align: left; box-sizing: border-box; margin-bottom: 14px; }
+.setup-panel h3 { margin: 4px 0 14px; color: #10233f; font-size: 20px; font-weight: 900; }
+.section-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.field-label { display: block; margin: 10px 0 6px; color: #425466; font-size: 13px; font-weight: 900; }
+.text-input, .message-input { width: 100%; box-sizing: border-box; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; background: #fff; color: #111827; font-size: 15px; padding: 11px 12px; }
+.message-input { min-height: 76px; resize: vertical; }
+.help-text { margin: 10px 0 0; color: #5f6b7a; font-size: 13px; font-weight: 700; line-height: 1.35; }
+.compact-btn { width: auto; min-width: 150px; border: none; margin-top: 12px; }
+.list-table { overflow-x: auto; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; }
+.list-head, .list-row { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr .8fr; min-width: 720px; align-items: center; }
+.list-head { background: #334155; color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+.list-head span, .list-row span, .list-row strong { padding: 10px 12px; }
+.list-row { border-top: 1px solid rgba(66,84,102,.14); color: #425466; font-size: 14px; font-weight: 800; }
+.list-row strong { color: #10233f; }
+.completion-panel { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.completion-panel .menu-btn { min-width: 230px; border: none; }
+@@media (max-width: 860px) {
+    .setup-grid { grid-template-columns: 1fr; }
+    .section-header { align-items: flex-start; flex-direction: column; }
+}
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Operational structure saved."),
+            delay: 1300
+        });
+    </script>
+}

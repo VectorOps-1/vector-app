@@ -28,6 +28,9 @@ public class Company
     public string? Timezone { get; set; }
 
     [MaxLength(80)]
+    public string? OperationalStructureMode { get; set; }
+
+    [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]
@@ -66,6 +69,7 @@ public class Company
     public ICollection<TaskEvent> TaskEvents { get; set; } = new List<TaskEvent>();
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();
     public ICollection<OperationalArea> OperationalAreas { get; set; } = new List<OperationalArea>();
+    public ICollection<StorageLocation> StorageLocations { get; set; } = new List<StorageLocation>();
     public ICollection<AssetMovement> AssetMovements { get; set; } = new List<AssetMovement>();
     public ICollection<MedicationItem> MedicationItems { get; set; } = new List<MedicationItem>();
     public ICollection<StockItem> StockItems { get; set; } = new List<StockItem>();

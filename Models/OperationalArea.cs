@@ -15,6 +15,9 @@ public class OperationalArea
     [MaxLength(120)]
     public string AreaType { get; set; } = "Base";
 
+    public int? ParentOperationalAreaId { get; set; }
+    public OperationalArea? ParentOperationalArea { get; set; }
+
     [MaxLength(360)]
     public string? Address { get; set; }
 
@@ -30,4 +33,6 @@ public class OperationalArea
     public ICollection<AssetMovement> SourceMovements { get; set; } = new List<AssetMovement>();
     public ICollection<AssetMovement> DestinationMovements { get; set; } = new List<AssetMovement>();
     public ICollection<ManagerOperationalAreaAssignment> ManagerAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
+    public ICollection<OperationalArea> ChildOperationalAreas { get; set; } = new List<OperationalArea>();
+    public ICollection<StorageLocation> StorageLocations { get; set; } = new List<StorageLocation>();
 }

@@ -85,6 +85,12 @@ public class CompanyNameModel : PageModel
         company.Region = submittedRegion;
         company.Timezone = submittedTimezone;
         company.BrandingStatus = CompanyBranding.GetBrandingStatus(company);
+        if (CompanySetupState.IsSetupComplete(company) ||
+            string.Equals(company.BrandingStatus, CompanyBranding.BrandingStatusConfigured, StringComparison.OrdinalIgnoreCase))
+        {
+            SetupWizardProgress.MarkStepComplete(company, SetupWizardProgress.CompanyIdentityStepKey);
+        }
+
         company.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
