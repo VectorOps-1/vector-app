@@ -27,6 +27,9 @@ public class SetupWizardModel : PageModel
     public bool CanManageSetup { get; private set; }
     public SetupWizardStepDefinition CurrentStep { get; private set; } = SetupWizardProgress.Steps[0];
     public IReadOnlySet<string> CompletedStepKeys { get; private set; } = new HashSet<string>();
+    public IReadOnlyList<SetupWizardStepDefinition> SetupSteps { get; private set; } = SetupWizardProgress.Steps;
+    public int CompletedStepCount { get; private set; }
+    public int RemainingStepCount { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -66,6 +69,9 @@ public class SetupWizardModel : PageModel
         CanManageSetup = CurrentUserService.IsSeniorAccessRole(SignedInRole);
         CurrentStep = SetupWizardProgress.GetCurrentStep(company);
         CompletedStepKeys = SetupWizardProgress.GetCompletedStepKeys(company);
+        SetupSteps = SetupWizardProgress.Steps;
+        CompletedStepCount = SetupSteps.Count(step => CompletedStepKeys.Contains(step.Key));
+        RemainingStepCount = SetupSteps.Count - CompletedStepCount;
         ViewData["ClientName"] = ClientName;
     }
 }

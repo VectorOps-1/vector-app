@@ -16,12 +16,47 @@
             <div>
                 <span class="status-label">Setup status</span>
                 <strong>@Model.SetupStatus</strong>
-                <span>@Model.CompletedStepKeys.Count completed step(s)</span>
+                <span>@Model.CompletedStepCount completed / @Model.RemainingStepCount remaining</span>
             </div>
             <div>
                 <span class="status-label">Signed in</span>
                 <strong>@Model.SignedInName</strong>
                 <span>@Model.SignedInRole</span>
+            </div>
+        </div>
+
+        <div class="setup-progress-panel" aria-label="Setup progress">
+            <div class="progress-summary">
+                <div>
+                    <span class="status-label">Setup progress</span>
+                    <strong>@Model.CompletedStepCount of @Model.SetupSteps.Count complete</strong>
+                </div>
+                <div>
+                    <span class="status-label">Current step</span>
+                    <strong>@Model.CurrentStep.Title</strong>
+                </div>
+                <div>
+                    <span class="status-label">Remaining</span>
+                    <strong>@Model.RemainingStepCount</strong>
+                </div>
+            </div>
+
+            <div class="progress-steps">
+                @foreach (var step in Model.SetupSteps)
+                {
+                    var isCurrent = string.Equals(step.Key, Model.CurrentStep.Key, StringComparison.OrdinalIgnoreCase);
+                    var isCompleted = Model.CompletedStepKeys.Contains(step.Key);
+                    var stepState = isCompleted ? "Completed" : isCurrent ? "Current" : "Remaining";
+                    var stepClass = isCompleted ? "completed" : isCurrent ? "current" : "remaining";
+
+                    <div class="progress-step @stepClass">
+                        <div class="progress-step-number">@step.Number</div>
+                        <div class="progress-step-copy">
+                            <span>@stepState</span>
+                            <strong>@step.Title</strong>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -109,6 +144,7 @@
 }
 
 .setup-status-panel,
+.setup-progress-panel,
 .setup-step-card {
     width: min(860px, 96%);
     margin: 0 auto 16px;
@@ -139,6 +175,95 @@
     margin-top: 5px;
     color: #10233f;
     font-size: 18px;
+}
+
+.setup-progress-panel {
+    padding: 14px;
+    text-align: left;
+}
+
+.progress-summary {
+    display: grid;
+    grid-template-columns: 1.2fr 1.4fr .6fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.progress-summary div {
+    min-width: 0;
+    border: 1px solid rgba(66, 84, 102, 0.14);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.progress-summary strong {
+    display: block;
+    margin-top: 4px;
+    color: #10233f;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+.progress-steps {
+    display: grid;
+    gap: 8px;
+}
+
+.progress-step {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    border: 1px solid rgba(66, 84, 102, 0.14);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.progress-step.completed {
+    background: #e9f7f1;
+    border-color: rgba(16, 126, 92, 0.28);
+}
+
+.progress-step.current {
+    background: #eef8fb;
+    border-color: rgba(18, 119, 140, 0.35);
+}
+
+.progress-step.remaining {
+    background: #fff;
+}
+
+.progress-step-number {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #334155;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.progress-step-copy span,
+.progress-step-copy strong {
+    display: block;
+}
+
+.progress-step-copy span {
+    color: #5f6b7a;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.progress-step-copy strong {
+    margin-top: 2px;
+    color: #10233f;
+    font-size: 15px;
 }
 
 .setup-step-card {
@@ -190,6 +315,7 @@
 
 @@media (max-width: 820px) {
     .setup-status-panel,
+    .progress-summary,
     .setup-step-card {
         grid-template-columns: 1fr;
     }
