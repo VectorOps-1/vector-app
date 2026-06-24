@@ -44,20 +44,42 @@ That includes:
 
 ## Reporting Rule
 
-Completion percentage may be reported only as:
+Completion percentage may be reported only from reconciled tracker rows.
 
-`Calculated completion: X.X% / 100%`
+Every completion/status report after a tracker row must include both:
+
+1. Phase progress for the current phase.
+2. Total SaaS readiness progress.
+
+Use this exact display shape:
+
+```text
+Current tracker row: <row id> - <status>
+Phase progress: <phase name> - <done rows>/<total rows> rows Done (<phase row percent>%), phase score <phase score>/<phase weight>
+Total SaaS readiness: <total score>% / 100%
+Calculation: <completed group scores> + <current phase score> + <remaining groups score>
+```
 
 The report must also state:
 
 - tracker file used
 - tracker date if known
-- rows or phases counted
-- rows or phases excluded
+- exact rows counted
+- exact rows excluded
 - whether the tracker is stale or unreconciled
 
 If the tracker is stale, contradictory, or missing required rows, the percentage is
 `Blocked`, not estimated.
+
+No arbitrary percentage jumps are allowed. A score may change only when one of
+these occurs:
+
+- a tracker row status changes to `Done` through tracker reconciliation
+- a tracker row is added or removed through an approved gate expansion
+- the scoring weights in this file are changed through a docs-only scoring-model
+  update
+
+All row-count and score changes must be visible in the next status report.
 
 ## Status Values
 
@@ -102,6 +124,10 @@ the group may score its full weight.
 If a group has child tracker rows but no closure row yet, use the child-row ratio.
 
 If a group has not been expanded into tracker rows, the group score is `0`.
+
+Round only the final reported group score and total score to one decimal place.
+Do not round row counts. Do not estimate rows that are not present in the
+execution tracker.
 
 ## Scoring Weights
 
@@ -151,20 +177,31 @@ are true:
 
 ## Current Tracker Baseline
 
-Date: 2026-06-23
+Date: 2026-06-24
 
 This baseline uses `docs/specs/execution-tracker.md` only.
 
-| Group | Tracker evidence | Score |
-| --- | --- | ---: |
-| Phase 1 | P1-01 through P1-08 are `Done` | 4.0 |
-| Phase 2 | P2 closure is recorded through P2-15M as `Done` | 6.0 |
-| Phase 2A | P2A-15A through P2A-15F are `Done`; P2A-15G and later are not tracker-done | 1.7 |
-| Remaining groups | Not expanded, not started, or not tracker-done | 0.0 |
-| **Calculated completion** |  | **11.7% / 100%** |
+| Group | Tracker evidence | Row count | Group weight | Score |
+| --- | --- | ---: | ---: | ---: |
+| Phase 1 | P1-01 through P1-08 are `Done` | 8/8 | 4.0 | 4.0 |
+| Phase 2 | P2-GATE through P2-15M are `Done` | 21/21 | 6.0 | 6.0 |
+| Phase 2A | P2A-15A through P2A-15J are `Done`; P2A-15K through P2A-15R are `Not started` | 10/18 | 5.0 | 2.8 |
+| Remaining groups | Not expanded, not started, or not tracker-done | 0/0 counted | 85.0 | 0.0 |
+| **Calculated completion** | Phase 1 4.0 + Phase 2 6.0 + Phase 2A 2.8 + remaining groups 0.0 |  |  | **12.8% / 100%** |
 
-P2A-15G implementation or verification does not affect this baseline until the
-tracker records the row as `Done`.
+Current Phase 2A row progress:
+
+```text
+P2A-15A through P2A-15J: Done = 10 rows
+P2A-15K through P2A-15R: Not started = 8 rows
+Phase 2A row progress = 10/18 = 55.6%
+Phase 2A score = 5.0 x (10/18) = 2.8
+Total SaaS readiness = 4.0 + 6.0 + 2.8 = 12.8% / 100%
+```
+
+Future Phase 2A rows must change the score by this exact formula. For example,
+if P2A-15K is reconciled as `Done`, Phase 2A becomes `11/18`, not an arbitrary
+manual percentage.
 
 ## Required Update Process
 
@@ -172,10 +209,13 @@ After each tracker reconciliation:
 
 1. Read the execution tracker.
 2. Confirm the active row status.
-3. Recalculate using this model.
-4. Report the calculated percentage with one decimal place.
-5. State whether any release blockers remain.
-6. State the exact next tracker instruction.
+3. Count `Done`, non-`Done`, and total rows for the active phase.
+4. Recalculate the phase score using the group weight.
+5. Recalculate total SaaS readiness using all completed group scores.
+6. Report phase progress and total SaaS readiness using the required display
+   shape above.
+7. State whether any release blockers remain.
+8. State the exact next tracker instruction.
 
 If this file conflicts with the master spec or execution tracker, stop and ask for
 spec/tracker correction before implementation continues.
