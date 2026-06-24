@@ -92,6 +92,10 @@
                     {
                         <a class="menu-btn equipment-btn" asp-page="/AccessModelSetup">Open Access Model</a>
                     }
+                    else if (Model.CurrentStep.Key == SetupWizardProgress.AssetRegisterStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/AssetRegisterSetup">Open Asset Registers</a>
+                    }
                 </div>
             }
             else

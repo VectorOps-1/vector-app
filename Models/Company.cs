@@ -60,6 +60,29 @@ public class Company
     public bool AccessModelDefaultsConfigured { get; set; }
 
     [MaxLength(80)]
+    public string? VehicleRegisterSetupChoice { get; set; }
+
+    [MaxLength(80)]
+    public string? EquipmentRegisterSetupChoice { get; set; }
+
+    [MaxLength(80)]
+    public string? StockRegisterSetupChoice { get; set; }
+
+    [MaxLength(80)]
+    public string? MedicationRegisterSetupChoice { get; set; }
+
+    [MaxLength(80)]
+    public string? StaffRegisterSetupChoice { get; set; }
+
+    [MaxLength(80)]
+    public string? StorageLocationSetupChoice { get; set; }
+
+    [MaxLength(1000)]
+    public string? AssetRegisterSetupNotes { get; set; }
+
+    public bool AssetRegisterSetupConfigured { get; set; }
+
+    [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]

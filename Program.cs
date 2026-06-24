@@ -40,6 +40,7 @@ builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<LocationOptionService>();
 builder.Services.AddScoped<SetupUploadService>();
 builder.Services.AddScoped<AccessModelSetupService>();
+builder.Services.AddScoped<AssetRegisterSetupService>();
 builder.Services.AddScoped<ChecklistVarianceService>();
 builder.Services.AddScoped<ReadinessAlertService>();
 builder.Services.AddScoped<AuditTrailService>();

@@ -99,6 +99,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/LogoUpload"] = SeniorAccess,
         ["/StaffStructureSetup"] = SeniorAccess,
         ["/AccessModelSetup"] = SeniorAccess,
+        ["/AssetRegisterSetup"] = SeniorAccess,
         ["/SupplierDetails"] = SeniorAccess,
         ["/UploadChecklist"] = SeniorAccess,
         ["/ChecklistPreview"] = SeniorAccess,
@@ -129,7 +130,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/OperationalStructureSetup",
         "/VehicleStructureSetup",
         "/StaffStructureSetup",
-        "/AccessModelSetup"
+        "/AccessModelSetup",
+        "/AssetRegisterSetup"
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
@@ -485,6 +487,15 @@ public class SessionAccessPageFilter : IAsyncPageFilter
 
             "/AccessModelSetup"
                 => PermissionRequirement.All(UserActionPermissions.SetupAccess),
+
+            "/AssetRegisterSetup"
+                => PermissionRequirement.Any(
+                    UserActionPermissions.SetupCompany,
+                    UserActionPermissions.RegistersVehicleEdit,
+                    UserActionPermissions.RegistersEquipmentEdit,
+                    UserActionPermissions.RegistersStockEdit,
+                    UserActionPermissions.RegistersMedicationEdit,
+                    UserActionPermissions.RegistersStaffEdit),
 
             "/CompanyProfile" or "/CompanyName" or "/LogoUpload" or "/SupplierDetails"
                 => PermissionRequirement.All(UserActionPermissions.SetupCompany),
