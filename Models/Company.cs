@@ -97,6 +97,18 @@ public class Company
     public bool ChecklistSetupConfigured { get; set; }
 
     [MaxLength(80)]
+    public string? ReadinessScoringSetupChoice { get; set; }
+
+    public bool ReadinessScoringActivated { get; set; }
+
+    public bool RequireSeniorApprovalForScoringChanges { get; set; } = true;
+
+    [MaxLength(1000)]
+    public string? ReadinessEngineSetupNotes { get; set; }
+
+    public bool ReadinessEngineSetupConfigured { get; set; }
+
+    [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]

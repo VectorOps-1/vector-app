@@ -1,0 +1,154 @@
+@page
+@model ReadinessEngineSetupModel
+@using vector_app_local.Services
+@inject IWebHostEnvironment WebHostEnvironment
+@{
+    ViewData["Title"] = "Readiness Engine Setup";
+    var branding = await CurrentUser.GetCurrentCompanyBrandingAsync(WebHostEnvironment);
+}
+
+<div class="readiness-setup-screen">
+    <div class="readiness-setup-inner">
+        <img class="page-logo" src="@branding.LogoPath" alt="Company logo" />
+        <div class="client-line">Client: @Model.ClientName</div>
+        <div class="home-label">Setup Wizard</div>
+        <h2 class="page-title">Readiness Engine Setup</h2>
+        <p class="page-subtitle">Choose how readiness scoring should be introduced. This page saves setup intent only; it does not create rules, seed scoring data, or publish a readiness engine.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="status-message" data-action-status data-confirmation-duration="1800">@Model.StatusMessage</div>
+        }
+
+        <form method="post" asp-page-handler="SaveChoices" class="setup-card">
+            <div class="section-heading-row">
+                <div>
+                    <div class="section-label">Readiness scoring choices</div>
+                    <p class="section-help">Default scoring is a product option, not a hidden setup routine. A senior user still controls rule review and publish before scoring becomes operational.</p>
+                </div>
+            </div>
+
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <div class="choice-grid">
+                <label>
+                    Scoring setup path
+                    <select asp-for="ReadinessScoringSetupChoice" asp-items="Model.ScoringChoiceItems" data-skip-na></select>
+                </label>
+                <fieldset class="activation-choice">
+                    <legend>Readiness scoring activation</legend>
+                    <label class="check-row">
+                        <input asp-for="ReadinessScoringActivated" />
+                        <span>Activate readiness scoring after setup</span>
+                    </label>
+                    <p>Leave unticked to defer readiness scoring until the readiness engine has been reviewed and explicitly published.</p>
+                    <span asp-validation-for="ReadinessScoringActivated" class="field-validation"></span>
+                </fieldset>
+                <fieldset class="activation-choice">
+                    <legend>Scoring change approval</legend>
+                    <label class="check-row">
+                        <input asp-for="RequireSeniorApprovalForScoringChanges" />
+                        <span>Require senior approval for scoring changes</span>
+                    </label>
+                    <p>When enabled, operational manager changes are requests until senior management approves them.</p>
+                </fieldset>
+                <label>
+                    Setup notes
+                    <textarea asp-for="ReadinessEngineSetupNotes" rows="4" placeholder="Optional notes about scoring defaults, approval rules, deferred configuration, or senior-management decisions."></textarea>
+                </label>
+            </div>
+
+            <button class="primary-btn" type="submit">Save Readiness Engine Choices</button>
+        </form>
+
+        <section class="setup-card">
+            <div class="section-heading-row">
+                <div>
+                    <div class="section-label">Next action routing</div>
+                    <p class="section-help">These routes reflect the saved or selected choices. No readiness rules are created from this setup page.</p>
+                </div>
+                <strong>@Model.ReadinessRows.Count setup items</strong>
+            </div>
+
+            <div class="readiness-route-list">
+                @foreach (var row in Model.ReadinessRows)
+                {
+                    <article class="readiness-route-row">
+                        <div>
+                            <span>@row.ChoiceLabel</span>
+                            <strong>@row.Name</strong>
+                            <p>@row.Description</p>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(row.ActionUrl))
+                        {
+                            <a class="route-btn" href="@row.ActionUrl">@row.ActionLabel</a>
+                        }
+                        else
+                        {
+                            <span class="route-note">@row.ActionLabel</span>
+                        }
+                    </article>
+                }
+            </div>
+        </section>
+
+        <form method="post" asp-page-handler="CompleteStep" class="complete-form">
+            <a class="secondary-btn" asp-page="/SetupWizard">Back to Setup Wizard</a>
+            <button class="primary-btn" type="submit">Complete Readiness Engine Setup Step</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.readiness-setup-screen { display: flex; width: 100%; min-height: calc(100vh - 70px); justify-content: center; align-items: flex-start; }
+.readiness-setup-inner { width: 100%; max-width: 1160px; margin: 0 auto; padding: 36px 20px 70px; text-align: center; box-sizing: border-box; }
+.page-logo { display: block; width: 260px; max-width: 72%; max-height: 150px; margin: 0 auto 12px; object-fit: contain; }
+.client-line { margin-bottom: 14px; color: #6b7280; font-size: 12px; font-weight: 800; }
+.home-label, .section-label { color: #52606d; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.home-label { margin-bottom: 10px; }
+.page-title { margin: 0 0 8px; color: #10233f; font-size: 32px; font-weight: 900; }
+.page-subtitle { width: min(860px, 96%); margin: 0 auto 22px; color: #5f6b7a; font-size: 16px; font-weight: 700; line-height: 1.45; }
+.status-message { width: min(820px, 96%); margin: 0 auto 16px; padding: 12px 16px; border: 1px solid rgba(31,111,91,.24); border-radius: 8px; background: rgba(31,111,91,.08); color: #1f6f5b; font-weight: 900; }
+.setup-card { margin: 0 auto 16px; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.82); text-align: left; box-sizing: border-box; }
+.section-heading-row { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.section-heading-row strong { color: #52606d; font-size: 13px; font-weight: 900; }
+.section-help { margin: 6px 0 14px; color: #64748b; font-size: 13px; font-weight: 800; line-height: 1.45; }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.choice-grid label { display: flex; flex-direction: column; gap: 7px; color: #52606d; font-size: 12px; font-weight: 900; }
+.choice-grid select, .choice-grid textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; color: #10233f; background: #fff; font-size: 14px; box-sizing: border-box; }
+.choice-grid select { min-height: 42px; }
+.choice-grid textarea { min-height: 96px; padding-top: 10px; resize: vertical; }
+.activation-choice { margin: 0; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; padding: 12px; }
+.activation-choice legend { padding: 0 5px; color: #52606d; font-size: 12px; font-weight: 900; }
+.activation-choice p { margin: 4px 0 0; color: #64748b; font-size: 12px; font-weight: 800; line-height: 1.35; }
+.check-row { flex-direction: row !important; align-items: center; gap: 9px !important; color: #10233f !important; font-size: 13px !important; }
+.check-row input { width: 18px; height: 18px; }
+.validation-summary, .field-validation { color: #9f1239; font-size: 13px; font-weight: 900; }
+.readiness-route-list { display: grid; gap: 10px; }
+.readiness-route-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; border: 1px solid rgba(66,84,102,.14); border-radius: 8px; padding: 12px; background: #fff; }
+.readiness-route-row span { display: block; color: #64748b; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.readiness-route-row strong { display: block; margin: 3px 0; color: #10233f; font-size: 18px; font-weight: 900; }
+.readiness-route-row p { margin: 0; color: #52606d; font-size: 13px; font-weight: 800; line-height: 1.35; }
+.primary-btn, .secondary-btn, .route-btn, .route-note { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 900; text-decoration: none; white-space: nowrap; }
+.primary-btn, .route-btn { border: none; background: #126C84; color: #fff; padding: 0 16px; }
+.secondary-btn { border: 1px solid rgba(47,128,168,.24); background: #fff; color: #126C84; padding: 0 16px; }
+.route-note { border: 1px solid rgba(66,84,102,.16); background: rgba(248,250,252,.9); color: #64748b; padding: 0 14px; }
+.complete-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+@@media (max-width: 860px) {
+    .choice-grid,
+    .complete-form,
+    .readiness-route-row { grid-template-columns: 1fr; }
+    .setup-card { padding: 14px; }
+    .route-btn, .route-note { width: 100%; }
+}
+</style>
+
+@if (Model.ActionSaved)
+{
+    <script>
+        window.VectorActionConfirmation?.show({
+            message: @Json.Serialize(Model.StatusMessage ?? "Readiness engine setup choices saved."),
+            delay: 1300
+        });
+    </script>
+}
