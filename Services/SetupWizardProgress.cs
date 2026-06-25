@@ -10,6 +10,7 @@ public static class SetupWizardProgress
     public const string StaffStructureStepKey = "staff-structure";
     public const string AccessModelStepKey = "access-model";
     public const string AssetRegisterStepKey = "asset-registers";
+    public const string ChecklistSetupStepKey = "checklist-setup";
 
     private static readonly IReadOnlyList<SetupWizardStepDefinition> StepDefinitions =
     [
@@ -18,7 +19,8 @@ public static class SetupWizardProgress
         new(VehicleStructureStepKey, 3, "Vehicle structure", "Capture vehicle functions, client-defined subtypes, and optional default unit schematic assignments by function or subtype."),
         new(StaffStructureStepKey, 4, "Staff structure", "Capture clinical qualification and scope options, staff ID format, practitioner-number requirements, licensing expiry, CPD tracking, and default profile fields."),
         new(AccessModelStepKey, 5, "Access model", "Capture default permissions for company owner, senior management, operational management, and staff before real users begin operating."),
-        new(AssetRegisterStepKey, 6, "Asset registers", "Choose whether vehicles, equipment, stock, medication, staff, and storage locations will be built manually now or imported later.")
+        new(AssetRegisterStepKey, 6, "Asset registers", "Choose whether vehicles, equipment, stock, medication, staff, and storage locations will be built manually now or imported later."),
+        new(ChecklistSetupStepKey, 7, "Checklist setup", "Choose whether daily checks start from blank, use an explicit starter structure, import existing checklists later, publish by function, subtype, or callsign, and configure Full Audit now or later.")
     ];
 
     public static IReadOnlyList<SetupWizardStepDefinition> Steps => StepDefinitions;

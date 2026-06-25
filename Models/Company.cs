@@ -83,6 +83,20 @@ public class Company
     public bool AssetRegisterSetupConfigured { get; set; }
 
     [MaxLength(80)]
+    public string? DailyChecklistSetupChoice { get; set; }
+
+    [MaxLength(500)]
+    public string? DailyChecklistPublishScopeKeys { get; set; }
+
+    [MaxLength(80)]
+    public string? FullAuditChecklistSetupChoice { get; set; }
+
+    [MaxLength(1000)]
+    public string? ChecklistSetupNotes { get; set; }
+
+    public bool ChecklistSetupConfigured { get; set; }
+
+    [MaxLength(80)]
     public string BrandingStatus { get; set; } = "Incomplete";
 
     [MaxLength(80)]

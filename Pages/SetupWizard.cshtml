@@ -96,6 +96,10 @@
                     {
                         <a class="menu-btn equipment-btn" asp-page="/AssetRegisterSetup">Open Asset Registers</a>
                     }
+                    else if (Model.CurrentStep.Key == SetupWizardProgress.ChecklistSetupStepKey)
+                    {
+                        <a class="menu-btn equipment-btn" asp-page="/ChecklistSetup">Open Checklist Setup</a>
+                    }
                 </div>
             }
             else
