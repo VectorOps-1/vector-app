@@ -12,6 +12,7 @@ public static class SetupWizardProgress
     public const string AssetRegisterStepKey = "asset-registers";
     public const string ChecklistSetupStepKey = "checklist-setup";
     public const string ReadinessEngineSetupStepKey = "readiness-engine-setup";
+    public const string ReviewStepKey = "setup-review";
 
     private static readonly IReadOnlyList<SetupWizardStepDefinition> StepDefinitions =
     [
@@ -22,7 +23,8 @@ public static class SetupWizardProgress
         new(AccessModelStepKey, 5, "Access model", "Capture default permissions for company owner, senior management, operational management, and staff before real users begin operating."),
         new(AssetRegisterStepKey, 6, "Asset registers", "Choose whether vehicles, equipment, stock, medication, staff, and storage locations will be built manually now or imported later."),
         new(ChecklistSetupStepKey, 7, "Checklist setup", "Choose whether daily checks start from blank, use an explicit starter structure, import existing checklists later, publish by function, subtype, or callsign, and configure Full Audit now or later."),
-        new(ReadinessEngineSetupStepKey, 8, "Readiness engine setup", "Choose whether readiness scoring will use the default AcuityOps scoring model, be customized later, require senior approval for scoring changes, and activate or stay deferred.")
+        new(ReadinessEngineSetupStepKey, 8, "Readiness engine setup", "Choose whether readiness scoring will use the default AcuityOps scoring model, be customized later, require senior approval for scoring changes, and activate or stay deferred."),
+        new(ReviewStepKey, 9, "Setup review", "Review missing required setup items, optional deferred work, and what the company can do immediately after setup.")
     ];
 
     public static IReadOnlyList<SetupWizardStepDefinition> Steps => StepDefinitions;
