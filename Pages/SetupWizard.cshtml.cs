@@ -48,6 +48,7 @@ public class SetupWizardModel : PageModel
     public IReadOnlyList<SetupReviewItem> OptionalDeferredItems { get; private set; } = [];
     public IReadOnlyList<SetupReviewItem> ImmediateActionItems { get; private set; } = [];
     public bool HasRequiredSetupGaps => MissingRequiredItems.Count > 0;
+    public string? CompletionError { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -75,6 +76,49 @@ public class SetupWizardModel : PageModel
 
         await ApplyPageStateAsync(company, currentUser);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostCompleteSetupAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
+        }
+
+        var company = currentUser.Company ?? await _currentUser.GetCurrentCompanyAsync();
+        if (company is null)
+        {
+            return RedirectToPage("/CompanyLogin");
+        }
+
+        await ApplyPageStateAsync(company, currentUser);
+        if (!CanManageSetup)
+        {
+            CompletionError = "Only senior management can complete company setup.";
+            return Page();
+        }
+
+        if (!IsReviewStep)
+        {
+            CompletionError = "Setup can only be completed from the Step 9 review screen.";
+            return Page();
+        }
+
+        if (HasRequiredSetupGaps)
+        {
+            CompletionError = "Resolve the required setup items before completing setup.";
+            return Page();
+        }
+
+        SetupWizardProgress.MarkStepComplete(company, SetupWizardProgress.ReviewStepKey);
+        company.BrandingStatus = CompanyBranding.BrandingStatusConfigured;
+        company.SetupWizardUpdatedAtUtc = DateTime.UtcNow;
+        company.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return RedirectToPage("/Home");
     }
 
     private async Task ApplyPageStateAsync(Company company, AppUser currentUser)
@@ -282,8 +326,8 @@ public class SetupWizardModel : PageModel
 
         immediateActionItems.Add(new SetupReviewItem(
             "Open normal Home flow after final setup completion",
-            "When the final completion step is implemented and no required items are missing, normal Home access will unlock for the company.",
-            "Home unlock follows next step",
+            "When the required setup items are complete, use the completion button below to unlock normal Home access for this company.",
+            "Complete setup below",
             null,
             "action"));
 

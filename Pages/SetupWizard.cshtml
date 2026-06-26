@@ -214,6 +214,10 @@
                 </div>
 
                 <div class="review-completion-note @(Model.HasRequiredSetupGaps ? "blocked" : "ready")">
+                    @if (!string.IsNullOrWhiteSpace(Model.CompletionError))
+                    {
+                        <strong>@Model.CompletionError</strong>
+                    }
                     @if (Model.HasRequiredSetupGaps)
                     {
                         <strong>Final completion is blocked.</strong>
@@ -221,8 +225,14 @@
                     }
                     else
                     {
-                        <strong>Final completion can proceed in the next setup step.</strong>
-                        <span>This review does not unlock Home by itself; the completion action is handled by the next tracker row.</span>
+                        <strong>Final completion can proceed.</strong>
+                        <span>Completing setup unlocks normal Home access and keeps deferred work visible as operational next actions.</span>
+                        @if (Model.CanManageSetup)
+                        {
+                            <form method="post" asp-page-handler="CompleteSetup" class="complete-setup-form">
+                                <button class="menu-btn equipment-btn" type="submit">Complete Setup And Open Home</button>
+                            </form>
+                        }
                     }
                 </div>
             </div>
@@ -632,6 +642,14 @@
 .review-completion-note.ready {
     background: #e9f7f1;
     color: #0f684f;
+}
+
+.complete-setup-form {
+    margin-top: 10px;
+}
+
+.complete-setup-form .menu-btn {
+    width: 100%;
 }
 
 @@media (max-width: 820px) {

@@ -40,6 +40,23 @@
             </section>
         }
 
+        @if (Model.ShowFirstOperationGuidance)
+        {
+            <section class="first-operation-panel" aria-label="First operation guidance">
+                <div>
+                    <span class="management-section-label">First Operation Setup</span>
+                    <h2>Start operating from live records</h2>
+                    <p>Add the real people, assets, checklists, and daily workflow records this company will use.</p>
+                </div>
+                <div class="first-operation-actions">
+                    <a href="/Staff" class="workflow-action">Add staff</a>
+                    <a href="/MasterSetup" class="workflow-action">Add or import registers</a>
+                    <a href="/EditChecklist" class="workflow-action">Build / publish checklists</a>
+                    <a href="/DailyVehicleChecklist" class="workflow-action primary-action">Start daily checks</a>
+                </div>
+            </section>
+        }
+
         <section class="dashboard-section">
             <div class="management-section-label">Operational Work</div>
 
@@ -307,6 +324,42 @@
     background: #fff5f5;
 }
 
+.first-operation-panel {
+    width: min(940px, 100%);
+    margin: -4px auto 24px auto;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    gap: 16px;
+    align-items: center;
+    border: 1px solid rgba(18, 119, 140, 0.2);
+    border-radius: 8px;
+    background: #eef8fb;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.first-operation-panel h2 {
+    margin: 4px 0 6px;
+    color: #10233f;
+    font-size: 21px;
+}
+
+.first-operation-panel p {
+    margin: 0;
+    color: #52606d;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.first-operation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
 .home-subtitle {
     margin-top: 0;
     margin-bottom: 26px;
@@ -506,6 +559,11 @@
 
     .guide-entry p {
         text-align: center;
+    }
+
+    .first-operation-panel,
+    .first-operation-actions {
+        grid-template-columns: 1fr;
     }
 
     .workflow-grid {

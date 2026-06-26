@@ -27,6 +27,7 @@ public class HomeModel : PageModel
     public string CompanyLogoPath { get; private set; } = CompanyBranding.DefaultLogoPath;
     public bool PermissionDenied { get; private set; }
     public bool PermissionSetupRequired { get; private set; }
+    public bool ShowFirstOperationGuidance { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(string? access, bool permissionDenied = false, bool permissionSetupRequired = false)
     {
@@ -45,10 +46,13 @@ public class HomeModel : PageModel
         SignedInName = currentUser.FullName;
         SignedInRole = currentUser.AppRole?.Name;
         SignedInUserId = currentUser.Id;
+        var isSeniorManagement = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
+        var company = currentUser.Company ?? await _currentUser.GetCurrentCompanyAsync();
+        ShowFirstOperationGuidance = isSeniorManagement && company is not null && CompanySetupState.IsSetupComplete(company);
         PermissionSetupRequired = permissionSetupRequired;
         PermissionDenied = permissionDenied;
 
-        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        if (!isSeniorManagement)
         {
             var hasSavedPermissionRows = await _db.AppUserAccessPermissions
                 .AsNoTracking()
