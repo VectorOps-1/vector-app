@@ -5,6 +5,7 @@ vector-dev*.db
 vector-dev*.db-*
 vector-dev.backup*.db
 *.backup*.db
+db-backups/
 
 # Build and runtime output
 bin/
