@@ -38,6 +38,8 @@ public class SetupWizardModel : PageModel
     public string SignedInName { get; private set; } = string.Empty;
     public string SignedInRole { get; private set; } = string.Empty;
     public bool CanManageSetup { get; private set; }
+    public bool IsSetupComplete { get; private set; }
+    public bool IsProgressReviewMode { get; private set; }
     public SetupWizardStepDefinition CurrentStep { get; private set; } = SetupWizardProgress.Steps[0];
     public IReadOnlySet<string> CompletedStepKeys { get; private set; } = new HashSet<string>();
     public IReadOnlyList<SetupWizardStepDefinition> SetupSteps { get; private set; } = SetupWizardProgress.Steps;
@@ -49,6 +51,9 @@ public class SetupWizardModel : PageModel
     public IReadOnlyList<SetupReviewItem> ImmediateActionItems { get; private set; } = [];
     public bool HasRequiredSetupGaps => MissingRequiredItems.Count > 0;
     public string? CompletionError { get; private set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Mode { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -64,9 +69,22 @@ public class SetupWizardModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
+        var canManageSetup = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
+        var progressReviewRequested = IsProgressReviewRequest();
+        if (progressReviewRequested && !canManageSetup)
+        {
+            return RedirectToPage("/Home", new { permissionDenied = "true" });
+        }
+
         if (CompanySetupState.IsSetupComplete(company))
         {
-            return RedirectToPage("/Home");
+            if (!progressReviewRequested)
+            {
+                return RedirectToPage("/Home");
+            }
+
+            await ApplyPageStateAsync(company, currentUser, progressReviewRequested: true);
+            return Page();
         }
 
         if (SetupWizardProgress.EnsureCurrentStep(company))
@@ -121,7 +139,7 @@ public class SetupWizardModel : PageModel
         return RedirectToPage("/Home");
     }
 
-    private async Task ApplyPageStateAsync(Company company, AppUser currentUser)
+    private async Task ApplyPageStateAsync(Company company, AppUser currentUser, bool progressReviewRequested = false)
     {
         ClientName = CompanyBranding.GetDisplayCompanyName(company);
         CompanyLogoPath = CompanyBranding.GetLogoPath(_environment, company);
@@ -129,7 +147,11 @@ public class SetupWizardModel : PageModel
         SignedInName = currentUser.FullName;
         SignedInRole = currentUser.AppRole?.Name ?? string.Empty;
         CanManageSetup = CurrentUserService.IsSeniorAccessRole(SignedInRole);
-        CurrentStep = SetupWizardProgress.GetCurrentStep(company);
+        IsSetupComplete = CompanySetupState.IsSetupComplete(company);
+        IsProgressReviewMode = progressReviewRequested && IsSetupComplete;
+        CurrentStep = IsProgressReviewMode
+            ? SetupWizardProgress.Steps.First(step => step.Key.Equals(SetupWizardProgress.ReviewStepKey, StringComparison.OrdinalIgnoreCase))
+            : SetupWizardProgress.GetCurrentStep(company);
         CompletedStepKeys = SetupWizardProgress.GetCompletedStepKeys(company);
         SetupSteps = SetupWizardProgress.Steps;
         CompletedStepCount = SetupSteps.Count(step => CompletedStepKeys.Contains(step.Key));
@@ -324,12 +346,24 @@ public class SetupWizardModel : PageModel
             AddReadinessReview(company, optionalDeferredItems, immediateActionItems);
         }
 
-        immediateActionItems.Add(new SetupReviewItem(
-            "Open normal Home flow after final setup completion",
-            "When the required setup items are complete, use the completion button below to unlock normal Home access for this company.",
-            "Complete setup below",
-            null,
-            "action"));
+        if (IsSetupComplete)
+        {
+            immediateActionItems.Add(new SetupReviewItem(
+                "Normal Home flow is unlocked",
+                "Company setup is complete. Use this page to review deferred setup items and jump back into the existing setup records when changes are needed.",
+                "Open Home",
+                "/Home",
+                "action"));
+        }
+        else
+        {
+            immediateActionItems.Add(new SetupReviewItem(
+                "Open normal Home flow after final setup completion",
+                "When the required setup items are complete, use the completion button below to unlock normal Home access for this company.",
+                "Complete setup below",
+                null,
+                "action"));
+        }
 
         MissingRequiredItems = missingRequiredItems;
         OptionalDeferredItems = optionalDeferredItems;
@@ -464,6 +498,12 @@ public class SetupWizardModel : PageModel
             SetupWizardProgress.ReadinessEngineSetupStepKey => "/ReadinessEngineSetup",
             _ => null
         };
+    }
+
+    private bool IsProgressReviewRequest()
+    {
+        return string.Equals(Mode, "progress", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Mode, "review", StringComparison.OrdinalIgnoreCase);
     }
 }
 

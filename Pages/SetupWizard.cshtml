@@ -11,7 +11,11 @@
         <div class="client-line">Client: @Model.ClientName</div>
         <div class="home-label">Company Setup</div>
         <h2 class="page-title">Setup Wizard</h2>
-        <p class="page-subtitle">Complete the company setup before normal app use starts.</p>
+        <p class="page-subtitle">
+            @(Model.IsSetupComplete
+                ? "Review setup progress, deferred items, and next actions without duplicating Master Setup records."
+                : "Complete the company setup before normal app use starts.")
+        </p>
 
         <div class="setup-status-panel">
             <div>
@@ -66,7 +70,16 @@
             <div class="step-copy">
                 <span class="status-label">Resume setup here</span>
                 <h3>@Model.CurrentStep.Title</h3>
-                <p>@Model.CurrentStep.Description Normal Home access remains locked until the company record is configured.</p>
+                <p>
+                    @if (Model.IsSetupComplete)
+                    {
+                        <text>Normal Home access is unlocked. Use this page to review setup progress and jump back into the existing setup pages when deferred items need attention.</text>
+                    }
+                    else
+                    {
+                        <text>@Model.CurrentStep.Description Normal Home access remains locked until the company record is configured.</text>
+                    }
+                </p>
             </div>
             @if (Model.CanManageSetup)
             {
@@ -107,6 +120,10 @@
                     else if (Model.CurrentStep.Key == SetupWizardProgress.ReviewStepKey)
                     {
                         <span class="setup-review-ready">Review the setup summary below.</span>
+                        @if (Model.IsSetupComplete)
+                        {
+                            <a class="menu-btn" asp-page="/Home">Open Home</a>
+                        }
                     }
                 </div>
             }
@@ -225,13 +242,21 @@
                     }
                     else
                     {
-                        <strong>Final completion can proceed.</strong>
-                        <span>Completing setup unlocks normal Home access and keeps deferred work visible as operational next actions.</span>
-                        @if (Model.CanManageSetup)
+                        @if (Model.IsSetupComplete)
                         {
-                            <form method="post" asp-page-handler="CompleteSetup" class="complete-setup-form">
-                                <button class="menu-btn equipment-btn" type="submit">Complete Setup And Open Home</button>
-                            </form>
+                            <strong>Company setup is complete.</strong>
+                            <span>Normal Home access is unlocked. Deferred setup items remain listed above with links to the existing setup records.</span>
+                        }
+                        else
+                        {
+                            <strong>Final completion can proceed.</strong>
+                            <span>Completing setup unlocks normal Home access and keeps deferred work visible as operational next actions.</span>
+                            @if (Model.CanManageSetup)
+                            {
+                                <form method="post" asp-page-handler="CompleteSetup" class="complete-setup-form">
+                                    <button class="menu-btn equipment-btn" type="submit">Complete Setup And Open Home</button>
+                                </form>
+                            }
                         }
                     }
                 </div>

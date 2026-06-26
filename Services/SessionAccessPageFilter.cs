@@ -44,8 +44,6 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ReportIssue"] = AllSignedInAccess,
         ["/ExpiryNotifications"] = AllSignedInAccess,
         ["/SetupWizard"] = AllSignedInAccess,
-        ["/OperationalStructureSetup"] = AllSignedInAccess,
-        ["/VehicleStructureSetup"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
@@ -97,6 +95,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/CompanyProfile"] = SeniorAccess,
         ["/CompanyName"] = SeniorAccess,
         ["/LogoUpload"] = SeniorAccess,
+        ["/OperationalStructureSetup"] = SeniorAccess,
+        ["/VehicleStructureSetup"] = SeniorAccess,
         ["/StaffStructureSetup"] = SeniorAccess,
         ["/AccessModelSetup"] = SeniorAccess,
         ["/AssetRegisterSetup"] = SeniorAccess,
