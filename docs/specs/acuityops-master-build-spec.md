@@ -21,6 +21,52 @@ This file is the controlling execution spec for AcuityOps. Work must follow this
 15. After implementation or a blocked attempt, Codex must update the tracker status and report the exact next tracker instruction. The status report must include the app-readiness percentage requested by the user.
 16. Documentation-only changes to the spec or tracker are allowed only when explicitly requested. They must not be mixed with product source code changes.
 
+## Credit Control Protocol
+
+This protocol overrides the previous row-by-row micro-implementation workflow. The goal is to reduce credit waste without reducing safety, source-of-truth discipline, tenant isolation, or verification quality.
+
+Mandatory cost-control rules:
+
+1. Codex must not continue row-by-row micro-implementation unless the user explicitly requests a single tracker row.
+2. Before editing product source, Codex must propose the smallest safe batch of related tracker rows.
+3. Each batch proposal must include:
+   - `Scope`: tracker rows and files/modules expected to change.
+   - `Excluded work`: related work that will not be touched.
+   - `Risk level`: low, medium, or high, with the reason.
+   - `Expected verification`: build, tests, smoke checks, browser checks, database checks, or provider checks.
+   - `Commit plan`: one source commit plus one tracker/docs commit by default.
+   - `Estimated credit cost`: low, medium, or high, with the main cost driver.
+4. Full-app audits are allowed only at phase gates, release gates, or when the user explicitly requests a full audit.
+5. Normal implementation work must use targeted file inspection only. Codex must not reread broad app areas unless the batch scope requires it.
+6. Automated build and smoke checks must run before browser verification where practical.
+7. Browser verification is required for UI, navigation, login, tenant, upload, checklist, reporting, or workflow changes. It is not required for docs-only changes or pure backend changes unless the batch risk demands it.
+8. Commits must be grouped as one source commit plus one tracker/docs commit per batch unless a risk requires smaller commits.
+9. Codex must stop before risky uncertainty instead of exploring broadly. Risky uncertainty includes unclear tenant ownership, unclear source of truth, destructive data changes, provider choice, legal/compliance uncertainty, billing consequences, or security implications.
+10. Major unfinished capabilities must never be mixed into cleanup batches.
+11. If a batch reveals a new major feature, provider decision, legal dependency, or architecture dependency, Codex must record it as future work and stop before coding it.
+12. The tracker remains the execution gate. Batching changes how authorized rows are grouped; it does not permit undocumented work or silent scope expansion.
+
+Dedicated major-capability rule:
+
+The following capabilities must be treated as dedicated focused phases or subphases. Each requires its own design/spec, acceptance criteria, architecture/provider decision, cost-risk review, implementation batch, verification plan, and tier/commercial impact review before product code is written:
+
+- AI register and checklist importing.
+- AI-generated compliance and future-risk analytics.
+- PDF evidence generation and downloads.
+- Azure production storage and deployment architecture.
+- Multi-tenant SaaS packaging and client-specific releases.
+- Billing, invoices, VAT/tax, subscriptions, downgrade/cancellation rules, and refunds.
+- SMS and email notifications.
+- Compliance audit modes, starting with South African EMS audit requirements.
+- SOP/CPG document ingestion into app UI.
+- Global vehicle schematic library expansion.
+- Website, pricing, demo, trial, and marketing truth-control.
+- Client data export, deletion, retention, and offboarding.
+
+Roadmap preservation rule:
+
+The product vision and phase order below remain valid. The Credit Control Protocol changes execution discipline, not the product direction. If a roadmap conflict is found, Codex must document the conflict in this spec or tracker and stop; it must not silently change phase order or product scope.
+
 ## Execution Tracker Gate
 
 The master spec defines the product, rules, and roadmap. The execution tracker at `docs/specs/execution-tracker.md` controls what may be executed in the current work sequence.

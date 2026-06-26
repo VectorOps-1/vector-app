@@ -8,14 +8,31 @@ The master spec remains the product and architecture authority. This tracker con
 
 1. Do not work from memory. Read the relevant tracker row and master spec section before acting.
 2. Do not invent step numbers. If the user asks for `Step 10` and the current tracker does not contain that step in the active phase, stop and report the mismatch.
-3. Do not combine tracker rows. One user instruction may complete one tracker row unless the user explicitly authorizes a named batch of tracker rows.
-4. Do not edit product source code during spec, tracker, audit, or planning rows.
-5. Do not touch database files, runtime files, generated files, app startup, or app process state unless the active tracker row explicitly permits it.
-6. Do not treat prior untracked work as complete. Prior work must be reconciled against the tracker before any row is marked `Done`.
-7. Do not mark a row `Done` without the required verification evidence.
-8. Do not continue to the next row automatically. Stop, report status, and provide the exact next instruction for the user to give.
-9. If new work is discovered, add it as a proposed tracker row or report it as a required tracker change. Do not implement it silently.
-10. If a row conflicts with the master spec, stop and request a spec/tracker correction before implementation.
+3. Do not continue row-by-row micro-implementation unless the user explicitly requests a single tracker row.
+4. Do not combine tracker rows silently. Related rows may be batched only after Codex proposes a named batch plan and the user authorizes that batch.
+5. Before editing product source, Codex must propose the smallest safe batch plan unless the user instruction explicitly names one tracker row only.
+6. The batch plan must state scope, excluded work, risk level, expected verification, commit plan, and estimated credit cost.
+7. Full-app audits are only allowed at phase gates, release gates, or when the user explicitly requests one.
+8. Normal work must use targeted file inspection only.
+9. Automated build and smoke checks must run before browser verification where practical.
+10. Browser verification is required for UI, navigation, login, tenant, upload, checklist, reporting, or workflow changes.
+11. Major unfinished capabilities must never be mixed into cleanup batches.
+12. Codex must stop before risky uncertainty instead of exploring broadly or silently expanding scope.
+13. Major unfinished capabilities require their own focused design/spec, acceptance criteria, architecture/provider decision, cost-risk review, implementation batch, verification plan, and tier/commercial impact review before product code is written.
+14. Dedicated major capabilities include AI register/checklist importing, AI compliance and future-risk analytics, PDF evidence, Azure production storage, SaaS packaging/client-specific releases, billing/subscriptions/tax/refunds, SMS/email notifications, compliance audit modes, SOP/CPG ingestion, global schematic library expansion, website/marketing truth-control, and client data export/offboarding.
+15. Preserve the current product vision and phase order unless a roadmap conflict is documented in the spec or tracker.
+
+## Legacy Single-Row Safety Rules
+
+The rules below still apply inside an authorized single row or authorized batch.
+
+1. Do not edit product source code during spec, tracker, audit, or planning rows.
+2. Do not touch database files, runtime files, generated files, app startup, or app process state unless the active tracker row or authorized batch explicitly permits it.
+3. Do not treat prior untracked work as complete. Prior work must be reconciled against the tracker before any row is marked `Done`.
+4. Do not mark a row `Done` without the required verification evidence.
+5. Do not continue to the next row or batch automatically. Stop, report status, and provide the exact next instruction for the user to give.
+6. If new work is discovered, add it as a proposed tracker row or report it as a required tracker change. Do not implement it silently.
+7. If a row conflicts with the master spec, stop and request a spec/tracker correction before implementation.
 
 ## Allowed Status Values
 
@@ -26,7 +43,21 @@ The master spec remains the product and architecture authority. This tracker con
 
 ## Required Pre-Flight Before Any Product Work
 
-Before any product source, database, runtime, or generated-file work, Codex must state:
+Before any product source, database, runtime, or generated-file work, Codex must first state whether the user authorized a single row or a batch.
+
+For a batch, Codex must state:
+
+1. Batch name.
+2. Tracker rows included.
+3. Scope.
+4. Excluded work.
+5. Risk level and reason.
+6. Expected verification.
+7. Commit plan.
+8. Estimated credit cost and main cost driver.
+9. Stop condition.
+
+For a single row, Codex must state:
 
 1. Active tracker row ID and exact title.
 2. Matching master spec section.
@@ -41,16 +72,17 @@ If any answer is unclear, the row is `Blocked`.
 
 ## Required Post-Step Report
 
-After each authorized row, Codex must report:
+After each authorized row or batch, Codex must report:
 
-1. Tracker row ID and title.
-2. Final row status.
+1. Tracker row ID/title or batch name with included rows.
+2. Final row or batch status.
 3. Files changed.
 4. Verification completed.
 5. Verification not run and reason.
 6. Remaining risk.
 7. App-readiness percentage where `100%` means a high-level production SaaS app running with real clients.
 8. Exact next recommended instruction.
+9. Whether the actual credit cost was lower, equal to, or higher than expected.
 
 ## Current Active Row
 
