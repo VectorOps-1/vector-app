@@ -15,6 +15,7 @@ public class SetupWizardModel : PageModel
     private readonly AssetRegisterSetupService _assetRegisterSetup;
     private readonly ChecklistSetupService _checklistSetup;
     private readonly ReadinessEngineSetupService _readinessEngineSetup;
+    private readonly AuditTrailService _auditTrail;
 
     public SetupWizardModel(
         CurrentUserService currentUser,
@@ -22,7 +23,8 @@ public class SetupWizardModel : PageModel
         IWebHostEnvironment environment,
         AssetRegisterSetupService assetRegisterSetup,
         ChecklistSetupService checklistSetup,
-        ReadinessEngineSetupService readinessEngineSetup)
+        ReadinessEngineSetupService readinessEngineSetup,
+        AuditTrailService auditTrail)
     {
         _currentUser = currentUser;
         _db = db;
@@ -30,6 +32,7 @@ public class SetupWizardModel : PageModel
         _assetRegisterSetup = assetRegisterSetup;
         _checklistSetup = checklistSetup;
         _readinessEngineSetup = readinessEngineSetup;
+        _auditTrail = auditTrail;
     }
 
     public string ClientName { get; private set; } = CompanyBranding.DefaultCompanyName;
@@ -87,7 +90,9 @@ public class SetupWizardModel : PageModel
             return Page();
         }
 
-        if (SetupWizardProgress.EnsureCurrentStep(company))
+        var currentStepChanged = SetupWizardProgress.EnsureCurrentStep(company);
+        var setupStartedAuditAdded = await AddSetupStartedAuditIfNeededAsync(company, currentUser);
+        if (currentStepChanged || setupStartedAuditAdded)
         {
             await _db.SaveChangesAsync();
         }
@@ -133,6 +138,16 @@ public class SetupWizardModel : PageModel
         company.BrandingStatus = CompanyBranding.BrandingStatusConfigured;
         company.SetupWizardUpdatedAtUtc = DateTime.UtcNow;
         company.UpdatedAtUtc = DateTime.UtcNow;
+
+        var completedStepCount = SetupSteps.Count(step =>
+            CompletedStepKeys.Contains(step.Key)
+            || step.Key.Equals(SetupWizardProgress.ReviewStepKey, StringComparison.OrdinalIgnoreCase));
+        _auditTrail.Record(
+            currentUser,
+            "Setup wizard completed",
+            "Company",
+            company.Id,
+            $"Setup wizard completed by {currentUser.FullName} ({currentUser.AppRole?.Name ?? "Unknown access"}). Completed steps: {completedStepCount}/{SetupSteps.Count}. Deferred optional items: {BuildDeferredSetupAuditSummary(OptionalDeferredItems)}. Normal Home access unlocked.");
 
         await _db.SaveChangesAsync();
 
@@ -504,6 +519,40 @@ public class SetupWizardModel : PageModel
     {
         return string.Equals(Mode, "progress", StringComparison.OrdinalIgnoreCase)
             || string.Equals(Mode, "review", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool> AddSetupStartedAuditIfNeededAsync(Company company, AppUser currentUser)
+    {
+        var alreadyLogged = await _db.AuditLogs
+            .AsNoTracking()
+            .AnyAsync(log => log.CompanyId == company.Id
+                && log.EntityType == "Company"
+                && log.EntityId == company.Id
+                && log.Action == "Setup wizard started");
+        if (alreadyLogged)
+        {
+            return false;
+        }
+
+        var currentStep = SetupWizardProgress.GetCurrentStep(company);
+        _auditTrail.Record(
+            currentUser,
+            "Setup wizard started",
+            "Company",
+            company.Id,
+            $"Setup wizard started by {currentUser.FullName} ({currentUser.AppRole?.Name ?? "Unknown access"}). Current step: {currentStep.Number} - {currentStep.Title}.");
+        return true;
+    }
+
+    private static string BuildDeferredSetupAuditSummary(IEnumerable<SetupReviewItem> optionalDeferredItems)
+    {
+        var deferredItems = optionalDeferredItems
+            .Select(item => item.Title)
+            .Where(title => !string.IsNullOrWhiteSpace(title))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+        return deferredItems.Count == 0 ? "none" : string.Join("; ", deferredItems);
     }
 }
 
