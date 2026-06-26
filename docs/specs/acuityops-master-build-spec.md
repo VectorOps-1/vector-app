@@ -53,6 +53,7 @@ The following capabilities must be treated as dedicated focused phases or subpha
 - AI register and checklist importing.
 - AI-generated compliance and future-risk analytics.
 - PDF evidence generation and downloads.
+- Environment stabilization and cloud staging.
 - Azure production storage and deployment architecture.
 - Multi-tenant SaaS packaging and client-specific releases.
 - Billing, invoices, VAT/tax, subscriptions, downgrade/cancellation rules, and refunds.
@@ -317,6 +318,61 @@ The app must include a guided setup wizard for new client onboarding. This wizar
 15P. The wizard must be accessible later from Master Setup as `Setup Wizard / Setup Progress` so senior users can review or complete deferred setup items.
 15Q. Setup wizard completion, skipped optional steps, and later setup edits must be audit logged.
 15R. Verification must include a clean company with no seed data progressing through the wizard until the app is ready for staff creation and operational use.
+
+### Phase 2B: Environment Stabilization And Cloud Staging Gate
+
+This phase exists because local-only development is now blocking efficient progress. The current Windows + SQLite + OneDrive + manual app process workflow is acceptable for early prototyping, but it is not acceptable as the only verification environment for a multi-tenant SaaS product. Phase 2B must create a stable staging path where committed source can be built, deployed, migrated, logged, and verified without depending on the founder's active desktop session.
+
+Phase 2B is not full production launch. It is a controlled staging environment for safer, faster verification while product development continues. Production security, billing, support, public launch, compliance, and Enterprise hardening remain governed by later phases.
+
+Target staging architecture:
+
+- `Source of truth`: GitHub repository and protected working branch. Local code is a working copy only; staging deploys from committed source.
+- `CI build verification`: GitHub Actions must restore dependencies, build the ASP.NET app, run available tests, and fail before deployment if source does not compile.
+- `Staging app host`: Azure App Service or Azure Container Apps. Initial decision must favour the simplest reliable host for an ASP.NET prototype, not premature Enterprise complexity.
+- `Staging database`: managed Azure SQL Database or Azure PostgreSQL Flexible Server. SQLite must not be the staging source of truth.
+- `Staging file storage`: Azure Blob Storage with tenant-aware container/path strategy for logos, uploads, generated reports, PDFs, and future import files.
+- `Secrets`: Azure Key Vault for database connection strings, storage connection strings, application secrets, provider keys, and future AI/SMS/email/billing secrets.
+- `Configuration`: environment-specific configuration for `Local`, `Staging`, and later `Production`. Local configuration must never be copied blindly into staging.
+- `Observability`: Application Insights plus Log Analytics for staging errors, request failures, dependency failures, startup failures, deployment failures, and migration failures.
+- `Deployment flow`: GitHub commit -> CI build -> staging deploy -> migration step -> smoke verification -> tracker evidence.
+- `Database migrations`: EF migrations or approved migration scripts must run in a controlled staging step. Migrations must be backed by rollback/restore instructions before use.
+- `Rollback`: staging deployment must be able to roll back to a previous commit and restore the previous staging database backup when a migration breaks the app.
+- `Local responsibility`: local remains for quick implementation, targeted build checks, and controlled experiments.
+- `Staging responsibility`: staging is the first shared verification truth for login, setup wizard, tenant isolation, uploads, checklist loading, reports, and app-start behavior.
+- `Production responsibility`: production is not created by this phase. Production requires later security, billing, support, legal, observability, offboarding, and release gates.
+- `Cost control`: every cloud resource must have an owner, purpose, tier/SKU, monthly estimate, budget alert, shutdown/deletion rule, and reason for existence. No resource may be created without a cost note.
+
+Cost-control rules:
+
+- Start with one staging environment only.
+- Do not create production, demo, trial, or Enterprise environments in this phase.
+- Do not enable paid add-ons, autoscale, premium monitoring, SMS, email, AI, billing, CDN, WAF, or SIEM unless explicitly authorized in a later phase.
+- Prefer low-cost staging SKUs until the app needs a higher tier for verification.
+- Add Azure budget alerts before or during first resource provisioning.
+- Record every created Azure resource in a staging resource inventory.
+- Delete failed experiment resources instead of leaving them running.
+
+Acceptance criteria:
+
+- A clean commit can be pushed to GitHub and built by CI.
+- The staging app can start from committed source without relying on local desktop process state.
+- The staging app uses a managed database, not the active local SQLite file.
+- The staging app uses configured storage for uploads/logos and does not write tenant files into source folders.
+- Secrets are stored outside source control.
+- App startup, company login, role login, Home, Setup Wizard, Master Setup branding, Checklist Register empty state, and Daily Vehicle Check no-assigned-checklist state can be smoke verified on the staging URL.
+- A failed build blocks deployment.
+- A failed migration or broken staging deploy has a documented rollback path.
+- Cloud spend is visible and bounded.
+
+15S. Confirm GitHub source-of-truth readiness: remote, branch strategy, pushed commits, ignored runtime files, and clean working tree rules.
+15T. Add GitHub Actions CI build verification for restore, build, and available tests.
+15U. Create the staging architecture decision record covering Azure host, managed database, blob storage, Key Vault, Application Insights, Log Analytics, environment names, and cost-control choices.
+15V. Provision the minimal Azure staging resource set after the decision record is approved: resource group, app host, managed database, blob storage, Key Vault, Application Insights/Log Analytics, and budget alert.
+15W. Configure staging app settings and secrets without committing secrets to source.
+15X. Define and verify staging database migration, backup, restore, and rollback process.
+15Y. Deploy the current committed app to staging and run the staging smoke suite.
+15Z. Record local-vs-staging responsibilities, stable staging URL, troubleshooting path, and rules for when verification must happen on staging instead of localhost.
 
 ### Phase 3: Access And Permissions
 
