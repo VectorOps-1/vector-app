@@ -1,58 +1,42 @@
-name: Build and deploy ASP.Net Core app to Azure Web App - vector-app
+name: CI
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: windows-latest
+    name: Restore, build, and verify
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Set up .NET Core
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: 8.0.x
 
-      - name: Build with dotnet
-        run: dotnet build vector-app-local.csproj --configuration Release
+      - name: Restore app
+        run: dotnet restore vector-app-local.csproj
 
-      - name: dotnet publish
-        run: dotnet publish vector-app-local.csproj -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+      - name: Restore tenant isolation verifier
+        run: dotnet restore tests/TenantIsolationTests/TenantIsolationTests.csproj
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+      - name: Build app
+        run: dotnet build vector-app-local.csproj --configuration Release --no-restore
 
-  deploy:
-    runs-on: windows-latest
-    needs: build
+      - name: Build tenant isolation verifier
+        run: dotnet build tests/TenantIsolationTests/TenantIsolationTests.csproj --configuration Release --no-restore
 
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
-
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E7A3FCB8C9864806A49A8D1A0C3A42B3 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_85366A0A353547FCA2080497E6D316A1 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44FDB48506B447B8B6A945AF495E5D30 }}
-
-      - name: Deploy to Azure
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'vector-app'
-          package: .
+      - name: Run tenant isolation verifier
+        run: dotnet run --project tests/TenantIsolationTests/TenantIsolationTests.csproj --configuration Release --no-build
