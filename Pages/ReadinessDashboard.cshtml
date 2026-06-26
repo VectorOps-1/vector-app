@@ -34,39 +34,53 @@
             </form>
 
             <section class="summary-panel">
-                <div class="score-ring @Model.Summary.ScoreClass" style="background: conic-gradient(var(--score-color) @(Model.Summary.ScorePercent)%, #e5e7eb 0);">
-                    <div class="score-core">
-                        <strong>@Model.Summary.ScorePercent%</strong>
-                        <span>@Model.ScopeLabel</span>
+                @if (Model.Summary.TotalVehicles == 0)
+                {
+                    <div class="empty-readiness-state">
+                        <strong>No vehicles are available for readiness scoring.</strong>
+                        <span>Add real vehicles, assign them to operational areas, publish checklists, and submit daily checks before readiness can calculate operational activity.</span>
+                        @if (Model.IsSeniorOverview)
+                        {
+                            <a class="empty-readiness-action" href="/AddItem?type=vehicle">Add Vehicle</a>
+                        }
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="score-ring @Model.Summary.ScoreClass" style="background: conic-gradient(var(--score-color) @(Model.Summary.ScorePercent)%, #e5e7eb 0);">
+                        <div class="score-core">
+                            <strong>@Model.Summary.ScorePercent%</strong>
+                            <span>@Model.ScopeLabel</span>
+                        </div>
+                    </div>
 
-                <div class="summary-grid">
-                    <a class="summary-tile" asp-page="/ReadinessMetric" asp-route-metric="ready-vehicles" asp-route-operationalAreaId="@Model.OperationalAreaId">
-                        <strong>@Model.Summary.ReadyVehicles / @Model.Summary.TotalVehicles</strong>
-                        <span>Ready vehicles</span>
-                    </a>
-                    <div class="summary-tile passive-tile" aria-label="Daily vehicle readiness checks completed this shift">
-                        <strong>@Model.Summary.CheckedVehicles</strong>
-                        <span>Daily checks complete</span>
+                    <div class="summary-grid">
+                        <a class="summary-tile" asp-page="/ReadinessMetric" asp-route-metric="ready-vehicles" asp-route-operationalAreaId="@Model.OperationalAreaId">
+                            <strong>@Model.Summary.ReadyVehicles / @Model.Summary.TotalVehicles</strong>
+                            <span>Ready vehicles</span>
+                        </a>
+                        <div class="summary-tile passive-tile" aria-label="Daily vehicle readiness checks completed this shift">
+                            <strong>@Model.Summary.CheckedVehicles</strong>
+                            <span>Daily checks complete</span>
+                        </div>
+                        <div class="summary-tile warning-tile passive-tile" aria-label="Vehicles missing daily readiness checks this shift">
+                            <strong>@Model.Summary.MissingChecks</strong>
+                            <span>Missing checks</span>
+                        </div>
+                        <div class="summary-tile danger-tile passive-tile" aria-label="Vehicles currently not ready">
+                            <strong>@Model.Summary.UnavailableVehicles</strong>
+                            <span>Not ready</span>
+                        </div>
+                        <a class="summary-tile warning-tile" asp-page="/ReadinessMetric" asp-route-metric="equipment-alerts" asp-route-operationalAreaId="@Model.OperationalAreaId">
+                            <strong>@Model.Summary.EquipmentWarnings</strong>
+                            <span>Equipment alerts</span>
+                        </a>
+                        <a class="summary-tile danger-tile" asp-page="/ReadinessMetric" asp-route-metric="open-issues" asp-route-operationalAreaId="@Model.OperationalAreaId">
+                            <strong>@Model.Summary.OpenIssues</strong>
+                            <span>Open issues</span>
+                        </a>
                     </div>
-                    <div class="summary-tile warning-tile passive-tile" aria-label="Vehicles missing daily readiness checks this shift">
-                        <strong>@Model.Summary.MissingChecks</strong>
-                        <span>Missing checks</span>
-                    </div>
-                    <div class="summary-tile danger-tile passive-tile" aria-label="Vehicles currently not ready">
-                        <strong>@Model.Summary.UnavailableVehicles</strong>
-                        <span>Not ready</span>
-                    </div>
-                    <a class="summary-tile warning-tile" asp-page="/ReadinessMetric" asp-route-metric="equipment-alerts" asp-route-operationalAreaId="@Model.OperationalAreaId">
-                        <strong>@Model.Summary.EquipmentWarnings</strong>
-                        <span>Equipment alerts</span>
-                    </a>
-                    <a class="summary-tile danger-tile" asp-page="/ReadinessMetric" asp-route-metric="open-issues" asp-route-operationalAreaId="@Model.OperationalAreaId">
-                        <strong>@Model.Summary.OpenIssues</strong>
-                        <span>Open issues</span>
-                    </a>
-                </div>
+                }
             </section>
 
         }
@@ -86,6 +100,10 @@
 .filter-input { width: 100%; min-height: 46px; border: 1px solid rgba(66,84,102,.24); border-radius: 8px; padding: 0 14px; background: #fff; color: #1f2937; font-size: 15px; font-weight: 700; box-sizing: border-box; }
 .toolbar-btn { min-width: 0; border: none; }
 .summary-panel { display: flex; flex-direction: column; gap: 22px; align-items: center; width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 22px; border: 1px solid rgba(66,84,102,.18); border-radius: 8px; background: rgba(255,255,255,.72); box-sizing: border-box; }
+.empty-readiness-state { display: grid; gap: 10px; justify-items: center; width: min(720px, 100%); padding: 22px; border: 1px dashed rgba(66,84,102,.24); border-radius: 8px; background: rgba(248,250,252,.8); box-sizing: border-box; color: #52606d; font-weight: 800; }
+.empty-readiness-state strong { color: #102a3a; font-size: 18px; }
+.empty-readiness-state span { max-width: 620px; line-height: 1.45; }
+.empty-readiness-action { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 16px; border-radius: 8px; background: #126C84; color: #fff; text-decoration: none; font-size: 13px; font-weight: 900; }
 .score-ring { --score-color: #9B3B3B; width: 220px; aspect-ratio: 1; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; }
 .score-green { --score-color: #207A63; }
 .score-teal { --score-color: #126C84; }
