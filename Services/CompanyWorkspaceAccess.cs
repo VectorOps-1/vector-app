@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using vector_app_local.Models;
 
 namespace vector_app_local.Services;
@@ -13,7 +12,7 @@ public static class CompanyWorkspaceAccess
 
         if (string.IsNullOrWhiteSpace(company.WorkspaceSlug))
         {
-            company.WorkspaceSlug = GenerateWorkspaceSlug(company.Name, company.Id);
+            company.WorkspaceSlug = GenerateWorkspaceSlug(company.Id);
             changed = true;
         }
 
@@ -39,15 +38,9 @@ public static class CompanyWorkspaceAccess
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GenerateWorkspaceSlug(string companyName, int companyId)
+    private static string GenerateWorkspaceSlug(int companyId)
     {
-        var baseName = Regex.Replace(companyName.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
-        if (string.IsNullOrWhiteSpace(baseName))
-        {
-            baseName = "company";
-        }
-
-        return $"{baseName}-{companyId}-{RandomToken(5).ToLowerInvariant()}";
+        return $"acuityops-workspace-{companyId}-{RandomToken(5).ToLowerInvariant()}";
     }
 
     private static string GenerateAccessCode()
