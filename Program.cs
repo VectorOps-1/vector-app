@@ -1,12 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using vector_app_local.Data;
 using vector_app_local.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 const string DevelopmentDatabaseRepairCommand = "--dev-db-repair";
+const string SchemaBaselineCommand = "--schema-baseline";
 var runDevelopmentDatabaseRepair = args.Any(arg =>
     string.Equals(arg, DevelopmentDatabaseRepairCommand, StringComparison.OrdinalIgnoreCase));
+var runSchemaBaseline = args.Any(arg =>
+    string.Equals(arg, SchemaBaselineCommand, StringComparison.OrdinalIgnoreCase));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -82,6 +87,18 @@ if (runDevelopmentDatabaseRepair)
     app.Logger.LogInformation(
         "Development database repair completed by explicit command {Command}.",
         DevelopmentDatabaseRepairCommand);
+    return;
+}
+
+if (runSchemaBaseline)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<VectorDbContext>();
+    var migrationsAssembly = db.GetService<IMigrationsAssembly>();
+    await SchemaBaselineInitializer.CreateCurrentSchemaBaselineAsync(db, migrationsAssembly);
+    app.Logger.LogInformation(
+        "Database schema baseline completed by explicit command {Command}.",
+        SchemaBaselineCommand);
     return;
 }
 
