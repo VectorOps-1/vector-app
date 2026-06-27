@@ -1,5 +1,17 @@
 # AcuityOps Spec Execution Tracker
 
+Status: Paused / superseded
+
+Superseded by: `docs/specs/acuityops-recovery-roadmap.md`
+
+This tracker is no longer the active execution authority. It is retained as historical evidence of completed work and prior phase structure. Codex must not resume this row-by-row tracker flow, execute old tracker rows, or use this file as the controlling plan unless the user explicitly revives a specific row or migrates that row into the active recovery roadmap.
+
+The active controlling roadmap is now `docs/specs/acuityops-recovery-roadmap.md`.
+
+## Supersession Rule
+
+If a user instruction references this old tracker without explicitly saying to revive it, Codex must stop and ask whether the work should be migrated into the active recovery roadmap. No fallback to the old plan is allowed by default.
+
 This tracker is the execution gate for `docs/specs/acuityops-master-build-spec.md`.
 
 The master spec remains the product and architecture authority. This tracker controls sequence, authorization, status, verification, and anti-deviation behavior. Product source code, database files, runtime files, generated files, and app behavior must not be changed unless the user authorizes one exact tracker row.
