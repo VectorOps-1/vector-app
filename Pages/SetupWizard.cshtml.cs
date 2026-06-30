@@ -42,6 +42,7 @@ public class SetupWizardModel : PageModel
     public string SignedInRole { get; private set; } = string.Empty;
     public bool CanManageSetup { get; private set; }
     public bool IsSetupComplete { get; private set; }
+    public bool IsSetupBlockedForCurrentUser => !CanManageSetup && !IsSetupComplete;
     public bool IsProgressReviewMode { get; private set; }
     public SetupWizardStepDefinition CurrentStep { get; private set; } = SetupWizardProgress.Steps[0];
     public IReadOnlySet<string> CompletedStepKeys { get; private set; } = new HashSet<string>();
@@ -87,6 +88,12 @@ public class SetupWizardModel : PageModel
             }
 
             await ApplyPageStateAsync(company, currentUser, progressReviewRequested: true);
+            return Page();
+        }
+
+        if (!canManageSetup)
+        {
+            await ApplyPageStateAsync(company, currentUser);
             return Page();
         }
 

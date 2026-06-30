@@ -30,6 +30,19 @@
             </div>
         </div>
 
+        @if (Model.IsSetupBlockedForCurrentUser)
+        {
+            <div class="setup-blocked-card">
+                <span class="status-label">Setup incomplete</span>
+                <h3>Company setup must be completed first</h3>
+                <p>
+                    A company owner or senior manager must complete setup before staff and operational management can use the app.
+                    No setup actions are available to this access level.
+                </p>
+            </div>
+        }
+        else
+        {
         <div class="setup-progress-panel" aria-label="Setup progress">
             <div class="progress-summary">
                 <div>
@@ -262,6 +275,7 @@
                 </div>
             </div>
         }
+        }
     </div>
 </div>
 
@@ -454,6 +468,28 @@
     align-items: center;
     padding: 18px;
     text-align: left;
+}
+
+.setup-blocked-card {
+    width: min(860px, 96%);
+    margin: 18px auto 0;
+    padding: 22px;
+    border: 1px solid rgba(66, 84, 102, 0.18);
+    border-radius: 8px;
+    background: #fff;
+    text-align: left;
+}
+
+.setup-blocked-card h3 {
+    margin: 6px 0 8px;
+    color: #102033;
+    font-size: 22px;
+}
+
+.setup-blocked-card p {
+    margin: 0;
+    color: #5f6b7a;
+    line-height: 1.5;
 }
 
 .step-number {
