@@ -450,11 +450,10 @@ The next technical work should not resume the old tracker automatically.
 
 The recommended next batch is:
 
-1. Reconcile Azure staging provisioning evidence into the new roadmap or a short staging evidence file.
+1. Keep current Azure staging evidence and demo-entry rules in `docs/specs/staging-runbook.md`.
 2. Configure staging app settings and secrets.
 3. Define staging database migration and rollback.
 4. Deploy the current committed app to staging.
 5. Make staging the main verification URL.
 
 No Pro/Premium feature implementation should begin until the staging test path is stable.
-
