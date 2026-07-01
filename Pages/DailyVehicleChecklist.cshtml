@@ -81,36 +81,50 @@
                     </div>
                 </div>
 
-                <div class="vehicle-register-grid vehicle-selection-grid">
-                    <label class="registration-field">
-                        Registration number
-                        <select asp-for="Registration" id="registrationSelect">
-                            <option value="">Select registration</option>
-                            @foreach (var vehicle in Model.VehicleRegisterOptions)
-                            {
-                                <option value="@vehicle.Registration"
-                                        data-callsign="@vehicle.Callsign"
-                                        data-type="@vehicle.VehicleType"
-                                        data-schematic-name="@vehicle.SchematicName"
-                                        data-schematic-key="@vehicle.SchematicKey"
-                                        data-next-service="@vehicle.NextServiceDate"
-                                        data-license-number="@vehicle.LicenseNumber"
-                                        data-template-id="@vehicle.PublishedChecklistTemplateId"
-                                        data-template-name="@vehicle.PublishedChecklistTemplateName"
-                                        data-template-configured="@vehicle.PublishedChecklistHasConfiguredContent.ToString().ToLowerInvariant()"
-                                        data-previous-report-id="@vehicle.PreviousSourceReportId"
-                                        data-previous-performer="@vehicle.PreviousSourcePerformer">
-                                    @vehicle.Registration - @vehicle.Callsign
-                                </option>
-                            }
-                        </select>
-                    </label>
-                    <label>Callsign<input asp-for="Callsign" id="callsignInput" type="text" placeholder="Assigned callsign" /></label>
-                </div>
+                @if (Model.VehicleRegisterOptions.Count == 0)
+                {
+                    <div id="checklistTemplateName" class="template-loaded-note unavailable empty-check-state">
+                        <strong>No vehicles are available for daily checks.</strong>
+                        <span>Management must add active vehicles to the Vehicle Register, then build and publish the correct checklist before crews can start daily checks.</span>
+                        <div class="empty-check-actions">
+                            <a class="empty-check-action" href="/VehicleRegister">Open Vehicle Register</a>
+                            <a class="empty-check-action primary" href="/EditChecklist?view=register">Open Checklist Register</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="vehicle-register-grid vehicle-selection-grid">
+                        <label class="registration-field">
+                            Registration number
+                            <select asp-for="Registration" id="registrationSelect">
+                                <option value="">Select registration</option>
+                                @foreach (var vehicle in Model.VehicleRegisterOptions)
+                                {
+                                    <option value="@vehicle.Registration"
+                                            data-callsign="@vehicle.Callsign"
+                                            data-type="@vehicle.VehicleType"
+                                            data-schematic-name="@vehicle.SchematicName"
+                                            data-schematic-key="@vehicle.SchematicKey"
+                                            data-next-service="@vehicle.NextServiceDate"
+                                            data-license-number="@vehicle.LicenseNumber"
+                                            data-template-id="@vehicle.PublishedChecklistTemplateId"
+                                            data-template-name="@vehicle.PublishedChecklistTemplateName"
+                                            data-template-configured="@vehicle.PublishedChecklistHasConfiguredContent.ToString().ToLowerInvariant()"
+                                            data-previous-report-id="@vehicle.PreviousSourceReportId"
+                                            data-previous-performer="@vehicle.PreviousSourcePerformer">
+                                        @vehicle.Registration - @vehicle.Callsign
+                                    </option>
+                                }
+                            </select>
+                        </label>
+                        <label>Callsign<input asp-for="Callsign" id="callsignInput" type="text" placeholder="Assigned callsign" /></label>
+                    </div>
 
-                <div class="vehicle-selection-actions">
-                    <button id="selectVehicleButton" class="menu-btn vehicle-btn select-vehicle-btn" type="button">Select Vehicle</button>
-                </div>
+                    <div class="vehicle-selection-actions">
+                        <button id="selectVehicleButton" class="menu-btn vehicle-btn select-vehicle-btn" type="button">Select Vehicle</button>
+                    </div>
+                }
 
                 @if (Model.HasSelectedVehicle)
                 {
@@ -132,11 +146,7 @@
                 }
                 else
                 {
-                    @if (Model.VehicleRegisterOptions.Count == 0)
-                    {
-                        <div id="checklistTemplateName" class="template-loaded-note unavailable">No active vehicles are available in the vehicle register. Management must add vehicles and publish the correct checklist before daily checks can start.</div>
-                    }
-                    else
+                    @if (Model.VehicleRegisterOptions.Count > 0)
                     {
                         <div id="checklistTemplateName" class="template-loaded-note">Select a registration, confirm the callsign, then select the vehicle to load the active checklist.</div>
                     }
@@ -415,6 +425,12 @@
 .template-loaded-note.unavailable,
 .unavailable-checklist-panel { border-color: rgba(155, 59, 59, 0.22); background: rgba(155, 59, 59, 0.07); color: #7f2f2f; }
 .unavailable-checklist-panel p { margin: 0; color: #7f2f2f; font-size: 14px; font-weight: 800; text-align: left; }
+.empty-check-state { display: grid; gap: 10px; justify-items: start; }
+.empty-check-state strong { color: #102a3a; font-size: 15px; }
+.empty-check-state span { color: #52606d; line-height: 1.4; }
+.empty-check-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.empty-check-action { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 12px; border: 1px solid rgba(18,108,132,.24); border-radius: 8px; color: #0E5E7A; background: rgba(255,255,255,.78); font-size: 12px; font-weight: 900; text-decoration: none; }
+.empty-check-action.primary { color: #fff; background: #126C84; border-color: #126C84; }
 .live-checklist-panel { display: flex; flex-direction: column; gap: 12px; }
 .live-checklist-section { border: 1px solid rgba(66, 84, 102, 0.14); border-radius: 8px; overflow: hidden; background: #ffffff; }
 .live-checklist-section-title { padding: 10px 12px; background: #334155; color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; text-align: left; }

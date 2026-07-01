@@ -42,6 +42,19 @@
             <a class="metric-card metric-card-link @(Model.IsMetricSelected("setup-uploads") ? "selected" : string.Empty)" href="@Model.MetricUrl("setup-uploads")"><strong>@Model.Summary.SetupUploads</strong><span>Setup uploads</span></a>
         </section>
 
+        @if (string.IsNullOrWhiteSpace(Model.SelectedMetricTitle) && Model.HasNoReportActivity)
+        {
+            <section class="report-section demo-empty-report">
+                <h3>No operational activity collected yet.</h3>
+                <p>This report will populate once crews complete daily checks, managers create tasks or issues, assets are moved, registers are uploaded, or service and expiry dates start reaching alert windows.</p>
+                <div class="demo-empty-actions">
+                    <a href="/DailyVehicleChecklist">Daily Check</a>
+                    <a href="/EditChecklist?view=register">Checklist Register</a>
+                    <a href="/VehicleRegister">Vehicle Register</a>
+                </div>
+            </section>
+        }
+
         @if (!string.IsNullOrWhiteSpace(Model.SelectedMetricTitle))
         {
             <section class="report-section metric-detail-section">
@@ -140,6 +153,11 @@
 .metric-detail-row strong { display: block; color: #102a3a; font-size: 13px; font-weight: 900; }
 .metric-detail-row small { display: block; margin-top: 2px; color: #66758a; font-size: 11px; font-weight: 800; line-height: 1.35; }
 .report-section { width: min(1080px, 100%); margin: 0 auto 18px auto; padding: 18px; border: 1px solid rgba(66,84,102,.16); border-radius: 8px; background: rgba(255,255,255,.76); box-shadow: 0 12px 24px rgba(15,23,42,.06); text-align: left; box-sizing: border-box; }
+.demo-empty-report { display: grid; gap: 8px; text-align: center; }
+.demo-empty-report h3 { margin: 0; color: #102a3a; font-size: 20px; font-weight: 900; }
+.demo-empty-report p { width: min(760px, 100%); margin: 0 auto; color: #52606d; font-size: 13px; font-weight: 800; line-height: 1.45; }
+.demo-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.demo-empty-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(18,108,132,.2); border-radius: 8px; color: #0E5E7A; background: rgba(255,255,255,.78); font-size: 12px; font-weight: 900; text-decoration: none; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
 .section-heading h3 { margin: 0; color: #1f2937; font-size: 20px; font-weight: 900; }
 .section-heading a { color: #126C84; font-size: 13px; font-weight: 900; text-decoration: none; }

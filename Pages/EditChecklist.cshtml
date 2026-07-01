@@ -62,7 +62,10 @@
                     <a class="source-secondary-btn" href="/VehicleSchematicLibrary">Unit Schematic Library</a>
                     <a class="source-secondary-btn" href="/UploadChecklist">Upload Existing Checklist</a>
                     <a class="source-secondary-btn" href="/ChecklistReports">Checklist Reports</a>
-                    <a class="source-upload-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build New Checklist</a>
+                    @if (Model.SavedTemplates.Count > 0)
+                    {
+                        <a class="source-upload-btn" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build New Checklist</a>
+                    }
                 </div>
             </div>
 
@@ -70,7 +73,7 @@
             {
                 <div class="empty-template-state">
                     <strong>No checklist register entries yet.</strong>
-                    <span>Build or import a real checklist before any vehicle can load a live daily check.</span>
+                    <span>This company has no saved checklist templates. Build a checklist from blank or upload an existing checklist before any vehicle can load a live daily check.</span>
                     <a class="empty-template-action" href="/EditVehicleChecklist?checklist=daily-vehicle&mode=build">Build New Checklist</a>
                 </div>
             }

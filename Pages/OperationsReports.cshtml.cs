@@ -43,6 +43,7 @@ public class OperationsReportsModel : PageModel
     public DateTime FromUtc { get; private set; }
     public DateTime ToUtcExclusive { get; private set; }
     public ReportSummary Summary { get; private set; } = new();
+    public bool HasNoReportActivity => Summary.TotalActivityCount == 0;
     public IReadOnlyList<MetricDetailRow> MetricRows { get; private set; } = [];
     public IReadOnlyList<ReadinessReportRow> ReadinessRows { get; private set; } = [];
     public IReadOnlyList<IssueReportRow> IssueRows { get; private set; } = [];
@@ -732,6 +733,15 @@ public class OperationsReportsModel : PageModel
         public int SetupUploads { get; set; }
         public int ServiceOrExpiryPressure { get; set; }
         public int AuditEvents { get; set; }
+        public int TotalActivityCount =>
+            SubmittedReadinessChecks +
+            DraftReadinessChecks +
+            OpenIssues +
+            OpenTasks +
+            CompletedTasks +
+            AssetMovements +
+            SetupUploads +
+            ServiceOrExpiryPressure;
     }
 
     public sealed class ReadinessReportRow
