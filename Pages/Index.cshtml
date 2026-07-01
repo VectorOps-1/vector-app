@@ -1,7 +1,7 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Select Access";
+    ViewData["Title"] = "AcuityOps Workspace";
     var selectorScreenClass = Model.ShowSplash ? "selector-screen" : "selector-screen ready show";
 }
 
@@ -18,19 +18,19 @@
 
 <div id="mainContent" class="@selectorScreenClass">
     <div class="selector-inner">
-        <div class="home-label">AcuityOps Access</div>
+        <div class="home-label">AcuityOps Workspace</div>
 
         <img src="@Model.LogoPath" class="selector-logo" alt="AcuityOps logo" />
 
-        <div class="home-context">AcuityOps Workspace</div>
+        <div class="home-context">Secure EMS operations platform</div>
 
-        <p class="selector-title">Select access level</p>
+        <p class="selector-title">Open your company workspace link</p>
 
-        <div class="menu-row">
-            <a class="menu-btn staff-btn" href="/RoleLogin?access=staff">Staff</a>
-            <a class="menu-btn equipment-btn" href="/RoleLogin?access=operational-management">Operational Management</a>
-            <a class="menu-btn vehicle-btn" href="/RoleLogin?access=senior-management">Senior Management</a>
-        </div>
+        <p class="workspace-entry-note">
+            Staff, operational managers, and senior managers sign in after the company workspace has been opened.
+        </p>
+
+        <a class="menu-btn equipment-btn workspace-entry-link" href="/CompanyLogin">Company workspace login</a>
 
         <div class="home-footer">AcuityOps v0.1</div>
     </div>
@@ -154,9 +154,22 @@ html, body {
 
 .selector-title {
     margin-top: 0;
-    margin-bottom: 26px;
+    margin-bottom: 12px;
     font-size: 24px;
     color: #2f2f2f;
+}
+
+.workspace-entry-note {
+    max-width: 520px;
+    margin: 0 auto 22px auto;
+    font-size: 14px;
+    line-height: 1.55;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.workspace-entry-link {
+    width: min(100%, 360px);
 }
 
 .home-footer {
