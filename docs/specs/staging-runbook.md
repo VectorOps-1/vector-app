@@ -165,3 +165,4 @@ Use this for first-demo testing:
 
 `https://app-acuityops-stg-za-001.azurewebsites.net/CompanyLogin/acuityops-workspace`
 
+Use `docs/specs/first-demo-script.md` for the current first-demo click path, talking points, known limits, and features that must not be represented as complete.
