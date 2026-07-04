@@ -108,6 +108,8 @@ public class ReadinessEngineScoringService
         {
             if (IsUnavailable(report.ReadinessStatus) || report.CriticalIssueCount > 0)
             {
+                result.IsHardBlocked = true;
+                result.ScorePercent = 0;
                 ApplyRuleValues("Issue Report", "Open issue", "Severity", report.ReadinessStatus, "Critical unresolved issue", Apply);
             }
 
@@ -300,8 +302,11 @@ public class ReadinessEngineScoringService
     {
         return report is not null &&
             !string.Equals(report.WorkflowStatus, "Draft", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(report.LastSavedSection, "Equipment", StringComparison.OrdinalIgnoreCase) &&
-            report.EquipmentChecks.Any();
+            !string.Equals(report.WorkflowStatus, "Deleted", StringComparison.OrdinalIgnoreCase) &&
+            (report.SubmittedAtUtc.HasValue ||
+                string.Equals(report.WorkflowStatus, "Saved", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(report.WorkflowStatus, "Submitted", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(report.WorkflowStatus, "Completed", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsProblemStatus(string? value, params string[] acceptedValues)

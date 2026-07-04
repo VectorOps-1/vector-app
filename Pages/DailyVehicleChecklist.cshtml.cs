@@ -613,18 +613,23 @@ public class DailyVehicleChecklistModel : PageModel
 
     private string ResolveDynamicReadinessStatus()
     {
-        var responses = ChecklistResponses.Values
-            .Select(NormalizeOptional)
-            .Where(response => response is not null)
-            .Select(response => response!)
+        var responses = GetLiveChecklistFields()
+            .Select(field => new
+            {
+                Field = field,
+                Response = ChecklistResponses.TryGetValue(field.ResponseKey, out var response)
+                    ? NormalizeOptional(response)
+                    : null
+            })
+            .Where(entry => entry.Response is not null)
             .ToList();
 
-        if (responses.Any(IsCriticalResponse))
+        if (responses.Any(entry => IsCriticalResponse(entry.Field, entry.Response!)))
         {
             return "Not ready";
         }
 
-        if (responses.Any(IsWarningResponse))
+        if (responses.Any(entry => IsWarningResponse(entry.Field, entry.Response!)))
         {
             return "Operational with notes";
         }
@@ -634,32 +639,80 @@ public class DailyVehicleChecklistModel : PageModel
 
     private int CountDynamicCriticalIssues()
     {
-        return ChecklistResponses.Values
-            .Select(NormalizeOptional)
-            .Count(response => response is not null && IsCriticalResponse(response));
+        return GetLiveChecklistFields().Count(field =>
+            ChecklistResponses.TryGetValue(field.ResponseKey, out var response) &&
+            NormalizeOptional(response) is { } normalized &&
+            IsCriticalResponse(field, normalized));
     }
 
     private int CountDynamicWarningIssues()
     {
-        return ChecklistResponses.Values
-            .Select(NormalizeOptional)
-            .Count(response => response is not null && IsWarningResponse(response));
+        return GetLiveChecklistFields().Count(field =>
+            ChecklistResponses.TryGetValue(field.ResponseKey, out var response) &&
+            NormalizeOptional(response) is { } normalized &&
+            IsWarningResponse(field, normalized));
     }
 
-    private static bool IsCriticalResponse(string value)
+    private static bool IsCriticalResponse(LiveChecklistField field, string value)
     {
+        var heading = field.Heading ?? string.Empty;
+
+        if (string.Equals(value, "No", StringComparison.OrdinalIgnoreCase))
+        {
+            return IsPositiveConfirmationField(heading);
+        }
+
+        if (string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase))
+        {
+            return IsNegativeConfirmationField(heading);
+        }
+
         return string.Equals(value, "Fail", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(value, "No", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "Failed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "Critical", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("not operational", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("not complete", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("out of service", StringComparison.OrdinalIgnoreCase);
+            value.Contains("out of service", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("missing", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsWarningResponse(string value)
+    private IEnumerable<LiveChecklistField> GetLiveChecklistFields()
     {
+        return AssignedChecklistSections
+            .SelectMany(section => section.Items)
+            .SelectMany(item => item.Fields);
+    }
+
+    private static bool IsWarningResponse(LiveChecklistField field, string value)
+    {
+        var heading = field.Heading ?? string.Empty;
+
+        if (string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase) &&
+            IsNegativeConfirmationField(heading))
+        {
+            return false;
+        }
+
         return string.Equals(value, "Issue", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "Warning", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("notes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPositiveConfirmationField(string heading)
+    {
+        return ContainsAny(heading, "operational", "ready", "available", "complete", "present", "working", "functional", "serviceable");
+    }
+
+    private static bool IsNegativeConfirmationField(string heading)
+    {
+        return ContainsAny(heading, "damage", "issue", "fault", "problem", "defect", "readiness impact", "impact");
+    }
+
+    private static bool ContainsAny(string value, params string[] needles)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+            needles.Any(needle => value.Contains(needle, StringComparison.OrdinalIgnoreCase));
     }
 
     private string? BuildSchematicMarkSummary()
