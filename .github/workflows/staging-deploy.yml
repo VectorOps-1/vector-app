@@ -1,0 +1,68 @@
+name: Deploy Azure Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: Build, verify static assets, and deploy staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore app
+        run: dotnet restore vector-app-local.csproj
+
+      - name: Build app
+        run: dotnet build vector-app-local.csproj --configuration Release --no-restore
+
+      - name: Publish app for Azure Linux App Service
+        run: dotnet publish vector-app-local.csproj --configuration Release --runtime linux-x64 --self-contained false --output ./publish
+
+      - name: Verify published static assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ./publish/wwwroot/css/site.css
+          test -f ./publish/wwwroot/vector-app-local.styles.css
+          test -f ./publish/wwwroot/acuityops-app-icon-light.png
+          test -f ./publish/wwwroot/acuityops-app-icon-dark.png
+          test -f ./publish/wwwroot/acuityops-app-logo.png
+          test -f ./publish/wwwroot/js/site.js
+          test -f ./publish/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css
+
+      - name: Upload staging publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: acuityops-staging-publish
+          path: ./publish
+          if-no-files-found: error
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E7A3FCB8C9864806A49A8D1A0C3A42B3 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_85366A0A353547FCA2080497E6D316A1 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44FDB48506B447B8B6A945AF495E5D30 }}
+
+      - name: Deploy to Azure staging App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-acuityops-stg-za-001
+          package: ./publish
