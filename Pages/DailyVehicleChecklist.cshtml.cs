@@ -659,6 +659,11 @@ public class DailyVehicleChecklistModel : PageModel
 
         if (string.Equals(value, "No", StringComparison.OrdinalIgnoreCase))
         {
+            if (IsNegativeConfirmationField(heading))
+            {
+                return false;
+            }
+
             return IsPositiveConfirmationField(heading);
         }
 
