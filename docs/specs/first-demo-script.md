@@ -138,6 +138,8 @@ These were expected in the initial clean tenant. Current staging now contains de
 - Checklist Reports shows dated report groups and the submitted report row.
 - The submitted report detail opens.
 - PDF download is available and verified to return `application/pdf`.
+- Checklist Report Detail renders the checklist template/version correctly.
+- Readiness Dashboard reconciles with submitted demo evidence and shows `1 Daily checks complete` for the verified demo flow.
 
 These records are demo tenant data, not seed data. They must remain removable through normal tenant/data management flows and must never be recreated by startup, fallback logic, or product code.
 
@@ -162,8 +164,6 @@ These remain roadmap capabilities and must be implemented in dedicated approved 
 - The demo tenant now contains deliberate demo records entered through approved workflows. It is no longer a pure empty-state tenant.
 - The demo currently proves the access path, senior navigation, checklist source-of-truth behavior, one daily-check evidence path, report detail, PDF download availability, readiness visibility, and operational report counts.
 - PDF download returns a valid PDF for the verified demo report, but PDF layout/content polish is not yet a completed product phase.
-- Checklist Report Detail currently has a visible template-version rendering bug: `v@Model.TemplateVersion(report)` appears literally. Do not dwell on this screen until that is fixed.
-- Readiness Dashboard currently shows `100%` and `1 / 1 Ready vehicles`, while its `Daily checks complete` metric can still show `0`. Do not present that sub-metric as final until reconciled.
 - A richer sales demo still needs a controlled demo-data script and a polished report/PDF pass.
 
 ## Next Demo Blockers To Fix
@@ -171,10 +171,8 @@ These remain roadmap capabilities and must be implemented in dedicated approved 
 Recommended next blockers, in order:
 
 1. Push the latest verified staging source commits and redeploy through the GitHub workflow so staging matches committed source.
-2. Decide whether the current uncommitted Checklist Reports visual polish belongs in Block 1 and commit it separately if approved.
-3. Fix the Checklist Report Detail template-version rendering bug.
-4. Reconcile the Readiness Dashboard `Daily checks complete` sub-metric with submitted demo checks.
-5. Polish PDF output layout/content if Block 1 credits allow; otherwise carry it into the next paid block.
+2. Polish PDF output layout/content in a dedicated report/PDF batch; do not expand Block 1 for PDF redesign.
+3. Create a controlled demo-data script if a richer sales demo is needed.
 
 ## Demo Safety Rules
 
