@@ -15,7 +15,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Shift Readiness</div>
         <h2 class="page-title">Readiness Dashboard</h2>
-        <p class="page-subtitle">Current 12-hour shift readiness for vehicles, equipment checks, and open issue reports.</p>
+        <p class="page-subtitle">Latest readiness evidence for vehicles, equipment checks, and open issue reports.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -59,11 +59,11 @@
                             <strong>@Model.Summary.ReadyVehicles / @Model.Summary.TotalVehicles</strong>
                             <span>Ready vehicles</span>
                         </a>
-                        <div class="summary-tile passive-tile" aria-label="Daily vehicle readiness checks completed this shift">
+                        <div class="summary-tile passive-tile" aria-label="Vehicles with saved or submitted daily readiness evidence">
                             <strong>@Model.Summary.CheckedVehicles</strong>
                             <span>Daily checks complete</span>
                         </div>
-                        <div class="summary-tile warning-tile passive-tile" aria-label="Vehicles missing daily readiness checks this shift">
+                        <div class="summary-tile warning-tile passive-tile" aria-label="Vehicles without saved or submitted daily readiness evidence">
                             <strong>@Model.Summary.MissingChecks</strong>
                             <span>Missing checks</span>
                         </div>

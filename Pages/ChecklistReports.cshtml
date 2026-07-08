@@ -129,6 +129,7 @@
                         <span>Submitted by</span>
                         <span>Status</span>
                         <span>Issues</span>
+                        <span>Action</span>
                     </div>
 
                     @foreach (var areaGroup in Model.SelectedReportAreaGroups)
@@ -154,6 +155,7 @@
                                     <span role="cell">@row.PerformedByName</span>
                                     <span role="cell"><mark class="status-chip @row.ReadinessStatusClass">@row.ReadinessStatus</mark></span>
                                     <span role="cell">@row.IssueSummary</span>
+                                    <span role="cell"><em class="open-report-chip">Open Report</em></span>
                                 </a>
                             }
                         }
@@ -185,7 +187,7 @@
 .quick-links { width: min(720px, 100%); margin: 0 auto 20px auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
 .report-link { display: flex; min-height: 42px; align-items: center; justify-content: center; border: 1px solid rgba(66, 84, 102, .18); border-radius: 8px; background: #f8fafc; color: #24364a; font-size: 14px; font-weight: 900; text-decoration: none; }
 .report-link.primary { background: #126C84; border-color: #126C84; color: #fff; }
-.report-section { width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 10px; border: 1px solid rgba(66, 84, 102, .14); border-radius: 6px; background: rgba(255, 255, 255, .72); box-shadow: none; text-align: left; box-sizing: border-box; }
+.report-section { width: min(1120px, 100%); margin: 0 auto 18px auto; padding: 14px; border: 1px solid rgba(66, 84, 102, .14); border-radius: 8px; background: rgba(255, 255, 255, .76); box-shadow: 0 12px 24px rgba(15,23,42,.055); text-align: left; box-sizing: border-box; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
 .section-heading h3 { margin: 0; color: #1f2937; font-size: 18px; font-weight: 900; }
 .section-heading span { color: #52606d; font-size: 13px; font-weight: 900; }
@@ -197,18 +199,19 @@
 .report-scroll-spacer { height: 1px; min-width: 100%; }
 .register-row { display: grid; align-items: center; min-width: 1040px; }
 .date-register .register-row { grid-template-columns: 140px 90px 80px 90px 140px 80px minmax(250px, 1fr); }
-.entry-register .register-row { grid-template-columns: 70px 110px 88px 92px minmax(150px, 1fr) minmax(150px, 1fr) 96px minmax(190px, 1.2fr); }
+.entry-register .register-row { grid-template-columns: 70px 110px 88px 92px minmax(150px, 1fr) minmax(150px, 1fr) 96px minmax(190px, 1.2fr) 118px; }
 .register-header { min-height: 34px; background: #334155; color: #fff; }
 .register-header span { padding: 0 9px; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
 .register-group-row { min-height: 32px; background: rgba(51, 65, 85, .08); border-top: 1px solid rgba(66, 84, 102, .16); }
 .register-subgroup-row { min-height: 30px; background: rgba(18, 108, 132, .06); border-top: 1px solid rgba(66, 84, 102, .1); }
 .group-cell { grid-column: 1 / -1; padding: 0 9px; color: #334155; font-size: 12px; font-weight: 900; text-align: left; }
-.register-item { min-height: 34px; border-top: 1px solid rgba(66, 84, 102, .1); color: #1f2937; text-decoration: none; }
-.register-item:hover { background: rgba(18, 108, 132, .06); color: #1f2937; }
+.register-item { min-height: 38px; border-top: 1px solid rgba(66, 84, 102, .1); color: #1f2937; text-decoration: none; background: #ffffff; transition: background .15s ease, box-shadow .15s ease, transform .15s ease; }
+.register-item:hover, .register-item:focus-visible { background: rgba(18, 108, 132, .065); color: #1f2937; box-shadow: inset 4px 0 0 #126C84; outline: none; }
 .selected-register-item { background: rgba(18, 108, 132, .08); box-shadow: inset 4px 0 0 #126C84; }
 .register-item span { padding: 0 9px; color: #52606d; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .register-item strong { color: #102a3a; font-size: 12px; font-weight: 900; }
 .status-chip { display: inline-flex; min-height: 22px; align-items: center; justify-content: center; width: fit-content; max-width: 100%; padding: 0 7px; border-radius: 6px; font-size: 10px; font-weight: 900; font-style: normal; }
+.open-report-chip { display: inline-flex; min-height: 26px; align-items: center; justify-content: center; padding: 0 9px; border: 1px solid rgba(18, 108, 132, .24); border-radius: 7px; background: #eef8fb; color: #0E5E7A; font-size: 10px; font-style: normal; font-weight: 900; text-transform: uppercase; letter-spacing: .35px; }
 .status-ok { background: rgba(32, 129, 96, .12); color: #146c4d; }
 .status-warning { background: rgba(138, 90, 19, .14); color: #8A5A13; }
 .status-danger { background: rgba(155, 59, 59, .12); color: #8A2C2C; }
@@ -219,7 +222,7 @@
     .checklist-report-filter, .summary-strip { grid-template-columns: 1fr 1fr; }
     .wide-filter { grid-column: span 2; }
     .date-register .register-row { min-width: 820px; grid-template-columns: 122px 74px 70px 82px 124px 70px 220px; }
-    .entry-register .register-row { min-width: 900px; grid-template-columns: 62px 96px 76px 88px 140px 140px 86px 165px; }
+    .entry-register .register-row { min-width: 980px; grid-template-columns: 62px 96px 76px 88px 140px 140px 86px 165px 112px; }
 }
 @@media (max-width: 520px) {
     .checklist-report-filter, .summary-strip { grid-template-columns: 1fr; }

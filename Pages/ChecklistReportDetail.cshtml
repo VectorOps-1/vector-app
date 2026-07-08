@@ -71,7 +71,7 @@
                     <div><span>Shift</span><strong>@Model.Text(report.ShiftName)</strong></div>
                     <div><span>Shift started</span><strong>@Model.FormatDateTime(report.ShiftStartedAtUtc)</strong></div>
                     <div><span>Shift ended</span><strong>@Model.FormatDateTime(report.ShiftEndsAtUtc)</strong></div>
-                    <div><span>Template</span><strong>@Model.TemplateName(report) v@Model.TemplateVersion(report)</strong></div>
+                    <div><span>Template</span><strong>@Model.TemplateName(report) v@(Model.TemplateVersion(report))</strong></div>
                 </div>
             </section>
 

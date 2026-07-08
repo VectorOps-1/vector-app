@@ -169,8 +169,12 @@ public class ReadinessDashboardModel : PageModel
                 .Where(report =>
                     report.CompanyId == companyId &&
                     report.WorkflowStatus != "Deleted" &&
+                    report.WorkflowStatus != "Draft" &&
                     vehicleIds.Contains(report.VehicleId) &&
-                    (report.SubmittedAtUtc ?? report.InspectionDateUtc) >= ShiftStartUtc)
+                    (report.SubmittedAtUtc.HasValue ||
+                        report.WorkflowStatus == "Saved" ||
+                        report.WorkflowStatus == "Submitted" ||
+                        report.WorkflowStatus == "Completed"))
                 .ToListAsync();
 
         var latestReports = recentReports
