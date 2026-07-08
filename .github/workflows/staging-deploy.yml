@@ -61,7 +61,14 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44FDB48506B447B8B6A945AF495E5D30 }}
 
       - name: Deploy to Azure staging App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: app-acuityops-stg-za-001
-          package: ./publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd ./publish && zip -r ../publish.zip .)
+          az webapp deploy \
+            --resource-group rg-acuityops-stg-za-001 \
+            --name app-acuityops-stg-za-001 \
+            --src-path ./publish.zip \
+            --type zip \
+            --clean true \
+            --restart true
