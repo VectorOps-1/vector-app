@@ -15,7 +15,6 @@ jobs:
   deploy-staging:
     name: Build, verify static assets, and deploy staging
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - name: Checkout source
