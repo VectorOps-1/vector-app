@@ -65,16 +65,17 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 70px;
+            min-height: 58px;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
-            padding: 0 28px;
+            gap: 14px;
+            padding: 9px 22px;
             box-sizing: border-box;
             z-index: 1000;
             border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
         }
 
         .top-bar.no-page-index {
@@ -83,35 +84,35 @@
 
         .page-index-wrap {
             display: grid;
-            grid-template-columns: auto minmax(150px, 0.85fr) minmax(170px, 1fr) minmax(220px, 1.15fr);
+            grid-template-columns: auto minmax(130px, 0.8fr) minmax(150px, 0.95fr) minmax(190px, 1.05fr);
             align-items: end;
             gap: 8px;
             min-width: 0;
             flex: 1 1 auto;
             overflow-x: auto;
-            padding-bottom: 2px;
+            padding: 0;
         }
 
         .page-index-label {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.8px;
             text-transform: uppercase;
-            color: #52606d;
+            color: #66758a;
             white-space: nowrap;
-            padding-bottom: 9px;
+            padding: 0 2px 8px 0;
         }
 
         .page-index-field {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 2px;
             min-width: 0;
             margin: 0;
         }
 
         .page-index-field span {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 900;
             letter-spacing: 0.7px;
             text-transform: uppercase;
@@ -121,41 +122,48 @@
         .page-index-select {
             width: 100%;
             min-width: 0;
-            height: 34px;
+            height: 30px;
             border: 1px solid rgba(66, 84, 102, 0.24);
-            border-radius: 8px;
+            border-radius: 7px;
             background: #ffffff;
             color: #1f2937;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
-            padding: 0 10px;
+            padding: 0 9px;
         }
 
         .top-nav {
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 14px;
             flex: 0 0 auto;
         }
 
         .top-nav a {
             text-decoration: none;
-            font-size: 17px;
-            font-weight: 600;
-            color: #111;
-            transition: opacity 0.15s ease;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .2px;
+            color: #24364a;
+            min-height: 30px;
+            padding: 0 12px;
+            border: 1px solid rgba(66, 84, 102, .16);
+            border-radius: 7px;
+            background: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s ease, background .15s ease, border-color .15s ease;
         }
 
         .top-nav a:hover {
-            opacity: 0.65;
+            opacity: 1;
+            background: #eef3f8;
+            border-color: rgba(18, 108, 132, .32);
         }
 
         .app-footer {
-            position: fixed;
-            right: 22px;
-            bottom: 18px;
-            z-index: 1050;
-            display: flex;
+            display: none;
             align-items: center;
             gap: 14px;
             padding: 10px 12px;
@@ -179,13 +187,13 @@
 
         .page-shell {
             min-height: 100vh;
-            padding-top: 70px;
-            padding-bottom: 56px;
+            padding-top: 58px;
+            padding-bottom: 24px;
             box-sizing: border-box;
         }
 
         main {
-            min-height: calc(100vh - 70px);
+            min-height: calc(100vh - 58px);
         }
 
         .container {
@@ -538,7 +546,7 @@
         @@media (max-width: 780px) {
             .top-bar {
                 height: auto;
-                min-height: 70px;
+                min-height: 58px;
                 align-items: stretch;
                 flex-direction: column;
                 padding: 10px 14px;
@@ -551,7 +559,7 @@
             .page-index-wrap {
                 width: 100%;
                 min-width: 0;
-                grid-template-columns: auto minmax(150px, 0.85fr) minmax(170px, 1fr) minmax(220px, 1.15fr);
+                grid-template-columns: auto minmax(130px, 0.85fr) minmax(150px, 1fr) minmax(190px, 1.15fr);
             }
 
             .page-index-label {
@@ -575,20 +583,20 @@
             }
 
             .page-shell {
-                padding-top: 124px;
-                padding-bottom: 92px;
+                padding-top: 112px;
+                padding-bottom: 76px;
             }
 
             .top-bar.no-page-index + .page-shell {
-                padding-top: 70px;
+                padding-top: 58px;
             }
 
             main {
-                min-height: calc(100vh - 124px);
+                min-height: calc(100vh - 112px);
             }
 
             .top-bar.no-page-index + .page-shell main {
-                min-height: calc(100vh - 70px);
+                min-height: calc(100vh - 58px);
             }
 
             .notification-stack {
@@ -605,15 +613,6 @@
             .scoring-notification {
                 width: 54px;
                 height: 54px;
-            }
-
-            .app-footer {
-                left: 16px;
-                right: 16px;
-                bottom: 12px;
-                gap: 10px;
-                justify-content: flex-end;
-                flex-wrap: wrap;
             }
 
             .in-app-confirm-card {
@@ -677,13 +676,12 @@
         </div>
     </div>
 
-    <footer class="app-footer" aria-label="Application footer">
-        @if (hasCompanySession)
-        {
-            <a asp-area="" asp-page="/AccessLogin" onclick="try { sessionStorage.setItem('acuityopsSplashShown', 'true'); sessionStorage.removeItem('vectorAccessRole'); } catch (e) { }">Access Login Page</a>
-        }
-        <a asp-area="" asp-page="/Privacy">Privacy</a>
-    </footer>
+    @if (!hasAccessLogin)
+    {
+        <footer class="app-footer" aria-label="Application footer">
+            <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </footer>
+    }
 
     @if (showNotifications)
     {
