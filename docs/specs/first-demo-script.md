@@ -4,7 +4,7 @@ Status: Active Block 1 staging demo guide
 
 Created: 2026-07-04
 
-This script is for the current Azure staging demo only. It must not be used to promise unfinished Base, Pro, Premium, AI, PDF, import, billing, or compliance capabilities.
+This script is for the current Azure staging demo only. It must not be used to promise unfinished Base, Pro, Premium, AI, import, billing, or compliance capabilities.
 
 ## Demo Link
 
@@ -31,9 +31,9 @@ Other staging accounts exist for verification, but the first demo should use Sen
 
 Use this framing:
 
-> AcuityOps is being built as an EMS operations platform for private ambulance and response services. The staging environment currently shows the clean Base starting point: company access, role login, setup direction, checklist management, operational reports, and empty-state behavior without seed data or fake operational records.
+> AcuityOps is being built as an EMS operations platform for private ambulance and response services. The staging environment currently shows the Base operating model: company access, role login, setup direction, checklist management as the source of truth, a deliberately entered demo vehicle/checklist flow, submitted checklist evidence, readiness visibility, and operational reporting without hidden seed/fallback data.
 
-Avoid saying that AI import, PDF evidence packs, DOH audit mode, or predictive analytics are already finished.
+Avoid saying that AI import, DOH audit mode, or predictive analytics are already finished.
 
 ## Click Path
 
@@ -88,7 +88,8 @@ Click:
 Expected:
 
 - Checklist Register opens.
-- Clean staging should show no saved checklist templates unless demo data has deliberately been created later.
+- Staging may show the deliberately created demo checklist if the demo dataset is present.
+- A live checklist should not appear unless it exists in Checklist Management and is published to a target.
 
 Message:
 
@@ -103,7 +104,8 @@ Click:
 
 Expected:
 
-- Clean staging shows no vehicles available for daily checks.
+- Staging may show the deliberately created demo vehicle `DEM-101 / A01` if the demo dataset is present.
+- Selecting the demo vehicle should load only the register-published demo checklist.
 - It must not show fixed-form seed checklists.
 - It must not show hidden default templates.
 
@@ -120,7 +122,8 @@ Click:
 
 Expected:
 
-- Clean staging shows no operational activity collected yet.
+- Staging may show deliberately submitted demo checks.
+- Current verified staging status: Operations Reports shows submitted checklist activity for the demo date range.
 
 Message:
 
@@ -128,20 +131,20 @@ Message:
 
 ## Current Clean-Tenant Empty States
 
-These are expected in the current demo tenant:
+These were expected in the initial clean tenant. Current staging now contains deliberate demo records created through approved app/UI workflows:
 
-- No vehicles available for daily checks.
-- No saved checklist templates.
-- No operational activity collected.
-- No register-driven daily checks until real vehicle and checklist records exist.
+- Demo vehicle: `DEM-101 / A01`.
+- Demo submitted checklist report: `ChecklistReportDetail?id=3`.
+- Checklist Reports shows dated report groups and the submitted report row.
+- The submitted report detail opens.
+- PDF download is available and verified to return `application/pdf`.
 
-These empty states are a strength for this stage because they prove the app is not silently falling back to seed data.
+These records are demo tenant data, not seed data. They must remain removable through normal tenant/data management flows and must never be recreated by startup, fallback logic, or product code.
 
 ## What Not To Demo Yet
 
 Do not demo these as working product capabilities yet:
 
-- Real submitted checklist PDFs.
 - Excel register import.
 - Excel checklist import and column matching.
 - AI-assisted import.
@@ -156,20 +159,22 @@ These remain roadmap capabilities and must be implemented in dedicated approved 
 
 ## Known First-Demo Limits
 
-- The demo tenant is clean and does not contain operational demo records.
-- The demo currently proves the access path, senior navigation, empty-state behavior, and source-of-truth discipline.
-- A richer sales demo will require deliberate demo data or a guided setup script in a later approved batch.
-- PDF evidence and import workflows are not yet demo-ready.
+- The demo tenant now contains deliberate demo records entered through approved workflows. It is no longer a pure empty-state tenant.
+- The demo currently proves the access path, senior navigation, checklist source-of-truth behavior, one daily-check evidence path, report detail, PDF download availability, readiness visibility, and operational report counts.
+- PDF download returns a valid PDF for the verified demo report, but PDF layout/content polish is not yet a completed product phase.
+- Checklist Report Detail currently has a visible template-version rendering bug: `v@Model.TemplateVersion(report)` appears literally. Do not dwell on this screen until that is fixed.
+- Readiness Dashboard currently shows `100%` and `1 / 1 Ready vehicles`, while its `Daily checks complete` metric can still show `0`. Do not present that sub-metric as final until reconciled.
+- A richer sales demo still needs a controlled demo-data script and a polished report/PDF pass.
 
 ## Next Demo Blockers To Fix
 
 Recommended next blockers, in order:
 
-1. Create a deliberate, minimal demo dataset plan without seed/fallback behavior.
-2. Add one realistic vehicle, one staff profile, and one manually built checklist only through approved app flows or controlled staging data setup.
-3. Verify a complete daily check can be performed from a register-published checklist.
-4. Verify a submitted checklist report view exists.
-5. Implement or defer PDF download depending on Block 1 credit budget.
+1. Push the latest verified staging source commits and redeploy through the GitHub workflow so staging matches committed source.
+2. Decide whether the current uncommitted Checklist Reports visual polish belongs in Block 1 and commit it separately if approved.
+3. Fix the Checklist Report Detail template-version rendering bug.
+4. Reconcile the Readiness Dashboard `Daily checks complete` sub-metric with submitted demo checks.
+5. Polish PDF output layout/content if Block 1 credits allow; otherwise carry it into the next paid block.
 
 ## Demo Safety Rules
 
@@ -178,4 +183,3 @@ Recommended next blockers, in order:
 - Do not show unfinished Pro/Premium pages as if complete.
 - Do not use local development as demo truth.
 - Do not manually patch database records during a demo.
-
