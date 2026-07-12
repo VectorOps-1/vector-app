@@ -1,6 +1,8 @@
 # Block 2 Base Commercial Foundation Execution Blueprint
 
-Status: Active execution blueprint
+Status: Closed
+
+Closed: 2026-07-12
 
 Created: 2026-07-12
 
@@ -51,6 +53,8 @@ Do not include these in Block 2 implementation unless a separate explicit approv
 Fake tenant data may be used only for functional testing through normal UI workflows.
 
 ## Batch 2.1: Setup Wizard Closeout And No-Seed Gate
+
+Status: Completed
 
 Objective:
 
@@ -149,7 +153,17 @@ Acceptance criteria:
 - Incomplete tenants are gated clearly.
 - Setup Wizard no longer feels like an unfinished blocker to Base commercial foundation.
 
+Completion evidence:
+
+- Phase 2A setup wizard implementation and closure evidence already proved company-owned, resumable setup progress, role-appropriate setup access, final review, setup completion, Home unlock, first-operation guidance, setup audit logging, and clean-company no-seed behavior.
+- Commit `ae8da60` (`Decouple setup completion from branding status`) made the completed setup state independent from tenant branding state, preventing logo/name configuration from incorrectly controlling Home access.
+- Azure staging verification confirmed incomplete company setup remains gated, completed setup reaches Home, staff and operational managers do not receive actionable company setup controls, and senior management retains the setup completion path.
+- Setup completion did not create vehicles, staff, equipment, stock, medication, checklist templates, publish scopes, readiness rules, schematic assignments, or demo records.
+- No direct database patch was required for product behavior.
+
 ## Batch 2.2: Vehicle, Staff, And Equipment Register Consistency
+
+Status: Completed
 
 Objective:
 
@@ -261,7 +275,19 @@ Acceptance criteria:
 - Each rendered item can be opened and edited where access allows.
 - Bulky card layouts are removed from these core registers.
 
+Completion evidence:
+
+- Time-boxed source and Azure staging verification passed separately for Vehicle Register, Staff Register, and Equipment Register.
+- Vehicle Register is grouped by function and then subtype, uses collapsed groups, exposes compact rows and record actions, and persists function/subtype changes through the vehicle source-of-truth edit path.
+- Staff Register is grouped by clinical qualification/scope rather than access role and exposes practitioner number, annual licence expiry, CPD status/expiry, profile open, and access-controlled edit behavior.
+- Equipment Register is grouped by equipment type/name with collapsed groups and exposes Edit, Move, Issue, and Delete actions according to access.
+- Equipment movement includes vehicle destinations through the existing tenant-scoped movement flow.
+- Batch 2.4 subsequently added server-side enforcement for the register actions verified in this batch.
+- No register schema migration or direct tenant-data mutation was required to satisfy this batch.
+
 ## Batch 2.3: Checklist Source-Of-Truth Guard And Publish Target Review
+
+Status: Completed
 
 Objective:
 
@@ -348,6 +374,17 @@ Acceptance criteria:
 - Checklist register remains the only source of truth for live daily checks.
 - Publish targets are understandable and safe.
 - No fallback checklist appears.
+
+Completion evidence:
+
+- Source and Azure staging verification confirmed Build New Checklist starts blank unless a user explicitly selects a template.
+- Live daily checks resolve only active, published Checklist Register templates and scopes; no fixed-form or fallback daily checklist is rendered.
+- A vehicle without an active matching scope renders `No assigned checklist available`.
+- Publishing supports operational area, vehicle function, vehicle subtype, and specific vehicle/callsign targets.
+- Existing active target coverage is shown and replacement warnings are generated before publishing over an active target.
+- Publish, replacement, retirement, and deletion paths use the existing audit pattern, and deleting a template retires its active scopes so it cannot remain live.
+- Controlled staging data proved that one UI-built and register-published checklist loaded for its intended demo vehicle and produced the submitted evidence later used by Batch 2.5.
+- No seed checklist, fallback template, or direct database behavior patch was introduced.
 
 ## Batch 2.4: Core Access Action Enforcement
 
@@ -449,6 +486,8 @@ Remaining boundary:
 
 ## Batch 2.5: Evidence Baseline Regression Check
 
+Status: Completed
+
 Objective:
 
 Ensure Base changes did not break report detail, PDF route, readiness, or operational reports.
@@ -502,7 +541,34 @@ Acceptance criteria:
 
 - Base workflow changes did not break evidence visibility.
 
-## Recommended 10,000-Credit Allocation
+Completion evidence:
+
+- Post-Batch-2.4 Azure staging verification completed on 2026-07-12 against existing submitted report `3`; no test records or database changes were created.
+- Checklist Reports displayed the existing `DEM-101 / A01` submitted checklist as Operational with Critical `0`, Warning `0`, and the correct date, area, vehicle, and submitter.
+- Checklist Report Detail opened successfully and rendered the saved template/version, submitter, vehicle, checklist responses, and readiness evidence.
+- The authenticated PDF endpoint `/ChecklistReports?id=3&handler=Pdf` completed a PDF media download.
+- Readiness Dashboard reconciled to `1 / 1` ready vehicle, `1` daily check complete, `0` missing checks, and `0` not-ready vehicles.
+- Operations Reports reconciled to `1` saved/submitted check and linked the same `DEM-101 / A01` Operational report with no action required.
+- No report, PDF, readiness, or operational evidence failure remained after Batch 2.4 access enforcement.
+
+## Block 2 Closure
+
+Block 2 is closed with all five batches completed and verified:
+
+1. Batch 2.1 - Setup Wizard Closeout And No-Seed Gate: Completed.
+2. Batch 2.2 - Vehicle, Staff, And Equipment Register Consistency: Completed.
+3. Batch 2.3 - Checklist Source-Of-Truth Guard And Publish Target Review: Completed.
+4. Batch 2.4 - Core Access Action Enforcement: Completed in source commit `a6a9d59` and documented in commit `51b9f93`.
+5. Batch 2.5 - Evidence Baseline Regression Check: Completed after Batch 2.4 with no failures.
+
+Closure determination:
+
+- Every Block 2 acceptance criterion has evidence.
+- No Block 2 stop condition remains active.
+- No unresolved Block 2 product blocker remains.
+- Work excluded by the Block 2 hard do-not-touch list remains future roadmap work and is not implied complete by this closure.
+
+## Historical 10,000-Credit Allocation
 
 If the next block is limited to 10,000 credits, use this priority order:
 
@@ -513,8 +579,6 @@ If the next block is limited to 10,000 credits, use this priority order:
 
 Only start Batch 2.4 Access Action Enforcement if the first three batches finish under budget. If credits run low, defer Batch 2.4 rather than rushing access/security work.
 
-## First Instruction For Next Paid Block
+## Closed-Block Guardrail
 
-Use this exact instruction when ready:
-
-`Use Medium reasoning. Propose the smallest safe implementation batch for Block 2 Batch 2.1 Setup Wizard Closeout from docs/specs/block-2-base-commercial-execution-blueprint.md. Do not edit source until I approve the batch plan. Include scope, exclusions, likely files, migration risk, verification, staging checks, commit plan, estimated credit use, stop conditions, and acceptance criteria.`
+Do not restart or add batches to Block 2. Any further work must be selected from the active recovery/commercial roadmap and proposed as a new, separately approved block or phase.
