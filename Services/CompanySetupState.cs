@@ -6,8 +6,7 @@ public static class CompanySetupState
 {
     public static bool IsSetupComplete(Company company)
     {
-        return IsConfiguredStatus(company.BrandingStatus)
-            && SetupWizardProgress.AreAllStepsComplete(company);
+        return SetupWizardProgress.AreAllStepsComplete(company);
     }
 
     public static bool RequiresSetupWizard(Company company)
