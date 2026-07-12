@@ -65,8 +65,15 @@ Package pattern:
 
 ```powershell
 $zip = "$out.zip"
-Compress-Archive -Path (Join-Path $out '*') -DestinationPath $zip -Force
+Push-Location $out
+tar.exe -a -c -f "..\$(Split-Path $zip -Leaf)" *
+Pop-Location
 ```
+
+Do not use PowerShell `Compress-Archive` for Azure staging packages. On 2026-07-12, Windows
+`Compress-Archive` packages repeatedly reached Kudu OneDeploy and failed with HTTP 400 during the
+generated deployment command. The same published output deployed successfully when packaged with
+`tar.exe -a -c -f`, matching the working GitHub/Linux zip behavior more closely.
 
 Deploy pattern:
 
