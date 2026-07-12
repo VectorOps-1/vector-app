@@ -1,6 +1,6 @@
 # Block 2 Base Commercial Foundation Execution Blueprint
 
-Status: Proposed execution blueprint
+Status: Active execution blueprint
 
 Created: 2026-07-12
 
@@ -351,6 +351,10 @@ Acceptance criteria:
 
 ## Batch 2.4: Core Access Action Enforcement
 
+Status: Completed
+
+Source commit: `a6a9d59` (`Enforce core access actions`)
+
 Objective:
 
 Begin enforcing Base role boundaries on real actions, starting with the actions touched in Batches 2.1-2.3.
@@ -425,6 +429,23 @@ Acceptance criteria:
 
 - Core Base actions are enforced server-side for the touched workflows.
 - Access behavior is not just navigation hiding.
+
+Completion evidence:
+
+- The existing saved permission model was sufficient; no permission schema or migration change was required.
+- Added one shared server-side action authorization service and applied it only to setup completion, checklist publish/delete, vehicle edit/delete, staff register-controlled edit, and equipment edit/move/delete.
+- Staff manager actions are denied unless the approved assigned movement-task exception applies.
+- Operational manager actions require both the relevant saved permission and assigned-area scope.
+- Senior management and company-owner access remains company-wide through the existing permission model.
+- Operational managers retain checklist draft/submission behavior; checklist approval and publishing require the saved publish permission or an existing delegated publish task.
+- Equipment issue reporting remains available as an operational safety action and was not converted into a manager-only permission.
+- Local build verification passed with 0 warnings and 0 errors.
+- Azure staging verification passed for staff, operational manager, and senior manager login paths and the scoped setup, checklist, vehicle, staff, equipment, and movement actions.
+- No database data, schema, tenant records, seed data, product-owned schematics, runtime files, generated files, logs, or Azure resource configuration were changed by the source commit.
+
+Remaining boundary:
+
+- Full enterprise permission design, tier-based permissions, Pro/Premium feature gates, and new notification workflows remain excluded from Batch 2.4.
 
 ## Batch 2.5: Evidence Baseline Regression Check
 
