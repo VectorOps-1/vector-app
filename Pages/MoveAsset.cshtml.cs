@@ -12,11 +12,16 @@ public class MoveAssetModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public MoveAssetModel(VectorDbContext db, CurrentUserService currentUser)
+    public MoveAssetModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public string AssetType { get; set; } = AssetTypes.Vehicle;
@@ -64,6 +69,13 @@ public class MoveAssetModel : PageModel
             await ApplyTaskReferenceAsync(currentUser);
         }
 
+        if (!await CanMoveRequestedAssetAsync(currentUser, allowAssignedTask: true))
+        {
+            StatusMessage = "You do not have permission to move or reallocate this asset.";
+            await LoadPageDataAsync(currentUser.CompanyId);
+            return Page();
+        }
+
         await LoadPageDataAsync(currentUser.CompanyId);
         return Page();
     }
@@ -76,6 +88,13 @@ public class MoveAssetModel : PageModel
         if (currentUser is null)
         {
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.OperationalManagementAccess });
+        }
+
+        if (!await CanMoveRequestedAssetAsync(currentUser, allowAssignedTask: true))
+        {
+            StatusMessage = "You do not have permission to move or reallocate this asset.";
+            await LoadPageDataAsync(currentUser.CompanyId);
+            return Page();
         }
 
         var destination = await ResolveDestinationAsync(currentUser.CompanyId);
@@ -111,6 +130,11 @@ public class MoveAssetModel : PageModel
         if (sendAsTask && AssignedToUserId <= 0)
         {
             ModelState.AddModelError(nameof(AssignedToUserId), "Select the person who must complete this movement task.");
+        }
+
+        if (sendAsTask && !await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.TasksSend))
+        {
+            ModelState.AddModelError(nameof(AssignedToUserId), "You do not have permission to send movement tasks.");
         }
 
         if (sendAsTask && AssignedToUserId > 0)
@@ -249,6 +273,53 @@ public class MoveAssetModel : PageModel
         {
             QuantityMoved = quantity;
         }
+    }
+
+    private async Task<bool> CanMoveRequestedAssetAsync(AppUser currentUser, bool allowAssignedTask)
+    {
+        if (AssetId <= 0)
+        {
+            return await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.AssetsMove);
+        }
+
+        if (allowAssignedTask &&
+            await _authorization.CanCompleteMovementTaskAsync(currentUser, TaskId, AssetType, AssetId))
+        {
+            return true;
+        }
+
+        var operationalAreaId = await GetAssetOperationalAreaIdAsync(currentUser.CompanyId, AssetId, AssetType);
+        return await _authorization.CanManageAreaScopedRecordAsync(
+            currentUser,
+            UserActionPermissions.AssetsMove,
+            operationalAreaId);
+    }
+
+    private async Task<int?> GetAssetOperationalAreaIdAsync(int companyId, int assetId, string assetType)
+    {
+        return AssetTypes.Normalize(assetType) switch
+        {
+            AssetTypes.Equipment => await _db.EquipmentItems
+                .AsNoTracking()
+                .Where(item => item.Id == assetId && item.CompanyId == companyId && item.Status != "Deleted")
+                .Select(item => item.CurrentOperationalAreaId)
+                .FirstOrDefaultAsync(),
+            AssetTypes.Stock => await _db.StockItems
+                .AsNoTracking()
+                .Where(item => item.Id == assetId && item.CompanyId == companyId && item.Status != "Deleted")
+                .Select(item => item.CurrentOperationalAreaId)
+                .FirstOrDefaultAsync(),
+            AssetTypes.Medication => await _db.MedicationItems
+                .AsNoTracking()
+                .Where(item => item.Id == assetId && item.CompanyId == companyId && item.Status != "Deleted")
+                .Select(item => item.CurrentOperationalAreaId)
+                .FirstOrDefaultAsync(),
+            _ => await _db.Vehicles
+                .AsNoTracking()
+                .Where(item => item.Id == assetId && item.CompanyId == companyId && item.Status != "Deleted")
+                .Select(item => item.CurrentOperationalAreaId)
+                .FirstOrDefaultAsync()
+        };
     }
 
     private async Task CreateMovementTaskAsync(AppUser currentUser, MovementDestination destination, string assetLabel)

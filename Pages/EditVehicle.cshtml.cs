@@ -16,17 +16,20 @@ public class EditVehicleModel : PageModel
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
     private readonly VehicleStructureSetupService _vehicleStructure;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public EditVehicleModel(
         VectorDbContext db,
         CurrentUserService currentUser,
         LocationOptionService locationOptions,
-        VehicleStructureSetupService vehicleStructure)
+        VehicleStructureSetupService vehicleStructure,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
         _vehicleStructure = vehicleStructure;
+        _authorization = authorization;
     }
 
     [BindProperty] public int VehicleId { get; set; }
@@ -74,6 +77,14 @@ public class EditVehicleModel : PageModel
             return RedirectToPage("/VehicleRegister");
         }
 
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersVehicleEdit,
+                vehicle.CurrentOperationalAreaId))
+        {
+            return RedirectToPage("/VehicleRegister", new { permissionDenied = "true" });
+        }
+
         LoadFromVehicle(vehicle, returnUrl);
         await LoadOptionsAsync(currentUser.CompanyId);
         PrepareSubtypeSelection();
@@ -99,6 +110,15 @@ public class EditVehicleModel : PageModel
         if (vehicle is null)
         {
             StatusMessage = "Vehicle record not found.";
+            return Page();
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersVehicleEdit,
+                vehicle.CurrentOperationalAreaId))
+        {
+            StatusMessage = "You do not have permission to edit this vehicle.";
             return Page();
         }
 

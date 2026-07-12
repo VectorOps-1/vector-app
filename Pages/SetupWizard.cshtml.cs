@@ -16,6 +16,7 @@ public class SetupWizardModel : PageModel
     private readonly ChecklistSetupService _checklistSetup;
     private readonly ReadinessEngineSetupService _readinessEngineSetup;
     private readonly AuditTrailService _auditTrail;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public SetupWizardModel(
         CurrentUserService currentUser,
@@ -24,7 +25,8 @@ public class SetupWizardModel : PageModel
         AssetRegisterSetupService assetRegisterSetup,
         ChecklistSetupService checklistSetup,
         ReadinessEngineSetupService readinessEngineSetup,
-        AuditTrailService auditTrail)
+        AuditTrailService auditTrail,
+        IUserActionAuthorizationService authorization)
     {
         _currentUser = currentUser;
         _db = db;
@@ -33,6 +35,7 @@ public class SetupWizardModel : PageModel
         _checklistSetup = checklistSetup;
         _readinessEngineSetup = readinessEngineSetup;
         _auditTrail = auditTrail;
+        _authorization = authorization;
     }
 
     public string ClientName { get; private set; } = CompanyBranding.DefaultCompanyName;
@@ -73,7 +76,7 @@ public class SetupWizardModel : PageModel
             return RedirectToPage("/CompanyLogin");
         }
 
-        var canManageSetup = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
+        var canManageSetup = await CanManageSetupAsync(currentUser);
         var progressReviewRequested = IsProgressReviewRequest();
         if (progressReviewRequested && !canManageSetup)
         {
@@ -168,7 +171,7 @@ public class SetupWizardModel : PageModel
         SetupStatus = CompanySetupState.DisplayStatus(company);
         SignedInName = currentUser.FullName;
         SignedInRole = currentUser.AppRole?.Name ?? string.Empty;
-        CanManageSetup = CurrentUserService.IsSeniorAccessRole(SignedInRole);
+        CanManageSetup = await CanManageSetupAsync(currentUser);
         IsSetupComplete = CompanySetupState.IsSetupComplete(company);
         IsProgressReviewMode = progressReviewRequested && IsSetupComplete;
         CurrentStep = IsProgressReviewMode
@@ -526,6 +529,12 @@ public class SetupWizardModel : PageModel
     {
         return string.Equals(Mode, "progress", StringComparison.OrdinalIgnoreCase)
             || string.Equals(Mode, "review", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool> CanManageSetupAsync(AppUser currentUser)
+    {
+        return CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name) ||
+            await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.SetupCompany);
     }
 
     private async Task<bool> AddSetupStartedAuditIfNeededAsync(Company company, AppUser currentUser)

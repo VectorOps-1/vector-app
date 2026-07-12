@@ -22,17 +22,20 @@ public class EditVehicleChecklistModel : PageModel
     private readonly CurrentUserService _currentUser;
     private readonly ChecklistPublishingService _checklistPublishing;
     private readonly VehicleStructureSetupService _vehicleStructure;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public EditVehicleChecklistModel(
         VectorDbContext db,
         CurrentUserService currentUser,
         ChecklistPublishingService checklistPublishing,
-        VehicleStructureSetupService vehicleStructure)
+        VehicleStructureSetupService vehicleStructure,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _checklistPublishing = checklistPublishing;
         _vehicleStructure = vehicleStructure;
+        _authorization = authorization;
     }
 
     [BindProperty] public string? ChecklistName { get; set; }
@@ -944,7 +947,8 @@ public class EditVehicleChecklistModel : PageModel
     private async Task<vector_app_local.Models.AppUser?> LoadCurrentAuthorityAsync(bool loadPublishedSettings)
     {
         var currentUser = await _currentUser.GetCurrentUserAsync();
-        IsSeniorChecklistPublisher = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
+        IsSeniorChecklistPublisher = currentUser is not null &&
+            await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.ChecklistsPublish);
         HasDelegatedPublishAccess = currentUser is not null && await HasChecklistPublishTaskAccessAsync(currentUser);
         if (currentUser is not null)
         {

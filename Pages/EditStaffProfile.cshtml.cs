@@ -13,15 +13,18 @@ public class EditStaffProfileModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly StaffStructureSetupService _staffStructure;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public EditStaffProfileModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        StaffStructureSetupService staffStructure)
+        StaffStructureSetupService staffStructure,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _staffStructure = staffStructure;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public int? StaffUserId { get; set; }
@@ -236,14 +239,16 @@ public class EditStaffProfileModel : PageModel
         IsSelfEdit = targetUser.Id == currentUser.Id;
         RoleName = targetUser.AppRole?.Name ?? "Unassigned";
 
-        var isSenior = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
         var isOperationalManager = string.Equals(currentUser.AppRole?.Name, "Operational Management", StringComparison.OrdinalIgnoreCase);
         var targetIsStaff = string.Equals(targetUser.AppRole?.Name, "Staff", StringComparison.OrdinalIgnoreCase);
         var assignedAreaIds = await LoadAssignedAreaIdsAsync(currentUser);
         var targetInManagerScope = targetUser.AssignedOperationalAreaId.HasValue &&
             assignedAreaIds.Contains(targetUser.AssignedOperationalAreaId.Value);
+        var canEditStaffRegister = await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.RegistersStaffEdit);
+        var isSenior = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
 
-        CanEditManagerFields = isSenior || (isOperationalManager && targetIsStaff && targetInManagerScope);
+        CanEditManagerFields = canEditStaffRegister &&
+            (isSenior || (isOperationalManager && targetIsStaff && targetInManagerScope));
         ScopeLabel = CanEditManagerFields
             ? "Manager edit: register and personal details"
             : "Self edit: personal profile details";

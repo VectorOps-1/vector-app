@@ -13,15 +13,18 @@ public class VehicleRegisterModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly VehicleSchematicAssignmentService _schematicAssignments;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public VehicleRegisterModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        VehicleSchematicAssignmentService schematicAssignments)
+        VehicleSchematicAssignmentService schematicAssignments,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _schematicAssignments = schematicAssignments;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public string? SearchTerm { get; set; }
@@ -186,6 +189,15 @@ public class VehicleRegisterModel : PageModel
         if (vehicle is null)
         {
             TempData["SuccessMessage"] = "Vehicle was not found.";
+            return RedirectBack(returnUrl);
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersDelete,
+                vehicle.CurrentOperationalAreaId))
+        {
+            TempData["SuccessMessage"] = "You do not have permission to delete this vehicle.";
             return RedirectBack(returnUrl);
         }
 

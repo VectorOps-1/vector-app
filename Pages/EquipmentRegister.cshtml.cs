@@ -11,11 +11,16 @@ public class EquipmentRegisterModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public EquipmentRegisterModel(VectorDbContext db, CurrentUserService currentUser)
+    public EquipmentRegisterModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public string? SearchTerm { get; set; }
@@ -137,6 +142,15 @@ public class EquipmentRegisterModel : PageModel
         if (equipmentItem is null)
         {
             TempData["SuccessMessage"] = "Equipment item was not found.";
+            return RedirectBack(returnUrl);
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersDelete,
+                equipmentItem.CurrentOperationalAreaId))
+        {
+            TempData["SuccessMessage"] = "You do not have permission to delete this equipment item.";
             return RedirectBack(returnUrl);
         }
 

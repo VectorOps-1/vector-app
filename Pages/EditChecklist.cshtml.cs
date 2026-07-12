@@ -19,15 +19,18 @@ public class EditChecklistModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly ChecklistPublishingService _checklistPublishing;
+    private readonly IUserActionAuthorizationService _authorization;
 
     public EditChecklistModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        ChecklistPublishingService checklistPublishing)
+        ChecklistPublishingService checklistPublishing,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _checklistPublishing = checklistPublishing;
+        _authorization = authorization;
     }
 
     [BindProperty] public int TemplateId { get; set; }
@@ -85,9 +88,11 @@ public class EditChecklistModel : PageModel
             return;
         }
 
-        CanDeleteChecklist = CurrentUserService.IsSeniorAccessRole(currentUser?.AppRole?.Name);
-        CanPublishChecklist = CanDeleteChecklist ||
-            (currentUser is not null && await HasChecklistPublishTaskAccessAsync(currentUser, TaskAccess, TaskId));
+        CanDeleteChecklist = currentUser is not null &&
+            await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.RegistersDelete);
+        CanPublishChecklist = currentUser is not null &&
+            (await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.ChecklistsPublish) ||
+                await HasChecklistPublishTaskAccessAsync(currentUser, TaskAccess, TaskId));
 
         SavedTemplates = await _db.ChecklistTemplates
             .AsNoTracking()
@@ -130,9 +135,9 @@ public class EditChecklistModel : PageModel
             return RedirectToPage("/RoleLogin", new { access = CurrentUserService.SeniorManagementAccess });
         }
 
-        if (!CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name))
+        if (!await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.RegistersDelete))
         {
-            TempData["StatusMessage"] = "Only senior management can delete checklist templates.";
+            TempData["StatusMessage"] = "Only authorized users can delete checklist templates.";
             return RedirectToPage(new { view = "register" });
         }
 
@@ -237,7 +242,7 @@ public class EditChecklistModel : PageModel
 
     private async Task<bool> UserCanPublishChecklistAsync(AppUser currentUser)
     {
-        return CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name) ||
+        return await _authorization.HasPermissionAsync(currentUser, UserActionPermissions.ChecklistsPublish) ||
             await HasChecklistPublishTaskAccessAsync(currentUser, TaskAccess, TaskId);
     }
 

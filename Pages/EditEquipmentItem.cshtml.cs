@@ -13,12 +13,18 @@ public class EditEquipmentItemModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public EditEquipmentItemModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public EditEquipmentItemModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _authorization = authorization;
     }
 
     [BindProperty] public int EquipmentItemId { get; set; }
@@ -58,6 +64,14 @@ public class EditEquipmentItemModel : PageModel
             return RedirectToPage("/EquipmentRegister", new { view = "register" });
         }
 
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersEquipmentEdit,
+                equipmentItem.CurrentOperationalAreaId))
+        {
+            return RedirectToPage("/EquipmentRegister", new { view = "register", permissionDenied = "true" });
+        }
+
         LoadFromEquipmentItem(equipmentItem, returnUrl);
         await LoadOptionsAsync(currentUser.CompanyId);
         return Page();
@@ -83,6 +97,15 @@ public class EditEquipmentItemModel : PageModel
         if (equipmentItem is null)
         {
             StatusMessage = "Equipment item was not found.";
+            return Page();
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersEquipmentEdit,
+                equipmentItem.CurrentOperationalAreaId))
+        {
+            StatusMessage = "You do not have permission to edit this equipment item.";
             return Page();
         }
 
