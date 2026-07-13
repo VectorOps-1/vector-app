@@ -21,6 +21,14 @@ public class DailyVehicleReadinessReport
     [MaxLength(40)]
     public string? ChecklistTemplateVersion { get; set; }
 
+    // Versioned immutable evidence captured when a checklist is submitted.
+    // Legacy reports intentionally retain a null snapshot and use the marked legacy adapter.
+    public string? EvidenceSnapshotJson { get; set; }
+
+    public int EvidenceSnapshotVersion { get; set; }
+
+    public DateTime? EvidenceSnapshotCapturedAtUtc { get; set; }
+
     public DateTime InspectionDateUtc { get; set; } = DateTime.UtcNow;
 
     [MaxLength(80)]

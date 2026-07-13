@@ -22,6 +22,7 @@ public class ChecklistReportDetailModel : PageModel
     public int Id { get; set; }
 
     public DailyVehicleReadinessReport? Report { get; private set; }
+    public ChecklistEvidenceSnapshot? Evidence { get; private set; }
     public DateTime RecordedAtUtc { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
@@ -49,6 +50,7 @@ public class ChecklistReportDetailModel : PageModel
         }
 
         Report = report;
+        Evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
         RecordedAtUtc = report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc;
         return Page();
     }
@@ -108,6 +110,15 @@ public class ChecklistReportDetailModel : PageModel
     }
 
     public string EquipmentStatusClass(DailyVehicleEquipmentCheck check)
+    {
+        return check.IsOperational &&
+            string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(check.IssueNotes)
+                ? "status-ok"
+                : "status-danger";
+    }
+
+    public string EquipmentStatusClass(EvidenceEquipmentSnapshot check)
     {
         return check.IsOperational &&
             string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) &&

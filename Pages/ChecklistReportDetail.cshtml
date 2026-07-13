@@ -22,24 +22,25 @@
         else
         {
             var report = Model.Report;
-            var vehicle = report.Vehicle;
-            var performedBy = report.PerformedByUser;
-            var template = report.ChecklistTemplate;
-            var areaName = vehicle?.CurrentOperationalArea?.Name ?? "Unallocated";
-            var equipmentRows = report.EquipmentChecks
+            var evidence = Model.Evidence!;
+            var areaName = evidence.Vehicle.OperationalAreaName ?? "Unallocated";
+            var equipmentRows = evidence.Equipment
                 .OrderBy(check => check.SortOrder)
-                .ThenBy(check => check.Id)
                 .ToList();
 
             <div class="report-title-row">
                 <div>
-                    <h2 class="page-title">@Model.Text(report.CallsignAtCheck) Checklist Report</h2>
-                    <p class="page-subtitle">@Model.Text(report.VehicleRegistrationNumber) | @Model.Text(report.VehicleTypeAtCheck) | @areaName</p>
+                    <h2 class="page-title">@Model.Text(evidence.Vehicle.Callsign) Checklist Report</h2>
+                    <p class="page-subtitle">@Model.Text(evidence.Vehicle.RegistrationNumber) | @Model.Text(evidence.Vehicle.VehicleType) | @areaName</p>
                 </div>
                 <div class="report-actions">
                     <a class="report-link" href="/ChecklistReports">Back to Reports</a>
                     <a class="report-link primary" asp-page="/ChecklistReports" asp-page-handler="Pdf" asp-route-id="@report.Id">Download PDF</a>
                 </div>
+            </div>
+
+            <div class="evidence-contract-status @(evidence.IsLegacyRecord ? "legacy" : "immutable")">
+                @evidence.EvidenceStatus
             </div>
 
             <section class="status-panel">
@@ -49,15 +50,15 @@
                 </div>
                 <div>
                     <span>Evidence status</span>
-                    <strong>@Model.Text(report.WorkflowStatus)</strong>
+                    <strong>@Model.Text(evidence.Submission.WorkflowStatus)</strong>
                 </div>
                 <div>
                     <span>Readiness</span>
-                    <strong class="status-chip @Model.ReadinessStatusClass(report.ReadinessStatus)">@Model.Text(report.ReadinessStatus)</strong>
+                    <strong class="status-chip @Model.ReadinessStatusClass(evidence.Submission.ReadinessStatus)">@Model.Text(evidence.Submission.ReadinessStatus)</strong>
                 </div>
                 <div>
                     <span>Issues</span>
-                    <strong>Critical @report.CriticalIssueCount | Warning @report.WarningIssueCount</strong>
+                    <strong>Critical @evidence.Submission.CriticalIssueCount | Warning @evidence.Submission.WarningIssueCount</strong>
                 </div>
             </section>
 
@@ -66,12 +67,13 @@
                     <h3>Submission Details</h3>
                 </div>
                 <div class="detail-grid">
-                    <div><span>Report ID</span><strong>@report.Id</strong></div>
-                    <div><span>Submitted / recorded</span><strong>@Model.FormatDateTime(Model.RecordedAtUtc)</strong></div>
-                    <div><span>Shift</span><strong>@Model.Text(report.ShiftName)</strong></div>
-                    <div><span>Shift started</span><strong>@Model.FormatDateTime(report.ShiftStartedAtUtc)</strong></div>
-                    <div><span>Shift ended</span><strong>@Model.FormatDateTime(report.ShiftEndsAtUtc)</strong></div>
-                    <div><span>Template</span><strong>@Model.TemplateName(report) v@(Model.TemplateVersion(report))</strong></div>
+                    <div><span>Report ID</span><strong>@evidence.Submission.ReportId</strong></div>
+                    <div><span>Tenant at submission</span><strong>@Model.Text(evidence.Tenant.DisplayName)</strong></div>
+                    <div><span>Submitted / recorded</span><strong>@Model.FormatDateTime(evidence.Submission.SubmittedAtUtc ?? evidence.Submission.LastSavedAtUtc ?? evidence.CapturedAtUtc)</strong></div>
+                    <div><span>Shift</span><strong>@Model.Text(evidence.Submission.ShiftName)</strong></div>
+                    <div><span>Shift started</span><strong>@Model.FormatDateTime(evidence.Submission.ShiftStartedAtUtc)</strong></div>
+                    <div><span>Shift ended</span><strong>@Model.FormatDateTime(evidence.Submission.ShiftEndsAtUtc)</strong></div>
+                    <div><span>Template</span><strong>@Model.Text(evidence.Template.Name) v@(Model.Text(evidence.Template.Version))</strong></div>
                 </div>
             </section>
 
@@ -80,16 +82,16 @@
                     <h3>Completed By</h3>
                 </div>
                 <div class="detail-grid">
-                    <div><span>Name</span><strong>@(performedBy?.FullName ?? "Unknown")</strong></div>
-                    <div><span>Role</span><strong>@(performedBy?.AppRole?.Name ?? "Unknown")</strong></div>
-                    <div><span>Email</span><strong>@(performedBy?.Email ?? "Unknown")</strong></div>
-                    <div><span>Staff ID</span><strong>@Model.Text(performedBy?.StaffIdentifier)</strong></div>
-                    <div><span>Clinical qualification / scope</span><strong>@Model.Text(performedBy?.QualificationFunction)</strong></div>
-                    <div><span>Practitioner Number</span><strong>@Model.Text(performedBy?.PractitionerNumber)</strong></div>
-                    <div><span>Annual licence expiry</span><strong data-date-status-field="licence">@Model.FormatDate(performedBy?.AnnualLicenseExpiryDate)</strong></div>
-                    <div><span>CPD compliance</span><strong>@Model.Text(performedBy?.CpdComplianceStatus)</strong></div>
-                    <div><span>CPD valid until</span><strong data-date-status-field="cpd">@Model.FormatDate(performedBy?.CpdComplianceExpiryDate)</strong></div>
-                    <div><span>Assigned area</span><strong>@(performedBy?.AssignedOperationalArea?.Name ?? "Not set")</strong></div>
+                    <div><span>Name</span><strong>@Model.Text(evidence.Submitter.FullName)</strong></div>
+                    <div><span>Role</span><strong>@Model.Text(evidence.Submitter.Role)</strong></div>
+                    <div><span>Email</span><strong>@Model.Text(evidence.Submitter.Email)</strong></div>
+                    <div><span>Staff ID</span><strong>@Model.Text(evidence.Submitter.StaffIdentifier)</strong></div>
+                    <div><span>Clinical qualification / scope</span><strong>@Model.Text(evidence.Submitter.QualificationFunction)</strong></div>
+                    <div><span>Practitioner Number</span><strong>@Model.Text(evidence.Submitter.PractitionerNumber)</strong></div>
+                    <div><span>Annual licence expiry</span><strong data-date-status-field="licence">@Model.FormatDate(evidence.Submitter.AnnualLicenseExpiryDate)</strong></div>
+                    <div><span>CPD compliance</span><strong>@Model.Text(evidence.Submitter.CpdComplianceStatus)</strong></div>
+                    <div><span>CPD valid until</span><strong data-date-status-field="cpd">@Model.FormatDate(evidence.Submitter.CpdComplianceExpiryDate)</strong></div>
+                    <div><span>Assigned area</span><strong>@Model.Text(evidence.Submitter.AssignedOperationalAreaName)</strong></div>
                 </div>
             </section>
 
@@ -98,12 +100,12 @@
                     <h3>Vehicle</h3>
                 </div>
                 <div class="detail-grid">
-                    <div><span>Registration</span><strong>@Model.Text(report.VehicleRegistrationNumber)</strong></div>
-                    <div><span>Callsign at check</span><strong>@Model.Text(report.CallsignAtCheck)</strong></div>
-                    <div><span>Vehicle type</span><strong>@Model.Text(report.VehicleTypeAtCheck)</strong></div>
+                    <div><span>Registration</span><strong>@Model.Text(evidence.Vehicle.RegistrationNumber)</strong></div>
+                    <div><span>Callsign at check</span><strong>@Model.Text(evidence.Vehicle.Callsign)</strong></div>
+                    <div><span>Vehicle type</span><strong>@Model.Text(evidence.Vehicle.VehicleType)</strong></div>
                     <div><span>Area / base</span><strong>@areaName</strong></div>
-                    <div><span>Unit schematic</span><strong>@Model.Text(report.SchematicTypeAtCheck)</strong></div>
-                    <div><span>Next service at check</span><strong data-date-status-field="service">@Model.FormatDate(report.VehicleNextServiceDateAtCheck)</strong></div>
+                    <div><span>Unit schematic</span><strong>@Model.Text(evidence.Schematic.DisplayName)</strong></div>
+                    <div><span>Next service at check</span><strong data-date-status-field="service">@Model.FormatDate(evidence.Vehicle.NextServiceDate)</strong></div>
                 </div>
             </section>
 
@@ -112,10 +114,46 @@
                     <h3>Checklist Evidence</h3>
                 </div>
                 <div class="notes-list">
-                    <div><span>Checklist responses</span><p>@Model.Text(report.OperationalNotes)</p></div>
-                    <div><span>Unit schematic marks</span><p>@Model.Text(report.SchematicNotes)</p></div>
-                    <div><span>General notes</span><p>@Model.Text(report.GeneralNotes)</p></div>
+                    <div><span>Checklist responses</span><p>@Model.Text(evidence.Notes.ChecklistResponseSummary)</p></div>
+                    <div><span>Unit schematic marks</span><p>@Model.Text(evidence.Schematic.MarkSummary)</p></div>
+                    <div><span>General notes</span><p>@Model.Text(evidence.Notes.GeneralNotes)</p></div>
                 </div>
+
+                @if (evidence.Sections.Count > 0)
+                {
+                    <div class="evidence-sections">
+                        @foreach (var evidenceSection in evidence.Sections.OrderBy(section => section.DisplayOrder))
+                        {
+                            <div class="evidence-section">
+                                <strong>@evidenceSection.Name</strong>
+                                @foreach (var item in evidenceSection.Items)
+                                {
+                                    @foreach (var field in item.Fields)
+                                    {
+                                        <div><span>@item.Prompt - @field.Heading</span><b>@Model.Text(field.Value)</b></div>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="report-section">
+                <div class="section-heading"><h3>Linked Evidence Alerts</h3></div>
+                @if (evidence.IssueReferences.Count == 0)
+                {
+                    <div class="empty-panel">No linked issue or alert references were recorded with this submission.</div>
+                }
+                else
+                {
+                    <div class="evidence-sections">
+                        @foreach (var issue in evidence.IssueReferences)
+                        {
+                            <div class="evidence-section"><strong>@issue.ReferenceType #@issue.ReferenceId</strong><span>@issue.Label | @Model.Text(issue.Severity) | @Model.Text(issue.Status)</span></div>
+                        }
+                    </div>
+                }
             </section>
 
             <section class="report-section">
@@ -123,12 +161,10 @@
                     <h3>Same As Previous Shift</h3>
                 </div>
                 <div class="detail-grid">
-                    <div><span>Vehicle section copied</span><strong>@Model.YesNo(report.VehicleSameAsPreviousShiftUsed || report.SameAsPreviousShiftUsed)</strong></div>
-                    <div><span>Vehicle source report</span><strong>@(report.VehicleSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
-                    <div><span>Vehicle copied at</span><strong>@Model.FormatDateTime(report.VehicleSameAsPreviousAppliedAtUtc)</strong></div>
-                    <div><span>Equipment section copied</span><strong>@Model.YesNo(report.EquipmentSameAsPreviousShiftUsed)</strong></div>
-                    <div><span>Equipment source report</span><strong>@(report.EquipmentSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
-                    <div><span>Equipment copied at</span><strong>@Model.FormatDateTime(report.EquipmentSameAsPreviousAppliedAtUtc)</strong></div>
+                    <div><span>Vehicle section copied</span><strong>@Model.YesNo(evidence.Submission.VehicleSameAsPreviousShiftUsed)</strong></div>
+                    <div><span>Vehicle source report</span><strong>@(evidence.Submission.VehicleSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
+                    <div><span>Equipment section copied</span><strong>@Model.YesNo(evidence.Submission.EquipmentSameAsPreviousShiftUsed)</strong></div>
+                    <div><span>Equipment source report</span><strong>@(evidence.Submission.EquipmentSameAsPreviousSourceReportId?.ToString() ?? "N/A")</strong></div>
                 </div>
             </section>
 
@@ -149,11 +185,11 @@
                         {
                             <article class="equipment-row">
                                 <div>
-                                    <strong>@Model.Text(check.EquipmentName)</strong>
+                                    <strong>@Model.Text(check.Name)</strong>
                                     <span>@Model.Text(check.EquipmentType) | @Model.Text(check.Model)</span>
                                 </div>
                                 <div><span>S/N / ID</span><strong>@Model.Text(check.SerialOrAssetId)</strong></div>
-                                <div><span>Next service</span><strong data-date-status-field="service">@Model.FormatDate(check.NextServiceDateAtCheck)</strong></div>
+                                <div><span>Next service</span><strong data-date-status-field="service">@Model.FormatDate(check.NextServiceDate)</strong></div>
                                 <div><span>Battery</span><strong>@Model.Text(check.BatteryStatus)</strong></div>
                                 <div><span>Operational</span><strong class="status-chip @Model.EquipmentStatusClass(check)">@Model.YesNo(check.IsOperational)</strong></div>
                                 <div><span>Impact</span><strong>@Model.Text(check.ReadinessImpact)</strong></div>
@@ -179,6 +215,9 @@
 .report-actions { display: grid; grid-template-columns: 1fr; gap: 8px; min-width: 190px; }
 .report-link { display: flex; min-height: 42px; align-items: center; justify-content: center; border: 1px solid rgba(66, 84, 102, .18); border-radius: 8px; background: #f8fafc; color: #24364a; font-size: 14px; font-weight: 900; text-decoration: none; }
 .report-link.primary { background: #126C84; border-color: #126C84; color: #fff; }
+.evidence-contract-status { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 800; text-align: left; }
+.evidence-contract-status.immutable { border: 1px solid rgba(20, 108, 77, .24); background: rgba(32, 129, 96, .10); color: #146c4d; }
+.evidence-contract-status.legacy { border: 1px solid rgba(138, 90, 19, .24); background: rgba(138, 90, 19, .10); color: #8A5A13; }
 .status-panel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
 .status-panel div, .report-section { border: 1px solid rgba(66, 84, 102, .16); border-radius: 8px; background: rgba(255, 255, 255, .78); box-shadow: 0 12px 24px rgba(15, 23, 42, .06); box-sizing: border-box; }
 .status-panel div { padding: 13px; text-align: left; }
@@ -196,6 +235,11 @@
 .detail-grid div, .notes-list div, .equipment-row { padding: 12px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; }
 .notes-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .notes-list p, .equipment-notes p { margin: 0; color: #1f2937; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.evidence-sections { display: grid; gap: 10px; margin-top: 12px; }
+.evidence-section { display: grid; gap: 7px; padding: 12px; border: 1px solid rgba(66, 84, 102, .12); border-radius: 8px; background: #fff; }
+.evidence-section div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .8fr); gap: 10px; font-size: 13px; }
+.evidence-section span { color: #52606d; font-size: 12px; font-weight: 800; }
+.evidence-section b { color: #102a3a; font-size: 13px; }
 .equipment-report-list { display: flex; flex-direction: column; gap: 10px; }
 .equipment-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(120px, .8fr) minmax(110px, .7fr) minmax(110px, .7fr) minmax(110px, .7fr); gap: 10px; }
 .equipment-row > div:first-child span { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 800; }

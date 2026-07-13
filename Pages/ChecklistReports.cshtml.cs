@@ -132,7 +132,8 @@ public class ChecklistReportsModel : PageModel
             return NotFound();
         }
 
-        var pdfBytes = _pdfService.BuildDailyReadinessPdf(report);
+        var evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
+        var pdfBytes = _pdfService.BuildDailyReadinessPdf(report, evidence);
         var vehicleLabel = SafeFilePart(report.VehicleRegistrationNumber);
         var dateLabel = (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc).ToLocalTime().ToString("yyyyMMdd-HHmm");
         return File(pdfBytes, "application/pdf", $"checklist-{vehicleLabel}-{report.Id}-{dateLabel}.pdf");

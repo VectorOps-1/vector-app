@@ -340,8 +340,36 @@ public class DailyVehicleChecklistModel : PageModel
             SubmittedAtUtc = now
         };
 
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         _db.DailyVehicleReadinessReports.Add(report);
         await _db.SaveChangesAsync();
+
+        var company = currentUser.Company ?? await _db.Companies
+            .AsNoTracking()
+            .FirstAsync(item => item.Id == currentUser.CompanyId);
+        var submitterArea = currentUser.AssignedOperationalAreaId.HasValue
+            ? await _db.OperationalAreas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(area =>
+                    area.CompanyId == currentUser.CompanyId &&
+                    area.Id == currentUser.AssignedOperationalAreaId.Value)
+            : null;
+
+        var snapshot = ChecklistEvidenceSnapshotFactory.Create(
+            report,
+            company,
+            currentUser,
+            submitterArea,
+            vehicle,
+            vehicle.CurrentOperationalArea,
+            checklistTemplate,
+            BuildEvidenceSections(),
+            BuildEvidenceEquipment(report.EquipmentChecks),
+            []);
+
+        report.EvidenceSnapshotJson = ChecklistEvidenceSnapshotSerializer.Serialize(snapshot);
+        report.EvidenceSnapshotVersion = ChecklistEvidenceSnapshot.CurrentVersion;
+        report.EvidenceSnapshotCapturedAtUtc = snapshot.CapturedAtUtc;
 
         _db.AuditLogs.Add(new AuditLog
         {
@@ -350,11 +378,12 @@ public class DailyVehicleChecklistModel : PageModel
             Action = "Vehicle readiness saved",
             EntityType = "DailyVehicleReadinessReport",
             EntityId = report.Id,
-            Details = $"{currentUser.FullName} saved {InspectionTitle} for {report.VehicleRegistrationNumber} from {CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView)} access.",
+            Details = $"{currentUser.FullName} saved {InspectionTitle} for {report.VehicleRegistrationNumber} from {CurrentUserService.NormalizeAccessView(_currentUser.CurrentAccessView)} access with immutable evidence contract v{ChecklistEvidenceSnapshot.CurrentVersion}.",
             CreatedAtUtc = now
         });
 
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return report;
     }
 
@@ -366,10 +395,12 @@ public class DailyVehicleChecklistModel : PageModel
             return null;
         }
 
-        return await _db.Vehicles.FirstOrDefaultAsync(item =>
-            item.CompanyId == companyId &&
-            item.Status != "Deleted" &&
-            item.RegistrationNumber == registration);
+        return await _db.Vehicles
+            .Include(item => item.CurrentOperationalArea)
+            .FirstOrDefaultAsync(item =>
+                item.CompanyId == companyId &&
+                item.Status != "Deleted" &&
+                item.RegistrationNumber == registration);
     }
 
     private async Task LoadAssignedChecklistSectionsAsync(int companyId)
@@ -609,6 +640,71 @@ public class DailyVehicleChecklistModel : PageModel
         }
 
         return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
+    }
+
+    private List<EvidenceSectionSnapshot> BuildEvidenceSections()
+    {
+        return AssignedChecklistSections
+            .Select((section, sectionIndex) => new EvidenceSectionSnapshot
+            {
+                SectionId = section.Id,
+                Name = section.Name,
+                DisplayOrder = sectionIndex,
+                Items = section.Items
+                    .Select(item => new EvidenceItemSnapshot
+                    {
+                        ItemId = item.Id,
+                        ParentItemId = item.ParentChecklistItemId,
+                        Prompt = item.Prompt,
+                        ItemKind = item.ItemKind,
+                        ResponseType = item.ResponseType,
+                        SchematicKey = item.SchematicKey,
+                        Fields = item.Fields
+                            .Select(field =>
+                            {
+                                ChecklistResponses.TryGetValue(field.ResponseKey, out var response);
+                                return new EvidenceFieldSnapshot
+                                {
+                                    ResponseKey = field.ResponseKey,
+                                    Heading = field.Heading,
+                                    ResponseType = field.ResponseType,
+                                    IsRequired = field.IsRequired,
+                                    IsReadinessCritical = field.IsReadinessCritical,
+                                    Value = NormalizeOptional(response)
+                                };
+                            })
+                            .ToList()
+                    })
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    private static List<EvidenceEquipmentSnapshot> BuildEvidenceEquipment(
+        IEnumerable<DailyVehicleEquipmentCheck> equipmentChecks)
+    {
+        return equipmentChecks
+            .OrderBy(check => check.SortOrder)
+            .ThenBy(check => check.Id)
+            .Select(check => new EvidenceEquipmentSnapshot
+            {
+                ChecklistItemId = check.ChecklistItemId,
+                Name = check.EquipmentName,
+                EquipmentType = check.EquipmentType,
+                Model = check.Model,
+                SerialOrAssetId = check.SerialOrAssetId,
+                NextServiceDate = check.NextServiceDateAtCheck,
+                PresentStatus = check.PresentStatus,
+                DamageStatus = check.DamageStatus,
+                BatteryStatus = check.BatteryStatus,
+                IsOperational = check.IsOperational,
+                IssueNotes = check.IssueNotes,
+                ReadinessImpact = check.ReadinessImpact,
+                SameAsPreviousShiftUsed = check.SameAsPreviousShiftUsed,
+                Notes = check.Notes,
+                SortOrder = check.SortOrder
+            })
+            .ToList();
     }
 
     private string ResolveDynamicReadinessStatus()

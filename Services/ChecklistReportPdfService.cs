@@ -10,7 +10,14 @@ public class ChecklistReportPdfService
 
     public byte[] BuildDailyReadinessPdf(DailyVehicleReadinessReport report)
     {
-        var lines = BuildReportLines(report)
+        return BuildDailyReadinessPdf(report, ChecklistEvidenceSnapshotResolver.Resolve(report));
+    }
+
+    public byte[] BuildDailyReadinessPdf(
+        DailyVehicleReadinessReport report,
+        ChecklistEvidenceSnapshot evidence)
+    {
+        var lines = BuildReportLines(evidence)
             .SelectMany(line => WrapLine(line, MaxLineLength))
             .ToList();
 
@@ -22,98 +29,124 @@ public class ChecklistReportPdfService
         return BuildPdf(lines);
     }
 
-    private static IEnumerable<string> BuildReportLines(DailyVehicleReadinessReport report)
+    private static IEnumerable<string> BuildReportLines(ChecklistEvidenceSnapshot evidence)
     {
-        var recordedAt = report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc;
-        var vehicle = report.Vehicle;
-        var performedBy = report.PerformedByUser;
-        var template = report.ChecklistTemplate;
-        var areaName = vehicle?.CurrentOperationalArea?.Name ?? "Unallocated";
+        var submission = evidence.Submission;
+        var recordedAt = submission.SubmittedAtUtc ?? submission.LastSavedAtUtc ?? evidence.CapturedAtUtc;
 
         yield return "AcuityOps Checklist Evidence";
-        yield return $"Report ID: {report.Id}";
-        yield return $"Client: {CompanyBranding.GetDisplayCompanyName(report.Company)}";
+        yield return $"Report ID: {submission.ReportId}";
+        yield return $"Client: {Text(evidence.Tenant.DisplayName)}";
         yield return $"Generated: {DateTime.UtcNow.ToLocalTime():yyyy-MM-dd HH:mm}";
+        yield return $"Evidence contract: {evidence.EvidenceStatus}";
         yield return string.Empty;
 
         yield return "Submission";
         yield return $"Submitted / recorded: {FormatDateTime(recordedAt)}";
-        yield return $"Workflow status: {report.WorkflowStatus}";
-        yield return $"Readiness status: {report.ReadinessStatus}";
-        yield return $"Critical issues: {report.CriticalIssueCount}";
-        yield return $"Warning issues: {report.WarningIssueCount}";
-        yield return $"Shift: {Text(report.ShiftName)}";
-        yield return $"Shift started: {FormatDateTime(report.ShiftStartedAtUtc)}";
-        yield return $"Shift ended: {FormatDateTime(report.ShiftEndsAtUtc)}";
+        yield return $"Workflow status: {Text(submission.WorkflowStatus)}";
+        yield return $"Readiness status: {Text(submission.ReadinessStatus)}";
+        yield return $"Critical issues: {submission.CriticalIssueCount}";
+        yield return $"Warning issues: {submission.WarningIssueCount}";
+        yield return $"Shift: {Text(submission.ShiftName)}";
+        yield return $"Shift started: {FormatDateTime(submission.ShiftStartedAtUtc)}";
+        yield return $"Shift ended: {FormatDateTime(submission.ShiftEndsAtUtc)}";
         yield return string.Empty;
 
         yield return "Completed By";
-        yield return $"Name: {performedBy?.FullName ?? "Unknown"}";
-        yield return $"Email: {performedBy?.Email ?? "Unknown"}";
-        yield return $"Role: {performedBy?.AppRole?.Name ?? "Unknown"}";
-        yield return $"Staff ID: {Text(performedBy?.StaffIdentifier)}";
-        yield return $"Clinical qualification / scope: {Text(performedBy?.QualificationFunction)}";
-        yield return $"Practitioner Number: {Text(performedBy?.PractitionerNumber)}";
-        yield return $"Annual licence expiry: {FormatDate(performedBy?.AnnualLicenseExpiryDate)}";
-        yield return $"CPD compliance: {Text(performedBy?.CpdComplianceStatus)}";
-        yield return $"CPD valid until: {FormatDate(performedBy?.CpdComplianceExpiryDate)}";
-        yield return $"Assigned area: {performedBy?.AssignedOperationalArea?.Name ?? "Not set"}";
+        yield return $"Name: {Text(evidence.Submitter.FullName)}";
+        yield return $"Email: {Text(evidence.Submitter.Email)}";
+        yield return $"Role: {Text(evidence.Submitter.Role)}";
+        yield return $"Staff ID: {Text(evidence.Submitter.StaffIdentifier)}";
+        yield return $"Clinical qualification / scope: {Text(evidence.Submitter.QualificationFunction)}";
+        yield return $"Practitioner Number: {Text(evidence.Submitter.PractitionerNumber)}";
+        yield return $"Annual licence expiry: {FormatDate(evidence.Submitter.AnnualLicenseExpiryDate)}";
+        yield return $"CPD compliance: {Text(evidence.Submitter.CpdComplianceStatus)}";
+        yield return $"CPD valid until: {FormatDate(evidence.Submitter.CpdComplianceExpiryDate)}";
+        yield return $"Assigned area: {Text(evidence.Submitter.AssignedOperationalAreaName)}";
         yield return string.Empty;
 
         yield return "Vehicle";
-        yield return $"Registration: {Text(report.VehicleRegistrationNumber)}";
-        yield return $"Callsign at check: {Text(report.CallsignAtCheck)}";
-        yield return $"Vehicle type: {Text(report.VehicleTypeAtCheck)}";
-        yield return $"Qualification level: {Text(report.QualificationLevelAtCheck)}";
-        yield return $"Area / base: {areaName}";
-        yield return $"Unit schematic: {Text(report.SchematicTypeAtCheck)}";
-        yield return $"Vehicle next service at check: {FormatDate(report.VehicleNextServiceDateAtCheck)}";
-        yield return $"Register current callsign: {Text(vehicle?.Callsign)}";
-        yield return $"Register current status: {Text(vehicle?.Status)}";
+        yield return $"Registration: {Text(evidence.Vehicle.RegistrationNumber)}";
+        yield return $"Callsign at check: {Text(evidence.Vehicle.Callsign)}";
+        yield return $"Vehicle type: {Text(evidence.Vehicle.VehicleType)}";
+        yield return $"Vehicle function: {Text(evidence.Vehicle.VehicleFunction)}";
+        yield return $"Vehicle subtype: {Text(evidence.Vehicle.VehicleSubtype)}";
+        yield return $"Qualification level: {Text(evidence.Vehicle.QualificationLevel)}";
+        yield return $"Area / base: {Text(evidence.Vehicle.OperationalAreaName)}";
+        yield return $"Unit schematic: {Text(evidence.Schematic.DisplayName)}";
+        yield return $"Vehicle next service at check: {FormatDate(evidence.Vehicle.NextServiceDate)}";
         yield return string.Empty;
 
         yield return "Checklist Template";
-        yield return $"Template: {TemplateName(report)}";
-        yield return $"Template type: {template?.ChecklistType ?? "Not linked"}";
-        yield return $"Template vehicle target: {template?.TargetVehicleType ?? "Not linked"}";
-        yield return $"Template version at check: {Text(report.ChecklistTemplateVersion)}";
-        yield return $"Template status: {template?.Status ?? "Not linked"}";
+        yield return $"Template: {Text(evidence.Template.Name)}";
+        yield return $"Template type: {Text(evidence.Template.ChecklistType)}";
+        yield return $"Template vehicle target: {Text(evidence.Template.TargetVehicleType)}";
+        yield return $"Template version at check: {Text(evidence.Template.Version)}";
+        yield return $"Published scope at check: {Text(evidence.Template.PublishScopeSummary)}";
         yield return string.Empty;
 
         yield return "Same As Previous Shift";
-        yield return $"Vehicle section used: {YesNo(report.VehicleSameAsPreviousShiftUsed || report.SameAsPreviousShiftUsed)}";
-        yield return $"Vehicle copied from report: {report.VehicleSameAsPreviousSourceReportId?.ToString() ?? "N/A"}";
-        yield return $"Vehicle copied at: {FormatDateTime(report.VehicleSameAsPreviousAppliedAtUtc)}";
-        yield return $"Vehicle copied summary: {Text(report.VehicleSameAsPreviousCopiedSummary)}";
-        yield return $"Equipment section used: {YesNo(report.EquipmentSameAsPreviousShiftUsed)}";
-        yield return $"Equipment copied from report: {report.EquipmentSameAsPreviousSourceReportId?.ToString() ?? "N/A"}";
-        yield return $"Equipment copied at: {FormatDateTime(report.EquipmentSameAsPreviousAppliedAtUtc)}";
-        yield return $"Equipment copied summary: {Text(report.EquipmentSameAsPreviousCopiedSummary)}";
+        yield return $"Vehicle section used: {YesNo(submission.VehicleSameAsPreviousShiftUsed)}";
+        yield return $"Vehicle copied from report: {submission.VehicleSameAsPreviousSourceReportId?.ToString() ?? "N/A"}";
+        yield return $"Equipment section used: {YesNo(submission.EquipmentSameAsPreviousShiftUsed)}";
+        yield return $"Equipment copied from report: {submission.EquipmentSameAsPreviousSourceReportId?.ToString() ?? "N/A"}";
         yield return string.Empty;
 
         yield return "Checklist Evidence";
-        yield return $"Checklist responses: {Text(report.OperationalNotes)}";
+        if (evidence.Sections.Count == 0)
+        {
+            yield return $"Checklist responses: {Text(evidence.Notes.ChecklistResponseSummary)}";
+        }
+        else
+        {
+            foreach (var section in evidence.Sections.OrderBy(section => section.DisplayOrder))
+            {
+                yield return $"[{section.Name}]";
+                foreach (var item in section.Items)
+                {
+                    foreach (var field in item.Fields)
+                    {
+                        yield return $"{item.Prompt} - {field.Heading}: {Text(field.Value)}";
+                    }
+                }
+            }
+        }
         yield return string.Empty;
 
         yield return "Damage / Unit Schematic / General Notes";
-        yield return $"Damage notes: {Text(report.DamageNotes)}";
-        yield return $"Unit schematic notes: {Text(report.SchematicNotes)}";
-        yield return $"General notes: {Text(report.GeneralNotes)}";
+        yield return $"Damage notes: {Text(evidence.Notes.DamageNotes)}";
+        yield return $"Unit schematic notes: {Text(evidence.Schematic.MarkSummary)}";
+        yield return $"Unit schematic mark data: {Text(evidence.Schematic.MarkData)}";
+        yield return $"General notes: {Text(evidence.Notes.GeneralNotes)}";
+        yield return string.Empty;
+
+        yield return "Linked Evidence Alerts";
+        if (evidence.IssueReferences.Count == 0)
+        {
+            yield return "No linked issue or alert references were recorded with this submission.";
+        }
+        else
+        {
+            foreach (var issue in evidence.IssueReferences)
+            {
+                yield return $"{issue.ReferenceType} #{issue.ReferenceId}: {issue.Label} | {Text(issue.Severity)} | {Text(issue.Status)}";
+            }
+        }
         yield return string.Empty;
 
         yield return "Equipment Checks";
-        if (report.EquipmentChecks.Count == 0)
+        if (evidence.Equipment.Count == 0)
         {
             yield return "No equipment rows were saved against this checklist.";
             yield break;
         }
 
-        foreach (var check in report.EquipmentChecks.OrderBy(check => check.SortOrder).ThenBy(check => check.Id))
+        foreach (var check in evidence.Equipment.OrderBy(check => check.SortOrder))
         {
-            yield return $"#{check.SortOrder + 1} {Text(check.EquipmentName)}";
+            yield return $"#{check.SortOrder + 1} {Text(check.Name)}";
             yield return $"  S/N / ID: {Text(check.SerialOrAssetId)}";
             yield return $"  Type / model: {Text(check.EquipmentType)} / {Text(check.Model)}";
-            yield return $"  Next service at check: {FormatDate(check.NextServiceDateAtCheck)}";
+            yield return $"  Next service at check: {FormatDate(check.NextServiceDate)}";
             yield return $"  Present: {Text(check.PresentStatus)}";
             yield return $"  Damage: {Text(check.DamageStatus)}";
             yield return $"  Battery: {Text(check.BatteryStatus)}";
