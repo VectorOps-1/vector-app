@@ -46,7 +46,7 @@
                 <div class="button-row">
                     <a class="menu-btn equipment-btn" href="@mailto">Open Email Draft</a>
                     <form method="post" asp-page-handler="MarkEmailSent" asp-route-orderId="@order.Id">
-                        <button class="menu-btn vehicle-btn" type="submit">Mark Supplier Email Sent</button>
+                        <button class="menu-btn vehicle-btn" type="submit" disabled="@(!Model.CanMarkEmailSent)">Mark Supplier Email Sent</button>
                     </form>
                 </div>
             </section>
@@ -91,7 +91,7 @@
                     }
 
                     <div class="button-row">
-                        <button class="menu-btn equipment-btn" type="submit">Save Supplier Confirmation</button>
+                        <button class="menu-btn equipment-btn" type="submit" disabled="@(!Model.CanConfirmSupplier)">Save Supplier Confirmation</button>
                     </div>
                 </form>
             </section>
@@ -111,7 +111,7 @@
                             </label>
                         </div>
                         <div class="button-row">
-                            <button class="menu-btn equipment-btn" type="submit">Save Register Permission</button>
+                            <button class="menu-btn equipment-btn" type="submit" disabled="@(!Model.CanAuthoriseRegister)">Save Register Permission</button>
                         </div>
                     </form>
                 </section>
@@ -170,7 +170,7 @@
                         </div>
                     }
                     <div class="button-row">
-                        <button class="menu-btn equipment-btn" type="submit">Save Allocation</button>
+                        <button class="menu-btn equipment-btn" type="submit" disabled="@(!Model.CanAllocate)">Save Allocation</button>
                     </div>
                 </form>
             </section>

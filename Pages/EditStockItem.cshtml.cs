@@ -13,12 +13,18 @@ public class EditStockItemModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public EditStockItemModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public EditStockItemModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _authorization = authorization;
     }
 
     [BindProperty] public int StockItemId { get; set; }
@@ -60,6 +66,14 @@ public class EditStockItemModel : PageModel
             return RedirectToPage("/StockRegister", new { view = "register" });
         }
 
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersStockEdit,
+                stockItem.CurrentOperationalAreaId))
+        {
+            return RedirectToPage("/StockRegister", new { view = "register", permissionDenied = "true" });
+        }
+
         LoadFromStockItem(stockItem, returnUrl);
         await LoadOptionsAsync(currentUser.CompanyId);
         return Page();
@@ -84,6 +98,15 @@ public class EditStockItemModel : PageModel
         if (stockItem is null)
         {
             StatusMessage = "Stock item was not found.";
+            return Page();
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersStockEdit,
+                stockItem.CurrentOperationalAreaId))
+        {
+            StatusMessage = "You do not have permission to edit this stock item.";
             return Page();
         }
 

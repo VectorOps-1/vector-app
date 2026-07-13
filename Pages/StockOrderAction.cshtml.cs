@@ -34,7 +34,11 @@ public class StockOrderActionModel : PageModel
     public List<SelectListItem> OperationalManagers { get; private set; } = [];
     public bool IsSeniorManager { get; private set; }
     public bool CanApproveStockOrders { get; private set; }
+    public bool CanMarkEmailSent { get; private set; }
+    public bool CanConfirmSupplier { get; private set; }
+    public bool CanAuthoriseRegister { get; private set; }
     public bool CanEnterRegister { get; private set; }
+    public bool CanAllocate { get; private set; }
     public string? SuccessMessage { get; private set; }
     public List<SelectListItem> LocationOptions { get; private set; } = [];
 
@@ -64,6 +68,11 @@ public class StockOrderActionModel : PageModel
             return NotFound();
         }
 
+        if (order.Status != StockOrderStatuses.PendingSeniorApproval)
+        {
+            return RejectInvalidTransition(orderId, "This stock order is not awaiting approval.");
+        }
+
         order.Status = StockOrderStatuses.ReadyToEmailSupplier;
         order.ApprovedBySeniorUserId = currentUser.Id;
         order.ApprovedAtUtc = DateTime.UtcNow;
@@ -88,6 +97,11 @@ public class StockOrderActionModel : PageModel
             return NotFound();
         }
 
+        if (order.Status != StockOrderStatuses.ReadyToEmailSupplier)
+        {
+            return RejectInvalidTransition(orderId, "Approve the stock order before marking the supplier email as sent.");
+        }
+
         order.Status = StockOrderStatuses.SentToSupplier;
         order.EmailSentAtUtc = DateTime.UtcNow;
         await AddAuditAsync(currentUser, order.Id, "Stock order emailed", $"Supplier email marked sent for stock order #{order.Id}.");
@@ -109,6 +123,11 @@ public class StockOrderActionModel : PageModel
         if (order is null)
         {
             return NotFound();
+        }
+
+        if (order.Status is not (StockOrderStatuses.SentToSupplier or StockOrderStatuses.SupplierConfirmed))
+        {
+            return RejectInvalidTransition(orderId, "Mark the supplier email as sent before recording confirmation.");
         }
 
         foreach (var update in LineUpdates)
@@ -153,6 +172,11 @@ public class StockOrderActionModel : PageModel
             return NotFound();
         }
 
+        if (order.Status is not (StockOrderStatuses.SupplierConfirmed or StockOrderStatuses.RegisterEntryAuthorised))
+        {
+            return RejectInvalidTransition(orderId, "Record supplier confirmation before authorising register entry.");
+        }
+
         order.RegisterEntryAuthorisedUserId = AuthorisedUserId;
         order.Status = StockOrderStatuses.RegisterEntryAuthorised;
         await AddAuditAsync(currentUser, order.Id, "Stock register entry authorised", $"Stock order #{order.Id} authorised for register entry.");
@@ -174,6 +198,11 @@ public class StockOrderActionModel : PageModel
         if (order is null)
         {
             return NotFound();
+        }
+
+        if (order.Status is not (StockOrderStatuses.SupplierConfirmed or StockOrderStatuses.RegisterEntryAuthorised))
+        {
+            return RejectInvalidTransition(orderId, "Record supplier confirmation before entering stock into the register.");
         }
 
         var isSenior = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
@@ -225,6 +254,11 @@ public class StockOrderActionModel : PageModel
             return NotFound();
         }
 
+        if (order.Status is not (StockOrderStatuses.EnteredInRegister or StockOrderStatuses.Allocated))
+        {
+            return RejectInvalidTransition(orderId, "Enter the received stock into the register before allocating it.");
+        }
+
         foreach (var update in LineUpdates)
         {
             var line = order.Lines.FirstOrDefault(line => line.Id == update.LineId);
@@ -263,7 +297,7 @@ public class StockOrderActionModel : PageModel
         }
 
         IsSeniorManager = CurrentUserService.IsSeniorAccessRole(currentUser.AppRole?.Name);
-        CanApproveStockOrders = await _permissionService.HasPermissionAsync(currentUser, UserActionPermissions.StockOrdersApprove);
+        var hasApprovalPermission = await _permissionService.HasPermissionAsync(currentUser, UserActionPermissions.StockOrdersApprove);
 
         var order = await _db.StockOrders
             .AsNoTracking()
@@ -278,7 +312,13 @@ public class StockOrderActionModel : PageModel
             return NotFound();
         }
 
-        CanEnterRegister = IsSeniorManager || order.RegisterEntryAuthorisedUserId == currentUser.Id;
+        CanApproveStockOrders = hasApprovalPermission && order.Status == StockOrderStatuses.PendingSeniorApproval;
+        CanMarkEmailSent = order.Status == StockOrderStatuses.ReadyToEmailSupplier;
+        CanConfirmSupplier = order.Status is StockOrderStatuses.SentToSupplier or StockOrderStatuses.SupplierConfirmed;
+        CanAuthoriseRegister = IsSeniorManager && order.Status is StockOrderStatuses.SupplierConfirmed or StockOrderStatuses.RegisterEntryAuthorised;
+        CanEnterRegister = (IsSeniorManager || order.RegisterEntryAuthorisedUserId == currentUser.Id)
+            && order.Status is StockOrderStatuses.SupplierConfirmed or StockOrderStatuses.RegisterEntryAuthorised;
+        CanAllocate = order.Status is StockOrderStatuses.EnteredInRegister or StockOrderStatuses.Allocated;
         AuthorisedUserId = order.RegisterEntryAuthorisedUserId;
         LocationOptions = await _locationOptions.GetAssetLocationOptionsAsync(currentUser.CompanyId);
         OperationalManagers = await _db.AppUsers
@@ -348,6 +388,12 @@ public class StockOrderActionModel : PageModel
             lines);
 
         return Page();
+    }
+
+    private IActionResult RejectInvalidTransition(int orderId, string message)
+    {
+        TempData["SuccessMessage"] = message;
+        return RedirectToPage(new { orderId });
     }
 
     private async Task<StockOrder?> LoadOrderEntityAsync(int orderId, int companyId)

@@ -11,11 +11,13 @@ public class StockRegisterModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public StockRegisterModel(VectorDbContext db, CurrentUserService currentUser)
+    public StockRegisterModel(VectorDbContext db, CurrentUserService currentUser, IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public string? SearchTerm { get; set; }
@@ -127,6 +129,15 @@ public class StockRegisterModel : PageModel
         if (stockItem is null)
         {
             TempData["SuccessMessage"] = "Stock item was not found.";
+            return RedirectBack(returnUrl);
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersDelete,
+                stockItem.CurrentOperationalAreaId))
+        {
+            TempData["SuccessMessage"] = "You do not have permission to delete this stock item.";
             return RedirectBack(returnUrl);
         }
 

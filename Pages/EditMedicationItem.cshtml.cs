@@ -13,12 +13,18 @@ public class EditMedicationItemModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly LocationOptionService _locationOptions;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public EditMedicationItemModel(VectorDbContext db, CurrentUserService currentUser, LocationOptionService locationOptions)
+    public EditMedicationItemModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        LocationOptionService locationOptions,
+        IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
         _locationOptions = locationOptions;
+        _authorization = authorization;
     }
 
     [BindProperty] public int MedicationItemId { get; set; }
@@ -58,6 +64,14 @@ public class EditMedicationItemModel : PageModel
             return RedirectToPage("/MedicationRegister", new { view = "register" });
         }
 
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersMedicationEdit,
+                medicationItem.CurrentOperationalAreaId))
+        {
+            return RedirectToPage("/MedicationRegister", new { view = "register", permissionDenied = "true" });
+        }
+
         LoadFromMedicationItem(medicationItem, returnUrl);
         await LoadOptionsAsync(currentUser.CompanyId);
         return Page();
@@ -82,6 +96,15 @@ public class EditMedicationItemModel : PageModel
         if (medicationItem is null)
         {
             StatusMessage = "Medication item was not found.";
+            return Page();
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersMedicationEdit,
+                medicationItem.CurrentOperationalAreaId))
+        {
+            StatusMessage = "You do not have permission to edit this medication item.";
             return Page();
         }
 

@@ -11,11 +11,13 @@ public class MedicationRegisterModel : PageModel
 {
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
+    private readonly IUserActionAuthorizationService _authorization;
 
-    public MedicationRegisterModel(VectorDbContext db, CurrentUserService currentUser)
+    public MedicationRegisterModel(VectorDbContext db, CurrentUserService currentUser, IUserActionAuthorizationService authorization)
     {
         _db = db;
         _currentUser = currentUser;
+        _authorization = authorization;
     }
 
     [BindProperty(SupportsGet = true)] public string? SearchTerm { get; set; }
@@ -127,6 +129,15 @@ public class MedicationRegisterModel : PageModel
         if (medicationItem is null)
         {
             TempData["SuccessMessage"] = "Medication item was not found.";
+            return RedirectBack(returnUrl);
+        }
+
+        if (!await _authorization.CanManageAreaScopedRecordAsync(
+                currentUser,
+                UserActionPermissions.RegistersDelete,
+                medicationItem.CurrentOperationalAreaId))
+        {
+            TempData["SuccessMessage"] = "You do not have permission to delete this medication item.";
             return RedirectBack(returnUrl);
         }
 
