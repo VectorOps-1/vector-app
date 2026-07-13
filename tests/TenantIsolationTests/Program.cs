@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Text;
 using vector_app_local.Data;
 using vector_app_local.Models;
 using vector_app_local.Services;
@@ -13,7 +14,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("current user service rejects company mismatch", CurrentUserServiceRejectsCompanyMismatchAsync),
     ("checklist publishing rejects foreign tenant inputs", ChecklistPublishingRejectsForeignTenantInputsAsync),
     ("schematic resolution is company bounded", SchematicResolutionIsCompanyBoundedAsync),
-    ("tenant file storage requires company scoped paths", TenantFileStorageRequiresCompanyScopedPathsAsync)
+    ("tenant file storage requires company scoped paths", TenantFileStorageRequiresCompanyScopedPathsAsync),
+    ("professional evidence PDF contains the immutable evidence contract", ProfessionalEvidencePdfContainsImmutableContractAsync)
 };
 
 foreach (var test in tests)
@@ -136,6 +138,76 @@ static async Task TenantFileStorageRequiresCompanyScopedPathsAsync()
             Directory.Delete(tempRoot, recursive: true);
         }
     }
+}
+
+static Task ProfessionalEvidencePdfContainsImmutableContractAsync()
+{
+    var evidence = new ChecklistEvidenceSnapshot
+    {
+        CapturedAtUtc = DateTime.UtcNow,
+        Tenant = new EvidenceTenantSnapshot { CompanyId = 44, DisplayName = "Evidence Test EMS" },
+        Submission = new EvidenceSubmissionMetadata
+        {
+            ReportId = 817,
+            WorkflowStatus = "Submitted",
+            ReadinessStatus = "Operational",
+            SubmittedAtUtc = DateTime.UtcNow
+        },
+        Submitter = new EvidenceSubmitterSnapshot
+        {
+            FullName = "Casey Clinician",
+            Role = "Staff",
+            StaffIdentifier = "STAFF-817"
+        },
+        Vehicle = new EvidenceVehicleSnapshot
+        {
+            RegistrationNumber = "EV-817",
+            Callsign = "A817",
+            VehicleFunction = "Ambulance",
+            VehicleSubtype = "Operational Ambulance"
+        },
+        Template = new EvidenceTemplateSnapshot
+        {
+            Name = "Evidence Contract Test",
+            Version = "4.2",
+            PublishScopeSummary = "Callsign A817"
+        },
+        Sections =
+        [
+            new EvidenceSectionSnapshot
+            {
+                Name = "Vehicle",
+                Items =
+                [
+                    new EvidenceItemSnapshot
+                    {
+                        Prompt = "Warning lights",
+                        Fields = [new EvidenceFieldSnapshot { Heading = "Status", Value = "Pass" }]
+                    }
+                ]
+            }
+        ],
+        Notes = new EvidenceNotesSnapshot { GeneralNotes = "Immutable evidence marker 817" }
+    };
+
+    var pdf = new ChecklistReportPdfService().BuildDailyReadinessPdf(new DailyVehicleReadinessReport(), evidence);
+    var raw = Encoding.ASCII.GetString(pdf);
+    var previewPath = Environment.GetEnvironmentVariable("ACUITYOPS_PDF_TEST_OUTPUT");
+    if (!string.IsNullOrWhiteSpace(previewPath))
+    {
+        File.WriteAllBytes(previewPath, pdf);
+    }
+
+    Ensure(raw.StartsWith("%PDF-1.4", StringComparison.Ordinal), "Evidence PDF does not have a valid PDF header.");
+    Ensure(raw.Contains("/BaseFont /Helvetica-Bold", StringComparison.Ordinal), "Evidence PDF is missing the professional heading font.");
+    Ensure(raw.Contains("Evidence Test EMS", StringComparison.Ordinal), "Evidence PDF omitted the tenant identity.");
+    Ensure(raw.Contains("Evidence Contract Test", StringComparison.Ordinal), "Evidence PDF omitted the template identity.");
+    Ensure(raw.Contains("Warning lights - Status", StringComparison.Ordinal), "Evidence PDF omitted a dynamic checklist answer.");
+    Ensure(raw.Contains("Immutable evidence marker 817", StringComparison.Ordinal), "Evidence PDF omitted submission notes.");
+    Ensure(raw.Contains("Page 1 of", StringComparison.Ordinal), "Evidence PDF omitted print-safe pagination.");
+    Ensure(!raw.Contains("/BaseFont /Courier", StringComparison.Ordinal), "Evidence PDF still uses the prototype Courier renderer.");
+
+    return Task.CompletedTask;
 }
 
 static IFormFile CreatePngFormFile()
