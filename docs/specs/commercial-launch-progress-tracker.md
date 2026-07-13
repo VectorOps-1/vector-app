@@ -23,19 +23,19 @@ gate has passed.
 | Measure | Current value |
 | --- | --- |
 | Total commercial-launch blocks | 13 |
-| Accepted and locked | 3 |
-| Active | 0 (Block 4 is next) |
-| Remaining after active block | 10 |
+| Accepted and locked | 4 |
+| Active | 0 (Block 5 is next) |
+| Remaining after active block | 9 |
 | Blocked | 0 |
-| Overall commercial-launch progress | 27% |
-| Current Block 3 progress | 100% (6/6 batches accepted; closed) |
-| Estimated remaining implementation credits | 115,900-198,400 |
+| Overall commercial-launch progress | 35% |
+| Current Block 4 progress | 100% (4/4 batches accepted; closed) |
+| Estimated remaining implementation credits | 108,900-188,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
 The overall score is the sum of weights for blocks whose complete acceptance
 gate is accepted. Partial block work does not earn weighted progress. Therefore,
-Blocks 1, 2, and 3 contribute `7% + 8% + 12% = 27%`. The next contribution is
-earned only when Block 4 and its closure gate pass.
+Blocks 1 through 4 contribute `7% + 8% + 12% + 8% = 35%`. The next
+contribution is earned only when Block 5 and its closure gate pass.
 
 ## Reasoning Levels
 
@@ -78,8 +78,8 @@ earned only when Block 4 and its closure gate pass.
 | --- | --- | ---: | --- | --- | --- | --- | ---: |
 | B1 | Stable staging and committed-source foundation | 7% | Accepted and locked | None | GitHub-controlled deployment serves the app and static assets from stable Azure staging; login and first evidence path pass | Medium/High | Actual not reliably metered |
 | B2 | Base commercial foundation | 8% | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
-| B3 | Base manual operations completion | 12% | Active, 0/6 | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
-| B4 | PDF evidence and report reliability | 8% | Not started | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
+| B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
+| B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
 | B5 | Pro import, column matching, and conversion | 10% | Not started; not yet decomposed | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
 | B6 | South African DOH Annual Inspection Mode | 8% | Not started; not yet decomposed | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
 | B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
@@ -208,34 +208,60 @@ are accepted.
   Slice 1 and Slice 2 staging evidence above. No reproducible regression or
   source/schema gap was found. Block 3 is accepted and locked.
 
-## Next Block 4: PDF Evidence And Report Reliability
+### Block 4: PDF Evidence And Report Reliability
 
-Block 4 is defined now because it immediately follows Block 3. Implementation is
-not authorized until Block 3 closes.
+Status: Accepted and locked
 
 | Batch | Objective | Status | Acceptance summary | Reasoning | Credits |
 | --- | --- | --- | --- | --- | ---: |
-| B4.1 | Submitted evidence data contract | Not started | One tenant-scoped report model contains tenant, staff, time, vehicle/callsign, template/version, all dynamic values, notes, issues, schematic marks, and submission metadata | High | 1,500-2,200 |
-| B4.2 | Professional PDF evidence output | Not started | Every submitted checklist downloads a readable, complete, print-safe PDF generated from the accepted report contract | High | 2,500-3,500 |
-| B4.3 | Report search, grouping, drilldowns, and scope | Not started | Checklist and Operations Reports provide concise list drilldowns and required search/grouping within senior/ops tenant scope | Medium/High | 2,000-2,800 |
-| B4.4 | Evidence staging closure | Not started | Targeted desktop/mobile/print staging verification proves report detail and PDF parity without database fallback | High | 1,000-1,500 |
+| B4.1 | Submitted evidence data contract | Accepted and locked | One tenant-scoped report model contains tenant, staff, time, vehicle/callsign, template/version, all dynamic values, notes, issues, schematic marks, and submission metadata | High | 1,500-2,200 |
+| B4.2 | Professional PDF evidence output | Accepted and locked | Every submitted checklist downloads a readable, complete, print-safe PDF generated from the accepted report contract | High | 2,500-3,500 |
+| B4.3 | Report search, grouping, drilldowns, and scope | Accepted and locked | Checklist and Operations Reports provide concise list drilldowns and required search/grouping within senior/ops tenant scope | Medium/High | 2,000-2,800 |
+| B4.4 | Evidence staging closure | Accepted and locked | Targeted desktop/mobile/print staging verification proves report detail and PDF parity without database fallback | High | 1,000-1,500 |
+
+### Block 4 Acceptance Evidence
+
+- `b132bc6` adds the additive, versioned immutable checklist evidence snapshot,
+  submission capture, snapshot reader, and clearly separated legacy adapter. No
+  historical report was backfilled, rewritten, or inferred.
+- `ac0573f` generates professional report PDFs from the immutable evidence
+  contract. Build and tenant tests passed, the PDF was rendered for print
+  inspection, and Azure staging served the authenticated download route.
+- `d6671f6` makes Checklist Reports, report detail, PDF, and Operations Reports
+  resolve submitted identity, scope, template version, status, and counts from
+  the same immutable snapshot. Tenant tests prove later register changes cannot
+  alter submitted evidence.
+- `6064642` confines the Readiness Dashboard completed-check metric to the
+  current 12-hour shift and excludes retired evidence consistently.
+- GitHub Linux staging workflow runs `29240493100`, `29242792250`,
+  `29244105194`, and `29245705089` deployed the accepted Block 4 commits with
+  build, publish, static-asset, OIDC, deployment, and deployed-asset checks.
+- Controlled staging verification created report `4` through the real daily
+  check UI for `DEM-101 / A01`. Checklist Reports, immutable detail, PDF,
+  Readiness Dashboard, and Operations Reports agreed on the captured identity,
+  Operational status, and zero issues. An operational manager without assigned
+  area scope could not open the report directly.
+- The same controlled report was retired through the supported in-app
+  confirmation workflow. Checklist Reports and Operations Reports removed it,
+  and the deployed current-shift dashboard returned to zero completed checks.
+- Mobile-width report detail verification passed at `390px` without horizontal
+  page overflow. The temporary evidence was not created by seed, fallback, or
+  direct SQL, and no historical report was altered.
 
 ## Shortest Safe Remaining Order
 
-1. Finish B3 using verification-first batches; do not rebuild passing functions.
-2. Complete B4 so evidence is defensible before imports or compliance modes.
-3. Complete B5 imports before DOH and AI because both consume normalized data.
-4. Complete B6 source-backed DOH architecture before predictive compliance.
-5. Complete B7 AI and knowledge functions against accepted import/compliance
+1. Complete B5 imports before DOH and AI because both consume normalized data.
+2. Complete B6 source-backed DOH architecture before predictive compliance.
+3. Complete B7 AI and knowledge functions against accepted import/compliance
    contracts.
-6. Complete B8 communications and global schematic expansion without coupling
+4. Complete B8 communications and global schematic expansion without coupling
    either to seed or tenant identity.
-7. Complete B9 production architecture before billing or real client data.
-8. Complete B10 commercial controls and data lifecycle.
-9. Complete B11 legal/security/support approval.
-10. Complete B12 public website and trial truth controls only after product and
+5. Complete B9 production architecture before billing or real client data.
+6. Complete B10 commercial controls and data lifecycle.
+7. Complete B11 legal/security/support approval.
+8. Complete B12 public website and trial truth controls only after product and
     commercial behavior are verified.
-11. Complete B13 release gate and first customer activation.
+9. Complete B13 release gate and first customer activation.
 
 No requirement is removed by this consolidation. Detailed batches for B5-B13
 remain intentionally undecomposed until the preceding dependency is close to
@@ -259,8 +285,9 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Propose the smallest safe B4.1 Submitted Evidence Data Contract batch. Do not
-reopen Blocks 1-3 without a Verified-Work Finality Rule trigger.
+Expand B5 Pro Import, Column Matching, And Conversion into the fewest safe
+implementation slices. Do not reopen Blocks 1-4 without a Verified-Work
+Finality Rule trigger.
 
 ## Update Rules
 
