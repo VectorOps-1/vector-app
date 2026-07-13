@@ -17,6 +17,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("tenant file storage requires company scoped paths", TenantFileStorageRequiresCompanyScopedPathsAsync),
     ("submitted report identity remains immutable after register changes", SubmittedReportIdentityRemainsImmutableAsync),
     ("professional evidence PDF contains the immutable evidence contract", ProfessionalEvidencePdfContainsImmutableContractAsync)
+    ,("import field registry exposes required canonical contracts", ImportFieldRegistryExposesRequiredContractsAsync)
+    ,("import source inspector handles quoted CSV within limits", ImportSourceInspectorHandlesQuotedCsvAsync)
+    ,("import foundation is tenant scoped and creates no domain records", ImportFoundationIsTenantScopedAsync)
 };
 
 foreach (var test in tests)
@@ -26,6 +29,112 @@ foreach (var test in tests)
 }
 
 Console.WriteLine("Tenant isolation tests passed.");
+
+static Task ImportFieldRegistryExposesRequiredContractsAsync()
+{
+    var registry = new ImportFieldRegistry();
+    Ensure(registry.ContractVersion == 1, "Unexpected import field registry version.");
+    Ensure(registry.FindField("vehicle.registration_number")?.IsRequired == true, "Vehicle registration is not a required canonical field.");
+    Ensure(registry.FindField("stock.quantity")?.IsRequired == true, "Stock quantity is not a required canonical field.");
+    Ensure(registry.FindField("medication.name")?.IsRequired == true, "Medication name is not a required canonical field.");
+    Ensure(registry.FindField("staff.email")?.HelpText.Contains("never grants login", StringComparison.OrdinalIgnoreCase) == true,
+        "Staff import contract does not state the no-login boundary.");
+    Ensure(registry.Targets.Select(target => target.TargetType).ToHashSet(StringComparer.OrdinalIgnoreCase)
+        .SetEquals(ImportTargetTypes.All), "Canonical field registry target types are incomplete.");
+    return Task.CompletedTask;
+}
+
+static async Task ImportSourceInspectorHandlesQuotedCsvAsync()
+{
+    var inspector = new ImportSourceInspector();
+    var csv = "Registration,Notes\r\nDEM-101,\"Front, left panel\"\r\n";
+    var bytes = Encoding.UTF8.GetBytes(csv);
+    await using var stream = new MemoryStream(bytes);
+    var file = new FormFile(stream, 0, bytes.Length, "file", "vehicles.csv")
+    {
+        Headers = new HeaderDictionary(),
+        ContentType = "text/csv"
+    };
+
+    var profile = await inspector.InspectAsync(file);
+    Ensure(profile.FileType == "CSV", "CSV source profile did not retain the file type.");
+    Ensure(profile.WorksheetCount == 1, "CSV source profile did not expose one logical worksheet.");
+    Ensure(profile.TotalRows == 2, "CSV source profile row count is incorrect.");
+    Ensure(profile.Worksheets[0].ColumnCount == 2, "Quoted CSV field was parsed as an extra column.");
+    Ensure(profile.TotalNonEmptyCells == 4, "CSV source profile non-empty-cell count is incorrect.");
+
+    var unsafeBytes = Encoding.UTF8.GetBytes("not a supported workbook");
+    await using var unsafeStream = new MemoryStream(unsafeBytes);
+    var unsafeFile = new FormFile(unsafeStream, 0, unsafeBytes.Length, "file", "macro.xlsm");
+    await EnsureThrowsAsync<ImportSourceValidationException>(
+        () => inspector.InspectAsync(unsafeFile),
+        "Import inspector accepted a macro-enabled workbook extension.");
+}
+
+static async Task ImportFoundationIsTenantScopedAsync()
+{
+    await using var fixture = await TenantFixture.CreateAsync();
+    var companyA = await fixture.Db.Companies.SingleAsync(company => company.Id == fixture.TenantA.CompanyId);
+    companyA.SubscriptionTier = SubscriptionTiers.Pro;
+    await fixture.Db.SaveChangesAsync();
+
+    var actorA = await fixture.Db.AppUsers.Include(user => user.AppRole)
+        .SingleAsync(user => user.Id == fixture.TenantA.SeniorUserId);
+    var actorB = await fixture.Db.AppUsers.Include(user => user.AppRole)
+        .SingleAsync(user => user.Id == fixture.TenantB.SeniorUserId);
+    var staffA = await fixture.Db.AppUsers.Include(user => user.AppRole)
+        .SingleAsync(user => user.Id == fixture.TenantA.StaffUserId);
+
+    var domainCountsBefore = new
+    {
+        Vehicles = await fixture.Db.Vehicles.CountAsync(),
+        Staff = await fixture.Db.AppUsers.CountAsync(),
+        Equipment = await fixture.Db.EquipmentItems.CountAsync(),
+        Stock = await fixture.Db.StockItems.CountAsync(),
+        Medication = await fixture.Db.MedicationItems.CountAsync(),
+        Checklists = await fixture.Db.ChecklistTemplates.CountAsync()
+    };
+
+    var sourceFile = new AssetFile
+    {
+        CompanyId = actorA.CompanyId,
+        UploadedByUserId = actorA.Id,
+        LinkedEntityType = SetupUploadService.RegisterUploadEntityType,
+        Category = "Vehicle Register",
+        OriginalFileName = "vehicles.csv",
+        ContentType = "text/csv",
+        StorageProvider = LocalFileStorageService.Provider,
+        StoragePath = $"local/company-{actorA.CompanyId}/registerupload-vehicle/2026/07/vehicles.csv",
+        SizeBytes = 50
+    };
+    fixture.Db.AssetFiles.Add(sourceFile);
+
+    var service = new ImportBatchService(fixture.Db, new UserActionPermissionService(fixture.Db));
+    Ensure((await service.CanPrepareAsync(actorA)).Allowed,
+        "Pro senior user was not allowed to prepare a guided import.");
+    var profile = new ImportSourceProfile(1, new string('A', 64), "CSV", 1, 2, 4,
+        [new ImportWorksheetProfile("vehicles", 2, 2, 4)]);
+    var batch = await service.CreateUploadedBatchAsync(actorA, sourceFile, ImportTargetTypes.Vehicle, profile, DateTime.UtcNow);
+    await fixture.Db.SaveChangesAsync();
+
+    Ensure(await service.GetForCurrentTenantAsync(actorA, batch.Id) is not null,
+        "Import batch was not visible to its owning tenant.");
+    Ensure(await service.GetForCurrentTenantAsync(actorB, batch.Id) is null,
+        "Import batch leaked to another tenant.");
+    Ensure(!(await service.CanPrepareAsync(actorB)).Allowed,
+        "Base tenant was allowed to prepare a guided import.");
+    Ensure(!(await service.CanPrepareAsync(staffA)).Allowed,
+        "Staff user without import permission was allowed to prepare a guided import.");
+    Ensure(!(await service.CanCommitAsync(staffA)).Allowed,
+        "Staff user without import permission was allowed to commit a guided import.");
+
+    Ensure(domainCountsBefore.Vehicles == await fixture.Db.Vehicles.CountAsync(), "Import upload created a vehicle record.");
+    Ensure(domainCountsBefore.Staff == await fixture.Db.AppUsers.CountAsync(), "Import upload created a staff/login record.");
+    Ensure(domainCountsBefore.Equipment == await fixture.Db.EquipmentItems.CountAsync(), "Import upload created an equipment record.");
+    Ensure(domainCountsBefore.Stock == await fixture.Db.StockItems.CountAsync(), "Import upload created a stock record.");
+    Ensure(domainCountsBefore.Medication == await fixture.Db.MedicationItems.CountAsync(), "Import upload created a medication record.");
+    Ensure(domainCountsBefore.Checklists == await fixture.Db.ChecklistTemplates.CountAsync(), "Import upload created a checklist template.");
+}
 
 static async Task TenantWorkflowSnapshotsDoNotLeakRecordsAsync()
 {

@@ -17,12 +17,21 @@ public class SetupUploadService
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly IFileStorageService _fileStorage;
+    private readonly IImportSourceInspector _sourceInspector;
+    private readonly ImportBatchService _importBatches;
 
-    public SetupUploadService(VectorDbContext db, CurrentUserService currentUser, IFileStorageService fileStorage)
+    public SetupUploadService(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        IFileStorageService fileStorage,
+        IImportSourceInspector sourceInspector,
+        ImportBatchService importBatches)
     {
         _db = db;
         _currentUser = currentUser;
         _fileStorage = fileStorage;
+        _sourceInspector = sourceInspector;
+        _importBatches = importBatches;
     }
 
     public async Task<SetupUploadResult> SaveRegisterUploadAsync(IFormFile? file, string registerCategory)
@@ -83,6 +92,12 @@ public class SetupUploadService
             return SetupUploadResult.NotSignedIn();
         }
 
+        var access = await _importBatches.CanPrepareAsync(currentUser);
+        if (!access.Allowed)
+        {
+            return SetupUploadResult.Failed(access.Message ?? "Guided importing is not available for this account.");
+        }
+
         if (file is null || file.Length <= 0)
         {
             return SetupUploadResult.Failed("Select an Excel or CSV file before continuing.");
@@ -95,8 +110,11 @@ public class SetupUploadService
         }
 
         StoredFileResult storedFile;
+        ImportSourceProfile sourceProfile;
         try
         {
+            await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.SetupImport);
+            sourceProfile = await _sourceInspector.InspectAsync(file);
             storedFile = await _fileStorage.SaveAsync(
                 file,
                 currentUser.CompanyId,
@@ -107,38 +125,72 @@ public class SetupUploadService
         {
             return SetupUploadResult.Failed(ex.Message);
         }
-
-        var now = DateTime.UtcNow;
-        var assetFile = new AssetFile
+        catch (ImportSourceValidationException ex)
         {
-            CompanyId = currentUser.CompanyId,
-            UploadedByUserId = currentUser.Id,
-            LinkedEntityType = linkedEntityType,
-            LinkedEntityId = 0,
-            Category = category,
-            OriginalFileName = storedFile.OriginalFileName,
-            ContentType = storedFile.ContentType,
-            StorageProvider = storedFile.ProviderName,
-            StoragePath = storedFile.StoragePath,
-            SizeBytes = storedFile.SizeBytes,
-            UploadedAtUtc = now
+            return SetupUploadResult.Failed(ex.Message);
+        }
+
+        try
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            var now = DateTime.UtcNow;
+            var assetFile = new AssetFile
+            {
+                CompanyId = currentUser.CompanyId,
+                UploadedByUserId = currentUser.Id,
+                LinkedEntityType = linkedEntityType,
+                LinkedEntityId = 0,
+                Category = category,
+                OriginalFileName = storedFile.OriginalFileName,
+                ContentType = storedFile.ContentType,
+                StorageProvider = storedFile.ProviderName,
+                StoragePath = storedFile.StoragePath,
+                SizeBytes = storedFile.SizeBytes,
+                UploadedAtUtc = now
+            };
+
+            _db.AssetFiles.Add(assetFile);
+            var targetType = ResolveTargetType(category);
+            var importBatch = await _importBatches.CreateUploadedBatchAsync(currentUser, assetFile, targetType, sourceProfile, now);
+            await _db.SaveChangesAsync();
+
+            assetFile.LinkedEntityId = importBatch.Id;
+            _db.AuditLogs.Add(new AuditLog
+            {
+                CompanyId = currentUser.CompanyId,
+                AppUserId = currentUser.Id,
+                Action = "Import source uploaded",
+                EntityType = nameof(ImportBatch),
+                EntityId = importBatch.Id,
+                Details = $"{storedFile.OriginalFileName} stored for {targetType} import review. No operational records were changed.",
+                CreatedAtUtc = now
+            });
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return SetupUploadResult.Saved(assetFile.Id, importBatch.Id, storedFile.OriginalFileName);
+        }
+        catch
+        {
+            await _fileStorage.DeleteAsync(storedFile.StoragePath);
+            return SetupUploadResult.Failed("The source file passed validation but the import batch could not be created. No operational records were changed.");
+        }
+    }
+
+    private static string ResolveTargetType(string category)
+    {
+        return category.Trim() switch
+        {
+            "Vehicle Register" => ImportTargetTypes.Vehicle,
+            "Staff Register" => ImportTargetTypes.Staff,
+            "Equipment Register" => ImportTargetTypes.Equipment,
+            "Stock Register" => ImportTargetTypes.Stock,
+            "Medication Register" => ImportTargetTypes.Medication,
+            "Operational Area Register" => ImportTargetTypes.OperationalArea,
+            "Storage Location Register" => ImportTargetTypes.StorageLocation,
+            "Checklist" => ImportTargetTypes.Checklist,
+            _ => throw new InvalidOperationException("The selected import category is not supported.")
         };
-
-        _db.AssetFiles.Add(assetFile);
-        _db.AuditLogs.Add(new AuditLog
-        {
-            CompanyId = currentUser.CompanyId,
-            AppUserId = currentUser.Id,
-            Action = $"{category} source file uploaded",
-            EntityType = linkedEntityType,
-            EntityId = 0,
-            Details = $"{storedFile.OriginalFileName} uploaded for setup review.",
-            CreatedAtUtc = now
-        });
-
-        await _db.SaveChangesAsync();
-
-        return SetupUploadResult.Saved(assetFile.Id, storedFile.OriginalFileName);
     }
 }
 
@@ -157,9 +209,9 @@ public sealed record SetupUploadSummary(
     };
 }
 
-public sealed record SetupUploadResult(bool IsSaved, bool IsNotSignedIn, int? FileId, string? FileName, string? ErrorMessage)
+public sealed record SetupUploadResult(bool IsSaved, bool IsNotSignedIn, int? FileId, int? ImportBatchId, string? FileName, string? ErrorMessage)
 {
-    public static SetupUploadResult Saved(int fileId, string fileName) => new(true, false, fileId, fileName, null);
-    public static SetupUploadResult Failed(string errorMessage) => new(false, false, null, null, errorMessage);
-    public static SetupUploadResult NotSignedIn() => new(false, true, null, null, null);
+    public static SetupUploadResult Saved(int fileId, int importBatchId, string fileName) => new(true, false, fileId, importBatchId, fileName, null);
+    public static SetupUploadResult Failed(string errorMessage) => new(false, false, null, null, null, errorMessage);
+    public static SetupUploadResult NotSignedIn() => new(false, true, null, null, null, null);
 }

@@ -22,6 +22,8 @@ public static class UserActionPermissions
     public const string ChecklistsUpload = "checklists.upload";
     public const string ChecklistsReports = "checklists.reports";
     public const string ChecklistsVarianceReview = "checklists.variance.review";
+    public const string ImportsPrepare = "imports.prepare";
+    public const string ImportsCommit = "imports.commit";
 
     public const string DailyChecksComplete = "daily.checks.complete";
     public const string DailySamePrevious = "daily.sameprevious";
@@ -57,6 +59,8 @@ public static class UserActionPermissions
         ChecklistsUpload,
         ChecklistsReports,
         ChecklistsVarianceReview,
+        ImportsPrepare,
+        ImportsCommit,
         DailyChecksComplete,
         DailySamePrevious,
         IssuesReport,

@@ -1,0 +1,71 @@
+@page
+@model ImportBatchModel
+@{
+    ViewData["Title"] = "Import Source Review";
+}
+
+<section class="page-hero compact-hero">
+    <div class="eyebrow">Guided import</div>
+    <h1>Import Source Review</h1>
+    <p>The source file is stored as tenant evidence. No register or checklist records have been created.</p>
+</section>
+
+@if (Model.Batch is not null)
+{
+    <section class="content-panel import-source-panel">
+        <div class="section-heading-row">
+            <div>
+                <span class="section-kicker">@Model.Batch.TargetType import</span>
+                <h2>@Model.Batch.OriginalFileName</h2>
+            </div>
+            <span class="status-pill neutral">@Model.Batch.Status</span>
+        </div>
+
+        <dl class="summary-grid">
+            <div><dt>Format</dt><dd>@(Model.SourceProfile?.FileType ?? "Unknown")</dd></div>
+            <div><dt>Worksheets</dt><dd>@Model.Batch.WorksheetCount</dd></div>
+            <div><dt>Source rows</dt><dd>@Model.Batch.SourceRowCount.ToString("N0")</dd></div>
+            <div><dt>Uploaded by</dt><dd>@(Model.Batch.CreatedByUser?.FullName ?? "Recorded user")</dd></div>
+        </dl>
+
+        @if (Model.SourceProfile?.Worksheets.Count > 0)
+        {
+            <div class="table-scroll-shell sticky-scroll-shell">
+                <table class="compact-table">
+                    <thead><tr><th>Worksheet</th><th>Rows</th><th>Columns</th><th>Non-empty cells</th></tr></thead>
+                    <tbody>
+                    @foreach (var sheet in Model.SourceProfile.Worksheets)
+                    {
+                        <tr>
+                            <td>@sheet.Name</td>
+                            <td>@sheet.RowCount.ToString("N0")</td>
+                            <td>@sheet.ColumnCount.ToString("N0")</td>
+                            <td>@sheet.NonEmptyCellCount.ToString("N0")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="inline-notice info">
+            Column matching and validation are the next controlled import stage. This upload cannot change operational records or publish a checklist.
+        </div>
+    </section>
+}
+
+<style>
+.import-source-panel { display: grid; gap: 16px; }
+.section-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.section-heading-row h2 { margin: 2px 0 0; }
+.section-kicker { color: #5f6f82; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid #d8e0e8; background: #d8e0e8; }
+.summary-grid div { padding: 12px; background: #fff; }
+.summary-grid dt { color: #5f6f82; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.summary-grid dd { margin: 3px 0 0; font-weight: 800; overflow-wrap: anywhere; }
+.compact-table { width: 100%; border-collapse: collapse; }
+.compact-table th, .compact-table td { padding: 9px 12px; border-bottom: 1px solid #dfe6ed; text-align: left; white-space: nowrap; }
+.compact-table th { background: #35465e; color: #fff; font-size: 11px; text-transform: uppercase; }
+.inline-notice { padding: 12px; border-left: 4px solid #17768c; background: #eef7f9; font-weight: 700; }
+@@media (max-width: 760px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>

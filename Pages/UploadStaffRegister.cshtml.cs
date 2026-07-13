@@ -37,6 +37,6 @@ public class UploadStaffRegisterModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/StaffRegisterPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

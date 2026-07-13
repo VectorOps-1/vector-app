@@ -37,6 +37,6 @@ public class UploadMedicationRegisterModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/MedicationRegisterPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

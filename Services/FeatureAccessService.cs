@@ -29,6 +29,8 @@ public class FeatureAccessService : IFeatureAccessService
         [VectorFeatures.StockRegister] = SubscriptionTiers.Pro,
         [VectorFeatures.ManagerIssuePool] = SubscriptionTiers.Pro,
         [VectorFeatures.SameAsPreviousShiftControl] = SubscriptionTiers.Pro,
+        [VectorFeatures.GuidedRegisterImport] = SubscriptionTiers.Pro,
+        [VectorFeatures.GuidedChecklistImport] = SubscriptionTiers.Pro,
 
         [VectorFeatures.ReadinessAnalytics] = SubscriptionTiers.Premium,
         [VectorFeatures.AiChecklistImport] = SubscriptionTiers.Premium,

@@ -36,6 +36,11 @@ public static class AccessPermissionCatalog
             new AccessPermissionOption(UserActionPermissions.TasksFeedback, "Submit task feedback", "Submit feedback on assigned tasks or general app work."),
             new AccessPermissionOption(UserActionPermissions.StockOrdersApprove, "Approve stock orders", "Approve stock order requests for supplier and register workflow.")
         }),
+        new("Guided Imports", new[]
+        {
+            new AccessPermissionOption(UserActionPermissions.ImportsPrepare, "Prepare guided imports", "Upload and inspect Pro Excel or CSV sources and prepare mappings without changing operational records."),
+            new AccessPermissionOption(UserActionPermissions.ImportsCommit, "Commit guided imports", "Create or update tenant records from a validated import batch. This permission does not grant staff login access or publish checklists.")
+        }),
         new("Oversight And Setup", new[]
         {
             new AccessPermissionOption(UserActionPermissions.DashboardReadiness, "View readiness dashboard", "Open readiness score, metrics, and readiness variables."),

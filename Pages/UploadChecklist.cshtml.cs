@@ -37,6 +37,6 @@ public class UploadChecklistModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/ChecklistPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

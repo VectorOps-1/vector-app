@@ -37,6 +37,6 @@ public class UploadVehicleRegisterModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/VehicleRegisterPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

@@ -174,4 +174,8 @@ public class Company
     public ICollection<AppUserAccessPermission> AppUserAccessPermissions { get; set; } = new List<AppUserAccessPermission>();
     public ICollection<ManagerOperationalAreaAssignment> ManagerOperationalAreaAssignments { get; set; } = new List<ManagerOperationalAreaAssignment>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    public ICollection<ImportBatch> ImportBatches { get; set; } = new List<ImportBatch>();
+    public ICollection<ImportColumnMapping> ImportColumnMappings { get; set; } = new List<ImportColumnMapping>();
+    public ICollection<ImportRowResult> ImportRowResults { get; set; } = new List<ImportRowResult>();
+    public ICollection<ImportEntityChange> ImportEntityChanges { get; set; } = new List<ImportEntityChange>();
 }

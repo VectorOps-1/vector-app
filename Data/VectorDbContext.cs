@@ -50,6 +50,10 @@ public class VectorDbContext : DbContext
     public DbSet<CatalogueItem> CatalogueItems => Set<CatalogueItem>();
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
     public DbSet<CustomDropdownOption> CustomDropdownOptions => Set<CustomDropdownOption>();
+    public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+    public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();
+    public DbSet<ImportRowResult> ImportRowResults => Set<ImportRowResult>();
+    public DbSet<ImportEntityChange> ImportEntityChanges => Set<ImportEntityChange>();
 
     public override int SaveChanges()
     {
@@ -121,6 +125,112 @@ public class VectorDbContext : DbContext
             .HasOne(permission => permission.Company)
             .WithMany(company => company.AppUserAccessPermissions)
             .HasForeignKey(permission => permission.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasIndex(batch => new { batch.CompanyId, batch.Status, batch.CreatedAtUtc });
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasIndex(batch => batch.SourceAssetFileId)
+            .IsUnique();
+
+        modelBuilder.Entity<ImportBatch>()
+            .Property(batch => batch.ConcurrencyToken)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.Company)
+            .WithMany(company => company.ImportBatches)
+            .HasForeignKey(batch => batch.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.SourceAssetFile)
+            .WithMany()
+            .HasForeignKey(batch => batch.SourceAssetFileId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(batch => batch.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.ValidatedByUser)
+            .WithMany()
+            .HasForeignKey(batch => batch.ValidatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.CommittedByUser)
+            .WithMany()
+            .HasForeignKey(batch => batch.CommittedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasOne(batch => batch.RolledBackByUser)
+            .WithMany()
+            .HasForeignKey(batch => batch.RolledBackByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportColumnMapping>()
+            .HasIndex(mapping => new { mapping.CompanyId, mapping.ImportBatchId, mapping.SourceColumnIndex })
+            .IsUnique();
+
+        modelBuilder.Entity<ImportColumnMapping>()
+            .HasOne(mapping => mapping.Company)
+            .WithMany(company => company.ImportColumnMappings)
+            .HasForeignKey(mapping => mapping.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportColumnMapping>()
+            .HasOne(mapping => mapping.ImportBatch)
+            .WithMany(batch => batch.ColumnMappings)
+            .HasForeignKey(mapping => mapping.ImportBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportRowResult>()
+            .HasIndex(row => new { row.CompanyId, row.ImportBatchId, row.SourceRowNumber })
+            .IsUnique();
+
+        modelBuilder.Entity<ImportRowResult>()
+            .HasOne(row => row.Company)
+            .WithMany(company => company.ImportRowResults)
+            .HasForeignKey(row => row.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportRowResult>()
+            .HasOne(row => row.ImportBatch)
+            .WithMany(batch => batch.RowResults)
+            .HasForeignKey(row => row.ImportBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportEntityChange>()
+            .HasIndex(change => new { change.CompanyId, change.ImportBatchId, change.EntityType, change.EntityId });
+
+        modelBuilder.Entity<ImportEntityChange>()
+            .HasOne(change => change.Company)
+            .WithMany(company => company.ImportEntityChanges)
+            .HasForeignKey(change => change.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportEntityChange>()
+            .HasOne(change => change.ImportBatch)
+            .WithMany(batch => batch.EntityChanges)
+            .HasForeignKey(change => change.ImportBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportEntityChange>()
+            .HasOne(change => change.ImportRowResult)
+            .WithMany()
+            .HasForeignKey(change => change.ImportRowResultId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportEntityChange>()
+            .HasOne(change => change.RolledBackByUser)
+            .WithMany()
+            .HasForeignKey(change => change.RolledBackByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AppUserAccessPermission>()

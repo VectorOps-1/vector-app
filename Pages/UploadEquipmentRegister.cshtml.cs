@@ -37,6 +37,6 @@ public class UploadEquipmentRegisterModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/EquipmentRegisterPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

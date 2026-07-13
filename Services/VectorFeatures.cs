@@ -16,6 +16,8 @@ public static class VectorFeatures
     public const string StockRegister = "stock-register";
     public const string ManagerIssuePool = "manager-issue-pool";
     public const string SameAsPreviousShiftControl = "same-as-previous-shift-control";
+    public const string GuidedRegisterImport = "guided-register-import";
+    public const string GuidedChecklistImport = "guided-checklist-import";
 
     public const string ReadinessAnalytics = "readiness-analytics";
     public const string AiChecklistImport = "ai-checklist-import";

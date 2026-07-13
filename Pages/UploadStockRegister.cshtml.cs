@@ -37,6 +37,6 @@ public class UploadStockRegisterModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/StockRegisterPreview", new { sourceFileId = result.FileId });
+        return RedirectToPage("/ImportBatch", new { importBatchId = result.ImportBatchId });
     }
 }

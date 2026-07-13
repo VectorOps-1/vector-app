@@ -87,6 +87,19 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/EditVehicleChecklist"] = ManagementAccess,
         ["/AddItem"] = ManagementAccess,
         ["/UploadStaffFiles"] = ManagementAccess,
+        ["/UploadChecklist"] = ManagementAccess,
+        ["/ChecklistPreview"] = ManagementAccess,
+        ["/UploadVehicleRegister"] = ManagementAccess,
+        ["/VehicleRegisterPreview"] = ManagementAccess,
+        ["/UploadEquipmentRegister"] = ManagementAccess,
+        ["/EquipmentRegisterPreview"] = ManagementAccess,
+        ["/UploadStaffRegister"] = ManagementAccess,
+        ["/StaffRegisterPreview"] = ManagementAccess,
+        ["/UploadStockRegister"] = ManagementAccess,
+        ["/StockRegisterPreview"] = ManagementAccess,
+        ["/UploadMedicationRegister"] = ManagementAccess,
+        ["/MedicationRegisterPreview"] = ManagementAccess,
+        ["/ImportBatch"] = ManagementAccess,
 
         ["/MasterSetup"] = SeniorAccess,
         ["/AreaManagerControl"] = SeniorAccess,
@@ -103,19 +116,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ChecklistSetup"] = SeniorAccess,
         ["/ReadinessEngineSetup"] = SeniorAccess,
         ["/SupplierDetails"] = SeniorAccess,
-        ["/UploadChecklist"] = SeniorAccess,
-        ["/ChecklistPreview"] = SeniorAccess,
-        ["/UploadVehicleRegister"] = SeniorAccess,
-        ["/VehicleRegisterPreview"] = SeniorAccess,
         ["/VehicleSchematicLibrary"] = SeniorAccess,
-        ["/UploadEquipmentRegister"] = SeniorAccess,
-        ["/EquipmentRegisterPreview"] = SeniorAccess,
-        ["/UploadStaffRegister"] = SeniorAccess,
-        ["/StaffRegisterPreview"] = SeniorAccess,
-        ["/UploadStockRegister"] = SeniorAccess,
-        ["/StockRegisterPreview"] = SeniorAccess,
-        ["/UploadMedicationRegister"] = SeniorAccess,
-        ["/MedicationRegisterPreview"] = SeniorAccess,
         ["/CreateManagerAccess"] = SeniorAccess,
         ["/CreateOperationalStaffAccess"] = SeniorAccess,
         ["/TaskCommunicationSetup"] = SeniorAccess,
@@ -146,6 +147,23 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/StockOrders",
         "/StockOrderAction",
         "/StockRegister"
+    };
+
+    private static readonly HashSet<string> GuidedImportPages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/UploadChecklist",
+        "/ChecklistPreview",
+        "/UploadVehicleRegister",
+        "/VehicleRegisterPreview",
+        "/UploadEquipmentRegister",
+        "/EquipmentRegisterPreview",
+        "/UploadStaffRegister",
+        "/StaffRegisterPreview",
+        "/UploadStockRegister",
+        "/StockRegisterPreview",
+        "/UploadMedicationRegister",
+        "/MedicationRegisterPreview",
+        "/ImportBatch"
     };
 
     private sealed record PermissionRequirement(
@@ -209,6 +227,19 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         {
             context.Result = new RedirectToPageResult("/SetupWizard");
             return;
+        }
+
+        if (GuidedImportPages.Contains(pagePath))
+        {
+            var featureAccess = context.HttpContext.RequestServices.GetRequiredService<IFeatureAccessService>();
+            var featureKey = pagePath is "/UploadChecklist" or "/ChecklistPreview"
+                ? VectorFeatures.GuidedChecklistImport
+                : VectorFeatures.GuidedRegisterImport;
+            if (!await featureAccess.CanUseFeatureAsync(featureKey, context.HttpContext.RequestAborted))
+            {
+                context.Result = new RedirectToPageResult("/Home", new { featureUnavailable = "guided-import" });
+                return;
+            }
         }
 
         if (allowedAccessViews.Contains(accessView, StringComparer.OrdinalIgnoreCase))
@@ -459,25 +490,28 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/ChecklistApproval"
                 => PermissionRequirement.All(UserActionPermissions.ChecklistsPublish),
 
-            "/UploadChecklist" or "/ChecklistPreview"
-                => PermissionRequirement.All(UserActionPermissions.ChecklistsUpload),
+            "/UploadChecklist" or "/ChecklistPreview" or "/ImportBatch"
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
             "/VehicleSchematicLibrary"
                 => PermissionRequirement.All(UserActionPermissions.ChecklistsEdit),
 
             "/UploadVehicleRegister" or "/VehicleRegisterPreview"
-                => PermissionRequirement.All(UserActionPermissions.RegistersVehicleEdit),
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
             "/UploadEquipmentRegister" or "/EquipmentRegisterPreview"
-                => PermissionRequirement.All(UserActionPermissions.RegistersEquipmentEdit),
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
             "/UploadStockRegister" or "/StockRegisterPreview"
-                => PermissionRequirement.All(UserActionPermissions.RegistersStockEdit),
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
             "/UploadMedicationRegister" or "/MedicationRegisterPreview"
-                => PermissionRequirement.All(UserActionPermissions.RegistersMedicationEdit),
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
-            "/UploadStaffRegister" or "/StaffRegisterPreview" or "/UploadStaffFiles" or "/StaffFiles"
+            "/UploadStaffRegister" or "/StaffRegisterPreview"
+                => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
+
+            "/UploadStaffFiles" or "/StaffFiles"
                 => PermissionRequirement.All(UserActionPermissions.RegistersStaffEdit),
 
             "/AreaManagerControl"

@@ -27,7 +27,7 @@ public sealed record FileStorageValidationOptions(
 {
     public static readonly FileStorageValidationOptions SetupImport = new(
         "setup import",
-        15 * 1024 * 1024,
+        20 * 1024 * 1024,
         [".xlsx", ".xls", ".csv"]);
 
     public static readonly FileStorageValidationOptions StaffDocument = new(
