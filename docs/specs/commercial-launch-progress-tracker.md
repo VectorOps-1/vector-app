@@ -28,7 +28,7 @@ gate has passed.
 | Remaining after active block | 10 |
 | Blocked | 0 |
 | Overall commercial-launch progress | 15% |
-| Current Block 3 progress | 0% (0/6 batches accepted) |
+| Current Block 3 progress | 33% (2/6 batches accepted) |
 | Estimated remaining implementation credits | 115,900-198,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
@@ -134,14 +134,14 @@ This block may not be rechecked without a Verified-Work Finality Rule trigger.
 
 ## Active Block 3: Base Manual Operations Completion
 
-Block progress: `0% (0/6 accepted)`
+Block progress: `33% (2/6 accepted)`
 
 Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 
 | Batch | Objective | Dependencies | Status | Acceptance summary | Reasoning | Credits | Verification-first opportunity |
 | --- | --- | --- | --- | --- | --- | ---: | --- |
-| B3.1 | Stock Register and Distribution Flow | B2 | Not started | Unified stock register/order/supplier/receipt/allocation flow works with edit, move, issue, delete, grouping, scope, and audit | Medium | 1,800-2,600 | Verify existing register and distribution path before editing |
-| B3.2 | Medication Register Consistency | B3.1 only where stock patterns are shared | Not started | Medication grouping/search/detail/edit/move/issue/delete, expiry, role scope, and audit pass | Medium | 1,200-1,800 | Verify current medication behavior first |
+| B3.1 | Stock Register and Distribution Flow | B2 | Accepted and locked | Unified stock register/order/supplier/receipt/allocation flow works with edit, move, issue, delete, grouping, scope, and audit | Medium | 1,800-2,600 | Accepted from targeted staging verification and commit `b94e1cf` |
+| B3.2 | Medication Register Consistency | B3.1 only where stock patterns are shared | Accepted and locked | Medication grouping/search/detail/edit/move/issue/delete, expiry, role scope, and audit pass | Medium | 1,200-1,800 | Accepted from targeted staging verification and commit `b94e1cf` |
 | B3.3 | Cross-Asset Movement Completion | B3.1-B3.2 source paths | Not started | Relevant assets can move among vehicles, bases, storage, and areas with confirmation and audit | Medium; High if schema gap is proven | 1,400-2,100 | Verify each existing destination type before editing |
 | B3.4 | Tasks, Issues, And Feedback Coherence | B2 permissions | Not started | Role scope, task-specific feedback, completion/removal, delete authority, notifications, and audit behave coherently | Medium | 1,500-2,300 | Verify existing staff/ops/senior flows first |
 | B3.5 | Manual Checklist Authoring Completion | B2 checklist source of truth | Not started | Blank builder supports sections/items/subitems/columns/notes/register links and correct scoped publish/live display | Medium; High if migration is required | 2,400-3,600 | Verify each builder capability before implementing gaps |
@@ -149,6 +149,23 @@ Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 
 Block 3 earns its `12%` only when all six batches and the blueprint closure gate
 are accepted.
+
+### Block 3 Slice 1 Evidence
+
+- Staging verification on 2026-07-13 used existing Demo EMS Service tenant data
+  only; no records were created, modified, or deleted.
+- `/Stock`, `/StockRegister?view=register`, and `/StockOrders` rendered the
+  unified stock workflow, grouped register, existing stock item actions, and
+  a correct zero-order empty state.
+- `/Medication` and `/MedicationRegister?view=register` rendered the grouped
+  medication register and existing medication item actions.
+- Senior management and the assigned operational-manager session both exposed
+  Edit, Move, Issue, and Delete for the Central Operations stock and medication
+  records. The staff session was redirected away from both protected registers
+  to operational-management login, proving it cannot access those manager
+  actions.
+- `b94e1cf` supplies the accepted server-side area authorization for stock and
+  medication edit/delete plus guarded stock-order lifecycle transitions.
 
 ## Next Block 4: PDF Evidence And Report Reliability
 
@@ -201,9 +218,8 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Review and commit this documentation-only authority consolidation. No product
-implementation may begin until that docs commit is approved. Afterward, the next
-product batch must be a smallest-safe, verification-first proposal for B3.1.
+Run the B3.3 verification-first slice for cross-asset movement only. Do not
+reopen B3.1 or B3.2 without a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
