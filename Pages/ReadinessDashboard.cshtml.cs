@@ -171,6 +171,8 @@ public class ReadinessDashboardModel : PageModel
                     report.WorkflowStatus != "Deleted" &&
                     report.WorkflowStatus != "Draft" &&
                     vehicleIds.Contains(report.VehicleId) &&
+                    (report.SubmittedAtUtc ?? report.InspectionDateUtc) >= ShiftStartUtc &&
+                    (report.SubmittedAtUtc ?? report.InspectionDateUtc) <= ShiftEndUtc &&
                     (report.SubmittedAtUtc.HasValue ||
                         report.WorkflowStatus == "Saved" ||
                         report.WorkflowStatus == "Submitted" ||
