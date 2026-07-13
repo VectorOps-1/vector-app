@@ -71,4 +71,20 @@ jobs:
             --src-path ./publish.zip \
             --type zip \
             --clean true \
-            --restart true
+            --restart true \
+            --track-status false \
+            --timeout 180000 \
+            --enriched-errors true
+
+      - name: Verify deployed staging assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_url="https://app-acuityops-stg-za-001.azurewebsites.net"
+          for asset in \
+            "/css/site.css" \
+            "/vector-app-local.styles.css" \
+            "/acuityops-app-logo.png" \
+            "/js/site.js"; do
+            curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 "${base_url}${asset}" -o /dev/null
+          done
