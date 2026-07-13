@@ -24,11 +24,11 @@ gate has passed.
 | --- | --- |
 | Total commercial-launch blocks | 13 |
 | Accepted and locked | 4 |
-| Active | 0 (Block 5 is next) |
+| Active | 1 (Block 5 design complete; implementation not started) |
 | Remaining after active block | 9 |
 | Blocked | 0 |
 | Overall commercial-launch progress | 35% |
-| Current Block 4 progress | 100% (4/4 batches accepted; closed) |
+| Current Block 5 progress | 0% (0/5 batches accepted; design complete) |
 | Estimated remaining implementation credits | 108,900-188,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
@@ -80,7 +80,7 @@ contribution is earned only when Block 5 and its closure gate pass.
 | B2 | Base commercial foundation | 8% | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
 | B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
 | B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
-| B5 | Pro import, column matching, and conversion | 10% | Not started; not yet decomposed | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
+| B5 | Pro import, column matching, and conversion | 10% | Active; design complete; 0/5 batches accepted | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
 | B6 | South African DOH Annual Inspection Mode | 8% | Not started; not yet decomposed | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
 | B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
 | B8 | Operational communications and product libraries | 6% | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
@@ -285,9 +285,10 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Expand B5 Pro Import, Column Matching, And Conversion into the fewest safe
-implementation slices. Do not reopen Blocks 1-4 without a Verified-Work
-Finality Rule trigger.
+Implement B5.1 Import Foundation And Contract from
+`block-5-pro-import-execution-blueprint.md`. Do not begin B5.2, apply a
+migration, or reopen Blocks 1-4 without the required approval or a
+Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
