@@ -28,7 +28,7 @@ gate has passed.
 | Remaining after active block | 10 |
 | Blocked | 0 |
 | Overall commercial-launch progress | 15% |
-| Current Block 3 progress | 33% (2/6 batches accepted) |
+| Current Block 3 progress | 67% (4/6 batches accepted) |
 | Estimated remaining implementation credits | 115,900-198,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
@@ -134,7 +134,7 @@ This block may not be rechecked without a Verified-Work Finality Rule trigger.
 
 ## Active Block 3: Base Manual Operations Completion
 
-Block progress: `33% (2/6 accepted)`
+Block progress: `67% (4/6 accepted)`
 
 Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 
@@ -142,8 +142,8 @@ Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 | --- | --- | --- | --- | --- | --- | ---: | --- |
 | B3.1 | Stock Register and Distribution Flow | B2 | Accepted and locked | Unified stock register/order/supplier/receipt/allocation flow works with edit, move, issue, delete, grouping, scope, and audit | Medium | 1,800-2,600 | Accepted from targeted staging verification and commit `b94e1cf` |
 | B3.2 | Medication Register Consistency | B3.1 only where stock patterns are shared | Accepted and locked | Medication grouping/search/detail/edit/move/issue/delete, expiry, role scope, and audit pass | Medium | 1,200-1,800 | Accepted from targeted staging verification and commit `b94e1cf` |
-| B3.3 | Cross-Asset Movement Completion | B3.1-B3.2 source paths | Not started | Relevant assets can move among vehicles, bases, storage, and areas with confirmation and audit | Medium; High if schema gap is proven | 1,400-2,100 | Verify each existing destination type before editing |
-| B3.4 | Tasks, Issues, And Feedback Coherence | B2 permissions | Not started | Role scope, task-specific feedback, completion/removal, delete authority, notifications, and audit behave coherently | Medium | 1,500-2,300 | Verify existing staff/ops/senior flows first |
+| B3.3 | Cross-Asset Movement Completion | B3.1-B3.2 source paths | Accepted and locked | Relevant assets can move among vehicles, bases, storage, and areas with confirmation and audit | Medium; High if schema gap is proven | 1,400-2,100 | Accepted from targeted staging and handler verification |
+| B3.4 | Tasks, Issues, And Feedback Coherence | B2 permissions | Accepted and locked | Role scope, task-specific feedback, completion/removal, delete authority, notifications, and audit behave coherently | Medium | 1,500-2,300 | Accepted from targeted staging and handler verification with locked B2 enforcement evidence |
 | B3.5 | Manual Checklist Authoring Completion | B2 checklist source of truth | Not started | Blank builder supports sections/items/subitems/columns/notes/register links and correct scoped publish/live display | Medium; High if migration is required | 2,400-3,600 | Verify each builder capability before implementing gaps |
 | B3.6 | Base Manual Operations Closure Regression | B3.1-B3.5 | Not started | One targeted staging pass proves all Block 3 workflows and locked B2 boundaries | Medium | 600-1,000 | Reuse batch evidence; test only integrated dependencies |
 
@@ -166,6 +166,26 @@ are accepted.
   actions.
 - `b94e1cf` supplies the accepted server-side area authorization for stock and
   medication edit/delete plus guarded stock-order lifecycle transitions.
+
+### Block 3 Slice 2 Evidence
+
+- Staging verification on 2026-07-13 used the existing Demo EMS Service tenant
+  records only; no movement, task, issue, or feedback record was created or
+  modified.
+- `/MoveAsset` rendered one consistent movement flow for vehicle, equipment,
+  stock, and medication. Each existing selector included the active base,
+  operational area, region, storage space, and vehicle where applicable.
+- `MoveAsset` validates company-owned assets and destinations, permission to
+  move, task assignment permission, and records both movement and task
+  completion audit events. It rejects invalid or cross-company selections.
+- Senior management received company-wide issue scope. Operational management
+  received the scoped issue page labelled "Assigned to you". Staff was kept out
+  of manager-only stock and medication registers during Slice 1.
+- `/TaskInbox`, `/IssueReports`, and `/TaskFeedback` rendered coherent empty
+  states. Task feedback exposes separate specific-task and general-feedback
+  paths; the handler closes only the signed-in user's open task and writes task
+  events and audit logs. Existing B2 access-enforcement evidence remains locked
+  and is reused rather than retested.
 
 ## Next Block 4: PDF Evidence And Report Reliability
 
@@ -218,8 +238,8 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Run the B3.3 verification-first slice for cross-asset movement only. Do not
-reopen B3.1 or B3.2 without a Verified-Work Finality Rule trigger.
+Run the B3.5 verification-first slice for manual checklist authoring only. Do
+not reopen B3.1-B3.4 without a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
