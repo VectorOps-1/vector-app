@@ -23,19 +23,19 @@ gate has passed.
 | Measure | Current value |
 | --- | --- |
 | Total commercial-launch blocks | 13 |
-| Accepted and locked | 2 |
-| Active | 1 (Block 3) |
+| Accepted and locked | 3 |
+| Active | 0 (Block 4 is next) |
 | Remaining after active block | 10 |
 | Blocked | 0 |
-| Overall commercial-launch progress | 15% |
-| Current Block 3 progress | 67% (4/6 batches accepted) |
+| Overall commercial-launch progress | 27% |
+| Current Block 3 progress | 100% (6/6 batches accepted; closed) |
 | Estimated remaining implementation credits | 115,900-198,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
 The overall score is the sum of weights for blocks whose complete acceptance
 gate is accepted. Partial block work does not earn weighted progress. Therefore,
-Blocks 1 and 2 contribute `7% + 8% = 15%`; Block 3 contributes zero until all six
-batches and its closure gate pass.
+Blocks 1, 2, and 3 contribute `7% + 8% + 12% = 27%`. The next contribution is
+earned only when Block 4 and its closure gate pass.
 
 ## Reasoning Levels
 
@@ -132,9 +132,9 @@ Accepted evidence includes:
 
 This block may not be rechecked without a Verified-Work Finality Rule trigger.
 
-## Active Block 3: Base Manual Operations Completion
+## Closed Block 3: Base Manual Operations Completion
 
-Block progress: `67% (4/6 accepted)`
+Block progress: `100% (6/6 accepted; closed)`
 
 Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 
@@ -144,8 +144,8 @@ Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 | B3.2 | Medication Register Consistency | B3.1 only where stock patterns are shared | Accepted and locked | Medication grouping/search/detail/edit/move/issue/delete, expiry, role scope, and audit pass | Medium | 1,200-1,800 | Accepted from targeted staging verification and commit `b94e1cf` |
 | B3.3 | Cross-Asset Movement Completion | B3.1-B3.2 source paths | Accepted and locked | Relevant assets can move among vehicles, bases, storage, and areas with confirmation and audit | Medium; High if schema gap is proven | 1,400-2,100 | Accepted from targeted staging and handler verification |
 | B3.4 | Tasks, Issues, And Feedback Coherence | B2 permissions | Accepted and locked | Role scope, task-specific feedback, completion/removal, delete authority, notifications, and audit behave coherently | Medium | 1,500-2,300 | Accepted from targeted staging and handler verification with locked B2 enforcement evidence |
-| B3.5 | Manual Checklist Authoring Completion | B2 checklist source of truth | Not started | Blank builder supports sections/items/subitems/columns/notes/register links and correct scoped publish/live display | Medium; High if migration is required | 2,400-3,600 | Verify each builder capability before implementing gaps |
-| B3.6 | Base Manual Operations Closure Regression | B3.1-B3.5 | Not started | One targeted staging pass proves all Block 3 workflows and locked B2 boundaries | Medium | 600-1,000 | Reuse batch evidence; test only integrated dependencies |
+| B3.5 | Manual Checklist Authoring Completion | B2 checklist source of truth | Accepted and locked | Blank builder supports sections/items/subitems/columns/notes/register links and correct scoped publish/live display | Medium; High if migration is required | 2,400-3,600 | Accepted from targeted staging authoring and live-check verification |
+| B3.6 | Base Manual Operations Closure Regression | B3.1-B3.5 | Accepted and locked | One targeted staging pass proves all Block 3 workflows and locked B2 boundaries | Medium | 600-1,000 | Accepted from 2026-07-13 Slice 1-3 evidence; no regression trigger found |
 
 Block 3 earns its `12%` only when all six batches and the blueprint closure gate
 are accepted.
@@ -186,6 +186,27 @@ are accepted.
   paths; the handler closes only the signed-in user's open task and writes task
   events and audit logs. Existing B2 access-enforcement evidence remains locked
   and is reused rather than retested.
+
+### Block 3 Slice 3 And Closure Evidence
+
+- Staging verification on 2026-07-13 used the existing Demo EMS Service tenant
+  only; no checklist, scope, live check, asset, or report record was created,
+  edited, published, or deleted.
+- `/EditVehicleChecklist?checklist=daily-vehicle&mode=build` started with no
+  sections. It exposed optional manual naming, function/subtype targeting, blank
+  section creation for Vehicle, Equipment, Stock, Medication, or Custom, and
+  no hidden template or checklist scope.
+- The existing template editor exposed section controls, editable field rows,
+  X-axis column settings, register links, per-row overrides, subitems, notes,
+  and scoped publish controls. The register displayed the active exact subtype
+  scope and its publication evidence.
+- `/DailyVehicleChecklist?frequency=daily&registration=DEM-101&callsign=A01`
+  loaded only the published Operational Ambulance checklist. Its vehicle,
+  schematic, and Monitor Defibrillator sections matched the register-published
+  template; no fixed-form fallback rendered.
+- The closure check reuses locked B2 checklist/report/access evidence and the
+  Slice 1 and Slice 2 staging evidence above. No reproducible regression or
+  source/schema gap was found. Block 3 is accepted and locked.
 
 ## Next Block 4: PDF Evidence And Report Reliability
 
@@ -238,8 +259,8 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Run the B3.5 verification-first slice for manual checklist authoring only. Do
-not reopen B3.1-B3.4 without a Verified-Work Finality Rule trigger.
+Propose the smallest safe B4.1 Submitted Evidence Data Contract batch. Do not
+reopen Blocks 1-3 without a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
