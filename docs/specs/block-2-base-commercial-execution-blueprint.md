@@ -2,6 +2,11 @@
 
 Status: Closed
 
+Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+
+Block 2 acceptance is locked in the progress authority. This blueprint remains
+the detailed evidence and scope record only.
+
 Closed: 2026-07-12
 
 Created: 2026-07-12

@@ -4,7 +4,11 @@ Status: Active controlling roadmap
 
 Created: 2026-06-26
 
-This roadmap supersedes the previous row-by-row execution tracker as the active execution authority. The old tracker remains historical evidence only unless the user explicitly revives a specific row or migrates that row into this roadmap.
+Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+
+This roadmap defines required product direction. The Commercial Launch Progress
+Tracker is the sole block-status, percentage, and next-action authority. Git
+history preserves superseded execution records.
 
 ## Controlling Rule
 
@@ -115,8 +119,8 @@ This protocol is mandatory.
 ## Anti-Deviation Rules
 
 1. This file is the active roadmap.
-2. The old execution tracker is paused and historical.
-3. If Codex proposes work from the old tracker, it must first explain why and ask for explicit approval.
+2. Superseded progress models must not be used or recreated.
+3. Codex may execute only the action identified by the Commercial Launch Progress Tracker unless the user explicitly approves a tracker change.
 4. If a requested task conflicts with this roadmap, Codex must stop and identify the conflict.
 5. Every batch must preserve the product direction in this roadmap.
 6. Every implementation batch must end with:
@@ -444,16 +448,8 @@ The user must approve the batch before implementation.
 6. Database schema changes require backup, migration, verification, and rollback notes.
 7. No verification should be repeated after a pass unless a later change invalidates it.
 
-## Current Immediate Direction
+## Current Execution Direction
 
-The next technical work should not resume the old tracker automatically.
-
-The recommended next batch is:
-
-1. Keep current Azure staging evidence and demo-entry rules in `docs/specs/staging-runbook.md`.
-2. Configure staging app settings and secrets.
-3. Define staging database migration and rollback.
-4. Deploy the current committed app to staging.
-5. Make staging the main verification URL.
-
-No Pro/Premium feature implementation should begin until the staging test path is stable.
+Current completion, active-block status, and the only authorized next action are
+maintained in `docs/specs/commercial-launch-progress-tracker.md`. Requirements in
+this roadmap do not independently authorize implementation.

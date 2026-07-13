@@ -14,12 +14,12 @@ This file is the controlling execution spec for AcuityOps. Work must follow this
 8. Keep `http://localhost:5000` as the stable local app URL for verification.
 9. Commit only intentional source changes in logical slices after verification.
 10. If a change reveals a better product decision, report it as a suggested improvement before continuing.
-11. `docs/specs/execution-tracker.md` is the mandatory execution gate for this spec. Codex must not perform product source, database, or runtime changes unless the requested work maps to an existing tracker row.
-12. Codex must not invent phase numbers, step numbers, or continuation steps. If the user instruction does not match a tracker row, Codex must stop and report the mismatch before doing any implementation work.
-13. A tracker row may be worked only when the user explicitly authorizes that exact phase and step. Broad requests must be translated into tracker rows before work starts.
-14. Before implementation, Codex must run the tracker pre-flight check: confirm the active row, confirm allowed files, confirm forbidden files, confirm verification required, and confirm the exact stop condition.
-15. After implementation or a blocked attempt, Codex must update the tracker status and report the exact next tracker instruction. The status report must include the app-readiness percentage requested by the user.
-16. Documentation-only changes to the spec or tracker are allowed only when explicitly requested. They must not be mixed with product source code changes.
+11. `docs/specs/commercial-launch-progress-tracker.md` is the mandatory execution gate. Codex may execute only its single authorized action unless the user approves a tracker change.
+12. Codex must not invent blocks, batches, phases, prerequisites, or continuation work.
+13. Before implementation, Codex must confirm the authorized batch, allowed and forbidden scope, required reasoning level, verification, and stop condition.
+14. Accepted and locked work may be reopened only under the Verified-Work Finality Rule in the progress tracker.
+15. After an accepted batch, update its evidence once. Do not create repeated alignment, reconciliation, closeout, or verification work.
+16. Documentation-only changes are allowed only when explicitly requested and must not be mixed with product source changes.
 
 ## Credit Control Protocol
 
@@ -44,7 +44,7 @@ Mandatory cost-control rules:
 9. Codex must stop before risky uncertainty instead of exploring broadly. Risky uncertainty includes unclear tenant ownership, unclear source of truth, destructive data changes, provider choice, legal/compliance uncertainty, billing consequences, or security implications.
 10. Major unfinished capabilities must never be mixed into cleanup batches.
 11. If a batch reveals a new major feature, provider decision, legal dependency, or architecture dependency, Codex must record it as future work and stop before coding it.
-12. The tracker remains the execution gate. Batching changes how authorized rows are grouped; it does not permit undocumented work or silent scope expansion.
+12. The Commercial Launch Progress Tracker remains the execution gate. Batching does not permit undocumented work or silent scope expansion.
 
 Dedicated major-capability rule:
 
@@ -68,20 +68,19 @@ Roadmap preservation rule:
 
 The product vision and phase order below remain valid. The Credit Control Protocol changes execution discipline, not the product direction. If a roadmap conflict is found, Codex must document the conflict in this spec or tracker and stop; it must not silently change phase order or product scope.
 
-## Execution Tracker Gate
+## Commercial Launch Progress Gate
 
-The master spec defines the product, rules, and roadmap. The execution tracker at `docs/specs/execution-tracker.md` controls what may be executed in the current work sequence.
+The master spec defines detailed product requirements. The sole progress and
+execution authority is `docs/specs/commercial-launch-progress-tracker.md`.
 
 Mandatory operating rules:
 
-1. No active tracker row means no product implementation.
-2. The user instruction must match the tracker `ID` or exact phase/step wording before work starts.
-3. If the instruction is broader than one tracker row, Codex must ask the user to choose or must propose the next exact tracker instruction without editing product source.
-4. If a required step is missing from the tracker, Codex must update the tracker first, then wait for the user to authorize that row.
-5. If implementation reveals additional required work, Codex must add it as a new tracker row or suggested tracker change. It must not execute the new work in the same step unless the user explicitly authorizes it.
-6. Phase gates in the tracker must be expanded into child rows before implementation starts for that phase.
-7. Tracker status values are limited to `Not started`, `In progress`, `Blocked`, and `Done`.
-8. A row can be marked `Done` only after the acceptance criteria and verification stated in the master spec and tracker row are satisfied.
+1. No authorized tracker action means no product implementation.
+2. The user instruction must match the tracker action or explicitly approve a tracker change.
+3. Work broader than the authorized batch must stop before source editing.
+4. New requirements are recorded for the appropriate future block; they are not executed silently.
+5. Only accepted weighted block gates change overall progress.
+6. Existing accepted evidence must be reused under the Verified-Work Finality Rule.
 
 ## Required Step Completion Protocol
 
@@ -2456,21 +2455,11 @@ Legal review rules:
 138. Tag the release.
 139. Prepare production launch checklist.
 
-## Current Step Status
+## Progress And Execution Status
 
-Status values:
-
-- `Not started`
-- `In progress`
-- `Blocked`
-- `Verified`
-- `Committed`
-
-This section must be updated after every completed step.
-
-| Step | Status | Notes |
-| --- | --- | --- |
-| 1-139 plus 15A-15R, 84A-84Z, 93A-93Z, 93AA-93AZ, 93BA-93BZE, 100A-100AF, 113A-113Z, 113AA-113AR, 113AS-113BZ, 119A-119T, 119U-119AZ, 119BA-119BT, 119BU-119CT, 119CU-119DZ, 119EA-119EZ, 119FA-119FZ, 119GA-119GZ, and 119HA-119HZ | Not started | Use this table as the progress ledger. Expand individual rows as each step begins. |
+All percentages, block status, accepted evidence, and execution authorization are
+maintained only in `docs/specs/commercial-launch-progress-tracker.md`. This spec
+must not contain a second progress ledger.
 
 ## Change Control
 

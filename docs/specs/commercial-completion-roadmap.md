@@ -1,8 +1,13 @@
 # AcuityOps Commercial Completion Roadmap
 
-Status: Month-end closeout draft
+Status: Active commercial requirements roadmap
 
 Created: 2026-07-12
+
+Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+
+This roadmap defines commercial requirements. It does not calculate progress or
+authorize the next implementation action.
 
 This document controls the path from the current Azure staging foundation to the finished commercial AcuityOps SaaS platform. It is not a pilot-readiness or sales-demo plan. Fake tenant data may be used only to test functions and must never become seed data, fallback data, product identity, or required app data.
 
@@ -410,75 +415,8 @@ Expected credit scale:
 
 - Dedicated launch-preparation block.
 
-## Next 10,000-Credit Block 2 Plan
+## Execution Mapping
 
-Objective:
-
-Move from the current staged foundation into Base Commercial Foundation completion. This is not a pilot plan; it is the next commercial-product construction block.
-
-Block 2 scope:
-
-1. Setup Wizard closeout:
-   - complete remaining setup steps,
-   - verify completion state,
-   - ensure no seed data is created,
-   - ensure setup produces only configuration choices or user-created records.
-2. Register consistency pass:
-   - vehicles,
-   - staff,
-   - equipment,
-   - stock,
-   - medication,
-   - consistent edit/delete/move/issue actions,
-   - grouped list layouts,
-   - mobile-safe horizontal scroll.
-3. Checklist source-of-truth hardening:
-   - Build New Checklist starts blank,
-   - checklist publish scope by function/subtype/area/callsign,
-   - live daily checks use only published register templates,
-   - no fallback fixed form.
-4. Access permissions enforcement:
-   - senior vs operational manager vs staff action boundaries,
-   - register edit permissions,
-   - checklist publish/request permissions.
-5. Evidence baseline:
-   - confirm report detail and PDF remain functional after Base changes.
-
-Excluded from Block 2:
-
-- AI import.
-- Excel import.
-- DOH mode.
-- Billing.
-- production launch.
-- global schematic expansion.
-- SOP/CPG ingestion.
-- major UI redesign beyond needed consistency.
-
-Verification:
-
-- Build once per implementation batch.
-- Deploy to Azure staging after meaningful workflow changes.
-- Verify staging routes for affected workflows.
-- Use fake tenant data only to test functions through normal UI workflows.
-- No direct database data patching unless explicitly approved for test cleanup.
-
-Commit plan:
-
-- One source commit per coherent implementation batch.
-- One docs commit only when roadmap/status docs change.
-
-Estimated credit use:
-
-- 10,000 credits should cover a controlled part of Block 2, not the entire Base product.
-- Recommended first Block 2 implementation batch: Setup Wizard closeout plus no-seed verification.
-- Recommended second Block 2 implementation batch: register consistency for vehicles/staff/equipment only.
-- Defer stock/medication/checklist/access follow-up if credits run low.
-
-Stop conditions:
-
-- Any seed/fallback behavior reappears.
-- A workflow requires direct database patching to work.
-- A change threatens tenant isolation.
-- A batch expands into Pro/Premium features.
-- Azure staging verification fails in a way that requires architecture work.
+Current block status, accepted evidence, credit estimates, and execution order are
+maintained only in `docs/specs/commercial-launch-progress-tracker.md`. This
+requirements roadmap does not contain a separate current-block plan.
