@@ -24,11 +24,11 @@ gate has passed.
 | --- | --- |
 | Total commercial-launch blocks | 13 |
 | Accepted and locked | 4 |
-| Active | 1 (Block 5 design complete; implementation not started) |
+| Active | 1 (Block 5 implementation active; B5.1 accepted) |
 | Remaining after active block | 9 |
 | Blocked | 0 |
 | Overall commercial-launch progress | 35% |
-| Current Block 5 progress | 0% (0/5 batches accepted; design complete) |
+| Current Block 5 progress | 20% (1/5 batches accepted) |
 | Estimated remaining implementation credits | 108,900-188,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
@@ -80,7 +80,7 @@ contribution is earned only when Block 5 and its closure gate pass.
 | B2 | Base commercial foundation | 8% | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
 | B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
 | B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
-| B5 | Pro import, column matching, and conversion | 10% | Active; design complete; 0/5 batches accepted | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
+| B5 | Pro import, column matching, and conversion | 10% | Active; B5.1 accepted; 1/5 batches accepted | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
 | B6 | South African DOH Annual Inspection Mode | 8% | Not started; not yet decomposed | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
 | B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
 | B8 | Operational communications and product libraries | 6% | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
@@ -248,6 +248,40 @@ Status: Accepted and locked
   page overflow. The temporary evidence was not created by seed, fallback, or
   direct SQL, and no historical report was altered.
 
+### Block 5: Pro Import, Column Matching, And Conversion
+
+Status: Active; B5.1 accepted; 1/5 batches accepted
+
+| Batch | Objective | Status | Acceptance summary | Reasoning |
+| --- | --- | --- | --- | --- |
+| B5.1 | Import foundation and deterministic contract | Accepted and locked | Additive tenant-owned import ledger, bounded parser, canonical field registry, Pro/permission gates, source-evidence upload handoff, and no-domain-write boundary pass | High |
+| B5.2 | Deterministic register mapping and commit | Not started | Awaiting an approved batch plan | High/Medium |
+| B5.3 | Deterministic checklist conversion | Not started | Depends on B5.2 | High/Medium |
+| B5.4 | Audit, rollback, mapping reuse, and Pro UX | Not started | Depends on B5.2-B5.3 | High/Medium |
+| B5.5 | Integrated staging acceptance and closure | Not started | Depends on B5.1-B5.4 | High |
+
+### B5.1 Acceptance Evidence
+
+- Source commit `1d41db9` adds the versioned import ledger, canonical field
+  registry, deterministic source inspector, Pro feature and action-permission
+  gates, tenant-scoped import-batch route, and upload-to-review handoff.
+- Parser decision `decisions/adr-b5-import-parser-libraries.md` records
+  ExcelDataReader `3.9.0`, MIT compatibility, supported formats, bounded parser
+  limits, and the explicit exclusion of AI and automatic domain writes.
+- Release builds for the application and tenant-isolation test executable
+  passed with zero warnings and zero errors on 2026-07-13.
+- All ten tenant, evidence, PDF, and import tests passed. Import-specific tests
+  prove quoted CSV parsing, the canonical field contract, Pro/permission
+  boundaries, tenant isolation, and that upload preparation creates no vehicle,
+  staff, equipment, stock, medication, or checklist records.
+- `20260713190000_AddImportFoundation` was applied to an isolated disposable
+  SQLite baseline. Four import tables, fourteen indexes, three uniqueness
+  constraints, fourteen restrictive foreign keys, and migration history were
+  verified. Rollback removed only B5.1 objects and preserved the preceding
+  immutable-evidence schema. The temporary database and inspector were deleted.
+- No active development or Azure staging database was migrated, and no staging
+  deployment or operational data write occurred during B5.1 acceptance.
+
 ## Shortest Safe Remaining Order
 
 1. Complete B5 imports before DOH and AI because both consume normalized data.
@@ -285,10 +319,10 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Implement B5.1 Import Foundation And Contract from
-`block-5-pro-import-execution-blueprint.md`. Do not begin B5.2, apply a
-migration, or reopen Blocks 1-4 without the required approval or a
-Verified-Work Finality Rule trigger.
+Propose the smallest safe B5.2 Deterministic Register Mapping And Commit batch
+from `block-5-pro-import-execution-blueprint.md`. Do not implement B5.2, apply
+the B5.1 migration to an active database, deploy, or reopen Blocks 1-4 without
+explicit approval or a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
