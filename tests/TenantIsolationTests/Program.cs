@@ -15,6 +15,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("checklist publishing rejects foreign tenant inputs", ChecklistPublishingRejectsForeignTenantInputsAsync),
     ("schematic resolution is company bounded", SchematicResolutionIsCompanyBoundedAsync),
     ("tenant file storage requires company scoped paths", TenantFileStorageRequiresCompanyScopedPathsAsync),
+    ("submitted report identity remains immutable after register changes", SubmittedReportIdentityRemainsImmutableAsync),
     ("professional evidence PDF contains the immutable evidence contract", ProfessionalEvidencePdfContainsImmutableContractAsync)
 };
 
@@ -206,6 +207,62 @@ static Task ProfessionalEvidencePdfContainsImmutableContractAsync()
     Ensure(raw.Contains("Immutable evidence marker 817", StringComparison.Ordinal), "Evidence PDF omitted submission notes.");
     Ensure(raw.Contains("Page 1 of", StringComparison.Ordinal), "Evidence PDF omitted print-safe pagination.");
     Ensure(!raw.Contains("/BaseFont /Courier", StringComparison.Ordinal), "Evidence PDF still uses the prototype Courier renderer.");
+
+    return Task.CompletedTask;
+}
+
+static Task SubmittedReportIdentityRemainsImmutableAsync()
+{
+    var captured = new ChecklistEvidenceSnapshot
+    {
+        CapturedAtUtc = new DateTime(2026, 7, 13, 8, 30, 0, DateTimeKind.Utc),
+        Vehicle = new EvidenceVehicleSnapshot
+        {
+            OperationalAreaId = 71,
+            OperationalAreaName = "Captured Area",
+            RegistrationNumber = "CAP-101",
+            Callsign = "CAP1",
+            VehicleFunction = "Ambulance",
+            VehicleSubtype = "Primary Response"
+        },
+        Submitter = new EvidenceSubmitterSnapshot { FullName = "Captured Clinician", Role = "Staff" },
+        Template = new EvidenceTemplateSnapshot { Name = "Captured Checklist", Version = "3.1" },
+        Submission = new EvidenceSubmissionMetadata
+        {
+            ReportId = 901,
+            WorkflowStatus = "Submitted",
+            ReadinessStatus = "Operational",
+            SubmittedAtUtc = new DateTime(2026, 7, 13, 8, 30, 0, DateTimeKind.Utc)
+        }
+    };
+    var report = new DailyVehicleReadinessReport
+    {
+        Id = 901,
+        CompanyId = 44,
+        EvidenceSnapshotVersion = ChecklistEvidenceSnapshot.CurrentVersion,
+        EvidenceSnapshotJson = ChecklistEvidenceSnapshotSerializer.Serialize(captured),
+        VehicleRegistrationNumber = "MUTATED-REG",
+        CallsignAtCheck = "MUTATED-CALLSIGN",
+        WorkflowStatus = "Draft",
+        ReadinessStatus = "Not ready",
+        Vehicle = new Vehicle
+        {
+            RegistrationNumber = "CURRENT-REG",
+            Callsign = "CURRENT-CALLSIGN",
+            CurrentOperationalAreaId = 99,
+            CurrentOperationalArea = new OperationalArea { Id = 99, Name = "Current Area" }
+        },
+        PerformedByUser = new AppUser { FullName = "Renamed User" },
+        ChecklistTemplate = new ChecklistTemplate { Name = "Renamed Template", Version = "9.9" }
+    };
+
+    var resolved = ChecklistEvidenceSnapshotResolver.Resolve(report);
+
+    Ensure(resolved.Vehicle.OperationalAreaId == 71, "Report scope followed the vehicle's current area instead of the submission snapshot.");
+    Ensure(resolved.Vehicle.RegistrationNumber == "CAP-101", "Report identity followed a mutable vehicle record.");
+    Ensure(resolved.Submitter.FullName == "Captured Clinician", "Report identity followed a mutable staff profile.");
+    Ensure(resolved.Template.Name == "Captured Checklist", "Report identity followed a mutable checklist template.");
+    Ensure(resolved.Submission.WorkflowStatus == "Submitted", "Report workflow status did not come from the immutable snapshot.");
 
     return Task.CompletedTask;
 }

@@ -65,7 +65,7 @@ public class OperationsReportsModel : PageModel
         SetDateRange();
 
         var scope = await LoadReportScopeAsync(currentUser);
-        await LoadReadinessRowsAsync(currentUser.CompanyId, scope.VehicleIds);
+        await LoadReadinessRowsAsync(currentUser.CompanyId, scope.AreaIds);
         await LoadIssueRowsAsync(currentUser, scope);
         await LoadTaskRowsAsync(currentUser, scope);
         await LoadMovementRowsAsync(currentUser.CompanyId, scope.AreaIds);
@@ -167,46 +167,62 @@ public class OperationsReportsModel : PageModel
         return new ReportScope(areaIds, vehicleIds, assignedAreas.Select(area => area.Name).ToList(), vehicleLabels, staffIds);
     }
 
-    private async Task LoadReadinessRowsAsync(int companyId, IReadOnlyList<int> scopedVehicleIds)
+    private async Task LoadReadinessRowsAsync(int companyId, IReadOnlyList<int> scopedAreaIds)
     {
         var query = _db.DailyVehicleReadinessReports
             .AsNoTracking()
+            .Include(report => report.Company)
             .Include(report => report.Vehicle)
                 .ThenInclude(vehicle => vehicle!.CurrentOperationalArea)
             .Include(report => report.PerformedByUser)
+                .ThenInclude(user => user!.AppRole)
+            .Include(report => report.PerformedByUser)
+                .ThenInclude(user => user!.AssignedOperationalArea)
+            .Include(report => report.ChecklistTemplate)
             .Include(report => report.EquipmentChecks)
             .Where(report =>
                 report.CompanyId == companyId &&
+                report.WorkflowStatus != "Deleted" &&
                 (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc) >= FromUtc &&
                 (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc) < ToUtcExclusive);
 
-        if (!IsSeniorOverview)
-        {
-            query = query.Where(report => scopedVehicleIds.Contains(report.VehicleId));
-        }
-
-        ReadinessRows = await query
+        var reports = await query
             .OrderByDescending(report => report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc)
-            .Take(40)
-            .Select(report => new ReadinessReportRow
-            {
-                Id = report.Id,
-                VehicleLabel = report.Vehicle == null
-                    ? $"{report.VehicleRegistrationNumber} / {report.CallsignAtCheck}"
-                    : $"{report.Vehicle.RegistrationNumber} / {report.Vehicle.Callsign}",
-                AreaName = report.Vehicle != null && report.Vehicle.CurrentOperationalArea != null
-                    ? report.Vehicle.CurrentOperationalArea.Name
-                    : "Unallocated",
-                PerformedByName = report.PerformedByUser == null ? "Unknown" : report.PerformedByUser.FullName,
-                WorkflowStatus = report.WorkflowStatus,
-                ReadinessStatus = report.ReadinessStatus,
-                CriticalIssues = report.CriticalIssueCount,
-                WarningIssues = report.WarningIssueCount,
-                EquipmentIssueCount = report.EquipmentChecks.Count(check => !check.IsOperational || check.IssueNotes != null),
-                DetailUrl = $"/ChecklistReportDetail?id={report.Id}",
-                RecordedAtUtc = report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc
-            })
+            .Take(2000)
             .ToListAsync();
+
+        ReadinessRows = reports
+            .Select(BuildReadinessRow)
+            .Where(row => IsSeniorOverview ||
+                (row.OperationalAreaId.HasValue && scopedAreaIds.Contains(row.OperationalAreaId.Value)))
+            .Take(40)
+            .ToList();
+    }
+
+    private static ReadinessReportRow BuildReadinessRow(DailyVehicleReadinessReport report)
+    {
+        var evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
+        var registration = FirstNonEmpty(evidence.Vehicle.RegistrationNumber, "Unknown registration");
+        var callsign = FirstNonEmpty(evidence.Vehicle.Callsign, "No callsign");
+
+        return new ReadinessReportRow
+        {
+            Id = report.Id,
+            OperationalAreaId = evidence.Vehicle.OperationalAreaId,
+            VehicleLabel = $"{registration} / {callsign}",
+            AreaName = FirstNonEmpty(evidence.Vehicle.OperationalAreaName, "Unallocated"),
+            PerformedByName = FirstNonEmpty(evidence.Submitter.FullName, "Unknown"),
+            WorkflowStatus = evidence.Submission.WorkflowStatus,
+            ReadinessStatus = evidence.Submission.ReadinessStatus,
+            CriticalIssues = evidence.Submission.CriticalIssueCount,
+            WarningIssues = evidence.Submission.WarningIssueCount,
+            EquipmentIssueCount = evidence.Equipment.Count(check =>
+                !check.IsOperational ||
+                !string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) ||
+                !string.IsNullOrWhiteSpace(check.IssueNotes)),
+            DetailUrl = $"/ChecklistReportDetail?id={report.Id}",
+            RecordedAtUtc = evidence.Submission.SubmittedAtUtc ?? evidence.Submission.LastSavedAtUtc ?? evidence.CapturedAtUtc
+        };
     }
 
     private async Task LoadIssueRowsAsync(AppUser currentUser, ReportScope scope)
@@ -747,6 +763,7 @@ public class OperationsReportsModel : PageModel
     public sealed class ReadinessReportRow
     {
         public int Id { get; set; }
+        public int? OperationalAreaId { get; set; }
         public string VehicleLabel { get; set; } = string.Empty;
         public string AreaName { get; set; } = string.Empty;
         public string PerformedByName { get; set; } = string.Empty;

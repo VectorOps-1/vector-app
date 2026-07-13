@@ -134,8 +134,10 @@ public class ChecklistReportsModel : PageModel
 
         var evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
         var pdfBytes = _pdfService.BuildDailyReadinessPdf(report, evidence);
-        var vehicleLabel = SafeFilePart(report.VehicleRegistrationNumber);
-        var dateLabel = (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc).ToLocalTime().ToString("yyyyMMdd-HHmm");
+        var vehicleLabel = SafeFilePart(evidence.Vehicle.RegistrationNumber);
+        var dateLabel = (evidence.Submission.SubmittedAtUtc ?? evidence.Submission.LastSavedAtUtc ?? evidence.CapturedAtUtc)
+            .ToLocalTime()
+            .ToString("yyyyMMdd-HHmm");
         return File(pdfBytes, "application/pdf", $"checklist-{vehicleLabel}-{report.Id}-{dateLabel}.pdf");
     }
 
@@ -303,20 +305,6 @@ public class ChecklistReportsModel : PageModel
                 (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc) >= FromUtc &&
                 (report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc) < ToUtcExclusive);
 
-        if (IsSeniorOverview && OperationalAreaId.HasValue)
-        {
-            query = query.Where(report =>
-                report.Vehicle != null &&
-                report.Vehicle.CurrentOperationalAreaId == OperationalAreaId.Value);
-        }
-        else if (!IsSeniorOverview)
-        {
-            query = query.Where(report =>
-                report.Vehicle != null &&
-                report.Vehicle.CurrentOperationalAreaId.HasValue &&
-                areaIds.Contains(report.Vehicle.CurrentOperationalAreaId.Value));
-        }
-
         if (string.Equals(WorkflowStatus, "Saved", StringComparison.OrdinalIgnoreCase))
         {
             query = query.Where(report => report.WorkflowStatus == "Saved" || report.WorkflowStatus == "Submitted");
@@ -331,24 +319,19 @@ public class ChecklistReportsModel : PageModel
             query = query.Where(report => report.ReadinessStatus == ReadinessStatus);
         }
 
-        if (!string.IsNullOrWhiteSpace(VehicleType))
-        {
-            var selectedVehicleType = VehicleType.Trim();
-            query = query.Where(report =>
-                report.VehicleTypeAtCheck == selectedVehicleType ||
-                (report.Vehicle != null &&
-                    (report.Vehicle.VehicleType == selectedVehicleType ||
-                     report.Vehicle.VehicleFunction == selectedVehicleType ||
-                     report.Vehicle.VehicleSubtype == selectedVehicleType)));
-        }
-
         var reports = await query
             .OrderByDescending(report => report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc)
-            .Take(500)
+            .Take(2000)
             .ToListAsync();
 
         ReportRows = reports
             .Select(BuildReportRow)
+            .Where(row => IsSeniorOverview
+                ? !OperationalAreaId.HasValue || row.OperationalAreaId == OperationalAreaId.Value
+                : row.OperationalAreaId.HasValue && areaIds.Contains(row.OperationalAreaId.Value))
+            .Where(row => string.IsNullOrWhiteSpace(VehicleType) ||
+                string.Equals(row.VehicleType, VehicleType.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Take(500)
             .ToList();
     }
 
@@ -526,58 +509,52 @@ public class ChecklistReportsModel : PageModel
 
     private static ChecklistReportRow BuildReportRow(DailyVehicleReadinessReport report)
     {
-        var recordedAt = report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc;
-        var vehicle = report.Vehicle;
-        var areaName = vehicle?.CurrentOperationalArea?.Name ?? "Unallocated";
-        var registration = string.IsNullOrWhiteSpace(report.VehicleRegistrationNumber)
-            ? vehicle?.RegistrationNumber ?? "Unknown registration"
-            : report.VehicleRegistrationNumber;
-        var callsign = string.IsNullOrWhiteSpace(report.CallsignAtCheck)
-            ? vehicle?.Callsign ?? "No callsign"
-            : report.CallsignAtCheck;
-        var vehicleType = vehicle is null
-            ? string.IsNullOrWhiteSpace(report.VehicleTypeAtCheck) ? "Not set" : report.VehicleTypeAtCheck
-            : VehicleTaxonomyService.DisplayClassification(vehicle);
+        var evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
+        var recordedAt = evidence.Submission.SubmittedAtUtc ?? evidence.Submission.LastSavedAtUtc ?? evidence.CapturedAtUtc;
+        var areaName = string.IsNullOrWhiteSpace(evidence.Vehicle.OperationalAreaName)
+            ? "Unallocated"
+            : evidence.Vehicle.OperationalAreaName;
+        var registration = string.IsNullOrWhiteSpace(evidence.Vehicle.RegistrationNumber)
+            ? "Unknown registration"
+            : evidence.Vehicle.RegistrationNumber;
+        var callsign = string.IsNullOrWhiteSpace(evidence.Vehicle.Callsign)
+            ? "No callsign"
+            : evidence.Vehicle.Callsign;
+        var vehicleType = FirstNonEmpty(
+            evidence.Vehicle.VehicleSubtype,
+            evidence.Vehicle.VehicleFunction,
+            evidence.Vehicle.VehicleType,
+            "Not set");
+        var equipmentIssueCount = evidence.Equipment.Count(check =>
+            !check.IsOperational ||
+            !string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(check.IssueNotes));
 
         return new ChecklistReportRow
         {
             Id = report.Id,
+            OperationalAreaId = evidence.Vehicle.OperationalAreaId,
             AreaName = areaName,
             RegistrationNumber = registration,
             Callsign = callsign,
             VehicleLabel = $"{registration} / {callsign}",
             VehicleType = vehicleType,
-            PerformedByName = report.PerformedByUser?.FullName ?? "Unknown",
-            PerformedByRole = report.PerformedByUser?.AppRole?.Name ?? "Unknown",
-            WorkflowStatus = report.WorkflowStatus,
-            EvidenceStatus = GetEvidenceStatusLabel(report.WorkflowStatus),
-            ReadinessStatus = report.ReadinessStatus,
-            ReadinessStatusClass = GetReadinessStatusClass(report.ReadinessStatus),
-            CriticalIssues = report.CriticalIssueCount,
-            WarningIssues = report.WarningIssueCount,
-            EquipmentRowCount = report.EquipmentChecks.Count,
-            EquipmentIssueCount = report.EquipmentChecks.Count(check =>
-                !check.IsOperational ||
-                !string.Equals(check.ReadinessImpact, "None", StringComparison.OrdinalIgnoreCase) ||
-                !string.IsNullOrWhiteSpace(check.IssueNotes)),
+            PerformedByName = FirstNonEmpty(evidence.Submitter.FullName, "Unknown"),
+            PerformedByRole = FirstNonEmpty(evidence.Submitter.Role, "Unknown"),
+            WorkflowStatus = evidence.Submission.WorkflowStatus,
+            EvidenceStatus = GetEvidenceStatusLabel(evidence.Submission.WorkflowStatus),
+            ReadinessStatus = evidence.Submission.ReadinessStatus,
+            ReadinessStatusClass = GetReadinessStatusClass(evidence.Submission.ReadinessStatus),
+            CriticalIssues = evidence.Submission.CriticalIssueCount,
+            WarningIssues = evidence.Submission.WarningIssueCount,
+            EquipmentRowCount = evidence.Equipment.Count,
+            EquipmentIssueCount = equipmentIssueCount,
             RecordedAtUtc = recordedAt,
-            TemplateName = GetTemplateDisplayName(report),
-            TemplateVersion = report.ChecklistTemplateVersion ?? report.ChecklistTemplate?.Version ?? "N/A",
-            VehicleSameAsPreviousShiftUsed = report.VehicleSameAsPreviousShiftUsed || report.SameAsPreviousShiftUsed,
-            EquipmentSameAsPreviousShiftUsed = report.EquipmentSameAsPreviousShiftUsed
+            TemplateName = FirstNonEmpty(evidence.Template.Name, "Historical snapshot - no template link"),
+            TemplateVersion = FirstNonEmpty(evidence.Template.Version, "N/A"),
+            VehicleSameAsPreviousShiftUsed = evidence.Submission.VehicleSameAsPreviousShiftUsed,
+            EquipmentSameAsPreviousShiftUsed = evidence.Submission.EquipmentSameAsPreviousShiftUsed
         };
-    }
-
-    private static string GetTemplateDisplayName(DailyVehicleReadinessReport report)
-    {
-        if (report.ChecklistTemplate is not null)
-        {
-            return ChecklistDisplayService.TemplateName(report.ChecklistTemplate.Name);
-        }
-
-        return report.ChecklistTemplateId.HasValue
-            ? "Historical snapshot - template unavailable"
-            : "Historical snapshot - no template link";
     }
 
     private static string GetEvidenceStatusLabel(string? workflowStatus)
@@ -644,7 +621,7 @@ public class ChecklistReportsModel : PageModel
             return false;
         }
 
-        var vehicleAreaId = report.Vehicle?.CurrentOperationalAreaId;
+        var vehicleAreaId = ChecklistEvidenceSnapshotResolver.Resolve(report).Vehicle.OperationalAreaId;
         if (!vehicleAreaId.HasValue)
         {
             return false;
@@ -714,6 +691,11 @@ public class ChecklistReportsModel : PageModel
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+    }
+
     private sealed record AreaScopeItem(int Id, string Name, string AreaType);
     private sealed record ReportScope(IReadOnlyList<int> AreaIds);
 
@@ -761,6 +743,7 @@ public class ChecklistReportsModel : PageModel
     public sealed class ChecklistReportRow
     {
         public int Id { get; set; }
+        public int? OperationalAreaId { get; set; }
         public string AreaName { get; set; } = string.Empty;
         public string RegistrationNumber { get; set; } = string.Empty;
         public string Callsign { get; set; } = string.Empty;

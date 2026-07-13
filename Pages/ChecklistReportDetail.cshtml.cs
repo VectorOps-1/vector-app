@@ -51,7 +51,7 @@ public class ChecklistReportDetailModel : PageModel
 
         Report = report;
         Evidence = ChecklistEvidenceSnapshotResolver.Resolve(report);
-        RecordedAtUtc = report.SubmittedAtUtc ?? report.LastSavedAtUtc ?? report.CreatedAtUtc;
+        RecordedAtUtc = Evidence.Submission.SubmittedAtUtc ?? Evidence.Submission.LastSavedAtUtc ?? Evidence.CapturedAtUtc;
         return Page();
     }
 
@@ -159,7 +159,7 @@ public class ChecklistReportDetailModel : PageModel
             return false;
         }
 
-        var vehicleAreaId = report.Vehicle?.CurrentOperationalAreaId;
+        var vehicleAreaId = ChecklistEvidenceSnapshotResolver.Resolve(report).Vehicle.OperationalAreaId;
         if (!vehicleAreaId.HasValue)
         {
             return false;
