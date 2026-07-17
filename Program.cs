@@ -14,6 +14,8 @@ var runDevelopmentDatabaseRepair = args.Any(arg =>
     string.Equals(arg, DevelopmentDatabaseRepairCommand, StringComparison.OrdinalIgnoreCase));
 var runSchemaBaseline = args.Any(arg =>
     string.Equals(arg, SchemaBaselineCommand, StringComparison.OrdinalIgnoreCase));
+var runIdentityProvisioning = args.Any(arg =>
+    string.Equals(arg, IdentityProvisioningCommand.CommandName, StringComparison.OrdinalIgnoreCase));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -42,6 +44,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<IdentityAuthenticationService>();
 builder.Services.AddScoped<IdentityAccountService>();
+builder.Services.AddScoped<IdentityProvisioningService>();
+builder.Services.AddScoped<IdentityProvisioningCommand>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
 builder.Services.AddScoped<IUserActionPermissionService, UserActionPermissionService>();
 builder.Services.AddScoped<IUserActionAuthorizationService, UserActionAuthorizationService>();
@@ -146,6 +150,14 @@ if (runSchemaBaseline)
     app.Logger.LogInformation(
         "Database schema baseline completed by explicit command {Command}.",
         SchemaBaselineCommand);
+    return;
+}
+
+if (runIdentityProvisioning)
+{
+    using var scope = app.Services.CreateScope();
+    var command = scope.ServiceProvider.GetRequiredService<IdentityProvisioningCommand>();
+    Environment.ExitCode = await command.RunAsync(args, Console.Out, Console.Error);
     return;
 }
 

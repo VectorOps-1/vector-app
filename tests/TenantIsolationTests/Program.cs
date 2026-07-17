@@ -22,6 +22,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("import source inspector handles quoted CSV within limits", ImportSourceInspectorHandlesQuotedCsvAsync)
     ,("import foundation is tenant scoped and creates no domain records", ImportFoundationIsTenantScopedAsync)
     ,("staff profile and login identity remain separated and tenant scoped", IdentitySeparationTests.RunAllAsync)
+    ,("login identity provisioning is explicit, dry-run first, and replay safe", IdentityProvisioningTests.RunAllAsync)
 };
 
 foreach (var test in tests)
