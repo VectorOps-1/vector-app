@@ -56,8 +56,8 @@ public sealed class ImportFieldRegistry : IImportFieldRegistry
 
         Target(ImportTargetTypes.Staff, "Staff",
             Field("staff.full_name", "Full name", "Staff member's full name.", "FullName", "text", true, 160, ["name", "staff name", "employee name"], false, "Jane Doe"),
-            Field("staff.email", "Email", "Tenant-approved staff identity field. Import never grants login access.", "Email", "email", false, 180, ["email address", "work email"], true, "jane@example.org", requirementRule: "AtLeastOne:staff.email|staff.staff_id"),
-            Field("staff.staff_id", "Staff ID", "Tenant-issued staff identifier.", "StaffIdentifier", "text", false, 80, ["employee id", "staff number", "personnel number"], true, "EMS-001", requirementRule: "AtLeastOne:staff.email|staff.staff_id"),
+            Field("staff.email", "Email", "Required profile contact and tenant-unique identity field. Import never grants login access.", "Email", "email", true, 180, ["email address", "work email"], true, "jane@example.org"),
+            Field("staff.staff_id", "Staff ID", "Tenant-issued staff identifier.", "StaffIdentifier", "text", false, 80, ["employee id", "staff number", "personnel number"], true, "EMS-001"),
             Field("staff.national_id", "National ID", "National identity number.", "NationalId", "text", false, 120, ["id number", "identity number"], false, "900101..."),
             Field("staff.cell_number", "Cell number", "Mobile contact number.", "CellNumber", "text", false, 80, ["mobile", "phone", "contact number"], false, "+27 82 000 0000"),
             Field("staff.qualification", "Clinical qualification / scope", "Configured clinical qualification or scope.", "QualificationFunction", "tenant-option", false, 120, ["qualification", "scope", "clinical scope"], false, "ILS", "staff-qualifications"),

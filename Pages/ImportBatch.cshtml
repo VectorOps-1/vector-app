@@ -1,71 +1,97 @@
 @page
 @model ImportBatchModel
+@using vector_app_local.Models
+@using vector_app_local.Services
 @{
-    ViewData["Title"] = "Import Source Review";
+    ViewData["Title"] = "Guided Import";
+    var batch = Model.Batch;
+    var committed = batch?.Status == ImportBatchStatuses.Committed;
 }
 
 <section class="page-hero compact-hero">
-    <div class="eyebrow">Guided import</div>
-    <h1>Import Source Review</h1>
-    <p>The source file is stored as tenant evidence. No register or checklist records have been created.</p>
+    <div class="eyebrow">Pro guided import</div>
+    <h1>@(batch?.TargetType ?? "Register") Import</h1>
+    <p>Match source columns, correct exceptions, and commit only confirmed rows.</p>
 </section>
 
-@if (Model.Batch is not null)
-{
-    <section class="content-panel import-source-panel">
-        <div class="section-heading-row">
-            <div>
-                <span class="section-kicker">@Model.Batch.TargetType import</span>
-                <h2>@Model.Batch.OriginalFileName</h2>
-            </div>
-            <span class="status-pill neutral">@Model.Batch.Status</span>
-        </div>
+<div asp-validation-summary="All" class="inline-notice danger"></div>
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <div class="action-confirmation">@Model.StatusMessage</div> }
 
+@if (batch is not null)
+{
+    <section class="content-panel import-workflow">
+        <header class="heading-row"><div><span class="section-kicker">@batch.OriginalFileName</span><h2>Source and progress</h2></div><span class="status-pill neutral">@batch.Status</span></header>
         <dl class="summary-grid">
-            <div><dt>Format</dt><dd>@(Model.SourceProfile?.FileType ?? "Unknown")</dd></div>
-            <div><dt>Worksheets</dt><dd>@Model.Batch.WorksheetCount</dd></div>
-            <div><dt>Source rows</dt><dd>@Model.Batch.SourceRowCount.ToString("N0")</dd></div>
-            <div><dt>Uploaded by</dt><dd>@(Model.Batch.CreatedByUser?.FullName ?? "Recorded user")</dd></div>
+            <div><dt>Worksheets</dt><dd>@batch.WorksheetCount</dd></div>
+            <div><dt>Source rows</dt><dd>@batch.SourceRowCount</dd></div>
+            <div><dt>Valid / included</dt><dd>@batch.ValidRowCount / @batch.IncludedRowCount</dd></div>
+            <div><dt>Invalid</dt><dd>@batch.InvalidRowCount</dd></div>
         </dl>
 
-        @if (Model.SourceProfile?.Worksheets.Count > 0)
+        @if (!committed)
         {
-            <div class="table-scroll-shell sticky-scroll-shell">
-                <table class="compact-table">
-                    <thead><tr><th>Worksheet</th><th>Rows</th><th>Columns</th><th>Non-empty cells</th></tr></thead>
-                    <tbody>
-                    @foreach (var sheet in Model.SourceProfile.Worksheets)
-                    {
-                        <tr>
-                            <td>@sheet.Name</td>
-                            <td>@sheet.RowCount.ToString("N0")</td>
-                            <td>@sheet.ColumnCount.ToString("N0")</td>
-                            <td>@sheet.NonEmptyCellCount.ToString("N0")</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
+            <form method="post" asp-page-handler="SelectSource" class="step-band">
+                <input type="hidden" name="importBatchId" value="@batch.Id" />
+                <span class="step-number">1</span>
+                <label>Worksheet<select asp-for="Worksheet">@foreach (var sheet in Model.SourceProfile?.Worksheets ?? []) { <option value="@sheet.Name">@sheet.Name (@sheet.RowCount rows)</option> }</select></label>
+                <label>Header row<input asp-for="HeaderRowNumber" type="number" min="1" max="500" /></label>
+                <button class="button primary" type="submit">Read columns</button>
+            </form>
         }
 
-        <div class="inline-notice info">
-            Column matching and validation are the next controlled import stage. This upload cannot change operational records or publish a checklist.
-        </div>
+        @if (batch.ColumnMappings.Count > 0 && !committed)
+        {
+            <form method="post" asp-page-handler="SaveMappings" class="step-section">
+                <input type="hidden" name="importBatchId" value="@batch.Id" />
+                <div class="step-title"><span class="step-number">2</span><div><h3>Match columns</h3><p>Map each source column once or explicitly ignore it.</p></div></div>
+                <div class="table-scroll-shell sticky-scroll-shell"><table class="compact-table"><thead><tr><th>Source</th><th>AcuityOps field</th><th>Ignore</th><th>State</th></tr></thead><tbody>
+                @for (var i = 0; i < batch.ColumnMappings.Count; i++)
+                {
+                    var mapping = batch.ColumnMappings.ElementAt(i);
+                    <tr>
+                        <td><strong>@mapping.SourceHeading</strong>@if(Model.SamplesByColumn.TryGetValue(mapping.SourceColumnIndex, out var samples) && samples.Count > 0){<small class="source-samples">@string.Join(" · ", samples)</small>}<input type="hidden" name="Mappings[@i].SourceColumnIndex" value="@mapping.SourceColumnIndex" /></td>
+                        <td><select name="Mappings[@i].TargetFieldKey"><option value="">Select field...</option>@foreach (var field in Model.Target?.Fields ?? []) { <option value="@field.Key" selected="@(mapping.TargetFieldKey == field.Key)">@field.Label@(field.IsRequired ? " *" : "")</option> }</select></td>
+                        <td><input type="checkbox" name="Mappings[@i].IsIgnored" value="true" checked="@mapping.IsIgnored" /><input type="hidden" name="Mappings[@i].IsIgnored" value="false" /></td>
+                        <td>@(mapping.IsUserConfirmed ? "Confirmed" : mapping.TargetFieldKey is null ? "Unmatched" : "Suggested")</td>
+                    </tr>
+                }
+                </tbody></table></div>
+                <div class="button-row"><button class="button primary" type="submit">Save mappings</button></div>
+            </form>
+            <form method="post" asp-page-handler="Validate" class="button-row"><input type="hidden" name="importBatchId" value="@batch.Id" /><button class="button secondary" type="submit">Validate source rows</button></form>
+        }
+
+        @if (batch.RowResults.Count > 0 && !committed)
+        {
+            <section class="step-section">
+                <div class="step-title"><span class="step-number">3</span><div><h3>Correct and decide rows</h3><p>Correct or exclude errors. Existing matches need an explicit decision.</p></div></div>
+                <div class="row-list">
+                @foreach (var row in batch.RowResults)
+                {
+                    var values = Model.ValuesFor(row); var errors = Model.ErrorsFor(row); var duplicates = Model.DuplicatesFor(row);
+                    <details class="import-row @row.ValidationStatus.ToLowerInvariant()" open="@(row.ValidationStatus != ImportRowStatuses.Valid)">
+                        <summary><span>Row @row.SourceRowNumber</span><span>@row.ValidationStatus</span><span>@(row.RowDecision ?? "Decision required")</span></summary>
+                        <form method="post" asp-page-handler="CorrectRow" class="row-form">
+                            <input type="hidden" name="importBatchId" value="@batch.Id" /><input type="hidden" name="RowCorrection.SourceRowNumber" value="@row.SourceRowNumber" />
+                            <div class="correction-grid">@{ var f = 0; }@foreach (var field in Model.Target?.Fields ?? []) { values.TryGetValue(field.Key, out var value); errors.TryGetValue(field.Key, out var error); <label class="@(error is null ? "" : "field-error")">@field.Label@(field.IsRequired ? " *" : "")<input type="hidden" name="RowCorrection.Fields[@f].Key" value="@field.Key" /><input name="RowCorrection.Fields[@f].Value" value="@value" />@if(error is not null){<small>@error</small>}</label> f++; }</div>
+                            @if (duplicates.Count > 0) { <div class="inline-notice warning">Existing match: @string.Join(", ", duplicates.Select(item => item.Label))</div> }
+                            <div class="decision-row"><label><input type="checkbox" name="RowCorrection.IsIncluded" value="true" checked="@row.IsIncluded" /><input type="hidden" name="RowCorrection.IsIncluded" value="false" /> Include</label><label>Decision<select name="RowCorrection.Decision"><option value="">Select...</option><option value="Create" selected="@(row.RowDecision == "Create")">Create</option><option value="Update" selected="@(row.RowDecision == "Update")">Update existing</option><option value="Skip" selected="@(row.RowDecision == "Skip")">Skip</option></select></label><button class="button secondary" type="submit">Save row</button></div>
+                        </form>
+                    </details>
+                }
+                </div>
+            </section>
+            @if (Model.CanCommit)
+            {
+                <form method="post" asp-page-handler="Commit" data-confirm="Commit this validated import to the register?" class="commit-panel"><input type="hidden" name="importBatchId" value="@batch.Id" /><div><strong>Final register commit</strong><p>@batch.IncludedRowCount included; @batch.InvalidRowCount invalid. Any database failure rolls back the full commit.</p></div><button class="button primary" type="submit" disabled="@(batch.Status != ImportBatchStatuses.ReadyToCommit)">Commit import</button></form>
+            }
+        }
+        @if (committed) { <div class="completion-panel"><h3>Import complete</h3><p>Records are available in the normal register. Imported staff profiles have no login identity or credentials.</p></div> }
     </section>
 }
 
 <style>
-.import-source-panel { display: grid; gap: 16px; }
-.section-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.section-heading-row h2 { margin: 2px 0 0; }
-.section-kicker { color: #5f6f82; font-size: 12px; font-weight: 900; text-transform: uppercase; }
-.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid #d8e0e8; background: #d8e0e8; }
-.summary-grid div { padding: 12px; background: #fff; }
-.summary-grid dt { color: #5f6f82; font-size: 11px; font-weight: 900; text-transform: uppercase; }
-.summary-grid dd { margin: 3px 0 0; font-weight: 800; overflow-wrap: anywhere; }
-.compact-table { width: 100%; border-collapse: collapse; }
-.compact-table th, .compact-table td { padding: 9px 12px; border-bottom: 1px solid #dfe6ed; text-align: left; white-space: nowrap; }
-.compact-table th { background: #35465e; color: #fff; font-size: 11px; text-transform: uppercase; }
-.inline-notice { padding: 12px; border-left: 4px solid #17768c; background: #eef7f9; font-weight: 700; }
-@@media (max-width: 760px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.import-workflow,.step-section{display:grid;gap:16px}.heading-row,.step-band,.step-title,.decision-row,.commit-panel{display:flex;align-items:center;gap:14px}.heading-row{justify-content:space-between;align-items:flex-start}.heading-row h2,.step-title h3,.completion-panel h3{margin:0}.section-kicker{color:#5f6f82;font-size:12px;font-weight:900;text-transform:uppercase}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:0;border:1px solid #d8e0e8;background:#d8e0e8}.summary-grid div{padding:12px;background:#fff}.summary-grid dt{font-size:11px;font-weight:900;text-transform:uppercase;color:#5f6f82}.summary-grid dd{margin:3px 0 0;font-weight:800}.step-band,.step-section,.commit-panel,.completion-panel{padding:14px;border:1px solid #d8e0e8;background:#fff}.step-band label{display:grid;gap:5px;flex:1;font-weight:800}.step-number{display:grid;place-items:center;min-width:30px;height:30px;border-radius:50%;background:#35465e;color:#fff;font-weight:900}.compact-table{width:100%;border-collapse:collapse}.compact-table th,.compact-table td{padding:9px 12px;border-bottom:1px solid #dfe6ed;text-align:left;white-space:nowrap}.compact-table th{background:#35465e;color:#fff;font-size:11px;text-transform:uppercase}.button-row{display:flex;justify-content:flex-end;gap:8px}.row-list{display:grid;border:1px solid #d8e0e8}.import-row{border-bottom:1px solid #d8e0e8}.import-row summary{display:grid;grid-template-columns:1fr 120px 160px;gap:10px;padding:11px 12px;cursor:pointer;font-weight:800;background:#f7f9fb}.import-row.invalid summary{border-left:4px solid #b23b3b}.import-row.duplicate summary{border-left:4px solid #d37a00}.row-form{display:grid;gap:12px;padding:12px}.correction-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.correction-grid label{display:grid;gap:5px;font-weight:800}.field-error input{border-color:#b23b3b}.field-error small{color:#922b2b}.decision-row{justify-content:flex-end}.decision-row label{display:flex;align-items:center;gap:7px}.commit-panel{justify-content:space-between;border-left:4px solid #17768c}.commit-panel p{margin:3px 0 0}.completion-panel{border-left:4px solid #15805d}.inline-notice{padding:10px 12px;border-left:4px solid #17768c;background:#eef7f9}.inline-notice.warning{border-color:#d37a00;background:#fff7e7}.inline-notice.danger{border-color:#b23b3b;background:#fff0f0}
+.source-samples{display:block;max-width:320px;overflow:hidden;text-overflow:ellipsis;color:#637083;font-weight:500}
+@@media(max-width:760px){.summary-grid{grid-template-columns:1fr 1fr}.step-band,.commit-panel,.decision-row{align-items:stretch;flex-direction:column}.correction-grid{grid-template-columns:1fr}.import-row summary{grid-template-columns:1fr}.decision-row .button{width:100%}}
 </style>
