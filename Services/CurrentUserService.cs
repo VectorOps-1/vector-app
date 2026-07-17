@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using vector_app_local.Data;
 using vector_app_local.Models;
 
@@ -61,9 +62,14 @@ public class CurrentUserService
 
     public async Task<AppUser?> GetCurrentUserAsync()
     {
+        var principal = _httpContextAccessor.HttpContext?.User;
+        var identityId = principal?.FindFirstValue(ClaimTypes.NameIdentifier);
         var userId = CurrentUserId;
         var companyId = CurrentCompanyId;
-        if (!userId.HasValue || !companyId.HasValue)
+        if (principal?.Identity?.IsAuthenticated != true ||
+            string.IsNullOrWhiteSpace(identityId) ||
+            !userId.HasValue ||
+            !companyId.HasValue)
         {
             if (userId.HasValue && !companyId.HasValue)
             {
@@ -76,10 +82,15 @@ public class CurrentUserService
         var currentUser = await _db.AppUsers
             .Include(user => user.AppRole)
             .Include(user => user.Company)
+            .Include(user => user.LoginIdentity)
             .FirstOrDefaultAsync(user =>
                 user.Id == userId.Value &&
                 user.CompanyId == companyId.Value &&
-                user.Status == "Active");
+                user.Status == "Active" &&
+                user.LoginIdentity != null &&
+                user.LoginIdentity.Id == identityId &&
+                user.LoginIdentity.CompanyId == companyId.Value &&
+                user.LoginIdentity.IsLoginEnabled);
 
         if (currentUser is null)
         {

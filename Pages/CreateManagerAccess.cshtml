@@ -137,6 +137,8 @@
                             <div><span>CPD valid until</span><strong data-date-status-field="cpd">@DateOrDefault(staff.CpdComplianceExpiryDate)</strong></div>
                             <div><span>Current access role</span><strong>@staff.RoleName</strong></div>
                             <div><span>Current assigned area</span><strong>@staff.AssignedArea</strong></div>
+                            <div><span>Profile status</span><strong>@staff.Status</strong></div>
+                            <div><span>Login access</span><strong>@(staff.LoginEnabled ? "Enabled" : staff.HasLoginIdentity ? "Disabled" : "Not configured")</strong></div>
                         </div>
                     </section>
 
@@ -159,11 +161,23 @@
                             </div>
 
                             <label class="toggle-row">
-                                <input asp-for="AccountActive" />
-                                <span>Account active</span>
+                                <input asp-for="LoginEnabled" />
+                                <span>Enable login access</span>
                             </label>
+
+                            <div class="field-group">
+                                <label class="field-label" asp-for="TemporaryPassword">Temporary password</label>
+                                <input class="text-input" asp-for="TemporaryPassword" type="password" autocomplete="new-password" />
+                                <span asp-validation-for="TemporaryPassword" class="field-validation"></span>
+                            </div>
+
+                            <div class="field-group">
+                                <label class="field-label" asp-for="ConfirmTemporaryPassword">Confirm temporary password</label>
+                                <input class="text-input" asp-for="ConfirmTemporaryPassword" type="password" autocomplete="new-password" />
+                                <span asp-validation-for="ConfirmTemporaryPassword" class="field-validation"></span>
+                            </div>
                         </div>
-                        <p class="source-note">The access level sets the broad login route. The granular permission controls below decide which actions this person may perform inside that route.</p>
+                        <p class="source-note">New and imported staff profiles cannot sign in until login access is explicitly enabled. A temporary password is required for first activation and optional when resetting an existing login. The user must replace it at first sign-in.</p>
                     </section>
 
                     <section class="form-panel permissions-panel">
@@ -228,7 +242,8 @@
                             <th>Assigned area</th>
                             <th>Manager scope</th>
                             <th>Action permissions</th>
-                            <th>Status</th>
+                            <th>Login</th>
+                            <th>Profile</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -250,6 +265,13 @@
                                     @if (!row.HasSavedPermissionRows)
                                     {
                                         <small class="permission-missing">Setup required before testing</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="status-pill @(row.LoginEnabled ? "active" : "inactive")">@(row.LoginEnabled ? "Enabled" : row.HasLoginIdentity ? "Disabled" : "Not configured")</span>
+                                    @if (row.MustChangePassword && row.LoginEnabled)
+                                    {
+                                        <small>Password change required</small>
                                     }
                                 </td>
                                 <td><span class="status-pill @(row.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) ? "active" : "inactive")">@row.Status</span></td>

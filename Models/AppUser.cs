@@ -49,6 +49,8 @@ public class AppUser
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAtUtc { get; set; }
 
+    public ApplicationIdentityUser? LoginIdentity { get; set; }
+
     public ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskEvent> TaskEvents { get; set; } = new List<TaskEvent>();

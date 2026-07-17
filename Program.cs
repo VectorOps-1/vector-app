@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.AspNetCore.Identity;
 using vector_app_local.Data;
+using vector_app_local.Models;
 using vector_app_local.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +40,8 @@ builder.Services.AddSession(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
+builder.Services.AddScoped<IdentityAuthenticationService>();
+builder.Services.AddScoped<IdentityAccountService>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
 builder.Services.AddScoped<IUserActionPermissionService, UserActionPermissionService>();
 builder.Services.AddScoped<IUserActionAuthorizationService, UserActionAuthorizationService>();
@@ -74,6 +78,45 @@ builder.Services.AddDbContext<VectorDbContext>(options =>
     {
         options.UseSqlServer(builder.Configuration.GetConnectionString("VectorDatabase"));
     }
+});
+builder.Services
+    .AddIdentityCore<ApplicationIdentityUser>(options =>
+    {
+        options.Password.RequiredLength = 12;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireDigit = true;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        options.User.RequireUniqueEmail = false;
+    })
+    .AddSignInManager()
+    .AddDefaultTokenProviders()
+    .AddEntityFrameworkStores<VectorDbContext>();
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+    })
+    .AddIdentityCookies();
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = "AcuityOps.Identity";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+    options.LoginPath = "/CompanyLogin";
+    options.AccessDeniedPath = "/Access";
+});
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromMinutes(1);
 });
 
 var app = builder.Build();
@@ -118,6 +161,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();

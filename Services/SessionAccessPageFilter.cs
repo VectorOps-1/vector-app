@@ -44,6 +44,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ReportIssue"] = AllSignedInAccess,
         ["/ExpiryNotifications"] = AllSignedInAccess,
         ["/SetupWizard"] = AllSignedInAccess,
+        ["/ChangePassword"] = AllSignedInAccess,
 
         ["/Vehicles"] = ManagementAccess,
         ["/VehicleRegister"] = ManagementAccess,
@@ -136,7 +137,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/AccessModelSetup",
         "/AssetRegisterSetup",
         "/ChecklistSetup",
-        "/ReadinessEngineSetup"
+        "/ReadinessEngineSetup",
+        "/ChangePassword"
     };
 
     private static readonly HashSet<string> TaskAccessibleManagementPages = new(StringComparer.OrdinalIgnoreCase)
@@ -193,7 +195,9 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         var companyId = session.GetInt32(CurrentUserService.CompanyIdSessionKey);
         var accessView = session.GetString(CurrentUserService.AccessViewSessionKey);
 
-        if (!userId.HasValue || string.IsNullOrWhiteSpace(accessView))
+        if (context.HttpContext.User.Identity?.IsAuthenticated != true ||
+            !userId.HasValue ||
+            string.IsNullOrWhiteSpace(accessView))
         {
             context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
             return;
@@ -206,22 +210,24 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return;
         }
 
-        var db = context.HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
-        var roleName = await db.AppUsers
-            .AsNoTracking()
-            .Where(user =>
-                user.Id == userId.Value &&
-                user.CompanyId == companyId.Value &&
-                user.Status == "Active")
-            .Select(user => user.AppRole == null ? null : user.AppRole.Name)
-            .FirstOrDefaultAsync();
-
-        if (roleName is null || !CurrentUserService.AccessAllowsRole(accessView, roleName))
+        var currentUserService = context.HttpContext.RequestServices.GetRequiredService<CurrentUserService>();
+        var currentUser = await currentUserService.GetCurrentUserAsync();
+        var roleName = currentUser?.AppRole?.Name;
+        if (currentUser is null || roleName is null || !CurrentUserService.AccessAllowsRole(accessView, roleName))
         {
             ClearCurrentUserSession(session);
             context.Result = new RedirectToPageResult("/RoleLogin", new { access = allowedAccessViews[0] });
             return;
         }
+
+        if (currentUser.LoginIdentity?.MustChangePassword == true &&
+            !string.Equals(pagePath, "/ChangePassword", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Result = new RedirectToPageResult("/ChangePassword");
+            return;
+        }
+
+        var db = context.HttpContext.RequestServices.GetRequiredService<VectorDbContext>();
 
         if (await ShouldRedirectToSetupWizardAsync(db, companyId.Value, pagePath))
         {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Security.Claims;
 using System.Text;
 using vector_app_local.Data;
 using vector_app_local.Models;
@@ -20,6 +21,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("import field registry exposes required canonical contracts", ImportFieldRegistryExposesRequiredContractsAsync)
     ,("import source inspector handles quoted CSV within limits", ImportSourceInspectorHandlesQuotedCsvAsync)
     ,("import foundation is tenant scoped and creates no domain records", ImportFoundationIsTenantScopedAsync)
+    ,("staff profile and login identity remain separated and tenant scoped", IdentitySeparationTests.RunAllAsync)
 };
 
 foreach (var test in tests)
@@ -151,10 +153,29 @@ static async Task CurrentUserServiceRejectsCompanyMismatchAsync()
 {
     await using var fixture = await TenantFixture.CreateAsync();
 
+    var identity = new ApplicationIdentityUser
+    {
+        Id = "tenant-a-senior-identity",
+        CompanyId = fixture.TenantA.CompanyId,
+        AppUserId = fixture.TenantA.SeniorUserId,
+        UserName = "tenant-a-senior",
+        NormalizedUserName = "TENANT-A-SENIOR",
+        Email = "alex.manager@example.test",
+        NormalizedEmail = "ALEX.MANAGER@EXAMPLE.TEST",
+        IsLoginEnabled = true,
+        MustChangePassword = false,
+        LockoutEnabled = true
+    };
+    fixture.Db.LoginIdentities.Add(identity);
+    await fixture.Db.SaveChangesAsync();
+
     var session = new TestSession();
     var httpContext = new DefaultHttpContext
     {
-        Session = session
+        Session = session,
+        User = new ClaimsPrincipal(new ClaimsIdentity(
+            new[] { new Claim(ClaimTypes.NameIdentifier, identity.Id) },
+            "IdentityTest"))
     };
     var service = new CurrentUserService(
         new HttpContextAccessor { HttpContext = httpContext },

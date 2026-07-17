@@ -22,21 +22,26 @@ public class CreateManagerAccessModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly AccessModelSetupService _accessModel;
+    private readonly IdentityAccountService _identityAccounts;
 
     public CreateManagerAccessModel(
         VectorDbContext db,
         CurrentUserService currentUser,
-        AccessModelSetupService accessModel)
+        AccessModelSetupService accessModel,
+        IdentityAccountService identityAccounts)
     {
         _db = db;
         _currentUser = currentUser;
         _accessModel = accessModel;
+        _identityAccounts = identityAccounts;
     }
 
     [BindProperty(SupportsGet = true)] public int? StaffUserId { get; set; }
     [BindProperty(SupportsGet = true)] public string AccessLevel { get; set; } = CurrentUserService.OperationalManagementAccess;
     [BindProperty] public int? AssignedOperationalAreaId { get; set; }
-    [BindProperty] public bool AccountActive { get; set; } = true;
+    [BindProperty] public bool LoginEnabled { get; set; }
+    [BindProperty] public string? TemporaryPassword { get; set; }
+    [BindProperty] public string? ConfirmTemporaryPassword { get; set; }
     [BindProperty] public List<string> SelectedPermissionKeys { get; set; } = new();
 
     public List<SelectListItem> StaffOptions { get; private set; } = new();
@@ -230,6 +235,7 @@ public class CreateManagerAccessModel : PageModel
         var staffUser = StaffUserId.HasValue
             ? await _db.AppUsers
                 .Include(user => user.AppRole)
+                .Include(user => user.LoginIdentity)
                 .FirstOrDefaultAsync(user =>
                     user.CompanyId == currentUser.CompanyId &&
                     user.Id == StaffUserId.Value &&
@@ -280,11 +286,33 @@ public class CreateManagerAccessModel : PageModel
         var now = DateTime.UtcNow;
         var previousRole = staffUser.AppRole?.Name ?? "Unassigned";
         var previousAreaId = staffUser.AssignedOperationalAreaId;
-        var previousStatus = staffUser.Status;
+        var previousLoginState = staffUser.LoginIdentity?.IsLoginEnabled == true ? "Enabled" : "Disabled";
 
+        await using var transaction = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         staffUser.AppRoleId = role.Id;
         staffUser.AssignedOperationalAreaId = AssignedOperationalAreaId;
-        staffUser.Status = AccountActive ? "Active" : "Inactive";
+
+        var identityResult = await _identityAccounts.ConfigureAsync(
+            currentUser,
+            staffUser,
+            new IdentityAccountChange(LoginEnabled, TemporaryPassword, ConfirmTemporaryPassword),
+            HttpContext.RequestAborted);
+        if (!identityResult.Succeeded)
+        {
+            foreach (var error in identityResult.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+
+            await transaction.RollbackAsync(HttpContext.RequestAborted);
+            _db.ChangeTracker.Clear();
+            TemporaryPassword = null;
+            ConfirmTemporaryPassword = null;
+            ModelState.Remove(nameof(TemporaryPassword));
+            ModelState.Remove(nameof(ConfirmTemporaryPassword));
+            await LoadPageDataAsync(currentUser, useRegisterValues: false);
+            return Page();
+        }
 
         await SyncManagerAreaAssignmentAsync(currentUser, staffUser, AccessLevel, AssignedOperationalAreaId, now);
         await SyncAccessPermissionsAsync(currentUser, staffUser, SelectedPermissionKeys, now);
@@ -296,12 +324,16 @@ public class CreateManagerAccessModel : PageModel
             Action = "Staff access updated",
             EntityType = "AppUser",
             EntityId = staffUser.Id,
-            Details = $"{staffUser.FullName} access changed from {previousRole} to {role.Name}; status {previousStatus} to {staffUser.Status}; area #{previousAreaId?.ToString() ?? "none"} to #{AssignedOperationalAreaId?.ToString() ?? "none"}; permissions {SelectedPermissionKeys.Count}.",
+            Details = $"{staffUser.FullName} access changed from {previousRole} to {role.Name}; login {previousLoginState} to {(LoginEnabled ? "Enabled" : "Disabled")}; area #{previousAreaId?.ToString() ?? "none"} to #{AssignedOperationalAreaId?.ToString() ?? "none"}; permissions {SelectedPermissionKeys.Count}.",
             CreatedAtUtc = now
         });
 
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync(HttpContext.RequestAborted);
 
+        TemporaryPassword = null;
+        ConfirmTemporaryPassword = null;
+        ModelState.Clear();
         StatusMessage = $"{staffUser.FullName} access updated from the staff register.";
         ActionSaved = true;
         await LoadPageDataAsync(currentUser, useRegisterValues: true);
@@ -403,7 +435,10 @@ public class CreateManagerAccessModel : PageModel
                 RoleName = user.AppRole == null ? "Unassigned" : user.AppRole.Name,
                 AssignedOperationalAreaId = user.AssignedOperationalAreaId,
                 AssignedArea = user.AssignedOperationalArea == null ? "Unassigned" : user.AssignedOperationalArea.Name,
-                Status = user.Status
+                Status = user.Status,
+                HasLoginIdentity = user.LoginIdentity != null,
+                LoginEnabled = user.LoginIdentity != null && user.LoginIdentity.IsLoginEnabled,
+                MustChangePassword = user.LoginIdentity != null && user.LoginIdentity.MustChangePassword
             })
             .FirstOrDefaultAsync();
 
@@ -425,7 +460,7 @@ public class CreateManagerAccessModel : PageModel
 
         AccessLevel = RoleNameToAccessView(SelectedStaff.RoleName);
         AssignedOperationalAreaId = SelectedStaff.AssignedOperationalAreaId;
-        AccountActive = string.Equals(SelectedStaff.Status, "Active", StringComparison.OrdinalIgnoreCase);
+        LoginEnabled = SelectedStaff.LoginEnabled;
         var permissionSelection = await LoadPermissionSelectionAsync(companyId, SelectedStaff.Id);
         SelectedStaffHasSavedPermissions = permissionSelection.HasSavedRows;
         SelectedPermissionKeys = permissionSelection.HasSavedRows
@@ -501,6 +536,7 @@ public class CreateManagerAccessModel : PageModel
             .AsNoTracking()
             .Include(user => user.AppRole)
             .Include(user => user.AssignedOperationalArea)
+            .Include(user => user.LoginIdentity)
             .Where(user =>
                 user.CompanyId == companyId &&
                 user.Status != "Deleted")
@@ -515,7 +551,10 @@ public class CreateManagerAccessModel : PageModel
                 Email = user.Email,
                 AccessRole = user.AppRole == null ? "Unassigned" : user.AppRole.Name,
                 AssignedArea = user.AssignedOperationalArea == null ? "Unassigned" : user.AssignedOperationalArea.Name,
-                Status = user.Status
+                Status = user.Status,
+                HasLoginIdentity = user.LoginIdentity != null,
+                LoginEnabled = user.LoginIdentity != null && user.LoginIdentity.IsLoginEnabled,
+                MustChangePassword = user.LoginIdentity != null && user.LoginIdentity.MustChangePassword
             })
             .ToListAsync();
 
@@ -729,6 +768,9 @@ public class CreateManagerAccessModel : PageModel
         public int? AssignedOperationalAreaId { get; set; }
         public string AssignedArea { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public bool HasLoginIdentity { get; set; }
+        public bool LoginEnabled { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 
     public sealed class AccessRegisterRow
@@ -741,6 +783,9 @@ public class CreateManagerAccessModel : PageModel
         public string AssignedArea { get; set; } = string.Empty;
         public string ManagerScope { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public bool HasLoginIdentity { get; set; }
+        public bool LoginEnabled { get; set; }
+        public bool MustChangePassword { get; set; }
         public string EditAccessLevel { get; set; } = CurrentUserService.OperationalManagementAccess;
         public int PermissionCount { get; set; }
         public string PermissionSummary { get; set; } = string.Empty;

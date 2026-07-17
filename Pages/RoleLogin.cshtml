@@ -28,15 +28,10 @@
             <input class="text-input" asp-for="Password" type="password" value="@Model.Password" placeholder="Password" autocomplete="current-password" />
             <span class="field-error" asp-validation-for="Password"></span>
 
-            <label class="toggle-row">
-                <input type="checkbox" />
-                <span>Use multi-factor verification</span>
-            </label>
-
             <button class="menu-btn equipment-btn login-btn" type="submit">Continue</button>
         </form>
 
-        <div class="login-note">Temporary test login is pre-filled for this access level. Password storage, MFA, and tenant enforcement will be added with the production security layer.</div>
+        <div class="login-note">Login access is activated by an authorised senior manager from Access Setup.</div>
     </div>
 </div>
 

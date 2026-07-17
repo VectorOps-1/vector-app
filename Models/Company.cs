@@ -143,6 +143,7 @@ public class Company
     public DateTime? UpdatedAtUtc { get; set; }
 
     public ICollection<AppUser> Users { get; set; } = new List<AppUser>();
+    public ICollection<ApplicationIdentityUser> LoginIdentities { get; set; } = new List<ApplicationIdentityUser>();
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskEvent> TaskEvents { get; set; } = new List<TaskEvent>();
     public ICollection<IssueReport> IssueReports { get; set; } = new List<IssueReport>();

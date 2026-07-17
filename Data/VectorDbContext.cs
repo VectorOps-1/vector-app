@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using vector_app_local.Models;
 
 namespace vector_app_local.Data;
 
-public class VectorDbContext : DbContext
+public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
 {
     public VectorDbContext(DbContextOptions<VectorDbContext> options) : base(options)
     {
@@ -11,6 +12,7 @@ public class VectorDbContext : DbContext
 
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<ApplicationIdentityUser> LoginIdentities => Set<ApplicationIdentityUser>();
     public DbSet<AppRole> AppRoles => Set<AppRole>();
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
     public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
@@ -115,6 +117,25 @@ public class VectorDbContext : DbContext
             .HasOne(user => user.AssignedOperationalArea)
             .WithMany()
             .HasForeignKey(user => user.AssignedOperationalAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ApplicationIdentityUser>()
+            .HasIndex(identity => identity.AppUserId)
+            .IsUnique();
+
+        modelBuilder.Entity<ApplicationIdentityUser>()
+            .HasIndex(identity => new { identity.CompanyId, identity.NormalizedEmail });
+
+        modelBuilder.Entity<ApplicationIdentityUser>()
+            .HasOne(identity => identity.Company)
+            .WithMany(company => company.LoginIdentities)
+            .HasForeignKey(identity => identity.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ApplicationIdentityUser>()
+            .HasOne(identity => identity.AppUser)
+            .WithOne(user => user.LoginIdentity)
+            .HasForeignKey<ApplicationIdentityUser>(identity => identity.AppUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AppUserAccessPermission>()

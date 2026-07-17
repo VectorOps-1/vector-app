@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using vector_app_local.Data;
+using vector_app_local.Models;
 using vector_app_local.Services;
 
 namespace vector_app_local.Pages;
@@ -12,13 +14,16 @@ public class CompanyLoginModel : PageModel
 
     private readonly VectorDbContext _db;
     private readonly AuditTrailService _auditTrail;
+    private readonly SignInManager<ApplicationIdentityUser> _signInManager;
 
     public CompanyLoginModel(
         VectorDbContext db,
-        AuditTrailService auditTrail)
+        AuditTrailService auditTrail,
+        SignInManager<ApplicationIdentityUser> signInManager)
     {
         _db = db;
         _auditTrail = auditTrail;
+        _signInManager = signInManager;
     }
 
     [BindProperty]
@@ -36,7 +41,7 @@ public class CompanyLoginModel : PageModel
 
     public async Task OnGetAsync(string? workspaceSlug)
     {
-        ClearCompanyAndUserSession();
+        await ClearCompanyAndUserSessionAsync();
         WorkspaceSlug = workspaceSlug;
         ViewData["ClientName"] = "Company Workspace";
 
@@ -62,7 +67,7 @@ public class CompanyLoginModel : PageModel
         var company = await LoadCompanyFromWorkspaceAsync(WorkspaceSlug);
         if (company is null)
         {
-            ClearCompanyAndUserSession();
+            await ClearCompanyAndUserSessionAsync();
             ShowLoginForm = false;
             LoginError = "A valid company workspace link is required.";
             SecurityNote = "The company login is hidden unless opened from the workspace link created during onboarding.";
@@ -78,7 +83,7 @@ public class CompanyLoginModel : PageModel
             return Page();
         }
 
-        ClearCompanyAndUserSession();
+        await ClearCompanyAndUserSessionAsync();
         HttpContext.Session.SetInt32(CurrentUserService.CompanyIdSessionKey, company.Id);
 
         await _auditTrail.RecordAndSaveAsync(
@@ -107,8 +112,9 @@ public class CompanyLoginModel : PageModel
                 item.Status == "Active");
     }
 
-    private void ClearCompanyAndUserSession()
+    private async Task ClearCompanyAndUserSessionAsync()
     {
+        await _signInManager.SignOutAsync();
         HttpContext.Session.Remove(CurrentUserService.UserIdSessionKey);
         HttpContext.Session.Remove(CurrentUserService.CompanyIdSessionKey);
         HttpContext.Session.Remove(CurrentUserService.FullNameSessionKey);

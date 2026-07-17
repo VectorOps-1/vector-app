@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using vector_app_local.Data;
 using vector_app_local.Models;
 using vector_app_local.Services;
@@ -12,12 +13,21 @@ public class RoleLoginModel : PageModel
     private readonly VectorDbContext _db;
     private readonly CurrentUserService _currentUser;
     private readonly IWebHostEnvironment _environment;
+    private readonly IdentityAuthenticationService _authentication;
+    private readonly SignInManager<ApplicationIdentityUser> _signInManager;
 
-    public RoleLoginModel(VectorDbContext db, CurrentUserService currentUser, IWebHostEnvironment environment)
+    public RoleLoginModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        IWebHostEnvironment environment,
+        IdentityAuthenticationService authentication,
+        SignInManager<ApplicationIdentityUser> signInManager)
     {
         _db = db;
         _currentUser = currentUser;
         _environment = environment;
+        _authentication = authentication;
+        _signInManager = signInManager;
     }
 
     public string AccessView { get; private set; } = "operational-management";
@@ -43,7 +53,6 @@ public class RoleLoginModel : PageModel
         }
 
         ApplyCompanyBranding(company);
-        ApplyPrototypeLoginDefaults();
         return Page();
     }
 
@@ -66,7 +75,7 @@ public class RoleLoginModel : PageModel
 
         if (string.IsNullOrWhiteSpace(Password))
         {
-            ModelState.AddModelError(nameof(Password), "Enter the prototype password.");
+            ModelState.AddModelError(nameof(Password), "Enter your password.");
         }
 
         if (!ModelState.IsValid)
@@ -74,20 +83,24 @@ public class RoleLoginModel : PageModel
             return Page();
         }
 
-        var email = Email!.Trim();
-        var user = await _db.AppUsers
-            .Include(appUser => appUser.AppRole)
-            .Include(appUser => appUser.Company)
-            .FirstOrDefaultAsync(appUser =>
-                appUser.CompanyId == company.Id &&
-                appUser.Email == email &&
-                appUser.Status == "Active");
+        var result = await _authentication.AuthenticateAsync(
+            company.Id,
+            Email!.Trim(),
+            Password!,
+            AccessView,
+            HttpContext.RequestAborted);
 
-        if (user is null || !CurrentUserService.AccessAllowsRole(AccessView, user.AppRole?.Name))
+        if (result.Status != IdentityAuthenticationStatus.Succeeded ||
+            result.Profile is null ||
+            result.Identity is null)
         {
-            LoginError = "No active user with that email is authorised for this access level.";
+            LoginError = result.Status == IdentityAuthenticationStatus.LockedOut
+                ? "This login is temporarily locked after repeated failed attempts. Try again later or contact a senior manager."
+                : "The email, password, or selected access level is incorrect.";
             return Page();
         }
+
+        var user = result.Profile;
 
         var now = DateTime.UtcNow;
         user.LastLoginAtUtc = now;
@@ -104,9 +117,12 @@ public class RoleLoginModel : PageModel
 
         await _db.SaveChangesAsync();
 
+        await _signInManager.SignInAsync(result.Identity, isPersistent: false);
         _currentUser.SignIn(user, AccessView);
 
-        return RedirectToPage("/Home");
+        return result.Identity.MustChangePassword
+            ? RedirectToPage("/ChangePassword")
+            : RedirectToPage("/Home");
     }
 
     private void SetAccessView(string? access)
@@ -125,18 +141,6 @@ public class RoleLoginModel : PageModel
         ClientName = CompanyBranding.GetDisplayCompanyName(company);
         LogoPath = CompanyBranding.GetLogoPath(_environment, company);
         ViewData["ClientName"] = ClientName;
-    }
-
-    private void ApplyPrototypeLoginDefaults()
-    {
-        Email = AccessView switch
-        {
-            CurrentUserService.StaffAccess => "staff@test.local",
-            CurrentUserService.SeniorManagementAccess => "senior@test.local",
-            _ => "ops@test.local"
-        };
-
-        Password = "prototype";
     }
 
     private async Task<Company?> LoadSelectedCompanyAsync()
