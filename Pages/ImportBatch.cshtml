@@ -28,7 +28,46 @@
             <div><dt>Invalid</dt><dd>@batch.InvalidRowCount</dd></div>
         </dl>
 
-        @if (!committed)
+        @if (batch.TargetType == ImportTargetTypes.Checklist && !committed)
+        {
+            <form method="post" asp-page-handler="PrepareChecklist" class="step-section">
+                <input type="hidden" name="importBatchId" value="@batch.Id" />
+                <div class="step-title"><span class="step-number">1</span><div><h3>Name and interpret the checklist</h3><p>The selected structure becomes an editable draft only. It is never published automatically.</p></div></div>
+                <div class="checklist-import-controls">
+                    <label>Checklist name<input asp-for="ChecklistName" maxlength="160" placeholder="Enter the checklist name" /></label>
+                    <label>Source layout<select asp-for="ChecklistLayout"><option value="ExplicitColumns">Explicit columns</option><option value="Matrix">Checklist matrix</option><option value="OneSheetPerSection">One worksheet per section</option><option value="SectionedSheet">Sectioned worksheet</option></select></label>
+                    <label>Worksheet<select asp-for="Worksheet">@foreach (var sheet in Model.SourceProfile?.Worksheets ?? []) { <option value="@sheet.Name">@sheet.Name</option> }</select></label>
+                    <label>Header row<input asp-for="HeaderRowNumber" type="number" min="1" max="500" /></label>
+                </div>
+                <div class="button-row"><button class="button primary" type="submit">Build structure preview</button></div>
+            </form>
+            @if (Model.ChecklistDraft is not null)
+            {
+                <section class="step-section">
+                    <div class="step-title"><span class="step-number">2</span><div><h3>@Model.ChecklistDraft.Name</h3><p>@Model.ChecklistDraft.Sections.Count sections · @Model.ChecklistDraft.Sections.Sum(section => section.Items.Count) items</p></div></div>
+                    <div class="draft-structure-list">
+                        @foreach (var group in Model.ChecklistDraft.Sections)
+                        {
+                            <details open>
+                                <summary>@group.Name <span>@group.Items.Count items</span></summary>
+                                <ul>
+                                    @foreach (var item in group.Items)
+                                    {
+                                        <li><strong>@item.Prompt</strong><span>@item.ResponseType@(item.ParentPrompt is null ? "" : $" | Subitem of {item.ParentPrompt}")</span></li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    </div>
+                    @if (Model.CanCommit)
+                    {
+                        <form method="post" asp-page-handler="CommitChecklist" data-confirm="Create this named checklist as an editable draft? It will not be published or assigned."><input type="hidden" name="importBatchId" value="@batch.Id" /><button class="button primary" type="submit">Create editable draft</button></form>
+                    }
+                </section>
+            }
+        }
+
+        @if (batch.TargetType != ImportTargetTypes.Checklist && !committed)
         {
             <form method="post" asp-page-handler="SelectSource" class="step-band">
                 <input type="hidden" name="importBatchId" value="@batch.Id" />
@@ -39,7 +78,7 @@
             </form>
         }
 
-        @if (batch.ColumnMappings.Count > 0 && !committed)
+        @if (batch.TargetType != ImportTargetTypes.Checklist && batch.ColumnMappings.Count > 0 && !committed)
         {
             <form method="post" asp-page-handler="SaveMappings" class="step-section">
                 <input type="hidden" name="importBatchId" value="@batch.Id" />
@@ -61,7 +100,7 @@
             <form method="post" asp-page-handler="Validate" class="button-row"><input type="hidden" name="importBatchId" value="@batch.Id" /><button class="button secondary" type="submit">Validate source rows</button></form>
         }
 
-        @if (batch.RowResults.Count > 0 && !committed)
+        @if (batch.TargetType != ImportTargetTypes.Checklist && batch.RowResults.Count > 0 && !committed)
         {
             <section class="step-section">
                 <div class="step-title"><span class="step-number">3</span><div><h3>Correct and decide rows</h3><p>Correct or exclude errors. Existing matches need an explicit decision.</p></div></div>
@@ -93,5 +132,6 @@
 <style>
 .import-workflow,.step-section{display:grid;gap:16px}.heading-row,.step-band,.step-title,.decision-row,.commit-panel{display:flex;align-items:center;gap:14px}.heading-row{justify-content:space-between;align-items:flex-start}.heading-row h2,.step-title h3,.completion-panel h3{margin:0}.section-kicker{color:#5f6f82;font-size:12px;font-weight:900;text-transform:uppercase}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:0;border:1px solid #d8e0e8;background:#d8e0e8}.summary-grid div{padding:12px;background:#fff}.summary-grid dt{font-size:11px;font-weight:900;text-transform:uppercase;color:#5f6f82}.summary-grid dd{margin:3px 0 0;font-weight:800}.step-band,.step-section,.commit-panel,.completion-panel{padding:14px;border:1px solid #d8e0e8;background:#fff}.step-band label{display:grid;gap:5px;flex:1;font-weight:800}.step-number{display:grid;place-items:center;min-width:30px;height:30px;border-radius:50%;background:#35465e;color:#fff;font-weight:900}.compact-table{width:100%;border-collapse:collapse}.compact-table th,.compact-table td{padding:9px 12px;border-bottom:1px solid #dfe6ed;text-align:left;white-space:nowrap}.compact-table th{background:#35465e;color:#fff;font-size:11px;text-transform:uppercase}.button-row{display:flex;justify-content:flex-end;gap:8px}.row-list{display:grid;border:1px solid #d8e0e8}.import-row{border-bottom:1px solid #d8e0e8}.import-row summary{display:grid;grid-template-columns:1fr 120px 160px;gap:10px;padding:11px 12px;cursor:pointer;font-weight:800;background:#f7f9fb}.import-row.invalid summary{border-left:4px solid #b23b3b}.import-row.duplicate summary{border-left:4px solid #d37a00}.row-form{display:grid;gap:12px;padding:12px}.correction-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.correction-grid label{display:grid;gap:5px;font-weight:800}.field-error input{border-color:#b23b3b}.field-error small{color:#922b2b}.decision-row{justify-content:flex-end}.decision-row label{display:flex;align-items:center;gap:7px}.commit-panel{justify-content:space-between;border-left:4px solid #17768c}.commit-panel p{margin:3px 0 0}.completion-panel{border-left:4px solid #15805d}.inline-notice{padding:10px 12px;border-left:4px solid #17768c;background:#eef7f9}.inline-notice.warning{border-color:#d37a00;background:#fff7e7}.inline-notice.danger{border-color:#b23b3b;background:#fff0f0}
 .source-samples{display:block;max-width:320px;overflow:hidden;text-overflow:ellipsis;color:#637083;font-weight:500}
-@@media(max-width:760px){.summary-grid{grid-template-columns:1fr 1fr}.step-band,.commit-panel,.decision-row{align-items:stretch;flex-direction:column}.correction-grid{grid-template-columns:1fr}.import-row summary{grid-template-columns:1fr}.decision-row .button{width:100%}}
+.checklist-import-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.checklist-import-controls label{display:grid;gap:5px;font-weight:800}.draft-structure-list{display:grid;border:1px solid #d8e0e8}.draft-structure-list details{border-bottom:1px solid #d8e0e8}.draft-structure-list summary{display:flex;justify-content:space-between;padding:10px 12px;font-weight:900;cursor:pointer;background:#f7f9fb}.draft-structure-list ul{list-style:none;padding:0;margin:0}.draft-structure-list li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-top:1px solid #edf0f3}.draft-structure-list li span{color:#637083}
+@@media(max-width:760px){.summary-grid,.checklist-import-controls{grid-template-columns:1fr 1fr}.step-band,.commit-panel,.decision-row{align-items:stretch;flex-direction:column}.correction-grid{grid-template-columns:1fr}.import-row summary{grid-template-columns:1fr}.decision-row .button{width:100%}.draft-structure-list li{align-items:flex-start;flex-direction:column}}
 </style>

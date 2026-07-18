@@ -30,6 +30,8 @@ public class ChecklistTemplate
     [MaxLength(80)]
     public string SourceType { get; set; } = "Built";
 
+    public int? SourceImportBatchId { get; set; }
+
     public int? ParentChecklistTemplateId { get; set; }
     public ChecklistTemplate? ParentChecklistTemplate { get; set; }
 

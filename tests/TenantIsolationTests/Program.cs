@@ -24,6 +24,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("staff profile and login identity remain separated and tenant scoped", IdentitySeparationTests.RunAllAsync)
     ,("login identity provisioning is explicit, dry-run first, and replay safe", IdentityProvisioningTests.RunAllAsync)
     ,("deterministic register imports are tenant scoped, transactional, and non-login", ImportRegisterWorkflowTests.RunAllAsync)
+    ,("deterministic checklist imports preserve four layouts and create draft-only templates", ChecklistImportConversionTests.RunAllAsync)
 };
 
 foreach (var test in tests)

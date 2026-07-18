@@ -13,19 +13,22 @@ public class ImportBatchModel : PageModel
     private readonly ImportRegisterWorkflowService _workflow;
     private readonly IImportFieldRegistry _fields;
     private readonly IImportTabularReader _reader;
+    private readonly ChecklistImportConversionService _checklistConversion;
 
     public ImportBatchModel(
         CurrentUserService currentUser,
         ImportBatchService imports,
         ImportRegisterWorkflowService workflow,
         IImportFieldRegistry fields,
-        IImportTabularReader reader)
+        IImportTabularReader reader,
+        ChecklistImportConversionService checklistConversion)
     {
         _currentUser = currentUser;
         _imports = imports;
         _workflow = workflow;
         _fields = fields;
         _reader = reader;
+        _checklistConversion = checklistConversion;
     }
 
     public ImportBatch? Batch { get; private set; }
@@ -39,6 +42,9 @@ public class ImportBatchModel : PageModel
     [BindProperty] public int HeaderRowNumber { get; set; } = 1;
     [BindProperty] public List<MappingInputModel> Mappings { get; set; } = [];
     [BindProperty] public RowCorrectionInputModel RowCorrection { get; set; } = new();
+    [BindProperty] public string? ChecklistName { get; set; }
+    [BindProperty] public string ChecklistLayout { get; set; } = ChecklistImportLayouts.ExplicitColumns;
+    public ChecklistImportDraft? ChecklistDraft { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(int importBatchId, string? confirmation, CancellationToken cancellationToken)
     {
@@ -113,6 +119,26 @@ public class ImportBatchModel : PageModel
         });
     }
 
+    public async Task<IActionResult> OnPostPrepareChecklistAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            await _checklistConversion.PrepareAsync(
+                user, importBatchId, ChecklistName ?? string.Empty, ChecklistLayout,
+                Worksheet, HeaderRowNumber, cancellationToken);
+            return RedirectToPage(new { importBatchId, confirmation = "validated" });
+        });
+    }
+
+    public async Task<IActionResult> OnPostCommitChecklistAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            var template = await _checklistConversion.CommitDraftAsync(user, importBatchId, cancellationToken);
+            return RedirectToPage("/EditVehicleChecklist", new { templateId = template.Id, mode = "build", imported = "true" });
+        });
+    }
+
     public IReadOnlyDictionary<string, string?> ValuesFor(ImportRowResult row)
     {
         var json = row.CorrectedPayloadJson ?? row.OriginalPayloadJson;
@@ -169,7 +195,11 @@ public class ImportBatchModel : PageModel
         CanCommit = (await _imports.CanCommitAsync(user, cancellationToken)).Allowed;
         Worksheet = Batch.SelectedWorksheet ?? SourceProfile?.Worksheets.FirstOrDefault()?.Name;
         HeaderRowNumber = Batch.HeaderRowNumber ?? 1;
-        if (Batch.HeaderRowNumber is not null && Batch.SourceAssetFile is not null)
+        ChecklistName = Batch.ProposedRecordName;
+        ChecklistLayout = Batch.LayoutMode ?? ChecklistImportLayouts.ExplicitColumns;
+        ChecklistDraft = _checklistConversion.ReadDraft(Batch);
+        if (!string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
+            && Batch.HeaderRowNumber is not null && Batch.SourceAssetFile is not null)
         {
             var source = await _reader.ReadAsync(Batch.SourceAssetFile, Batch.SelectedWorksheet, Batch.HeaderRowNumber.Value, cancellationToken);
             SamplesByColumn = source.Columns.ToDictionary(column => column.Index, column => column.Samples);

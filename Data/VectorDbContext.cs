@@ -155,6 +155,9 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
             .HasIndex(batch => batch.SourceAssetFileId)
             .IsUnique();
 
+        modelBuilder.Entity<ChecklistTemplate>()
+            .HasIndex(template => new { template.CompanyId, template.SourceImportBatchId });
+
         modelBuilder.Entity<ImportBatch>()
             .Property(batch => batch.ConcurrencyToken)
             .IsConcurrencyToken();

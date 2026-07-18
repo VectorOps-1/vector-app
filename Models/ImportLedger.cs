@@ -52,6 +52,9 @@ public class ImportBatch
     [MaxLength(80)]
     public string TargetType { get; set; } = string.Empty;
 
+    [MaxLength(160)]
+    public string? ProposedRecordName { get; set; }
+
     [MaxLength(40)]
     public string Status { get; set; } = ImportBatchStatuses.Uploaded;
 

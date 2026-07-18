@@ -58,6 +58,7 @@ builder.Services.AddScoped<IImportFieldRegistry, ImportFieldRegistry>();
 builder.Services.AddScoped<IImportTabularReader, ImportTabularReader>();
 builder.Services.AddScoped<ImportBatchService>();
 builder.Services.AddScoped<ImportRegisterWorkflowService>();
+builder.Services.AddScoped<ChecklistImportConversionService>();
 builder.Services.AddScoped<AccessModelSetupService>();
 builder.Services.AddScoped<AssetRegisterSetupService>();
 builder.Services.AddScoped<ChecklistSetupService>();
