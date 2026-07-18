@@ -14,6 +14,7 @@ public class ImportBatchModel : PageModel
     private readonly IImportFieldRegistry _fields;
     private readonly IImportTabularReader _reader;
     private readonly ChecklistImportConversionService _checklistConversion;
+    private readonly ImportGovernanceService _governance;
 
     public ImportBatchModel(
         CurrentUserService currentUser,
@@ -21,7 +22,8 @@ public class ImportBatchModel : PageModel
         ImportRegisterWorkflowService workflow,
         IImportFieldRegistry fields,
         IImportTabularReader reader,
-        ChecklistImportConversionService checklistConversion)
+        ChecklistImportConversionService checklistConversion,
+        ImportGovernanceService governance)
     {
         _currentUser = currentUser;
         _imports = imports;
@@ -29,6 +31,7 @@ public class ImportBatchModel : PageModel
         _fields = fields;
         _reader = reader;
         _checklistConversion = checklistConversion;
+        _governance = governance;
     }
 
     public ImportBatch? Batch { get; private set; }
@@ -45,6 +48,9 @@ public class ImportBatchModel : PageModel
     [BindProperty] public string? ChecklistName { get; set; }
     [BindProperty] public string ChecklistLayout { get; set; } = ChecklistImportLayouts.ExplicitColumns;
     public ChecklistImportDraft? ChecklistDraft { get; private set; }
+    public IReadOnlyList<ImportMappingProfile> MappingProfiles { get; private set; } = [];
+    [BindProperty] public string? MappingProfileName { get; set; }
+    [BindProperty] public int SelectedMappingProfileId { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int importBatchId, string? confirmation, CancellationToken cancellationToken)
     {
@@ -58,6 +64,8 @@ public class ImportBatchModel : PageModel
             "validated" => "Rows validated. Resolve highlighted rows and duplicate decisions before commit.",
             "row-updated" => "Row correction saved and the batch revalidated.",
             "committed" => "Import committed. The records are now available in the existing register.",
+            "mapping-profile-saved" => "Reusable mapping saved for this company and import target.",
+            "mapping-profile-reused" => "Saved mappings applied. Review and confirm every column before validation.",
             _ => null
         };
         return Page();
@@ -91,6 +99,24 @@ public class ImportBatchModel : PageModel
         {
             await _workflow.ValidateAsync(user, importBatchId, cancellationToken);
             return RedirectToPage(new { importBatchId, confirmation = "validated" });
+        });
+    }
+
+    public async Task<IActionResult> OnPostSaveMappingProfileAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            await _governance.SaveMappingProfileAsync(user, importBatchId, MappingProfileName ?? string.Empty, cancellationToken);
+            return RedirectToPage(new { importBatchId, confirmation = "mapping-profile-saved" });
+        });
+    }
+
+    public async Task<IActionResult> OnPostReuseMappingProfileAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            await _governance.ReuseMappingProfileAsync(user, importBatchId, SelectedMappingProfileId, cancellationToken);
+            return RedirectToPage(new { importBatchId, confirmation = "mapping-profile-reused" });
         });
     }
 
@@ -198,6 +224,11 @@ public class ImportBatchModel : PageModel
         ChecklistName = Batch.ProposedRecordName;
         ChecklistLayout = Batch.LayoutMode ?? ChecklistImportLayouts.ExplicitColumns;
         ChecklistDraft = _checklistConversion.ReadDraft(Batch);
+        if (!string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
+            && Batch.ColumnMappings.Count > 0)
+        {
+            MappingProfiles = await _governance.MatchingProfilesAsync(user, Batch, cancellationToken);
+        }
         if (!string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
             && Batch.HeaderRowNumber is not null && Batch.SourceAssetFile is not null)
         {

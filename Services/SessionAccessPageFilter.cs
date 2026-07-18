@@ -101,6 +101,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/UploadMedicationRegister"] = ManagementAccess,
         ["/MedicationRegisterPreview"] = ManagementAccess,
         ["/ImportBatch"] = ManagementAccess,
+        ["/ImportHistory"] = ManagementAccess,
 
         ["/MasterSetup"] = SeniorAccess,
         ["/AreaManagerControl"] = SeniorAccess,
@@ -165,7 +166,8 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/StockRegisterPreview",
         "/UploadMedicationRegister",
         "/MedicationRegisterPreview",
-        "/ImportBatch"
+        "/ImportBatch",
+        "/ImportHistory"
     };
 
     private sealed record PermissionRequirement(
@@ -496,7 +498,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             "/ChecklistApproval"
                 => PermissionRequirement.All(UserActionPermissions.ChecklistsPublish),
 
-            "/UploadChecklist" or "/ChecklistPreview" or "/ImportBatch"
+            "/UploadChecklist" or "/ChecklistPreview" or "/ImportBatch" or "/ImportHistory"
                 => PermissionRequirement.All(UserActionPermissions.ImportsPrepare),
 
             "/VehicleSchematicLibrary"

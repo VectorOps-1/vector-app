@@ -56,6 +56,7 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
     public DbSet<ImportColumnMapping> ImportColumnMappings => Set<ImportColumnMapping>();
     public DbSet<ImportRowResult> ImportRowResults => Set<ImportRowResult>();
     public DbSet<ImportEntityChange> ImportEntityChanges => Set<ImportEntityChange>();
+    public DbSet<ImportMappingProfile> ImportMappingProfiles => Set<ImportMappingProfile>();
 
     public override int SaveChanges()
     {
@@ -255,6 +256,25 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
             .HasOne(change => change.RolledBackByUser)
             .WithMany()
             .HasForeignKey(change => change.RolledBackByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportMappingProfile>()
+            .HasIndex(profile => new { profile.CompanyId, profile.TargetType, profile.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<ImportMappingProfile>()
+            .HasIndex(profile => new { profile.CompanyId, profile.TargetType, profile.HeadingSignature });
+
+        modelBuilder.Entity<ImportMappingProfile>()
+            .HasOne(profile => profile.Company)
+            .WithMany(company => company.ImportMappingProfiles)
+            .HasForeignKey(profile => profile.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ImportMappingProfile>()
+            .HasOne(profile => profile.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(profile => profile.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<AppUserAccessPermission>()

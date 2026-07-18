@@ -18,30 +18,39 @@
         <p class="page-subtitle">Company onboarding and editable setup records</p>
 
         <div class="setup-section-title">Source Uploads</div>
+        @if (!Model.GuidedImportAvailable)
+        {
+            <div class="inline-notice">Guided Excel and CSV importing is available on Pro and Premium. Existing imported records remain available after a downgrade.</div>
+        }
         <div class="setup-grid">
-            <a class="module-card primary" href="/UploadVehicleRegister">
+            <a class="module-card primary @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadVehicleRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
                 <strong>Upload Vehicle Register</strong>
                 <span>Import registration numbers, callsigns, service dates, locations, and unit schematic mapping</span>
             </a>
 
-            <a class="module-card" href="/UploadEquipmentRegister">
+            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadEquipmentRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
                 <strong>Upload Equipment Register</strong>
                 <span>Import equipment names, S/N or asset IDs, service dates, and current locations</span>
             </a>
 
-            <a class="module-card" href="/UploadStaffRegister">
+            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadStaffRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
                 <strong>Upload Staff Register</strong>
                 <span>Import staff names, access level, contact detail, and assigned areas</span>
             </a>
 
-            <a class="module-card" href="/UploadStockRegister">
+            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadStockRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
                 <strong>Upload Stock Register</strong>
                 <span>Import stock item names, quantities, batch numbers, and storage locations</span>
             </a>
 
-            <a class="module-card" href="/UploadMedicationRegister">
+            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadMedicationRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
                 <strong>Upload Medication Register</strong>
                 <span>Import medication names, schedules, quantities, batches, expiry dates, and locations</span>
+            </a>
+
+            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/ImportHistory" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
+                <strong>Import History</strong>
+                <span>Review completed imports, mapping activity, and safe rollback status</span>
             </a>
         </div>
 
@@ -138,5 +147,21 @@
 
 .setup-grid .menu-btn {
     min-width: 260px;
+}
+
+.inline-notice {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-left: 4px solid #17768c;
+    background: #eef7f9;
+    color: #35465e;
+    text-align: left;
+    font-weight: 700;
+}
+
+.module-card.locked {
+    pointer-events: none;
+    opacity: .58;
+    border-style: dashed;
 }
 </style>

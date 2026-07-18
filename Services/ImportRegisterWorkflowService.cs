@@ -108,6 +108,8 @@ public sealed class ImportRegisterWorkflowService
         batch.LayoutMode = "RegisterRows";
         batch.Status = ImportBatchStatuses.Mapping;
         Touch(batch);
+        AddAudit(user, "Import source selected", batch,
+            $"Selected worksheet '{data.Worksheet}' and header row {data.HeaderRowNumber}; {data.Columns.Count} source columns detected.");
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -165,6 +167,8 @@ public sealed class ImportRegisterWorkflowService
 
         batch.Status = ImportBatchStatuses.Mapping;
         Touch(batch);
+        AddAudit(user, "Import mappings confirmed", batch,
+            $"Confirmed {batch.ColumnMappings.Count(mapping => !mapping.IsIgnored)} mapped and {batch.ColumnMappings.Count(mapping => mapping.IsIgnored)} ignored source columns.");
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -219,6 +223,8 @@ public sealed class ImportRegisterWorkflowService
         batch.ValidatedAtUtc = DateTime.UtcNow;
         batch.Status = DetermineBatchStatus(batch);
         Touch(batch);
+        AddAudit(user, "Import validated", batch,
+            $"Validation completed: {batch.ValidRowCount} valid, {batch.InvalidRowCount} invalid, {batch.WarningRowCount} warning rows; status {batch.Status}.");
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -241,6 +247,8 @@ public sealed class ImportRegisterWorkflowService
         row.IsIncluded = correction.IsIncluded;
         row.RowDecision = correction.IsIncluded ? correction.Decision : ImportRowDecisions.Skip;
         Touch(batch);
+        AddAudit(user, "Import row corrected", batch,
+            $"Source row {row.SourceRowNumber} was {(row.IsIncluded ? "included" : "excluded")} with decision '{row.RowDecision ?? "Pending"}'.");
         await _db.SaveChangesAsync(cancellationToken);
         await ValidateAsync(user, batchId, cancellationToken);
     }
@@ -932,6 +940,19 @@ public sealed class ImportRegisterWorkflowService
             .ToDictionary(property => property.Name, property => property.GetValue(entity));
     }
     private static string ComputeStateToken(string json) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(json)));
+    private void AddAudit(AppUser user, string action, ImportBatch batch, string details)
+    {
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = user.CompanyId,
+            AppUserId = user.Id,
+            Action = action,
+            EntityType = nameof(ImportBatch),
+            EntityId = batch.Id,
+            Details = details,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+    }
     private static void Touch(ImportBatch batch) { batch.UpdatedAtUtc = DateTime.UtcNow; batch.ConcurrencyToken = Guid.NewGuid().ToString("D"); }
 
     private sealed record ValueConversion(string? Value, string? Error);

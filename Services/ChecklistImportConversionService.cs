@@ -118,6 +118,16 @@ public sealed class ChecklistImportConversionService
         batch.ValidatedAtUtc = DateTime.UtcNow;
         batch.UpdatedAtUtc = DateTime.UtcNow;
         batch.ConcurrencyToken = Guid.NewGuid().ToString("D");
+        _db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = user.CompanyId,
+            AppUserId = user.Id,
+            Action = "Checklist import structure prepared",
+            EntityType = nameof(ImportBatch),
+            EntityId = batch.Id,
+            Details = $"Prepared '{checklistName}' as {layout}: {sections.Count} sections and {sections.Sum(section => section.Items.Count)} items. No checklist was created or published.",
+            CreatedAtUtc = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync(cancellationToken);
         return draft;
     }

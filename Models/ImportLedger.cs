@@ -203,3 +203,25 @@ public class ImportEntityChange
     public AppUser? RolledBackByUser { get; set; }
     public DateTime? RolledBackAtUtc { get; set; }
 }
+
+public class ImportMappingProfile
+{
+    public int Id { get; set; }
+    public int CompanyId { get; set; }
+    public Company? Company { get; set; }
+
+    [MaxLength(160)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    public string TargetType { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string HeadingSignature { get; set; } = string.Empty;
+
+    public string MappingJson { get; set; } = "[]";
+    public int CreatedByUserId { get; set; }
+    public AppUser? CreatedByUser { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}

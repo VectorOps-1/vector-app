@@ -179,4 +179,5 @@ public class Company
     public ICollection<ImportColumnMapping> ImportColumnMappings { get; set; } = new List<ImportColumnMapping>();
     public ICollection<ImportRowResult> ImportRowResults { get; set; } = new List<ImportRowResult>();
     public ICollection<ImportEntityChange> ImportEntityChanges { get; set; } = new List<ImportEntityChange>();
+    public ICollection<ImportMappingProfile> ImportMappingProfiles { get; set; } = new List<ImportMappingProfile>();
 }

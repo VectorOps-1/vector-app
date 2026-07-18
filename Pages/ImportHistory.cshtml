@@ -1,0 +1,63 @@
+@page
+@model ImportHistoryModel
+@using vector_app_local.Models
+@{
+    ViewData["Title"] = "Import History";
+}
+
+<section class="page-hero compact-hero">
+    <div class="eyebrow">Pro guided import</div>
+    <h1>Import History</h1>
+    <p>Review tenant-owned import activity and safely reverse only unchanged, unused imported records.</p>
+</section>
+
+<div asp-validation-summary="All" class="inline-notice danger"></div>
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <div class="action-confirmation">@Model.StatusMessage</div> }
+
+<section class="content-panel">
+    <header class="heading-row">
+        <div><span class="section-kicker">Current company</span><h2>Register and checklist imports</h2></div>
+        <a class="button secondary" href="/MasterSetup">Back to Master Setup</a>
+    </header>
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="empty-state"><strong>No imports recorded.</strong><span>Upload a register or checklist from Master Setup to begin.</span></div>
+    }
+    else
+    {
+        <div class="table-scroll-shell sticky-scroll-shell">
+            <table class="compact-table">
+                <thead><tr><th>Date</th><th>Target</th><th>Source</th><th>Created by</th><th>Rows</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    var rollbackAvailable = Model.CanRollback && row.Status is ImportBatchStatuses.Committed or ImportBatchStatuses.PartiallyRolledBack;
+                    <tr>
+                        <td>@row.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><strong>@(row.ProposedRecordName ?? row.TargetType)</strong><small>@row.TargetType</small></td>
+                        <td>@row.OriginalFileName</td>
+                        <td>@row.CreatedBy</td>
+                        <td>@row.ValidRows valid / @row.InvalidRows invalid</td>
+                        <td><span class="status-pill neutral">@row.Status</span>@if(row.BlockedChanges > 0){<small>@row.BlockedChanges rollback conflict(s)</small>}</td>
+                        <td class="action-cell">
+                            <a class="button small secondary" href="/ImportBatch?importBatchId=@row.Id">Open</a>
+                            @if (rollbackAvailable)
+                            {
+                                <form method="post" asp-page-handler="Rollback" data-confirm="Reverse only unchanged and unused records created or updated by this import? Operational and historical evidence will never be altered.">
+                                    <input type="hidden" name="importBatchId" value="@row.Id" />
+                                    <button class="button small danger" type="submit">Roll back</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<style>
+.heading-row,.action-cell{display:flex;align-items:center;gap:10px}.heading-row{justify-content:space-between;align-items:flex-start}.heading-row h2{margin:0}.section-kicker{font-size:11px;font-weight:900;text-transform:uppercase;color:#607087}.compact-table{width:100%;border-collapse:collapse}.compact-table th,.compact-table td{padding:10px 12px;border-bottom:1px solid #dfe6ed;text-align:left;white-space:nowrap}.compact-table th{background:#35465e;color:#fff;font-size:11px;text-transform:uppercase}.compact-table small{display:block;color:#637083;margin-top:3px}.action-cell form{margin:0}.empty-state{display:grid;gap:5px;padding:24px;border:1px dashed #cbd5df;text-align:center;color:#607087}.inline-notice.danger{border-left:4px solid #b23b3b;background:#fff0f0;padding:10px 12px}
+@@media(max-width:760px){.heading-row{align-items:stretch;flex-direction:column}.action-cell{align-items:stretch;flex-direction:column}.action-cell .button{width:100%}}
+</style>
