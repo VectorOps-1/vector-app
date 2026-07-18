@@ -162,7 +162,8 @@ public sealed class ImportGovernanceService
         var entity = await LoadEntityAsync(user.CompanyId, change.EntityType, change.EntityId.Value, cancellationToken);
         if (entity is null) return "The target record no longer exists.";
         var currentJson = JsonSerializer.Serialize(SnapshotEntity(entity), JsonOptions);
-        if (!string.Equals(StateToken(currentJson), change.EntityStateToken, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(StateToken(currentJson), change.EntityStateToken, StringComparison.OrdinalIgnoreCase)
+            && !SnapshotMatches(entity, change.AfterValuesJson))
             return "The record changed after import.";
 
         if (string.Equals(change.Action, ImportRowDecisions.Create, StringComparison.OrdinalIgnoreCase))
@@ -294,6 +295,33 @@ public sealed class ImportGovernanceService
         || type == typeof(DateTime) || type == typeof(DateTime?) || type == typeof(int?) || type == typeof(bool?);
 
     private static string StateToken(string json) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
+
+    private static bool SnapshotMatches(object entity, string? expectedJson)
+    {
+        if (string.IsNullOrWhiteSpace(expectedJson)) return false;
+        var expected = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(expectedJson, JsonOptions);
+        if (expected is null) return false;
+        var current = SnapshotEntity(entity);
+        if (current.Count != expected.Count) return false;
+
+        foreach (var (name, currentValue) in current)
+        {
+            if (!expected.TryGetValue(name, out var expectedValue)) return false;
+            var property = entity.GetType().GetProperty(name);
+            if (property is null || !ScalarValuesMatch(currentValue, expectedValue, property.PropertyType)) return false;
+        }
+        return true;
+    }
+
+    private static bool ScalarValuesMatch(object? currentValue, JsonElement expectedValue, Type propertyType)
+    {
+        if (currentValue is null) return expectedValue.ValueKind == JsonValueKind.Null;
+        if (expectedValue.ValueKind == JsonValueKind.Null) return false;
+        var expected = JsonSerializer.Deserialize(expectedValue.GetRawText(), propertyType, JsonOptions);
+        if (currentValue is DateTime currentDate && expected is DateTime expectedDate)
+            return currentDate.Ticks == expectedDate.Ticks;
+        return Equals(currentValue, expected);
+    }
 
     private static void RestoreScalarSnapshot(object entity, string json)
     {

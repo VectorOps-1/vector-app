@@ -33,8 +33,8 @@ public class ImportHistoryModel : PageModel
         await LoadAsync(user, cancellationToken);
         StatusMessage = confirmation switch
         {
-            "rolled-back" => "Eligible imported records were rolled back.",
-            "partially-rolled-back" => "Eligible records were rolled back. Records changed or used after import were preserved.",
+            "rolled-back" => "Import removed. Unchanged records created by this import were deleted.",
+            "partially-rolled-back" => "Import partially removed. Records changed or used after import were kept to protect operational history.",
             _ => null
         };
         return Page();

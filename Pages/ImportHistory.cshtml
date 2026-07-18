@@ -8,7 +8,7 @@
 <section class="page-hero compact-hero">
     <div class="eyebrow">Pro guided import</div>
     <h1>Import History</h1>
-    <p>Review tenant-owned import activity and safely reverse only unchanged, unused imported records.</p>
+    <p>Review import activity and remove records created by an import when they have not been changed or used.</p>
 </section>
 
 <div asp-validation-summary="All" class="inline-notice danger"></div>
@@ -38,14 +38,14 @@
                         <td>@row.OriginalFileName</td>
                         <td>@row.CreatedBy</td>
                         <td>@row.ValidRows valid / @row.InvalidRows invalid</td>
-                        <td><span class="status-pill neutral">@row.Status</span>@if(row.BlockedChanges > 0){<small>@row.BlockedChanges rollback conflict(s)</small>}</td>
+                        <td><span class="status-pill neutral">@(row.Status == ImportBatchStatuses.RolledBack ? "Import removed" : row.Status == ImportBatchStatuses.PartiallyRolledBack ? "Partially removed" : row.Status)</span>@if(row.BlockedChanges > 0){<small>@row.BlockedChanges removal conflict(s)</small>}</td>
                         <td class="action-cell">
                             <a class="button small secondary" href="/ImportBatch?importBatchId=@row.Id">Open</a>
                             @if (rollbackAvailable)
                             {
-                                <form method="post" asp-page-handler="Rollback" data-confirm="Reverse only unchanged and unused records created or updated by this import? Operational and historical evidence will never be altered.">
+                                <form method="post" asp-page-handler="Rollback" data-confirm="Remove this import? Records created by this import will be deleted only if they have not been changed or used. Existing operational and historical evidence will not be altered.">
                                     <input type="hidden" name="importBatchId" value="@row.Id" />
-                                    <button class="button small danger" type="submit">Roll back</button>
+                                    <button class="button small danger" type="submit">Remove Import</button>
                                 </form>
                             }
                         </td>

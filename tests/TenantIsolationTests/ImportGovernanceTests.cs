@@ -36,6 +36,10 @@ internal static class ImportGovernanceTests
             ("Item", "Rollback Gauze"), ("Quantity", "10"), ("Batch number", "ROLL-1"));
         var cleanWorkflow = Workflow(fixture, new StaticReader(("Item", "Rollback Gauze"), ("Quantity", "10"), ("Batch number", "ROLL-1")));
         await cleanWorkflow.CommitAsync(actor, cleanBatch.Id);
+        fixture.Db.ChangeTracker.Clear();
+        actor = await fixture.Db.AppUsers.Include(user => user.AppRole).SingleAsync(user => user.Id == fixture.TenantA.SeniorUserId);
+        batches = new ImportBatchService(fixture.Db, new UserActionPermissionService(fixture.Db));
+        governance = new ImportGovernanceService(fixture.Db, batches);
         var cleanResult = await governance.RollbackAsync(actor, cleanBatch.Id);
         Ensure(cleanResult.Reversed == 1 && cleanResult.Blocked == 0, "An unchanged import was not rolled back.");
         Ensure(!await fixture.Db.StockItems.AnyAsync(item => item.CompanyId == actor.CompanyId && item.BatchNumber == "ROLL-1"),

@@ -141,7 +141,7 @@
                 <form method="post" asp-page-handler="Commit" data-confirm="Commit this validated import to the register?" class="commit-panel"><input type="hidden" name="importBatchId" value="@batch.Id" /><div><strong>Final register commit</strong><p>@batch.IncludedRowCount included; @batch.InvalidRowCount invalid. Any database failure rolls back the full commit.</p></div><button class="button primary" type="submit" disabled="@(batch.Status != ImportBatchStatuses.ReadyToCommit)">Commit import</button></form>
             }
         }
-        @if (terminal) { <div class="completion-panel"><h3>@(batch.Status == ImportBatchStatuses.RolledBack ? "Import rolled back" : batch.Status == ImportBatchStatuses.PartiallyRolledBack ? "Import partially rolled back" : "Import complete")</h3><p>Records remain available in the normal register unless safely rolled back. Imported staff profiles never receive login identity or credentials.</p><a class="button secondary" href="/ImportHistory">Open import history</a></div> }
+        @if (terminal) { <div class="completion-panel"><h3>@(batch.Status == ImportBatchStatuses.RolledBack ? "Import removed" : batch.Status == ImportBatchStatuses.PartiallyRolledBack ? "Import partially removed" : "Import complete")</h3><p>Imported records remain in the register unless you choose Remove Import in Import History. Removal deletes only unchanged, unused records created by that import. Imported staff profiles never receive login identity or credentials.</p><a class="button secondary" href="/ImportHistory">Open import history</a></div> }
     </section>
 }
 
