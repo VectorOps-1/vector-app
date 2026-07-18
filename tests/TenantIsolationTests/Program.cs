@@ -12,6 +12,7 @@ using vector_app_local.Services;
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("tenant workflow snapshots do not leak records", TenantWorkflowSnapshotsDoNotLeakRecordsAsync),
+    ("workspace login recovery accepts issued links without a default tenant", WorkspaceLoginRecoveryAcceptsIssuedLinksAsync),
     ("current user service rejects company mismatch", CurrentUserServiceRejectsCompanyMismatchAsync),
     ("checklist publishing rejects foreign tenant inputs", ChecklistPublishingRejectsForeignTenantInputsAsync),
     ("schematic resolution is company bounded", SchematicResolutionIsCompanyBoundedAsync),
@@ -35,6 +36,17 @@ foreach (var test in tests)
 }
 
 Console.WriteLine("Tenant isolation tests passed.");
+
+static Task WorkspaceLoginRecoveryAcceptsIssuedLinksAsync()
+{
+    Ensure(CompanyWorkspaceAccess.NormalizeWorkspaceSlug("acuityops-workspace-42-demo") == "acuityops-workspace-42-demo",
+        "A workspace slug was not preserved.");
+    Ensure(CompanyWorkspaceAccess.NormalizeWorkspaceSlug("https://app.example/CompanyLogin/acuityops-workspace-42-demo") == "acuityops-workspace-42-demo",
+        "An issued workspace URL did not resolve to its workspace slug.");
+    Ensure(CompanyWorkspaceAccess.NormalizeWorkspaceSlug(null) is null,
+        "An empty workspace unexpectedly resolved to a default tenant.");
+    return Task.CompletedTask;
+}
 
 static Task ImportFieldRegistryExposesRequiredContractsAsync()
 {

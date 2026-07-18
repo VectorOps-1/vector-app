@@ -39,29 +39,40 @@ public class CompanyLoginModel : PageModel
     public string PageSubtitle { get; private set; } = "Use the company workspace link issued during onboarding";
     public string SecurityNote { get; private set; } = "This company-level access gate is separate from individual staff, operational management, and senior management logins.";
 
-    public async Task OnGetAsync(string? workspaceSlug)
+    public async Task<IActionResult> OnGetAsync(string? workspaceSlug)
     {
         await ClearCompanyAndUserSessionAsync();
-        WorkspaceSlug = workspaceSlug;
+        var requestedSlug = CompanyWorkspaceAccess.NormalizeWorkspaceSlug(workspaceSlug);
+        if (string.IsNullOrWhiteSpace(requestedSlug))
+            requestedSlug = CompanyWorkspaceAccess.NormalizeWorkspaceSlug(Request.Cookies[CompanyWorkspaceAccess.LastWorkspaceCookieName]);
+        WorkspaceSlug = requestedSlug;
         ViewData["ClientName"] = "Company Workspace";
 
-        var company = await LoadCompanyFromWorkspaceAsync(workspaceSlug);
+        var company = await LoadCompanyFromWorkspaceAsync(requestedSlug);
         if (company is null)
         {
+            if (!string.IsNullOrWhiteSpace(Request.Cookies[CompanyWorkspaceAccess.LastWorkspaceCookieName]))
+                Response.Cookies.Delete(CompanyWorkspaceAccess.LastWorkspaceCookieName);
             ShowLoginForm = false;
             LoginError = "A valid company workspace link is required.";
-            SecurityNote = "The company login is hidden unless opened from the workspace link created during onboarding.";
-            return;
+            SecurityNote = "Enter or paste the workspace link issued to your company. AcuityOps does not use a default company workspace.";
+            return Page();
         }
+
+        var canonicalSlug = company.WorkspaceSlug!;
+        RememberWorkspace(canonicalSlug);
+        if (!string.Equals(RouteData.Values["workspaceSlug"]?.ToString(), canonicalSlug, StringComparison.OrdinalIgnoreCase))
+            return RedirectToPage("/CompanyLogin", new { workspaceSlug = canonicalSlug });
 
         ShowLoginForm = true;
         PageSubtitle = "Enter the company access code issued during onboarding";
         CompanyAccessCode = string.Empty;
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(string? workspaceSlug)
     {
-        WorkspaceSlug = WorkspaceSlug ?? workspaceSlug;
+        WorkspaceSlug = CompanyWorkspaceAccess.NormalizeWorkspaceSlug(WorkspaceSlug ?? workspaceSlug);
         ViewData["ClientName"] = "Company Workspace";
 
         var company = await LoadCompanyFromWorkspaceAsync(WorkspaceSlug);
@@ -76,6 +87,7 @@ public class CompanyLoginModel : PageModel
 
         ShowLoginForm = true;
         PageSubtitle = "Enter the company access code issued during onboarding";
+        RememberWorkspace(company.WorkspaceSlug!);
 
         if (!CompanyWorkspaceAccess.AccessCodeMatches(company, CompanyAccessCode))
         {
@@ -110,6 +122,18 @@ public class CompanyLoginModel : PageModel
             .FirstOrDefaultAsync(item =>
                 item.WorkspaceSlug == normalizedSlug &&
                 item.Status == "Active");
+    }
+
+    private void RememberWorkspace(string workspaceSlug)
+    {
+        Response.Cookies.Append(CompanyWorkspaceAccess.LastWorkspaceCookieName, workspaceSlug, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            IsEssential = true,
+            MaxAge = TimeSpan.FromDays(365)
+        });
     }
 
     private async Task ClearCompanyAndUserSessionAsync()

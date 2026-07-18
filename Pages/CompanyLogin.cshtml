@@ -34,6 +34,19 @@
                 <button class="menu-btn equipment-btn" type="submit">Continue</button>
             </form>
         }
+        else
+        {
+            <form class="workspace-form workspace-recovery-form" method="get">
+                <label for="workspaceSlug">Company workspace link</label>
+                <input id="workspaceSlug"
+                       name="workspaceSlug"
+                       type="text"
+                       placeholder="Paste your workspace link or enter its workspace name"
+                       autocomplete="url" />
+                <button class="menu-btn equipment-btn" type="submit">Open Company Login</button>
+            </form>
+            <a class="button secondary company-login-start-link" href="/">Return to AcuityOps</a>
+        }
 
         <p class="security-note">@Model.SecurityNote</p>
     </div>
@@ -125,6 +138,15 @@
     width: 100%;
     margin-top: 8px;
     border: 0;
+}
+
+.workspace-recovery-form {
+    margin-top: 18px;
+}
+
+.company-login-start-link {
+    display: inline-flex;
+    margin-top: 14px;
 }
 
 .login-error {

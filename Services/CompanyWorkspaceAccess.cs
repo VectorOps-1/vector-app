@@ -6,6 +6,8 @@ namespace vector_app_local.Services;
 
 public static class CompanyWorkspaceAccess
 {
+    public const string LastWorkspaceCookieName = "AcuityOps.LastWorkspace";
+
     public static void EnsureWorkspaceAccess(Company company)
     {
         var changed = false;
@@ -36,6 +38,18 @@ public static class CompanyWorkspaceAccess
                 company.WorkspaceAccessCode.Trim(),
                 submittedCode.Trim(),
                 StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string? NormalizeWorkspaceSlug(string? workspaceLinkOrSlug)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceLinkOrSlug)) return null;
+        var value = workspaceLinkOrSlug.Trim();
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
+            value = uri.AbsolutePath;
+        value = value.Split('?', '#')[0].Trim('/');
+        if (value.Contains('/')) value = value.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty;
+        value = Uri.UnescapeDataString(value).Trim();
+        return value.Length is > 0 and <= 180 ? value : null;
     }
 
     private static string GenerateWorkspaceSlug(int companyId)
