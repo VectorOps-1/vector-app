@@ -224,12 +224,16 @@ public class ImportBatchModel : PageModel
         ChecklistName = Batch.ProposedRecordName;
         ChecklistLayout = Batch.LayoutMode ?? ChecklistImportLayouts.ExplicitColumns;
         ChecklistDraft = _checklistConversion.ReadDraft(Batch);
+        var isTerminal = Batch.Status is ImportBatchStatuses.Committed
+            or ImportBatchStatuses.PartiallyRolledBack
+            or ImportBatchStatuses.RolledBack;
         if (!string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
             && Batch.ColumnMappings.Count > 0)
         {
             MappingProfiles = await _governance.MatchingProfilesAsync(user, Batch, cancellationToken);
         }
-        if (!string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
+        if (!isTerminal
+            && !string.Equals(Batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
             && Batch.HeaderRowNumber is not null && Batch.SourceAssetFile is not null)
         {
             var source = await _reader.ReadAsync(Batch.SourceAssetFile, Batch.SelectedWorksheet, Batch.HeaderRowNumber.Value, cancellationToken);
