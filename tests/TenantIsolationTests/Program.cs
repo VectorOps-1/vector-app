@@ -27,9 +27,15 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("deterministic register imports are tenant scoped, transactional, and non-login", ImportRegisterWorkflowTests.RunAllAsync)
     ,("deterministic checklist imports preserve four layouts and create draft-only templates", ChecklistImportConversionTests.RunAllAsync)
     ,("import governance keeps mappings tenant scoped and rollback conservative", ImportGovernanceTests.RunAllAsync)
+    ,("province-aware compliance source registry is governed and provider compatible", CompliancePackGovernanceTests.RunAllAsync)
 };
 
-foreach (var test in tests)
+var testFilter = Environment.GetEnvironmentVariable("ACUITYOPS_TEST_FILTER");
+var selectedTests = string.IsNullOrWhiteSpace(testFilter)
+    ? tests
+    : tests.Where(test => test.Name.Contains(testFilter, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+foreach (var test in selectedTests)
 {
     await test.Run();
     Console.WriteLine($"PASS: {test.Name}");

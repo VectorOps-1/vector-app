@@ -57,6 +57,20 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
     public DbSet<ImportRowResult> ImportRowResults => Set<ImportRowResult>();
     public DbSet<ImportEntityChange> ImportEntityChanges => Set<ImportEntityChange>();
     public DbSet<ImportMappingProfile> ImportMappingProfiles => Set<ImportMappingProfile>();
+    public DbSet<Jurisdiction> Jurisdictions => Set<Jurisdiction>();
+    public DbSet<Regulator> Regulators => Set<Regulator>();
+    public DbSet<RegulatorySource> RegulatorySources => Set<RegulatorySource>();
+    public DbSet<RegulatorySourceVersion> RegulatorySourceVersions => Set<RegulatorySourceVersion>();
+    public DbSet<RegulatoryClause> RegulatoryClauses => Set<RegulatoryClause>();
+    public DbSet<ComplianceRequirementPack> ComplianceRequirementPacks => Set<ComplianceRequirementPack>();
+    public DbSet<ComplianceRequirementPackVersion> ComplianceRequirementPackVersions => Set<ComplianceRequirementPackVersion>();
+    public DbSet<ComplianceRequirement> ComplianceRequirements => Set<ComplianceRequirement>();
+    public DbSet<ComplianceApplicabilityRule> ComplianceApplicabilityRules => Set<ComplianceApplicabilityRule>();
+    public DbSet<ComplianceEvidenceDefinition> ComplianceEvidenceDefinitions => Set<ComplianceEvidenceDefinition>();
+    public DbSet<ComplianceRuleReview> ComplianceRuleReviews => Set<ComplianceRuleReview>();
+    public DbSet<ComplianceRequirementPackSource> ComplianceRequirementPackSources => Set<ComplianceRequirementPackSource>();
+    public DbSet<ComplianceRequirementSourceClause> ComplianceRequirementSourceClauses => Set<ComplianceRequirementSourceClause>();
+    public DbSet<ComplianceGovernanceEvent> ComplianceGovernanceEvents => Set<ComplianceGovernanceEvent>();
 
     public override int SaveChanges()
     {
@@ -276,6 +290,209 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
             .WithMany()
             .HasForeignKey(profile => profile.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Jurisdiction>()
+            .HasIndex(jurisdiction => jurisdiction.Code)
+            .IsUnique();
+
+        modelBuilder.Entity<Jurisdiction>()
+            .HasIndex(jurisdiction => new { jurisdiction.ParentJurisdictionId, jurisdiction.Level, jurisdiction.Name });
+
+        modelBuilder.Entity<Jurisdiction>()
+            .HasOne(jurisdiction => jurisdiction.ParentJurisdiction)
+            .WithMany(jurisdiction => jurisdiction.ChildJurisdictions)
+            .HasForeignKey(jurisdiction => jurisdiction.ParentJurisdictionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Regulator>()
+            .HasIndex(regulator => regulator.Code)
+            .IsUnique();
+
+        modelBuilder.Entity<Regulator>()
+            .HasOne(regulator => regulator.Jurisdiction)
+            .WithMany(jurisdiction => jurisdiction.Regulators)
+            .HasForeignKey(regulator => regulator.JurisdictionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegulatorySource>()
+            .HasIndex(source => source.SourceCode)
+            .IsUnique();
+
+        modelBuilder.Entity<RegulatorySource>()
+            .HasOne(source => source.Regulator)
+            .WithMany(regulator => regulator.RegulatorySources)
+            .HasForeignKey(source => source.RegulatorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegulatorySource>()
+            .HasOne(source => source.Jurisdiction)
+            .WithMany(jurisdiction => jurisdiction.RegulatorySources)
+            .HasForeignKey(source => source.JurisdictionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegulatorySourceVersion>()
+            .HasIndex(version => new { version.RegulatorySourceId, version.VersionLabel })
+            .IsUnique();
+
+        modelBuilder.Entity<RegulatorySourceVersion>()
+            .HasIndex(version => version.LifecycleState);
+
+        modelBuilder.Entity<RegulatorySourceVersion>()
+            .Property(version => version.ConcurrencyToken)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<RegulatorySourceVersion>()
+            .HasOne(version => version.RegulatorySource)
+            .WithMany(source => source.Versions)
+            .HasForeignKey(version => version.RegulatorySourceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegulatoryClause>()
+            .HasIndex(clause => new { clause.RegulatorySourceVersionId, clause.ClauseCode })
+            .IsUnique();
+
+        modelBuilder.Entity<RegulatoryClause>()
+            .HasOne(clause => clause.RegulatorySourceVersion)
+            .WithMany(version => version.Clauses)
+            .HasForeignKey(clause => clause.RegulatorySourceVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementPack>()
+            .HasIndex(pack => pack.PackCode)
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceRequirementPack>()
+            .HasOne(pack => pack.PrimaryJurisdiction)
+            .WithMany(jurisdiction => jurisdiction.RequirementPacks)
+            .HasForeignKey(pack => pack.PrimaryJurisdictionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementPackVersion>()
+            .HasIndex(version => new { version.ComplianceRequirementPackId, version.VersionLabel })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceRequirementPackVersion>()
+            .HasIndex(version => new { version.ComplianceRequirementPackId, version.ActiveSlot })
+            .IsUnique()
+            .HasFilter("ActiveSlot IS NOT NULL");
+
+        modelBuilder.Entity<ComplianceRequirementPackVersion>()
+            .HasIndex(version => new { version.LifecycleState, version.SourceCompletenessState });
+
+        modelBuilder.Entity<ComplianceRequirementPackVersion>()
+            .Property(version => version.ConcurrencyToken)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<ComplianceRequirementPackVersion>()
+            .HasOne(version => version.ComplianceRequirementPack)
+            .WithMany(pack => pack.Versions)
+            .HasForeignKey(version => version.ComplianceRequirementPackId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirement>()
+            .HasIndex(requirement => new { requirement.ComplianceRequirementPackVersionId, requirement.RequirementCode })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceRequirement>()
+            .HasOne(requirement => requirement.ComplianceRequirementPackVersion)
+            .WithMany(version => version.Requirements)
+            .HasForeignKey(requirement => requirement.ComplianceRequirementPackVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceApplicabilityRule>()
+            .HasIndex(rule => new { rule.ComplianceRequirementId, rule.GroupNumber, rule.SortOrder })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceApplicabilityRule>()
+            .HasOne(rule => rule.ComplianceRequirement)
+            .WithMany(requirement => requirement.ApplicabilityRules)
+            .HasForeignKey(rule => rule.ComplianceRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceApplicabilityRule>()
+            .HasOne(rule => rule.Jurisdiction)
+            .WithMany(jurisdiction => jurisdiction.ApplicabilityRules)
+            .HasForeignKey(rule => rule.JurisdictionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceEvidenceDefinition>()
+            .HasIndex(definition => new { definition.ComplianceRequirementId, definition.EvidenceCode })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceEvidenceDefinition>()
+            .HasOne(definition => definition.ComplianceRequirement)
+            .WithMany(requirement => requirement.EvidenceDefinitions)
+            .HasForeignKey(definition => definition.ComplianceRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .ToTable(table => table.HasCheckConstraint(
+                "CK_ComplianceRuleReviews_ExactlyOneSubject",
+                "((RegulatorySourceVersionId IS NOT NULL AND ComplianceRequirementPackVersionId IS NULL AND ComplianceRequirementId IS NULL) OR " +
+                "(RegulatorySourceVersionId IS NULL AND ComplianceRequirementPackVersionId IS NOT NULL AND ComplianceRequirementId IS NULL) OR " +
+                "(RegulatorySourceVersionId IS NULL AND ComplianceRequirementPackVersionId IS NULL AND ComplianceRequirementId IS NOT NULL))"));
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasIndex(review => new { review.RegulatorySourceVersionId, review.ReviewType, review.ReviewedAtUtc });
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasIndex(review => new { review.ComplianceRequirementPackVersionId, review.ReviewType, review.ReviewedAtUtc });
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasIndex(review => new { review.ComplianceRequirementId, review.ReviewType, review.ReviewedAtUtc });
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasOne(review => review.RegulatorySourceVersion)
+            .WithMany(version => version.Reviews)
+            .HasForeignKey(review => review.RegulatorySourceVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasOne(review => review.ComplianceRequirementPackVersion)
+            .WithMany(version => version.Reviews)
+            .HasForeignKey(review => review.ComplianceRequirementPackVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRuleReview>()
+            .HasOne(review => review.ComplianceRequirement)
+            .WithMany(requirement => requirement.Reviews)
+            .HasForeignKey(review => review.ComplianceRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementPackSource>()
+            .HasIndex(link => new { link.ComplianceRequirementPackVersionId, link.RegulatorySourceVersionId })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceRequirementPackSource>()
+            .HasOne(link => link.ComplianceRequirementPackVersion)
+            .WithMany(version => version.Sources)
+            .HasForeignKey(link => link.ComplianceRequirementPackVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementPackSource>()
+            .HasOne(link => link.RegulatorySourceVersion)
+            .WithMany(version => version.PackSources)
+            .HasForeignKey(link => link.RegulatorySourceVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementSourceClause>()
+            .HasIndex(link => new { link.ComplianceRequirementId, link.RegulatoryClauseId })
+            .IsUnique();
+
+        modelBuilder.Entity<ComplianceRequirementSourceClause>()
+            .HasOne(link => link.ComplianceRequirement)
+            .WithMany(requirement => requirement.SourceClauses)
+            .HasForeignKey(link => link.ComplianceRequirementId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceRequirementSourceClause>()
+            .HasOne(link => link.RegulatoryClause)
+            .WithMany(clause => clause.RequirementClauses)
+            .HasForeignKey(link => link.RegulatoryClauseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComplianceGovernanceEvent>()
+            .HasIndex(governanceEvent => new { governanceEvent.EntityType, governanceEvent.EntityId, governanceEvent.CreatedAtUtc });
 
         modelBuilder.Entity<AppUserAccessPermission>()
             .HasOne(permission => permission.AppUser)
