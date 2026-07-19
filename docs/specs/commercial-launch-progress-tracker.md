@@ -24,11 +24,11 @@ gate has passed.
 | --- | --- |
 | Total commercial-launch blocks | 13 |
 | Accepted and locked | 5 |
-| Active | 0 (Block 6 requires user-present planning) |
-| Remaining | 8 |
+| Active | 1 (Block 6; B6.1 accepted) |
+| Remaining | 7 |
 | Blocked | 0 |
 | Overall commercial-launch progress | 45% |
-| Current Block 5 progress | 100% (5/5 batches accepted; closed) |
+| Current Block 6 progress | 12.5% (1/8 stages accepted; B6.1 locked) |
 | Estimated remaining implementation credits | 94,900-164,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
@@ -81,7 +81,7 @@ contribution is earned only when Block 6 and its closure gate pass.
 | B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
 | B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
 | B5 | Pro import, column matching, and conversion | 10% | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
-| B6 | South African DOH Annual Inspection Mode | 8% | Not started; not yet decomposed | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
+| B6 | South African DOH Annual Inspection Mode | 8% | Active; B6.1 accepted and locked | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
 | B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
 | B8 | Operational communications and product libraries | 6% | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
 | B9 | Production Azure SaaS platform | 11% | Not started; not yet decomposed | B3, B4 | Production tenant/storage isolation, managed database/blob/secrets, CI/CD, client-specific release controls, backups, observability, incident response, and rollback pass | High; XHigh for final security review | 18,000-30,000 |
@@ -323,6 +323,46 @@ Status: Accepted and locked; 5/5 batches accepted
 - No seed/fallback data, direct SQL product-data creation, historical-evidence
   rewrite, product-owned schematic change, or Block 1-4 reopening occurred.
 
+## Active Block 6: South African DOH Annual Inspection Mode
+
+Block progress: `12.5% (1/8 stages accepted; active)`
+
+Authorities:
+
+- `docs/specs/block-6-sa-private-ambulance-inspection-mode-blueprint.md`
+- `docs/specs/block-6-authoritative-source-register.md`
+
+| Stage | Objective | Status | Evidence |
+| --- | --- | --- | --- |
+| B6.0 | Source acquisition and legal-pack gate | Not started | Research register exists, but no source pack has completed retained-artifact, clause, legal and operational approval gates |
+| B6.1 | Source registry and province-aware pack governance foundation | Accepted and locked | Commit `0a5df3b`; Release build passed with zero warnings/errors; full isolation suite and disposable SQLite/SQL Server migration checks passed |
+| B6.2 | Tenant compliance profile and evidence contract | Not started | Blocked from execution until explicitly authorized after B6.0 dependency review |
+| B6.3 | Deterministic evaluation and domain adapters | Not started | Depends on approved source and tenant evidence contracts |
+| B6.4 | Inspection workspace and corrective actions | Not started | Depends on B6.3 |
+| B6.5 | Immutable snapshot and evidence pack | Not started | Depends on B6.3-B6.4 |
+| B6.6 | First pack activation | Not started | Requires completed legal and operational approval; no pack is active |
+| B6.7 | Integrated tests, staging and legal closure | Not started | Block 6 closure gate |
+
+### B6.1 Accepted Evidence
+
+- Product-owned jurisdiction, source, clause, pack, requirement, applicability,
+  evidence-definition, review, relationship and governance tables carry no
+  tenant assignment.
+- South Africa, all nine provinces, optional nested district/municipality
+  levels, multi-province selection and future-country roots are supported by
+  structure only; the migration inserts no regulatory or tenant records.
+- National baseline and provincial overlays remain separately sourced,
+  versioned and reported. Missing or incomplete provinces return
+  `Source pack incomplete` and cannot produce an authoritative composition.
+- Governance writes are default-deny and require product-level authorization;
+  no tenant permission key, tenant mutation route or automatic rule creation
+  was added.
+- Lifecycle, clause provenance, conflict handling, one active version,
+  post-activation immutability, SQLite apply/rollback, SQL Server script
+  compatibility and zero-record creation were verified in disposable tests.
+- No active development or Azure database was migrated, no rule was activated,
+  no deployment occurred and product-owned schematics were untouched.
+
 ## Shortest Safe Remaining Order
 
 1. Complete B6 source-backed DOH architecture before predictive compliance.
@@ -359,11 +399,11 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-With the user present, propose the consolidated Block 6 South African DOH Annual
-Inspection Mode execution blueprint from the controlling roadmaps. Do not begin
-Block 6 implementation, legal interpretation, or compliance-source collection
-without that user-present planning step. Do not reopen Blocks 1-5 without an
-explicit instruction or a Verified-Work Finality Rule trigger.
+With the user present, propose the smallest safe B6.0 Source Acquisition and
+Legal-Pack Gate batch from the Block 6 blueprint and authoritative source
+register. Do not edit product source, activate requirements, create tenant
+compliance data, apply migrations, deploy or enter B6.2. Do not reopen Blocks
+1-5 without an explicit instruction or a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
