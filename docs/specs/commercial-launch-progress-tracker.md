@@ -2,7 +2,7 @@
 
 Status: Active and sole progress authority
 
-Updated: 2026-07-13
+Updated: 2026-07-19
 
 ## Authority
 
@@ -23,19 +23,19 @@ gate has passed.
 | Measure | Current value |
 | --- | --- |
 | Total commercial-launch blocks | 13 |
-| Accepted and locked | 4 |
-| Active | 1 (Block 5 implementation active; B5.1 accepted) |
-| Remaining after active block | 9 |
+| Accepted and locked | 5 |
+| Active | 0 (Block 6 requires user-present planning) |
+| Remaining | 8 |
 | Blocked | 0 |
-| Overall commercial-launch progress | 35% |
-| Current Block 5 progress | 20% (1/5 batches accepted) |
-| Estimated remaining implementation credits | 108,900-188,400 |
+| Overall commercial-launch progress | 45% |
+| Current Block 5 progress | 100% (5/5 batches accepted; closed) |
+| Estimated remaining implementation credits | 94,900-164,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
 The overall score is the sum of weights for blocks whose complete acceptance
 gate is accepted. Partial block work does not earn weighted progress. Therefore,
-Blocks 1 through 4 contribute `7% + 8% + 12% + 8% = 35%`. The next
-contribution is earned only when Block 5 and its closure gate pass.
+Blocks 1 through 5 contribute `7% + 8% + 12% + 8% + 10% = 45%`. The next
+contribution is earned only when Block 6 and its closure gate pass.
 
 ## Reasoning Levels
 
@@ -80,7 +80,7 @@ contribution is earned only when Block 5 and its closure gate pass.
 | B2 | Base commercial foundation | 8% | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
 | B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
 | B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
-| B5 | Pro import, column matching, and conversion | 10% | Active; B5.1 accepted; 1/5 batches accepted | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
+| B5 | Pro import, column matching, and conversion | 10% | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
 | B6 | South African DOH Annual Inspection Mode | 8% | Not started; not yet decomposed | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
 | B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
 | B8 | Operational communications and product libraries | 6% | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
@@ -250,15 +250,15 @@ Status: Accepted and locked
 
 ### Block 5: Pro Import, Column Matching, And Conversion
 
-Status: Active; B5.1 accepted; 1/5 batches accepted
+Status: Accepted and locked; 5/5 batches accepted
 
 | Batch | Objective | Status | Acceptance summary | Reasoning |
 | --- | --- | --- | --- | --- |
 | B5.1 | Import foundation and deterministic contract | Accepted and locked | Additive tenant-owned import ledger, bounded parser, canonical field registry, Pro/permission gates, source-evidence upload handoff, and no-domain-write boundary pass | High |
-| B5.2 | Deterministic register mapping and commit | Not started | Awaiting an approved batch plan | High/Medium |
-| B5.3 | Deterministic checklist conversion | Not started | Depends on B5.2 | High/Medium |
-| B5.4 | Audit, rollback, mapping reuse, and Pro UX | Not started | Depends on B5.2-B5.3 | High/Medium |
-| B5.5 | Integrated staging acceptance and closure | Not started | Depends on B5.1-B5.4 | High |
+| B5.2 | Deterministic register mapping and commit | Accepted and locked | Tenant-scoped mapping, conversion, correction, duplicate decisions, transactional commit, and non-login staff profile safety pass | High/Medium |
+| B5.3 | Deterministic checklist conversion | Accepted and locked | Explicit-column, matrix, sectioned-sheet, and one-sheet-per-section sources create editable drafts without hidden publication | High/Medium |
+| B5.4 | Audit, removal, mapping reuse, and Pro UX | Accepted and locked | Tenant-bound mapping reuse requires reconfirmation; import history and governed removal preserve conflicts and remove only unchanged unused records | High/Medium |
+| B5.5 | Integrated staging acceptance and closure | Accepted and locked | Automated tenant tests and real staging UI acceptance pass; temporary product records removed and original live checklist restored | High |
 
 ### B5.1 Acceptance Evidence
 
@@ -282,20 +282,60 @@ Status: Active; B5.1 accepted; 1/5 batches accepted
 - No active development or Azure staging database was migrated, and no staging
   deployment or operational data write occurred during B5.1 acceptance.
 
+### B5.2-B5.5 Acceptance Evidence
+
+- Source commits `579cde1`, `2a554db`, `75840c3`, `00b361a`, and `1b88f1a`
+  implement deterministic register import, checklist conversion, governed
+  history/removal, cross-request removal safety, and terminal import-history
+  rendering independent of temporary source files.
+- Staff-profile and login-identity separation commits `dedab8a` and `0342350`
+  preserve tenant-owned staff profiles while requiring explicit Access Setup
+  activation for real login identities. Importing staff creates no credentials
+  or login access.
+- The Release build passed with zero warnings and zero errors. All sixteen
+  targeted test groups passed, covering tenant isolation, immutable evidence and
+  PDF consistency, deterministic imports, staff identity separation, all four
+  checklist layouts, mapping reuse, transaction boundaries, and governed
+  removal.
+- GitHub Azure staging workflow run `29682027504` deployed the accepted source
+  successfully. Staging terminal import history remained readable after the
+  original local upload source was unavailable.
+- Real staging UI acceptance imported `stock-messy.csv`, confirmed deterministic
+  alias mapping, excluded one malformed row and one duplicate source row,
+  transactionally committed the single valid row, and verified exactly one
+  normal Stock Register record. A second import reused the saved tenant mapping,
+  required mapping reconfirmation, committed successfully, and was removed
+  through Import History. Both temporary stock records were removed.
+- Real staging UI acceptance imported one staff profile, verified it appeared in
+  the Staff Register with no configured login identity or credentials, and
+  removed it through Import History.
+- Real staging UI acceptance converted explicit-column CSV, checklist-matrix CSV,
+  sectioned-sheet CSV, and one-worksheet-per-section XLSX sources into named,
+  editable drafts. Crew preview rendered the imported vehicle and equipment
+  fields. None became live while in Draft status.
+- Explicit publication of the acceptance checklist to `A01 / DEM-101` was the
+  only action that made it load in Daily Vehicle & Equipment Check. Deleting the
+  temporary template removed its live scope and restored the prior published
+  subtype checklist. All temporary checklist templates and imported register
+  records were removed through supported UI workflows. Import-history evidence
+  remains as the tenant audit record; already-deleted templates are reported as
+  protected removal conflicts rather than rewritten.
+- No seed/fallback data, direct SQL product-data creation, historical-evidence
+  rewrite, product-owned schematic change, or Block 1-4 reopening occurred.
+
 ## Shortest Safe Remaining Order
 
-1. Complete B5 imports before DOH and AI because both consume normalized data.
-2. Complete B6 source-backed DOH architecture before predictive compliance.
-3. Complete B7 AI and knowledge functions against accepted import/compliance
+1. Complete B6 source-backed DOH architecture before predictive compliance.
+2. Complete B7 AI and knowledge functions against accepted import/compliance
    contracts.
-4. Complete B8 communications and global schematic expansion without coupling
+3. Complete B8 communications and global schematic expansion without coupling
    either to seed or tenant identity.
-5. Complete B9 production architecture before billing or real client data.
-6. Complete B10 commercial controls and data lifecycle.
-7. Complete B11 legal/security/support approval.
-8. Complete B12 public website and trial truth controls only after product and
+4. Complete B9 production architecture before billing or real client data.
+5. Complete B10 commercial controls and data lifecycle.
+6. Complete B11 legal/security/support approval.
+7. Complete B12 public website and trial truth controls only after product and
     commercial behavior are verified.
-9. Complete B13 release gate and first customer activation.
+8. Complete B13 release gate and first customer activation.
 
 No requirement is removed by this consolidation. Detailed batches for B5-B13
 remain intentionally undecomposed until the preceding dependency is close to
@@ -319,10 +359,11 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Propose the smallest safe B5.2 Deterministic Register Mapping And Commit batch
-from `block-5-pro-import-execution-blueprint.md`. Do not implement B5.2, apply
-the B5.1 migration to an active database, deploy, or reopen Blocks 1-4 without
-explicit approval or a Verified-Work Finality Rule trigger.
+With the user present, propose the consolidated Block 6 South African DOH Annual
+Inspection Mode execution blueprint from the controlling roadmaps. Do not begin
+Block 6 implementation, legal interpretation, or compliance-source collection
+without that user-present planning step. Do not reopen Blocks 1-5 without an
+explicit instruction or a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
