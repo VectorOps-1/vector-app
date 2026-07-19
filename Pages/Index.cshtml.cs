@@ -12,6 +12,9 @@ public class IndexModel : PageModel
     public bool ShowSplash { get; private set; } = true;
     public string ClientName { get; private set; } = AcuityOpsClientName;
     public string LogoPath { get; private set; } = AcuityOpsLogoPath;
+    public string WorkspaceEntryUrl { get; private set; } = "/CompanyLogin";
+    public string WorkspaceEntryLabel { get; private set; } = "Enter Workspace Link";
+    public bool HasRememberedWorkspace { get; private set; }
 
     public IActionResult OnGet()
     {
@@ -19,6 +22,15 @@ public class IndexModel : PageModel
         ClientName = AcuityOpsClientName;
         LogoPath = AcuityOpsLogoPath;
         ViewData["ClientName"] = ClientName;
+
+        var rememberedWorkspace = CompanyWorkspaceAccess.NormalizeWorkspaceSlug(
+            Request.Cookies[CompanyWorkspaceAccess.LastWorkspaceCookieName]);
+        if (!string.IsNullOrWhiteSpace(rememberedWorkspace))
+        {
+            HasRememberedWorkspace = true;
+            WorkspaceEntryUrl = $"/CompanyLogin/{Uri.EscapeDataString(rememberedWorkspace)}";
+            WorkspaceEntryLabel = "Continue to Company Login";
+        }
 
         return Page();
     }

@@ -24,13 +24,20 @@
 
         <div class="home-context">Secure EMS operations platform</div>
 
-        <p class="selector-title">Open your company workspace link</p>
+        <p class="selector-title">@(Model.HasRememberedWorkspace ? "Continue to your company login" : "Open your company workspace")</p>
 
         <p class="workspace-entry-note">
-            Staff, operational managers, and senior managers sign in after the company workspace has been opened.
+            @if (Model.HasRememberedWorkspace)
+            {
+                <text>Your previously opened workspace is ready. Continue to the company access gate.</text>
+            }
+            else
+            {
+                <text>Enter the workspace link issued during onboarding. Staff and managers sign in after the workspace opens.</text>
+            }
         </p>
 
-        <a class="menu-btn equipment-btn workspace-entry-link" href="/CompanyLogin">Company workspace login</a>
+        <a class="menu-btn equipment-btn workspace-entry-link" href="@Model.WorkspaceEntryUrl">@Model.WorkspaceEntryLabel</a>
 
         <div class="home-footer">AcuityOps v0.1</div>
     </div>
