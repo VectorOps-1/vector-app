@@ -23,7 +23,7 @@ Company access code:
 Senior Management login:
 
 - Email: `senior@test.local`
-- Password: `prototype`
+- Password: use the current temporary credential issued through the controlled staging identity-reset process; passwords are never stored in Git.
 
 Other staging accounts exist for verification, but the first demo should use Senior Management unless the demo specifically needs staff or operational-manager comparison.
 

@@ -31,12 +31,14 @@ Workspace:
 
 Role login accounts:
 
-- Staff: `staff@test.local` / `prototype`
-- Operational Management: `ops@test.local` / `prototype`
-- Senior Management: `senior@test.local` / `prototype`
-- Company Owner: `owner@test.local` / `prototype`
+- Staff: `staff@test.local`
+- Operational Management: `ops@test.local`
+- Senior Management: `senior@test.local`
+- Company Owner: `owner@test.local`
 
 These accounts are staging verification accounts only. They must not be treated as product seed data or copied into production.
+
+Passwords are not stored in Git or this runbook. Temporary credentials are issued through the controlled staging identity-reset path, are verified during reset, and require replacement at first login. After login, the Company Owner account is the recovery authority for resetting other staging accounts through **Area / Manager Control > Access Setup**. If every privileged staging credential is unavailable, use the controlled identity-reset utility after confirming Azure SQL point-in-time recovery; do not restore obsolete documented passwords.
 
 ## Azure Resource Inventory
 
