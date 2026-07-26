@@ -2,7 +2,7 @@
 
 Status: Active and sole progress authority
 
-Updated: 2026-07-19
+Updated: 2026-07-26
 
 ## Authority
 
@@ -24,9 +24,9 @@ gate has passed.
 | --- | --- |
 | Total commercial-launch blocks | 13 |
 | Accepted and locked | 5 |
-| Active | 1 (Block 6; B6.1 accepted) |
+| Active | 1 (Block 6; B6.1 accepted, B6.0 externally blocked) |
 | Remaining | 7 |
-| Blocked | 0 |
+| Blocked | 1 stage (B6.0 external authority and professional review) |
 | Overall commercial-launch progress | 45% |
 | Current Block 6 progress | 12.5% (1/8 stages accepted; B6.1 locked) |
 | Estimated remaining implementation credits | 94,900-164,400 |
@@ -334,7 +334,7 @@ Authorities:
 
 | Stage | Objective | Status | Evidence |
 | --- | --- | --- | --- |
-| B6.0 | Source acquisition and legal-pack gate | Not started | Research register exists, but no source pack has completed retained-artifact, clause, legal and operational approval gates |
+| B6.0 | Source acquisition and legal-pack gate | Blocked: external review | Public-source acquisition and missing-source remediation are documented in commit `db57bb7`; no pack has completed authority-response, qualified legal-review and private-EMS operational-review gates, and no requirement is approved or active |
 | B6.1 | Source registry and province-aware pack governance foundation | Accepted and locked | Commit `0a5df3b`; Release build passed with zero warnings/errors; full isolation suite and disposable SQLite/SQL Server migration checks passed |
 | B6.2 | Tenant compliance profile and evidence contract | Not started | Blocked from execution until explicitly authorized after B6.0 dependency review |
 | B6.3 | Deterministic evaluation and domain adapters | Not started | Depends on approved source and tenant evidence contracts |
@@ -362,6 +362,30 @@ Authorities:
   compatibility and zero-record creation were verified in disposable tests.
 - No active development or Azure database was migrated, no rule was activated,
   no deployment occurred and product-owned schematics were untouched.
+
+### B6.0 Evidence And External Block
+
+- Commit `db57bb7` records the source-acquisition report, national and
+  province-specific completeness matrix, candidate clause extracts,
+  independent-verification record, unavailable-source register, missing-source
+  remediation report, formal authority-request pack, and the prepared legal and
+  private-EMS operational review dossiers.
+- The retained external evidence vault contains 71 artifacts. Its inventory
+  SHA-256 is
+  `7c82a072279710b56cf59f49e3bc0091090d39b747270eaa0ceea5c272fda997`;
+  the supplemental-manifest SHA-256 is
+  `3557670751a9ed5fe65655cf7c00cec3a707d1f2ee24104ed63e6f673d93bfa6`.
+  Independent verification found zero hash mismatches and no duplicate
+  supplemental-manifest rows.
+- National sources and all nine provincial jurisdictions were assessed.
+  Unavailable or incomplete official records remain explicitly identified and
+  have not been substituted with another province's requirements.
+- `requirementsActivated = 0` and `tenantComplianceRecordsCreated = 0`.
+  Candidate extracts are not authoritative requirements.
+- B6.0 remains blocked pending responses from the responsible national,
+  provincial and professional authorities, qualified legal review, and
+  province-specific private-EMS operational review. B6.2 may not begin while
+  this gate remains blocked.
 
 ## Shortest Safe Remaining Order
 
@@ -399,11 +423,13 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-With the user present, propose the smallest safe B6.0 Source Acquisition and
-Legal-Pack Gate batch from the Block 6 blueprint and authoritative source
-register. Do not edit product source, activate requirements, create tenant
-compliance data, apply migrations, deploy or enter B6.2. Do not reopen Blocks
-1-5 without an explicit instruction or a Verified-Work Finality Rule trigger.
+Obtain and retain the outstanding authority responses using
+`docs/specs/block-6-b6.0/provincial-source-request-pack.md`, hash and
+independently extract every supplied record, and complete qualified legal and
+province-specific private-EMS operational review. Reconcile B6.0 only after
+those approvals are evidenced. Do not activate requirements or enter B6.2
+while B6.0 remains blocked. Do not reopen Blocks 1-5 without an explicit
+instruction or a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 
