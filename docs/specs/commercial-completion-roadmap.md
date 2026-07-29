@@ -250,6 +250,11 @@ Objective:
 
 Use AI to reduce setup effort and produce forward-looking operational intelligence.
 
+Implementation authorities:
+
+- `docs/specs/block-7-premium-ai-knowledge-intelligence-execution-blueprint.md`
+- `docs/specs/adr-block-7-ai-provider-and-data-residency.md`
+
 Deliverables:
 
 1. AI register import assistance:
@@ -293,6 +298,11 @@ Expected credit scale:
 Objective:
 
 Allow higher-tier clients to upload SOPs/clinical practice guidelines and turn them into navigable app content.
+
+Implementation authorities:
+
+- `docs/specs/block-7-premium-ai-knowledge-intelligence-execution-blueprint.md`
+- `docs/specs/adr-block-7-ai-provider-and-data-residency.md`
 
 Deliverables:
 

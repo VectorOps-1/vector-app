@@ -51,8 +51,9 @@ optional add-on, not newly completed implementation.
   and isolated workflow fixes.
 - `High`: migrations, tenant isolation, permissions, imports, billing,
   production architecture, security, or compliance data contracts.
-- `XHigh`: focused AI design, predictive compliance logic, or critical
-  production security/release review. It is not used for routine work.
+- `XHigh`: an irreversible AI/provider/data-residency decision not resolved by
+  an approved ADR, or a critical production security/release review. It is not
+  used for routine AI design or implementation.
 
 ## Verified-Work Finality Rule
 
@@ -89,7 +90,7 @@ optional add-on, not newly completed implementation.
 | B3 | Base manual operations completion | 12 | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
 | B4 | PDF evidence and report reliability | 8 | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
 | B5 | Pro import, column matching, and conversion | 10 | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
-| B7 | Premium AI and knowledge intelligence | 12 points | Not started; not yet decomposed | B5 | Human-reviewed AI import, 3/6/12-month operational forecasting, failure/shortage analytics, and cited SOP/CPG ingestion pass safety and audit gates; A1 compliance forecasting remains a separate extension | XHigh for design/review; High for implementation | 24,000-40,000 |
+| B7 | Premium AI and knowledge intelligence | 12 points | Planned; three-part blueprint proposed, no implementation accepted | B5 | Human-reviewed AI import, 3/6/12-month operational forecasting, failure/shortage analytics, and cited SOP/CPG ingestion pass safety and audit gates; A1 compliance forecasting remains a separate extension | High for architecture, migrations, isolation and evidence; Medium for bounded implementation | 24,000-40,000 |
 | B8 | Operational communications and product libraries | 6 | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
 | B9 | Production Azure SaaS platform | 11 | Not started; not yet decomposed | B3, B4 | Production tenant/storage isolation, managed database/blob/secrets, CI/CD, client-specific release controls, backups, observability, incident response, and rollback pass | High; XHigh for final security review | 18,000-30,000 |
 | B10 | Billing, tiers, subscriptions, and data lifecycle | 7 | Not started; not yet decomposed | B9 | Base/Pro/Premium/Enterprise and separately licensed add-on enforcement, invoices, VAT/tax, payment failure/grace/refund, downgrade/cancel, export, deletion, retention, and offboarding pass | High | 10,000-18,000 |
@@ -342,6 +343,26 @@ Status: Accepted and locked; 5/5 batches accepted
 - No seed/fallback data, direct SQL product-data creation, historical-evidence
   rewrite, product-owned schematic change, or Block 1-4 reopening occurred.
 
+### Block 7: Premium AI And Knowledge Intelligence
+
+Status: Planning only; 0/3 parts accepted; 0/12 points earned
+
+Proposed authorities:
+
+- `docs/specs/block-7-premium-ai-knowledge-intelligence-execution-blueprint.md`
+- `docs/specs/adr-block-7-ai-provider-and-data-residency.md`
+
+| Part | Objective | Status | Core boundary |
+| --- | --- | --- | --- |
+| B7.1 | Premium AI Import Intelligence | Not started | AI suggestions must enter the accepted Block 5 deterministic review, validation, commit and publication contract |
+| B7.2 | SOP/CPG Knowledge System | Not started | Immutable tenant sources, reviewed extraction, tenant-scoped search, and cited Q&A; no A1 conclusions |
+| B7.3 | Operational Forecasting And Integrated Closure | Not started | 3/6/12-month operational findings and explanations only; no regulatory compliance forecasting |
+
+Planning documentation earns no core points. Block 7 changes from 0 to 12
+accepted points only after all three parts pass the complete safety, tenant,
+human-review, cost, staging, and audit acceptance gate. Overall core progress
+therefore remains `45 / 92 = 48.9%`.
+
 ## Add-On Track A1: South African DOH Compliance Pack
 
 Add-on progress: `12.5% (1/8 stages accepted; externally blocked)`
@@ -447,12 +468,13 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-With the user present, propose the smallest safe B7 Premium AI and Knowledge
-Intelligence design batch. Keep core AI import, operational forecasting and
-SOP/CPG intelligence independent of Add-On Track A1. Do not implement
-add-on-specific compliance forecasting, activate requirements or enter B6.2.
-Do not reopen Blocks 1-5 without an explicit instruction or a Verified-Work
-Finality Rule trigger.
+Review and commit the proposed Block 7 blueprint, provider/data-residency ADR,
+and roadmap/tracker reconciliation as one docs-only change. After approval,
+propose `B7.1 Premium AI Import Intelligence` as the first implementation part.
+Keep core AI import, operational forecasting and SOP/CPG intelligence
+independent of Add-On Track A1. Do not implement add-on-specific compliance
+forecasting, activate requirements or enter B6.2. Do not reopen Blocks 1-5
+without an explicit instruction or a Verified-Work Finality Rule trigger.
 
 ## Update Rules
 

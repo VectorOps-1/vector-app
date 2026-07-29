@@ -296,7 +296,7 @@ Required outcomes:
 
 Goal:
 
-Make Premium a future-risk and compliance-intelligence platform.
+Make Premium a future operational-risk and decision-support platform.
 
 Required outcomes:
 
@@ -307,11 +307,16 @@ Required outcomes:
 5. Stock shortage prediction.
 6. Medication expiry risk.
 7. Equipment failure trend detection.
-8. Compliance gap forecasting.
+8. Operational control and readiness gap forecasting.
 9. Critical failure risk flags.
 10. Plain-English recommendations.
 11. Senior-management review controls.
 12. Exportable reports.
+
+Core R7 does not evaluate legislation, Department of Health inspection
+requirements, or Add-On Track A1 regulatory conclusions. Regulatory compliance
+forecasting remains an A1 extension and requires approved A1 deterministic
+results plus the required Premium and annual add-on entitlements.
 
 ### Phase R8: Premium SOP/CPG Knowledge UI
 

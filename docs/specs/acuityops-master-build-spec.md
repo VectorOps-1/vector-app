@@ -908,7 +908,7 @@ Tier positioning:
 
 - `Base`: ordinary file storage only where included. No AI conversion, no SOP knowledge UI, no semantic search, no source-backed Q&A.
 - `Pro`: structured upload, extraction, topic/category navigation, searchable SOP library, human review, version control, publish workflow, acknowledgement tracking, and role/scope access.
-- `Premium`: AI-assisted restructuring, semantic search, source-backed Q&A, change comparison, SOP analytics, training/acknowledgement dashboards, and future risk reports linked to SOP compliance gaps.
+- `Premium`: AI-assisted restructuring, semantic search, source-backed Q&A, change comparison, SOP analytics, training/acknowledgement dashboards, and future operational-risk reports linked to publication, acknowledgement, training, or operational-adherence gaps.
 
 Required providers and platform functions:
 
@@ -1048,11 +1048,16 @@ and both the required Premium and annual add-on entitlements are active.
 ### Phase 14: AI Predictive Analysis
 
 101. Build 3-month, 6-month, and 12-month AI forecast reports.
-102. Forecast expiry pressure, service pressure, licensing/CPD risk, shortages, failures, repeated defects, and compliance gaps.
+102. Forecast expiry pressure, service pressure, licensing/CPD risk, shortages, failures, repeated defects, and operational control/readiness gaps.
 103. Reports must use real app data only.
 104. Each AI report must include risks, priority, affected assets/areas, and recommended actions.
 105. Senior managers can generate company-wide reports.
 106. Operational managers can generate scoped reports only for assigned areas.
+
+Core Phase 14 does not evaluate legislation or regulator requirements and must
+not produce legal or Department of Health compliance conclusions. Regulatory
+compliance forecasting belongs only to Add-On Track A1 after approved
+deterministic A1 results exist and the required entitlements are active.
 
 ### Phase 15: SaaS Packaging
 
