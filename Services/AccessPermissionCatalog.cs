@@ -39,7 +39,8 @@ public static class AccessPermissionCatalog
         new("Guided Imports", new[]
         {
             new AccessPermissionOption(UserActionPermissions.ImportsPrepare, "Prepare guided imports", "Upload and inspect Pro Excel or CSV sources and prepare mappings without changing operational records."),
-            new AccessPermissionOption(UserActionPermissions.ImportsCommit, "Commit guided imports", "Create or update tenant records from a validated import batch. This permission does not grant staff login access or publish checklists.")
+            new AccessPermissionOption(UserActionPermissions.ImportsCommit, "Commit guided imports", "Create or update tenant records from a validated import batch. This permission does not grant staff login access or publish checklists."),
+            new AccessPermissionOption(UserActionPermissions.ImportsAiAssist, "Use Premium AI import assistance", "Request and review cost-controlled AI mapping or checklist-structure suggestions. Existing validation, commit, login, and publication controls still apply.")
         }),
         new("Oversight And Setup", new[]
         {

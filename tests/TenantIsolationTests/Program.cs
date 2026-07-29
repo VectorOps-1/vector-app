@@ -28,6 +28,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("deterministic checklist imports preserve four layouts and create draft-only templates", ChecklistImportConversionTests.RunAllAsync)
     ,("import governance keeps mappings tenant scoped and rollback conservative", ImportGovernanceTests.RunAllAsync)
     ,("province-aware compliance source registry is governed and provider compatible", CompliancePackGovernanceTests.RunAllAsync)
+    ,("premium AI import suggestions are tenant scoped, cost bounded, and Block 5 controlled", PremiumAiImportTests.RunAllAsync)
 };
 
 var testFilter = Environment.GetEnvironmentVariable("ACUITYOPS_TEST_FILTER");

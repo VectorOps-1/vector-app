@@ -57,6 +57,16 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
     public DbSet<ImportRowResult> ImportRowResults => Set<ImportRowResult>();
     public DbSet<ImportEntityChange> ImportEntityChanges => Set<ImportEntityChange>();
     public DbSet<ImportMappingProfile> ImportMappingProfiles => Set<ImportMappingProfile>();
+    public DbSet<AiProcessingJob> AiProcessingJobs => Set<AiProcessingJob>();
+    public DbSet<AiJobAttempt> AiJobAttempts => Set<AiJobAttempt>();
+    public DbSet<AiSuggestionSet> AiSuggestionSets => Set<AiSuggestionSet>();
+    public DbSet<AiSuggestion> AiSuggestions => Set<AiSuggestion>();
+    public DbSet<AiHumanDecision> AiHumanDecisions => Set<AiHumanDecision>();
+    public DbSet<CompanyAiUsagePolicy> CompanyAiUsagePolicies => Set<CompanyAiUsagePolicy>();
+    public DbSet<AiUsageLedger> AiUsageLedgers => Set<AiUsageLedger>();
+    public DbSet<AiImportProposal> AiImportProposals => Set<AiImportProposal>();
+    public DbSet<AiImportColumnProposal> AiImportColumnProposals => Set<AiImportColumnProposal>();
+    public DbSet<AiChecklistStructureProposal> AiChecklistStructureProposals => Set<AiChecklistStructureProposal>();
     public DbSet<Jurisdiction> Jurisdictions => Set<Jurisdiction>();
     public DbSet<Regulator> Regulators => Set<Regulator>();
     public DbSet<RegulatorySource> RegulatorySources => Set<RegulatorySource>();
@@ -290,6 +300,107 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
             .WithMany()
             .HasForeignKey(profile => profile.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiProcessingJob>()
+            .HasIndex(job => new { job.CompanyId, job.ImportBatchId, job.CreatedAtUtc });
+        modelBuilder.Entity<AiProcessingJob>()
+            .HasIndex(job => new { job.CompanyId, job.Status });
+        modelBuilder.Entity<AiProcessingJob>()
+            .Property(job => job.ConcurrencyToken)
+            .IsConcurrencyToken();
+        modelBuilder.Entity<AiProcessingJob>()
+            .HasOne(job => job.Company).WithMany().HasForeignKey(job => job.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiProcessingJob>()
+            .HasOne(job => job.RequestedByUser).WithMany().HasForeignKey(job => job.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiProcessingJob>()
+            .HasOne(job => job.ImportBatch).WithMany().HasForeignKey(job => job.ImportBatchId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiJobAttempt>()
+            .HasIndex(item => new { item.CompanyId, item.AiProcessingJobId, item.AttemptNumber }).IsUnique();
+        modelBuilder.Entity<AiJobAttempt>()
+            .Property(item => item.EstimatedCostUsd).HasPrecision(18, 6);
+        modelBuilder.Entity<AiJobAttempt>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiJobAttempt>()
+            .HasOne(item => item.AiProcessingJob).WithMany(job => job.Attempts).HasForeignKey(item => item.AiProcessingJobId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiSuggestionSet>()
+            .HasIndex(item => new { item.CompanyId, item.AiProcessingJobId, item.CreatedAtUtc });
+        modelBuilder.Entity<AiSuggestionSet>()
+            .Property(item => item.Confidence).HasPrecision(5, 4);
+        modelBuilder.Entity<AiSuggestionSet>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiSuggestionSet>()
+            .HasOne(item => item.AiProcessingJob).WithMany(job => job.SuggestionSets).HasForeignKey(item => item.AiProcessingJobId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiSuggestionSet>()
+            .HasOne(item => item.ReviewedByUser).WithMany().HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiSuggestion>()
+            .HasIndex(item => new { item.CompanyId, item.AiSuggestionSetId, item.SortOrder });
+        modelBuilder.Entity<AiSuggestion>()
+            .Property(item => item.Confidence).HasPrecision(5, 4);
+        modelBuilder.Entity<AiSuggestion>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiSuggestion>()
+            .HasOne(item => item.AiSuggestionSet).WithMany(set => set.Suggestions).HasForeignKey(item => item.AiSuggestionSetId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiHumanDecision>()
+            .HasIndex(item => new { item.CompanyId, item.AiSuggestionId, item.ReviewedAtUtc });
+        modelBuilder.Entity<AiHumanDecision>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiHumanDecision>()
+            .HasOne(item => item.AiSuggestion).WithMany(suggestion => suggestion.HumanDecisions).HasForeignKey(item => item.AiSuggestionId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiHumanDecision>()
+            .HasOne(item => item.ReviewedByUser).WithMany().HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .HasIndex(item => item.CompanyId).IsUnique();
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .Property(item => item.MonthlySoftLimitUsd).HasPrecision(18, 2);
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .Property(item => item.MonthlyHardLimitUsd).HasPrecision(18, 2);
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .Property(item => item.PerJobLimitUsd).HasPrecision(18, 2);
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .HasOne(item => item.Company).WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<CompanyAiUsagePolicy>()
+            .HasOne(item => item.ChangedByUser).WithMany().HasForeignKey(item => item.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiUsageLedger>()
+            .HasIndex(item => new { item.CompanyId, item.RecordedAtUtc });
+        modelBuilder.Entity<AiUsageLedger>()
+            .Property(item => item.EstimatedCostUsd).HasPrecision(18, 6);
+        modelBuilder.Entity<AiUsageLedger>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiUsageLedger>()
+            .HasOne(item => item.AiProcessingJob).WithMany().HasForeignKey(item => item.AiProcessingJobId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiImportProposal>()
+            .HasIndex(item => new { item.CompanyId, item.ImportBatchId, item.CreatedAtUtc });
+        modelBuilder.Entity<AiImportProposal>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiImportProposal>()
+            .HasOne(item => item.ImportBatch).WithMany().HasForeignKey(item => item.ImportBatchId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiImportProposal>()
+            .HasOne(item => item.AiSuggestionSet).WithMany().HasForeignKey(item => item.AiSuggestionSetId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiImportColumnProposal>()
+            .HasIndex(item => new { item.CompanyId, item.AiImportProposalId, item.SourceColumnKey });
+        modelBuilder.Entity<AiImportColumnProposal>()
+            .Property(item => item.Confidence).HasPrecision(5, 4);
+        modelBuilder.Entity<AiImportColumnProposal>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiImportColumnProposal>()
+            .HasOne(item => item.AiImportProposal).WithMany(proposal => proposal.ColumnProposals).HasForeignKey(item => item.AiImportProposalId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AiChecklistStructureProposal>()
+            .HasIndex(item => new { item.CompanyId, item.ImportBatchId, item.CreatedAtUtc });
+        modelBuilder.Entity<AiChecklistStructureProposal>()
+            .HasOne<Company>().WithMany().HasForeignKey(item => item.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiChecklistStructureProposal>()
+            .HasOne(item => item.ImportBatch).WithMany().HasForeignKey(item => item.ImportBatchId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AiChecklistStructureProposal>()
+            .HasOne(item => item.AiSuggestionSet).WithMany().HasForeignKey(item => item.AiSuggestionSetId).OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Jurisdiction>()
             .HasIndex(jurisdiction => jurisdiction.Code)

@@ -21,6 +21,7 @@ public static class VectorFeatures
 
     public const string ReadinessAnalytics = "readiness-analytics";
     public const string AiChecklistImport = "ai-checklist-import";
+    public const string AiImportIntelligence = "premium-ai-import-intelligence";
     public const string AdvancedExports = "advanced-exports";
     public const string AzureBlobStorage = "azure-blob-storage";
     public const string MultiSiteReporting = "multi-site-reporting";

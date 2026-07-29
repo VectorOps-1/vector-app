@@ -104,6 +104,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/ImportHistory"] = ManagementAccess,
 
         ["/MasterSetup"] = SeniorAccess,
+        ["/AiUsageSettings"] = SeniorAccess,
         ["/AreaManagerControl"] = SeniorAccess,
         ["/ChecklistApproval"] = SeniorAccess,
         ["/OperationalAreas"] = SeniorAccess,

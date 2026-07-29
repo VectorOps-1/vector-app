@@ -28,6 +28,82 @@
             <div><dt>Invalid</dt><dd>@batch.InvalidRowCount</dd></div>
         </dl>
 
+        @if (!terminal)
+        {
+            <section class="ai-assist-panel">
+                <div>
+                    <span class="section-kicker">Premium AI assistance</span>
+                    <h3>Review suggestions before guided import</h3>
+                    <p>AI can suggest mappings or checklist structure. It cannot write registers, grant staff access, create a live checklist, or publish anything.</p>
+                </div>
+                @if (Model.CanUseAi)
+                {
+                    <form method="post" asp-page-handler="RequestAi">
+                        <input type="hidden" name="importBatchId" value="@batch.Id" />
+                        <button class="button primary" type="submit">Generate AI suggestions</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="status-pill neutral">Premium entitlement, saved permission, and approved AI budget policy required</span>
+                }
+            </section>
+        }
+
+        @if (Model.AiReview is not null)
+        {
+            <section class="ai-review-panel">
+                <header class="heading-row">
+                    <div><span class="section-kicker">Human review required</span><h3>AI suggestions</h3></div>
+                    <span class="status-pill neutral">@Model.AiReview.Job.Status</span>
+                </header>
+                <p>Accept, correct, reject, or defer each suggestion. Accepted register mappings still require Save mappings and validation. Accepted checklist structure becomes only an editable draft preview.</p>
+                <div class="ai-suggestion-list">
+                    @foreach (var suggestion in Model.AiReview.SuggestionSet.Suggestions.OrderBy(item => item.SortOrder))
+                    {
+                        <form method="post" asp-page-handler="ReviewAi" class="ai-suggestion">
+                            <input type="hidden" name="importBatchId" value="@batch.Id" />
+                            <input type="hidden" name="AiSuggestionId" value="@suggestion.Id" />
+                            <div>
+                                <strong>@(suggestion.Kind == "ColumnMapping" ? $"Column {suggestion.SourceLocator}" : "Checklist structure")</strong>
+                                <span>@(suggestion.TargetKey ?? Model.AiReview.ChecklistProposal?.ProposedName)</span>
+                                <small>@suggestion.Explanation</small>
+                            </div>
+                            <div class="confidence-meter"><span>Confidence</span><strong>@($"{suggestion.Confidence:P0}")</strong></div>
+                            <label>Decision
+                                <select name="AiDecision">
+                                    <option value="@AiHumanDecisions.Accept">Accept</option>
+                                    <option value="@AiHumanDecisions.Correct">Correct</option>
+                                    <option value="@AiHumanDecisions.Reject">Reject</option>
+                                    <option value="@AiHumanDecisions.Defer">Defer</option>
+                                </select>
+                            </label>
+                            @if (suggestion.Kind == "ColumnMapping")
+                            {
+                                <label>Correction
+                                    <select name="AiCorrectedValue">
+                                        <option value="">Use suggestion</option>
+                                        @foreach (var field in Model.Target?.Fields ?? [])
+                                        {
+                                            <option value="@field.Key">@field.Label</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+                            else
+                            {
+                                <label>Correct checklist name<input name="AiCorrectedValue" maxlength="160" placeholder="Only required when correcting" /></label>
+                            }
+                            <label>Reviewer note<input name="AiReviewNote" maxlength="1200" placeholder="Required for low-confidence acceptance" /></label>
+                            <button class="button secondary" type="submit" disabled="@(suggestion.Status is not (AiSuggestionStatuses.PendingReview or AiSuggestionStatuses.Deferred))">
+                                @(suggestion.Status is AiSuggestionStatuses.PendingReview or AiSuggestionStatuses.Deferred ? "Save review" : suggestion.Status)
+                            </button>
+                        </form>
+                    }
+                </div>
+            </section>
+        }
+
         @if (batch.TargetType == ImportTargetTypes.Checklist && !terminal)
         {
             <form method="post" asp-page-handler="PrepareChecklist" class="step-section">
@@ -150,5 +226,7 @@
 .source-samples{display:block;max-width:320px;overflow:hidden;text-overflow:ellipsis;color:#637083;font-weight:500}
 .checklist-import-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.checklist-import-controls label{display:grid;gap:5px;font-weight:800}.draft-structure-list{display:grid;border:1px solid #d8e0e8}.draft-structure-list details{border-bottom:1px solid #d8e0e8}.draft-structure-list summary{display:flex;justify-content:space-between;padding:10px 12px;font-weight:900;cursor:pointer;background:#f7f9fb}.draft-structure-list ul{list-style:none;padding:0;margin:0}.draft-structure-list li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-top:1px solid #edf0f3}.draft-structure-list li span{color:#637083}
 .mapping-profile-bar{display:flex;align-items:end;gap:10px;padding:12px;border:1px solid #cbd9e3;background:#f5fafb}.mapping-profile-bar label{display:grid;gap:5px;flex:1;font-weight:800}.completion-panel{display:grid;gap:10px;justify-items:start}.completion-panel p{margin:0}
-@@media(max-width:760px){.summary-grid,.checklist-import-controls{grid-template-columns:1fr 1fr}.step-band,.commit-panel,.decision-row,.mapping-profile-bar{align-items:stretch;flex-direction:column}.correction-grid{grid-template-columns:1fr}.import-row summary{grid-template-columns:1fr}.decision-row .button,.mapping-profile-bar .button{width:100%}.draft-structure-list li{align-items:flex-start;flex-direction:column}}
+.ai-assist-panel,.ai-review-panel{display:grid;gap:12px;padding:14px;border:1px solid #a8c5d1;border-left:4px solid #17768c;background:#f5fafb}.ai-assist-panel{grid-template-columns:minmax(0,1fr) auto;align-items:center}.ai-assist-panel h3,.ai-review-panel h3{margin:2px 0}.ai-assist-panel p,.ai-review-panel p{margin:0;color:#586779}.ai-suggestion-list{display:grid;border:1px solid #d8e0e8;background:#fff}.ai-suggestion{display:grid;grid-template-columns:minmax(180px,1.25fr) 90px repeat(3,minmax(130px,1fr)) auto;gap:10px;align-items:end;padding:11px;border-bottom:1px solid #dfe6ed}.ai-suggestion>div:first-child{display:grid;gap:3px}.ai-suggestion small{color:#637083}.ai-suggestion label{display:grid;gap:4px;font-weight:800;font-size:12px}.confidence-meter{display:grid;gap:4px}.confidence-meter span{font-size:11px;text-transform:uppercase;color:#637083;font-weight:800}
+@@media(max-width:1000px){.ai-suggestion{grid-template-columns:1fr 100px}.ai-suggestion label,.ai-suggestion .button{grid-column:1/-1}}
+@@media(max-width:760px){.summary-grid,.checklist-import-controls{grid-template-columns:1fr 1fr}.step-band,.commit-panel,.decision-row,.mapping-profile-bar{align-items:stretch;flex-direction:column}.correction-grid{grid-template-columns:1fr}.import-row summary{grid-template-columns:1fr}.decision-row .button,.mapping-profile-bar .button{width:100%}.draft-structure-list li{align-items:flex-start;flex-direction:column}.ai-assist-panel{grid-template-columns:1fr}.ai-suggestion{grid-template-columns:1fr}.ai-suggestion>*{grid-column:1!important}}
 </style>

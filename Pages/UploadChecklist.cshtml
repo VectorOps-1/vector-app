@@ -15,7 +15,7 @@
         <div class="client-line">Client: @companyName</div>
         <div class="home-label">Checklist Management</div>
         <h2 class="page-title">Upload Existing Checklist</h2>
-        <p class="page-subtitle">Store an existing checklist for reference. Guided template import is a Pro workflow.</p>
+        <p class="page-subtitle">Upload a spreadsheet for guided import, or use Premium AI assistance for a checklist PDF.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
         {
@@ -24,9 +24,9 @@
 
         <form method="post" enctype="multipart/form-data" class="upload-form">
             <label class="upload-box" for="checklistFile">
-                <span class="upload-title">Select Excel File</span>
-                <span class="upload-help">Accepted now: .xlsx, .xls, or .csv</span>
-                <input id="checklistFile" asp-for="ChecklistFile" type="file" accept=".xlsx,.xls,.csv" />
+                <span class="upload-title">Select checklist source</span>
+                <span class="upload-help">Accepted: .xlsx, .xls, .csv, or .pdf. PDF structure extraction requires Premium AI.</span>
+                <input id="checklistFile" asp-for="ChecklistFile" type="file" accept=".xlsx,.xls,.csv,.pdf" />
             </label>
 
             <button class="menu-btn equipment-btn continue-btn" type="submit">Upload Source File</button>

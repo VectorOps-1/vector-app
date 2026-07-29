@@ -1,0 +1,38 @@
+@page
+@model AiUsageSettingsModel
+@{
+    ViewData["Title"] = "Premium AI Usage";
+}
+
+<section class="page-hero compact-hero">
+    <div class="eyebrow">Master Setup</div>
+    <h1>Premium AI Usage</h1>
+    <p>Control whether AI import assistance may run and set enforceable company cost limits.</p>
+</section>
+
+<div asp-validation-summary="All" class="inline-notice danger"></div>
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <div class="action-confirmation">@Model.StatusMessage</div> }
+
+<section class="content-panel ai-policy">
+    <header class="heading-row">
+        <div><span class="section-kicker">Current month</span><h2>USD @Model.CurrentMonthUsageUsd.ToString("0.0000") used</h2></div>
+        <span class="status-pill @(Model.PremiumAvailable ? "published" : "neutral")">@(Model.PremiumAvailable ? "Premium available" : "Premium required")</span>
+    </header>
+    <form method="post">
+        <label class="toggle-line"><input asp-for="Enabled" type="checkbox" /> Enable Premium AI Import Intelligence for this company</label>
+        <div class="policy-grid">
+            <label>Monthly warning limit (USD)<input asp-for="MonthlySoftLimitUsd" type="number" min="0" step="0.01" /></label>
+            <label>Monthly hard stop (USD)<input asp-for="MonthlyHardLimitUsd" type="number" min="0.01" step="0.01" /></label>
+            <label>Per-job hard stop (USD)<input asp-for="PerJobLimitUsd" type="number" min="0.01" step="0.01" /></label>
+            <label>Maximum concurrent jobs<input asp-for="MaxConcurrentJobs" type="number" min="1" max="5" /></label>
+        </div>
+        <label class="toggle-line"><input asp-for="AllowHighCapabilityModel" type="checkbox" /> Allow high-capability model only when the configured deployment and budget support it</label>
+        <div class="inline-notice">AI suggestions never commit register data, create staff access, publish checklists, or bypass Guided Import review.</div>
+        <div class="button-row"><a class="button secondary" href="/MasterSetup">Cancel</a><button class="button primary" type="submit">Save AI policy</button></div>
+    </form>
+</section>
+
+<style>
+.ai-policy,.ai-policy form{display:grid;gap:18px}.heading-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.heading-row h2{margin:2px 0}.section-kicker{font-size:11px;font-weight:900;text-transform:uppercase;color:#637083}.policy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.policy-grid label{display:grid;gap:6px;font-weight:800}.toggle-line{display:flex;align-items:center;gap:9px;font-weight:800}.button-row{display:flex;justify-content:flex-end;gap:8px}.inline-notice{padding:12px;border-left:4px solid #17768c;background:#eef7f9}.inline-notice.danger{border-color:#b23b3b;background:#fff0f0}
+@@media(max-width:700px){.policy-grid{grid-template-columns:1fr}.heading-row{flex-direction:column}.button-row .button{flex:1}}
+</style>

@@ -30,6 +30,11 @@ public sealed record FileStorageValidationOptions(
         20 * 1024 * 1024,
         [".xlsx", ".xls", ".csv"]);
 
+    public static readonly FileStorageValidationOptions ChecklistImport = new(
+        "checklist import",
+        20 * 1024 * 1024,
+        [".xlsx", ".xls", ".csv", ".pdf"]);
+
     public static readonly FileStorageValidationOptions StaffDocument = new(
         "staff document",
         10 * 1024 * 1024,

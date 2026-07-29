@@ -93,6 +93,38 @@ public sealed class ChecklistImportConversionService
             throw new InvalidOperationException("Every checklist item needs a label of 240 characters or fewer.");
 
         var draft = new ChecklistImportDraft(checklistName, layout, sections);
+        await SavePreparedDraftAsync(user, batch, draft, worksheet, headerRowNumber, cancellationToken);
+        return draft;
+    }
+
+    public async Task<ChecklistImportDraft> PrepareSuggestedDraftAsync(
+        AppUser user,
+        int batchId,
+        ChecklistImportDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        var batch = await RequireBatchAsync(user, batchId, cancellationToken);
+        if (!string.Equals(batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("This import batch is not a checklist source.");
+        if (!ChecklistImportLayouts.All.Contains(draft.Layout))
+            throw new InvalidOperationException("The reviewed checklist layout is not supported.");
+        if (draft.Name.Trim().Length is < 2 or > 160)
+            throw new InvalidOperationException("Enter a checklist name between 2 and 160 characters.");
+        if (draft.Sections.Count == 0 || draft.Sections.SelectMany(section => section.Items).Any(item =>
+                string.IsNullOrWhiteSpace(item.Prompt) || item.Prompt.Length > 240))
+            throw new InvalidOperationException("The reviewed checklist structure is incomplete.");
+        await SavePreparedDraftAsync(user, batch, draft with { Name = draft.Name.Trim() }, "AI reviewed structure", 1, cancellationToken);
+        return draft;
+    }
+
+    private async Task SavePreparedDraftAsync(
+        AppUser user,
+        ImportBatch batch,
+        ChecklistImportDraft draft,
+        string? worksheet,
+        int headerRowNumber,
+        CancellationToken cancellationToken)
+    {
         _db.ImportRowResults.RemoveRange(batch.RowResults);
         batch.RowResults.Clear();
         batch.RowResults.Add(new ImportRowResult
@@ -105,11 +137,11 @@ public sealed class ChecklistImportConversionService
             RowDecision = ImportRowDecisions.Create,
             IsIncluded = true
         });
-        batch.ProposedRecordName = checklistName;
-        batch.SelectedWorksheet = layout == ChecklistImportLayouts.OneSheetPerSection ? "All worksheets" : worksheet;
+        batch.ProposedRecordName = draft.Name;
+        batch.SelectedWorksheet = draft.Layout == ChecklistImportLayouts.OneSheetPerSection ? "All worksheets" : worksheet;
         batch.HeaderRowNumber = headerRowNumber;
-        batch.LayoutMode = layout;
-        batch.SourceRowCount = sections.Sum(section => section.Items.Count);
+        batch.LayoutMode = draft.Layout;
+        batch.SourceRowCount = draft.Sections.Sum(section => section.Items.Count);
         batch.IncludedRowCount = batch.SourceRowCount;
         batch.ValidRowCount = batch.SourceRowCount;
         batch.InvalidRowCount = 0;
@@ -125,11 +157,10 @@ public sealed class ChecklistImportConversionService
             Action = "Checklist import structure prepared",
             EntityType = nameof(ImportBatch),
             EntityId = batch.Id,
-            Details = $"Prepared '{checklistName}' as {layout}: {sections.Count} sections and {sections.Sum(section => section.Items.Count)} items. No checklist was created or published.",
+            Details = $"Prepared '{draft.Name}' as {draft.Layout}: {draft.Sections.Count} sections and {draft.Sections.Sum(section => section.Items.Count)} items. No checklist was created or published.",
             CreatedAtUtc = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(cancellationToken);
-        return draft;
     }
 
     public ChecklistImportDraft? ReadDraft(ImportBatch batch)

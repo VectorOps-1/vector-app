@@ -15,6 +15,7 @@ public class ImportBatchModel : PageModel
     private readonly IImportTabularReader _reader;
     private readonly ChecklistImportConversionService _checklistConversion;
     private readonly ImportGovernanceService _governance;
+    private readonly PremiumAiImportService _ai;
 
     public ImportBatchModel(
         CurrentUserService currentUser,
@@ -23,7 +24,8 @@ public class ImportBatchModel : PageModel
         IImportFieldRegistry fields,
         IImportTabularReader reader,
         ChecklistImportConversionService checklistConversion,
-        ImportGovernanceService governance)
+        ImportGovernanceService governance,
+        PremiumAiImportService ai)
     {
         _currentUser = currentUser;
         _imports = imports;
@@ -32,12 +34,15 @@ public class ImportBatchModel : PageModel
         _reader = reader;
         _checklistConversion = checklistConversion;
         _governance = governance;
+        _ai = ai;
     }
 
     public ImportBatch? Batch { get; private set; }
     public ImportSourceProfile? SourceProfile { get; private set; }
     public ImportTargetDefinition? Target { get; private set; }
     public bool CanCommit { get; private set; }
+    public bool CanUseAi { get; private set; }
+    public AiImportReview? AiReview { get; private set; }
     public IReadOnlyDictionary<int, IReadOnlyList<string>> SamplesByColumn { get; private set; } = new Dictionary<int, IReadOnlyList<string>>();
     public string? StatusMessage { get; private set; }
 
@@ -51,6 +56,10 @@ public class ImportBatchModel : PageModel
     public IReadOnlyList<ImportMappingProfile> MappingProfiles { get; private set; } = [];
     [BindProperty] public string? MappingProfileName { get; set; }
     [BindProperty] public int SelectedMappingProfileId { get; set; }
+    [BindProperty] public int AiSuggestionId { get; set; }
+    [BindProperty] public string AiDecision { get; set; } = AiHumanDecisions.Accept;
+    [BindProperty] public string? AiCorrectedValue { get; set; }
+    [BindProperty] public string? AiReviewNote { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int importBatchId, string? confirmation, CancellationToken cancellationToken)
     {
@@ -66,9 +75,30 @@ public class ImportBatchModel : PageModel
             "committed" => "Import committed. The records are now available in the existing register.",
             "mapping-profile-saved" => "Reusable mapping saved for this company and import target.",
             "mapping-profile-reused" => "Saved mappings applied. Review and confirm every column before validation.",
+            "ai-ready" => "AI suggestions are ready for human review. Nothing has been committed.",
+            "ai-reviewed" => "Review decision saved. Deterministic mapping, validation, and commit controls still apply.",
             _ => null
         };
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostRequestAiAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            await _ai.RequestAsync(user, importBatchId, cancellationToken);
+            return RedirectToPage(new { importBatchId, confirmation = "ai-ready" });
+        });
+    }
+
+    public async Task<IActionResult> OnPostReviewAiAsync(int importBatchId, CancellationToken cancellationToken)
+    {
+        return await ExecuteAsync(importBatchId, cancellationToken, async user =>
+        {
+            await _ai.ReviewSuggestionAsync(
+                user, AiSuggestionId, AiDecision, AiCorrectedValue, AiReviewNote, cancellationToken);
+            return RedirectToPage(new { importBatchId, confirmation = "ai-reviewed" });
+        });
     }
 
     public async Task<IActionResult> OnPostSelectSourceAsync(int importBatchId, CancellationToken cancellationToken)
@@ -219,6 +249,8 @@ public class ImportBatchModel : PageModel
         SourceProfile = ImportSourceProfile.FromJson(Batch.SourceProfileJson);
         Target = _fields.FindTarget(Batch.TargetType);
         CanCommit = (await _imports.CanCommitAsync(user, cancellationToken)).Allowed;
+        CanUseAi = await _ai.CanUseAsync(user, cancellationToken);
+        AiReview = await _ai.GetLatestReviewAsync(user, importBatchId, cancellationToken);
         Worksheet = Batch.SelectedWorksheet ?? SourceProfile?.Worksheets.FirstOrDefault()?.Name;
         HeaderRowNumber = Batch.HeaderRowNumber ?? 1;
         ChecklistName = Batch.ProposedRecordName;

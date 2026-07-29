@@ -34,6 +34,7 @@ public class FeatureAccessService : IFeatureAccessService
 
         [VectorFeatures.ReadinessAnalytics] = SubscriptionTiers.Premium,
         [VectorFeatures.AiChecklistImport] = SubscriptionTiers.Premium,
+        [VectorFeatures.AiImportIntelligence] = SubscriptionTiers.Premium,
         [VectorFeatures.AdvancedExports] = SubscriptionTiers.Premium,
         [VectorFeatures.AzureBlobStorage] = SubscriptionTiers.Premium,
         [VectorFeatures.MultiSiteReporting] = SubscriptionTiers.Premium,

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using vector_app_local.Data;
 using vector_app_local.Models;
 
@@ -103,23 +104,31 @@ public class SetupUploadService
             return SetupUploadResult.Failed("Select an Excel or CSV file before continuing.");
         }
 
-        var extension = Path.GetExtension(file.FileName);
-        if (!AllowedSpreadsheetExtensions.Contains(extension))
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var isChecklistPdf = linkedEntityType == ChecklistUploadEntityType && extension == ".pdf";
+        if (!AllowedSpreadsheetExtensions.Contains(extension) && !isChecklistPdf)
         {
-            return SetupUploadResult.Failed("Accepted file types are .xlsx, .xls, and .csv.");
+            return SetupUploadResult.Failed(linkedEntityType == ChecklistUploadEntityType
+                ? "Accepted file types are .xlsx, .xls, .csv, and .pdf."
+                : "Accepted file types are .xlsx, .xls, and .csv.");
         }
 
         StoredFileResult storedFile;
         ImportSourceProfile sourceProfile;
         try
         {
-            await _fileStorage.ValidateAsync(file, FileStorageValidationOptions.SetupImport);
-            sourceProfile = await _sourceInspector.InspectAsync(file);
+            var validation = linkedEntityType == ChecklistUploadEntityType
+                ? FileStorageValidationOptions.ChecklistImport
+                : FileStorageValidationOptions.SetupImport;
+            await _fileStorage.ValidateAsync(file, validation);
+            sourceProfile = isChecklistPdf
+                ? await BuildPdfProfileAsync(file)
+                : await _sourceInspector.InspectAsync(file);
             storedFile = await _fileStorage.SaveAsync(
                 file,
                 currentUser.CompanyId,
                 $"{linkedEntityType}-{category}",
-                FileStorageValidationOptions.SetupImport);
+                validation);
         }
         catch (FileStorageValidationException ex)
         {
@@ -175,6 +184,20 @@ public class SetupUploadService
             await _fileStorage.DeleteAsync(storedFile.StoragePath);
             return SetupUploadResult.Failed("The source file passed validation but the import batch could not be created. No operational records were changed.");
         }
+    }
+
+    private static async Task<ImportSourceProfile> BuildPdfProfileAsync(IFormFile file)
+    {
+        await using var stream = file.OpenReadStream();
+        var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream));
+        return new ImportSourceProfile(
+            ImportSourceInspector.ContractVersion,
+            hash,
+            "PDF",
+            1,
+            1,
+            1,
+            [new ImportWorksheetProfile("Extracted document", 1, 1, 1)]);
     }
 
     private static string ResolveTargetType(string category)
