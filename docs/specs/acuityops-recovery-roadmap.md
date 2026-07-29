@@ -33,11 +33,12 @@ AcuityOps must become a multi-tenant EMS operations SaaS platform for private am
 The product must support:
 
 1. Manual Base operations.
-2. Pro import, reporting, PDF evidence, and compliance tools.
-3. Premium AI import, predictive analytics, SOP/CPG ingestion, and compliance forecasting.
+2. Pro import, reporting, PDF evidence, and advanced operational tools.
+3. Premium AI import, predictive analytics, SOP/CPG ingestion, and operational forecasting.
 4. Azure-backed staging and production deployment.
 5. GitHub-controlled source, CI, and deployment flow.
 6. Tenant isolation, billing, support, data export, offboarding, and commercial controls.
+7. Separately licensed compliance add-ons that never block the core launch.
 
 ## Environment Authority
 
@@ -231,11 +232,13 @@ Required outcomes:
 11. Audit logs record imports and accepted mappings.
 12. Base users see clear locked upgrade messaging, not broken controls.
 
-### Phase R5: Pro South African DOH Annual Inspection Mode
+### Add-On Track A1: South African DOH Compliance Pack
 
 Goal:
 
-Create a Pro/Premium compliance mode that prepares EMS companies for annual Department of Health EMS inspections.
+Create a separately licensed 12-month compliance add-on that prepares private
+EMS companies for annual Department of Health inspection activity without
+blocking the core AcuityOps launch.
 
 Required outcomes:
 
@@ -256,14 +259,21 @@ Required outcomes:
    - readiness history,
    - operational areas,
    - audit logs.
-4. Add DOH Inspection Mode switch for Pro/Premium.
+4. Add an entitlement-gated DOH Compliance Pack workspace for any active
+   AcuityOps tier that purchases the annual add-on.
 5. Show compliance status clearly.
 6. Show missing evidence.
 7. Show overdue and high-risk areas.
 8. Produce an exportable inspection pack.
 9. Keep jurisdiction architecture extensible for other countries.
 
-This mode must not be guessed. Requirements must be source-backed before implementation.
+This add-on must not be guessed. Requirements must be source-backed before
+implementation. Commercial, entitlement, province, expiry and standalone rules
+are controlled by
+`docs/specs/sa-doh-compliance-pack-add-on-contract.md`.
+
+Historical Block 6 identifiers and evidence remain attached to Add-on Track A1.
+A1 does not contribute to or block core commercial-launch progress.
 
 ### Phase R6: Premium AI Import And AI Assistance
 
@@ -391,7 +401,6 @@ Pro must include:
 - advanced reporting,
 - PDF evidence pack,
 - area/function/subtype/callsign publishing,
-- DOH Annual Inspection Mode,
 - approval workflows.
 
 ### Premium
@@ -403,8 +412,17 @@ Premium must include:
 - predictive analytics,
 - 3/6/12 month future reports,
 - SOP/CPG ingestion,
-- compliance forecasting,
+- operational forecasting,
 - Azure-backed scale and retention.
+
+### Separately Licensed Add-Ons
+
+The South African DOH Compliance Pack is not included automatically in Base,
+Pro, Premium or Enterprise. Any active core tier may purchase the annual
+integrated add-on where approved national and provincial packs are available.
+Premium AI may enhance deterministic add-on results only when both Premium and
+the add-on entitlement are active. Add-on-specific compliance forecasting does
+not form part of the core Premium launch gate.
 
 ### Enterprise
 

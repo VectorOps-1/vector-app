@@ -608,14 +608,26 @@ Legal and IP rules:
 92. Variance Alerts are list-based, grouped by date and callsign.
 93. Operational manager reports respect assigned area; senior reports are company-wide.
 
-### Phase 12B: South African EMS Audit Compliance Mode
+### Phase 12B / Add-On Track A1: South African DOH Compliance Pack
 
-South African EMS operators must be able to prepare for annual Department of Health and provincial EMS audits in a dedicated compliance environment. This must not be a loose report page. It must be a selectable mode that turns AcuityOps into an audit-readiness workspace with clear requirements, evidence status, gaps, owner assignment, due dates, and exportable proof packs.
+South African EMS operators must be able to prepare for annual Department of
+Health and provincial EMS audits in a dedicated compliance environment. This is
+a separately licensed 12-month add-on, not an included Base, Pro, Premium or
+Enterprise feature and not a dependency of the core AcuityOps launch. Its
+commercial and entitlement rules are controlled by
+`docs/specs/sa-doh-compliance-pack-add-on-contract.md`.
+
+This must not be a loose report page. It must be a selectable mode that turns
+AcuityOps into an audit-readiness workspace with clear requirements, evidence
+status, gaps, owner assignment, due dates, and exportable proof packs.
 
 Regulatory approach:
 
 - The product must not assume one permanent national audit checklist. South African EMS audit requirements may involve national health legislation, provincial Department of Health processes, HPCSA staff registration/CPD requirements, vehicle/road/legal documents, medicine/stock controls, infection control, clinical governance, base readiness, and local inspector expectations.
-- The platform must therefore support versioned `Audit Requirement Packs` by country, province, regulator, year, service type, client type, and subscription tier.
+- The platform must therefore support versioned `Audit Requirement Packs` by
+  country, province, regulator, year, service type and client type. Tenant
+  access is controlled by a separate annual add-on entitlement, not inferred
+  from the core subscription tier.
 - A lawyer, EMS regulatory advisor, and real operator feedback must validate every published audit pack before it is made available as a product default.
 - The mode must clearly state that it is compliance-support and audit-preparation software, not a legal guarantee that a client will pass an audit.
 
@@ -649,7 +661,9 @@ Required architecture:
 
 User experience:
 
-- Senior managers must access `EMS Audit Compliance Mode` from Home and from Operational Reports.
+- Entitled senior managers must access `EMS Audit Compliance Mode` from Home
+  and from Operational Reports. Unentitled tenants receive add-on availability
+  information without access to regulatory content or evaluation.
 - Operational managers may access only the audit areas assigned to them unless senior management grants wider permissions.
 - Staff may see only requested evidence tasks or personal compliance items assigned to them.
 - Entering the mode must present a clean compliance dashboard: overall readiness, critical gaps, expiring items, missing evidence, unverified uploads, assigned owners, and export status.
@@ -692,7 +706,8 @@ Current app gaps that must be built before this mode can work:
 - Uploaded documents need document category, expiry date, owner, evidence type, verification status, and audit-use tags.
 - AI import must be able to map client spreadsheets into audit-relevant evidence fields without creating unverified compliance claims.
 
-93AA. Create the `EMS Audit Compliance Mode` navigation entry for senior managers and scoped operational managers.
+93AA. Create the entitlement-gated `EMS Audit Compliance Mode` navigation entry
+for authorized senior managers and scoped operational managers.
 93AB. Create the audit domain model: requirement packs, requirements, evidence maps, gaps, audit sessions, exports, and review history.
 93AC. Create a South Africa audit pack framework, but do not publish official defaults until validated by a legal/regulatory advisor and at least one real EMS operator.
 93AD. Add province and regulator fields so audit packs can differ by province and by audit year.
@@ -816,7 +831,11 @@ Multi-country architecture:
 93BW. Add tests proving a province with missing source documents shows `Source pack incomplete` rather than guessed requirements.
 93BX. Add tests proving evidence maps can link requirements to staff, vehicle, equipment, stock, medication, document, checklist, issue, task, report, and audit-log records.
 93BY. Add export metadata so audit packs include source title, source version, clause reference, evidence record, evidence timestamp, generated-by user, export timestamp, and tenant ID.
-93BZ. Production release of South African EMS Audit Compliance Mode is blocked until source packs, legal review, evidence mapping, export PDFs, access permissions, and tenant isolation are verified.
+93BZ. Commercial activation of the South African DOH Compliance Pack is blocked
+until source packs, legal review, private-EMS operational review, entitlement
+lifecycle, evidence mapping, export PDFs, access permissions, tenant isolation
+and public-claim controls are verified. This add-on gate does not block the core
+AcuityOps commercial launch.
 93BZA. Add the `AI Source Pack Compiler` feature plan: source discovery, source ingestion, OCR/extraction, clause detection, requirement drafting, evidence mapping, missing-source detection, and review queue creation.
 93BZB. Add Codex/build-agent workflow instructions requiring the build process to compile initial South African source packs rather than expecting the founder to manually assemble them.
 93BZC. Add a `Source needed` queue for missing provincial, regulator, traffic, medicine, staff-registration, bylaw, and audit-form sources.
@@ -1017,8 +1036,12 @@ Current app gaps that must be built before this feature can work:
 100Z. Add verification using at least one clean DOCX SOP, one scanned PDF SOP, one clinical guideline PDF, one conflicting-document test, one low-confidence OCR test, and one tenant-isolation test.
 100AA. Add manager dashboards for unpublished uploads, review queue, published versions, failed processing jobs, user feedback, and acknowledgement status.
 100AB. Add notifications for required acknowledgement, overdue acknowledgement, published update, rejected upload, failed extraction, and SOP issue feedback.
-100AC. Link SOP evidence into EMS Audit Compliance Mode where a requirement needs proof of policies, clinical guidelines, or company SOPs.
-100AD. Link SOP analytics into AI 3-month, 6-month, and 12-month future reports for compliance gaps, repeated SOP issue reports, missing acknowledgements, outdated policies, and high-risk procedure gaps.
+100AC. Where the annual add-on entitlement is active, link approved SOP
+evidence into EMS Audit Compliance Mode when a requirement needs proof of
+policies, clinical guidelines or company SOPs.
+100AD. Keep core SOP operational analytics independent of the add-on. Generate
+regulatory compliance forecasts only when deterministic add-on results exist
+and both the required Premium and annual add-on entitlements are active.
 100AE. Add export controls for approved SOP packs, acknowledgement evidence, review history, and source citation reports.
 100AF. No SOP/guideline AI feature may be enabled for production clients until tenant isolation, citation enforcement, human approval, audit logging, and legal/clinical safety review gates are verified.
 
@@ -1090,6 +1113,10 @@ Data behaviour when downgrading:
 - Premium integrations are disabled after downgrade unless needed for legal export/offboarding. Integration credentials must be retained only as long as needed and then removed.
 - Extended retention ends prospectively. Existing retained data must follow the retention contract that applied when it was created unless the contract/legal policy says otherwise.
 - Dedicated client deployment options must be reviewed before downgrade. A dedicated Premium tenant may need migration back to shared hosting, continued paid dedicated hosting, or cancellation/offboarding.
+- Separately licensed add-ons do not follow core tier downgrade automatically.
+  Their own term, payment and expiry state controls new add-on processing.
+  Historical add-on sessions remain read-only/exportable after expiry, while
+  core operational records continue according to the active core subscription.
 
 Data behaviour when cancelling:
 
@@ -1215,7 +1242,7 @@ Commercial tier matrix:
 | Readiness Engine defaults | Active default rules | Active default and limited custom rules | Active custom rules and approval workflows | Active custom/contracted engine | Custom rules become read-only/exportable if downgraded below supported tier. |
 | Readiness Engine customization | Locked or limited defaults only | Active | Active | Active/custom | New customization locked after downgrade; last published rules preserved read-only or converted through downgrade workflow. |
 | Operational reports | Limited filters | Active advanced filters | Active advanced filters plus AI/report links | Active custom reports | Existing reports read-only/exportable after downgrade. |
-| EMS Audit Compliance Mode | Locked or limited basic evidence only | Active | Active with AI support | Active/custom regulator packs | Existing packs exportable. New pack generation locked if tier no longer supports it. |
+| South African DOH Compliance Pack | Separately licensed annual add-on | Separately licensed annual add-on | Separately licensed annual add-on; Premium AI enhancement requires both entitlements | Separately licensed annual add-on; custom packs separately contracted | Core-tier downgrade does not delete add-on data. On add-on expiry, no new sessions or reevaluations; completed sessions remain read-only/exportable under retention rules. |
 | Basic audit logs | Active | Active | Active | Active | Audit logs exportable subject to legal retention. |
 | Advanced audit/evidence controls | Limited | Active | Active | Active/custom retention | Advanced controls read-only/exportable after downgrade. |
 | Personal documents | Active | Active | Active | Active | Documents exportable and deletable according to permissions/retention. |

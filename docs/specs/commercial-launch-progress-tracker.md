@@ -2,7 +2,7 @@
 
 Status: Active and sole progress authority
 
-Updated: 2026-07-26
+Updated: 2026-07-29
 
 ## Authority
 
@@ -18,24 +18,32 @@ onboarding flow. Plans, documentation, partially implemented work, test tenants,
 and staging demonstrations do not earn completion unless their block acceptance
 gate has passed.
 
+The first customer may subscribe to the core product without Add-On Track A1.
+Add-on completion and first add-on purchase are reported separately.
+
 ## Progress Dashboard
 
 | Measure | Current value |
 | --- | --- |
-| Total commercial-launch blocks | 13 |
+| Total mandatory core commercial-launch blocks | 12 |
 | Accepted and locked | 5 |
-| Active | 1 (Block 6; B6.1 accepted, B6.0 externally blocked) |
+| Active core block | 0 (next core block not yet authorized) |
 | Remaining | 7 |
-| Blocked | 1 stage (B6.0 external authority and professional review) |
-| Overall commercial-launch progress | 45% |
-| Current Block 6 progress | 12.5% (1/8 stages accepted; B6.1 locked) |
-| Estimated remaining implementation credits | 94,900-164,400 |
+| Blocked core blocks | 0 |
+| Overall core commercial-launch progress | 48.9% (45 accepted core points / 92 core points) |
+| Add-On Track A1 progress | 12.5% (1/8 stages accepted; B6.1 locked) |
+| Add-On Track A1 commercial availability | Not available; B6.0 externally blocked |
+| Estimated remaining core implementation credits | 84,900-146,400 |
 | Credit estimate basis | Planning range; actual usage is not reliably metered by block |
 
-The overall score is the sum of weights for blocks whose complete acceptance
-gate is accepted. Partial block work does not earn weighted progress. Therefore,
-Blocks 1 through 5 contribute `7% + 8% + 12% + 8% + 10% = 45%`. The next
-contribution is earned only when Block 6 and its closure gate pass.
+The overall core score is the sum of accepted core points divided by the
+92-point mandatory core pool. Partial block work does not earn weighted
+progress. Blocks 1 through 5 contribute
+`7 + 8 + 12 + 8 + 10 = 45` accepted core points, so current progress is
+`45 / 92 = 48.9%`. The South African DOH Compliance Pack is separately tracked
+as Add-On Track A1 and neither contributes to nor blocks core launch progress.
+The increase from 45% to 48.9% is a denominator correction after separating the
+optional add-on, not newly completed implementation.
 
 ## Reasoning Levels
 
@@ -74,23 +82,34 @@ contribution is earned only when Block 6 and its closure gate pass.
 
 ## Commercial Block Register
 
-| ID | Block | Weight | Status | Dependencies | Acceptance gate | Reasoning | Estimated credits |
+| ID | Block | Core weight points | Status | Dependencies | Acceptance gate | Reasoning | Estimated credits |
 | --- | --- | ---: | --- | --- | --- | --- | ---: |
-| B1 | Stable staging and committed-source foundation | 7% | Accepted and locked | None | GitHub-controlled deployment serves the app and static assets from stable Azure staging; login and first evidence path pass | Medium/High | Actual not reliably metered |
-| B2 | Base commercial foundation | 8% | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
-| B3 | Base manual operations completion | 12% | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
-| B4 | PDF evidence and report reliability | 8% | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
-| B5 | Pro import, column matching, and conversion | 10% | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
-| B6 | South African DOH Annual Inspection Mode | 8% | Active; B6.1 accepted and locked | B4, B5 | Source-backed SA requirements, dated references, gap analysis, inspection mode, evidence pack, and extensible jurisdiction model pass legal/compliance review | High | 10,000-18,000 |
-| B7 | Premium AI and knowledge intelligence | 12% | Not started; not yet decomposed | B5, B6 | Human-reviewed AI import, 3/6/12-month forecasting, compliance/failure analytics, and cited SOP/CPG ingestion pass safety and audit gates | XHigh for design/review; High for implementation | 24,000-40,000 |
-| B8 | Operational communications and product libraries | 6% | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
-| B9 | Production Azure SaaS platform | 11% | Not started; not yet decomposed | B3, B4 | Production tenant/storage isolation, managed database/blob/secrets, CI/CD, client-specific release controls, backups, observability, incident response, and rollback pass | High; XHigh for final security review | 18,000-30,000 |
-| B10 | Billing, tiers, subscriptions, and data lifecycle | 7% | Not started; not yet decomposed | B9 | Base/Pro/Premium/Enterprise enforcement, invoices, VAT/tax, payment failure/grace/refund, downgrade/cancel, export, deletion, retention, and offboarding pass | High | 10,000-18,000 |
-| B11 | Legal, security, support, and client success | 4% | Not started; not yet decomposed | B6, B9, B10 | POPIA/legal review, liability/trademark decisions, security evidence, support SLAs, training, documentation, escalation, and feedback loops are approved | High | 6,000-12,000 |
-| B12 | Website, trial, and public truth control | 3% | Not started; not yet decomposed | B7, B10, B11 | Website, pricing, signup/demo/trial flows, analytics, SEO, and every public claim match verified product/tier/legal truth | Medium; High for legal/billing review | 6,000-10,000 |
-| B13 | Production release and first customer activation | 4% | Not started; not yet decomposed | B1-B12 | Release/security/mobile/tenant/payment tests pass and the first real customer pays, receives an isolated tenant, signs in, and reaches onboarding | High; XHigh for final release/security gate | 4,000-8,000 |
+| B1 | Stable staging and committed-source foundation | 7 | Accepted and locked | None | GitHub-controlled deployment serves the app and static assets from stable Azure staging; login and first evidence path pass | Medium/High | Actual not reliably metered |
+| B2 | Base commercial foundation | 8 | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
+| B3 | Base manual operations completion | 12 | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
+| B4 | PDF evidence and report reliability | 8 | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
+| B5 | Pro import, column matching, and conversion | 10 | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
+| B7 | Premium AI and knowledge intelligence | 12 points | Not started; not yet decomposed | B5 | Human-reviewed AI import, 3/6/12-month operational forecasting, failure/shortage analytics, and cited SOP/CPG ingestion pass safety and audit gates; A1 compliance forecasting remains a separate extension | XHigh for design/review; High for implementation | 24,000-40,000 |
+| B8 | Operational communications and product libraries | 6 | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
+| B9 | Production Azure SaaS platform | 11 | Not started; not yet decomposed | B3, B4 | Production tenant/storage isolation, managed database/blob/secrets, CI/CD, client-specific release controls, backups, observability, incident response, and rollback pass | High; XHigh for final security review | 18,000-30,000 |
+| B10 | Billing, tiers, subscriptions, and data lifecycle | 7 | Not started; not yet decomposed | B9 | Base/Pro/Premium/Enterprise and separately licensed add-on enforcement, invoices, VAT/tax, payment failure/grace/refund, downgrade/cancel, export, deletion, retention, and offboarding pass | High | 10,000-18,000 |
+| B11 | Legal, security, support, and client success | 4 points | Not started; not yet decomposed | B9, B10 | Core POPIA/legal review, liability/trademark decisions, security evidence, support SLAs, training, documentation, escalation, and feedback loops are approved; A1 legal review remains separate | High | 6,000-12,000 |
+| B12 | Website, trial, and public truth control | 3 | Not started; not yet decomposed | B7, B10, B11 | Website, pricing, signup/demo/trial flows, analytics, SEO, and every public claim match verified product/tier/legal truth; A1 may be advertised only after its separate commercial gate passes | Medium; High for legal/billing review | 6,000-10,000 |
+| B13 | Production release and first customer activation | 4 points | Not started; not yet decomposed | Core B1-B5 and B7-B12 | Release/security/mobile/tenant/payment tests pass and the first real customer pays, receives an isolated tenant, signs in, and reaches onboarding; A1 is not required | High; XHigh for final release/security gate | 4,000-8,000 |
 
-Weights total `100%`.
+Mandatory core weights total `92 points` and are normalized to `100%` for the
+core commercial-launch percentage. Historical block IDs remain unchanged.
+
+### Separately Licensed Add-On Register
+
+| Add-on | Product | Progress | Commercial availability | Dependency | Acceptance gate | Reasoning | Estimated credits |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 (historical B6) | South African DOH Compliance Pack | 12.5% (1/8 stages accepted) | Not available; B6.0 externally blocked | B4, B5 and approved national/provincial sources | B6.0-B6.7, annual entitlement lifecycle, legal/private-EMS review, tenant isolation, evidence/export parity and public-claim controls pass | High; XHigh only for unresolved legal/source conflicts | 10,000-18,000 plus external review costs |
+
+Add-On Track A1 is governed by
+`docs/specs/sa-doh-compliance-pack-add-on-contract.md`. Its completion and
+commercial availability are reported separately and do not affect the core
+percentage.
 
 ## Accepted Evidence
 
@@ -323,14 +342,17 @@ Status: Accepted and locked; 5/5 batches accepted
 - No seed/fallback data, direct SQL product-data creation, historical-evidence
   rewrite, product-owned schematic change, or Block 1-4 reopening occurred.
 
-## Active Block 6: South African DOH Annual Inspection Mode
+## Add-On Track A1: South African DOH Compliance Pack
 
-Block progress: `12.5% (1/8 stages accepted; active)`
+Add-on progress: `12.5% (1/8 stages accepted; externally blocked)`
+
+Core-launch impact: `None`
 
 Authorities:
 
 - `docs/specs/block-6-sa-private-ambulance-inspection-mode-blueprint.md`
 - `docs/specs/block-6-authoritative-source-register.md`
+- `docs/specs/sa-doh-compliance-pack-add-on-contract.md`
 
 | Stage | Objective | Status | Evidence |
 | --- | --- | --- | --- |
@@ -341,7 +363,7 @@ Authorities:
 | B6.4 | Inspection workspace and corrective actions | Not started | Depends on B6.3 |
 | B6.5 | Immutable snapshot and evidence pack | Not started | Depends on B6.3-B6.4 |
 | B6.6 | First pack activation | Not started | Requires completed legal and operational approval; no pack is active |
-| B6.7 | Integrated tests, staging and legal closure | Not started | Block 6 closure gate |
+| B6.7 | Integrated tests, staging and legal closure | Not started | Add-On Track A1 closure gate |
 
 ### B6.1 Accepted Evidence
 
@@ -389,17 +411,18 @@ Authorities:
 
 ## Shortest Safe Remaining Order
 
-1. Complete B6 source-backed DOH architecture before predictive compliance.
-2. Complete B7 AI and knowledge functions against accepted import/compliance
-   contracts.
-3. Complete B8 communications and global schematic expansion without coupling
+1. Complete B7 core AI and knowledge functions against accepted import and
+   evidence contracts. Keep A1 compliance extensions excluded.
+2. Complete B8 communications and global schematic expansion without coupling
    either to seed or tenant identity.
-4. Complete B9 production architecture before billing or real client data.
-5. Complete B10 commercial controls and data lifecycle.
-6. Complete B11 legal/security/support approval.
-7. Complete B12 public website and trial truth controls only after product and
-    commercial behavior are verified.
-8. Complete B13 release gate and first customer activation.
+3. Complete B9 production architecture before billing or real client data.
+4. Complete B10 commercial controls and data lifecycle.
+5. Complete B11 core legal/security/support approval.
+6. Complete B12 public website and trial truth controls only after product and
+   commercial behavior are verified.
+7. Complete B13 release gate and first customer activation.
+8. Resume Add-On Track A1 independently when B6.0 external review evidence is
+   available; it does not delay steps 1-7.
 
 No requirement is removed by this consolidation. Detailed batches for B5-B13
 remain intentionally undecomposed until the preceding dependency is close to
@@ -411,7 +434,8 @@ acceptance.
 - Recovery `R2` and commercial `C1` map to B2-B3.
 - Recovery `R3` and commercial `C2` map to B4.
 - Recovery `R4` and commercial `C3` map to B5.
-- Recovery `R5` and commercial `C4` map to B6.
+- Recovery `R5` and commercial `C4` now map to Add-On Track A1 while preserving
+  historical B6.0-B6.7 identifiers.
 - Recovery `R6-R8` and commercial `C5-C6` map to B7.
 - SMS/email notifications and the product-owned schematic-library expansion map
   to B8 rather than being hidden inside cleanup work.
@@ -423,18 +447,19 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Obtain and retain the outstanding authority responses using
-`docs/specs/block-6-b6.0/provincial-source-request-pack.md`, hash and
-independently extract every supplied record, and complete qualified legal and
-province-specific private-EMS operational review. Reconcile B6.0 only after
-those approvals are evidenced. Do not activate requirements or enter B6.2
-while B6.0 remains blocked. Do not reopen Blocks 1-5 without an explicit
-instruction or a Verified-Work Finality Rule trigger.
+With the user present, propose the smallest safe B7 Premium AI and Knowledge
+Intelligence design batch. Keep core AI import, operational forecasting and
+SOP/CPG intelligence independent of Add-On Track A1. Do not implement
+add-on-specific compliance forecasting, activate requirements or enter B6.2.
+Do not reopen Blocks 1-5 without an explicit instruction or a Verified-Work
+Finality Rule trigger.
 
 ## Update Rules
 
-1. Only this file may report overall or block completion percentages.
-2. Only accepted block gates change the overall percentage.
+1. Only this file may report overall core or add-on completion percentages.
+2. Only accepted mandatory core block gates change the overall core percentage.
+   Add-on acceptance changes only the relevant add-on progress and commercial
+   availability state.
 3. Each accepted batch updates current-block numerator, evidence, actual credits
    when known, and remaining risk in one docs commit associated with that batch.
 4. The authorized execution action must always name exactly one batch or docs action.

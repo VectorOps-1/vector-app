@@ -41,8 +41,10 @@ Unresolved workspace item at closeout:
 AcuityOps must become a polished, commercial, multi-tenant EMS operations SaaS platform with:
 
 - Base manual operations that fully replace paper checklists and spreadsheet registers.
-- Pro importing, column matching, PDF/reporting strength, and South African DOH Annual Inspection Mode.
-- Premium AI importing, predictive analytics, SOP/CPG ingestion, and compliance forecasting.
+- Pro importing, column matching, and PDF/reporting strength.
+- Premium AI importing, predictive analytics, SOP/CPG ingestion, and
+  operational forecasting.
+- Separately licensed compliance add-ons that do not block the core launch.
 - Secure Azure production architecture.
 - Tenant isolation.
 - Billing, subscriptions, downgrade/cancellation, export/offboarding, support, and incident response.
@@ -192,11 +194,14 @@ Expected credit scale:
 - Several 10,000-credit blocks.
 - Requires dedicated design before code.
 
-## Phase C4: South African DOH Annual Inspection Mode
+## Add-On Track A1: South African DOH Compliance Pack
 
 Objective:
 
-Provide a Pro/Premium compliance mode for South African EMS annual Department of Health inspection preparation.
+Provide a separately licensed annual compliance product for South African
+private-EMS Department of Health inspection preparation. This track preserves
+historical Block 6 identifiers and evidence but is not part of the mandatory
+core commercial-launch denominator.
 
 Deliverables:
 
@@ -225,12 +230,19 @@ Deliverables:
 
 Acceptance criteria:
 
-- Client can switch into DOH mode and see what is compliant, missing, expiring, or requiring management action.
+- A client with an active add-on entitlement can enter the compliance workspace
+  and see what is evidenced, missing, expiring, unable to be verified, or
+  requiring management action.
+- No unentitled tenant or unapproved province pack can produce an authoritative
+  conclusion.
 
 Expected credit scale:
 
 - Research-heavy dedicated block before implementation.
 - Do not mix with Base cleanup.
+- Follow `docs/specs/sa-doh-compliance-pack-add-on-contract.md`.
+- Core AcuityOps launch may proceed while external A1 review gates remain
+  blocked.
 
 ## Phase C5: Premium AI Importing And Analytics
 
@@ -252,7 +264,8 @@ Deliverables:
 3. Predictive analytics:
    - 3-month,
    - 6-month,
-   - 12-month forecasts for compliance, failures, shortages, service pressure, readiness deterioration, and critical-risk trends.
+   - 12-month forecasts for operational failures, shortages, service pressure,
+     readiness deterioration and critical-risk trends.
 4. AI explanation layer:
    - why something is flagged,
    - what data was used,
@@ -262,6 +275,10 @@ Deliverables:
    - tenant isolation,
    - audit trail,
    - exportable evidence.
+
+Regulatory compliance forecasting is not a core Phase C5 dependency. It is an
+A1 extension available only after deterministic A1 results exist and both the
+Premium and annual add-on entitlements are active.
 
 Acceptance criteria:
 
@@ -286,7 +303,9 @@ Deliverables:
 5. Role-scoped access.
 6. Version history.
 7. Acknowledgement/training evidence.
-8. Link relevant SOP/CPG content to checklists, tasks, issues, and compliance mode.
+8. Link relevant SOP/CPG content to checklists, tasks and issues. Link it to the
+   compliance workspace only when Add-On Track A1 and the tenant's annual
+   entitlement are active.
 
 Acceptance criteria:
 

@@ -1,6 +1,7 @@
-# Block 6 South African Private Ambulance Service DOH Annual Inspection Mode
+# Add-On Track A1 South African Private Ambulance Service DOH Compliance Pack
 
-Status: Authoritative design blueprint; B6.1 foundation implemented and verified; no requirement pack active
+Status: Authoritative add-on design blueprint; historical B6.1 foundation
+implemented and verified; B6.0 externally blocked; no requirement pack active
 
 Designed: 2026-07-19
 
@@ -11,14 +12,20 @@ Source authority: `docs/specs/block-6-authoritative-source-register.md`
 Roadmap authority:
 
 - `docs/specs/acuityops-master-build-spec.md`, Phase 12B/12C
-- `docs/specs/commercial-completion-roadmap.md`, Phase C4
+- `docs/specs/commercial-completion-roadmap.md`, Add-On Track A1
+- `docs/specs/sa-doh-compliance-pack-add-on-contract.md`
 
 ## Objective
 
-Build a deterministic, source-backed mode that compares a private ambulance
+Build a separately licensed, deterministic, source-backed annual add-on that
+compares a private ambulance
 service's current AcuityOps records and uploaded evidence side by side with the
 applicable South African licensing, inspection, statutory, professional and
 clearly classified standards requirements.
+
+This add-on is not included automatically in any core tier and does not block
+core AcuityOps commercial launch. Historical identifiers `B6.0` through `B6.7`
+remain unchanged for evidence and commit traceability.
 
 The mode must answer, in plain English:
 
@@ -84,7 +91,7 @@ from a generic `Ambulance` vehicle label.
 
 | Dimension | Required values/behavior |
 | --- | --- |
-| Country | South Africa for Block 6; architecture supports future countries |
+| Country | South Africa for Add-On Track A1; architecture supports future countries |
 | Province | One or more operating/licensing provinces; each selected explicitly |
 | District/municipality | Optional only where an official condition is district-specific |
 | Operator type | Private commercial, non-profit/NGO, volunteer, government or other verified class |
@@ -235,7 +242,8 @@ visible regardless of percentage.
 
 ## 7. Missing Product Capabilities
 
-Block 6 requires the following gaps to be implemented or explicitly deferred:
+Add-On Track A1 requires the following gaps to be implemented or explicitly
+deferred:
 
 ### Organisation And Licensing
 
@@ -314,6 +322,10 @@ compliance administrators can create or publish pack versions.
 
 ### Tenant-Owned Models
 
+- `ComplianceAddOnEntitlement`: tenant, product code, term, lifecycle status,
+  billing/purchase reference and audited state changes.
+- `ComplianceProvinceEntitlement`: purchased province, aligned term and
+  approved-pack availability; national access does not imply every province.
 - `ComplianceProfile`: selected jurisdictions, service/licence categories and
   operating scope.
 - `ComplianceSession`: tenant, pack versions, selected scope, dates and state.
@@ -333,10 +345,13 @@ referenced globally, while evidence and assignments remain tenant-isolated.
 ### Additive Migration Sequence
 
 1. Global source, version, clause and requirement-pack tables.
-2. Tenant compliance profile and generalized evidence metadata.
-3. Sessions, evaluations, gaps and actions.
-4. Snapshot, attestation and export records.
-5. Domain-specific licensing/vehicle/staff/medicine extensions only after exact
+2. Tenant annual add-on and province entitlement records, integrated with the
+   production billing/entitlement boundary without granting access from core
+   tier alone.
+3. Tenant compliance profile and generalized evidence metadata.
+4. Sessions, evaluations, gaps and actions.
+5. Snapshot, attestation and export records.
+6. Domain-specific licensing/vehicle/staff/medicine extensions only after exact
    source requirements are approved.
 
 No migration may backfill compliance, infer missing evidence, rewrite history or
@@ -379,7 +394,8 @@ explicitly start reevaluation.
 
 ### Entry And Routes
 
-- Home/Operational Reports: `DOH Annual Inspection Mode` for eligible tiers.
+- Home/Operational Reports: `DOH Compliance Pack` for tenants with an active
+  annual add-on entitlement.
 - `/Compliance`
 - `/Compliance/SouthAfrica/AnnualInspection`
 - `/Compliance/Sessions/{id}`
@@ -500,22 +516,26 @@ action.
 Server-side authorization is mandatory for every handler, object ID and export.
 Navigation visibility is not enforcement.
 
-## 14. Tier And Commercial Contract
+## 14. Add-On And Commercial Contract
 
-| Capability | Base | Pro | Premium | Enterprise |
+The complete commercial contract is
+`docs/specs/sa-doh-compliance-pack-add-on-contract.md`.
+
+| Capability | Core tier only | Active annual add-on | Premium plus active add-on | Enterprise contract plus active add-on |
 | --- | --- | --- | --- | --- |
-| Existing register expiry/readiness alerts | Included | Included | Included | Included |
-| SA DOH Annual Inspection Mode | Locked | Included | Included | Included |
+| Existing register expiry/readiness alerts | Included according to core tier | Included | Included | Included |
+| SA DOH Compliance Pack | Unavailable except purchase information | Active for purchased approved provinces | Active for purchased approved provinces | Active for purchased/custom approved packs |
 | Deterministic source-backed comparison | No | Included | Included | Included |
 | Action plan and evidence linking | No | Included | Included | Included |
 | Versioned inspection-preparation export | No | Included | Included | Included |
-| AI source/evidence suggestions | No | No | Human-reviewed assistance later | Configurable |
-| Predictive compliance forecasting | No | No | Included after Block 7 validation | Configurable |
-| Custom country/jurisdiction packs | No | No | Standard supported packs | Contracted custom packs |
-| External reviewer/custom workflow | No | No | Limited where offered | Configurable |
+| AI source/evidence suggestions | No | No | Human-reviewed assistance after validation | Configurable after validation |
+| Predictive compliance forecasting | No | No | Available only after deterministic A1 and Block 7 validation | Configurable after validation |
+| Custom country/jurisdiction packs | No | No | Standard supported packs only | Separately contracted custom packs |
+| External reviewer/custom workflow | No | Where separately offered | Where separately offered | Configurable |
 
 Premium AI may explain, summarize and forecast only after deterministic results
-exist. It cannot activate legal rules or change compliant/non-compliant status.
+exist and both Premium and the annual add-on are active. It cannot activate
+legal rules or change compliant/non-compliant status.
 
 ## 15. Automated Test Contract
 
@@ -538,6 +558,13 @@ exist. It cannot activate legal rules or change compliant/non-compliant status.
 
 ### Tenant, Role And Evidence Tests
 
+- core tier alone cannot authorize add-on routes or processing;
+- active annual and purchased-province entitlements authorize only contracted
+  scope;
+- expiry, suspension and cancellation prevent new processing while preserving
+  read-only/exportable historical evidence;
+- renewal and pack supersession create new terms/evaluations without rewriting
+  old records;
 - overlapping object identifiers cannot cross tenants;
 - ops managers see only assigned scope;
 - staff see only assigned/self evidence;
@@ -562,17 +589,21 @@ or direct SQL product-data creation.
 
 1. Back up staging before additive migrations or controlled writes.
 2. Apply migrations through the existing GitHub Linux deployment path.
-3. Create a compliance profile for one supported province/service class.
-4. Populate the minimum evidence through existing UI and new evidence UI.
-5. Prove compliant, missing, expired, unable-to-verify and not-applicable cases.
-6. Prove one P0/P1 item dominates the overview/action list.
-7. Link a corrective task, submit closure evidence and recheck.
-8. Finalize and compare snapshot, report detail and PDF.
-9. Test senior, scoped ops and staff boundaries.
-10. Test cross-tenant identifiers and export isolation.
-11. Prove pack supersession creates a new reevaluation without changing the old
+3. Create a controlled annual add-on entitlement and one purchased approved
+   province through the production-equivalent entitlement path.
+4. Prove core tier alone, an unpurchased province and an expired entitlement
+   cannot start processing.
+5. Create a compliance profile for one supported province/service class.
+6. Populate the minimum evidence through existing UI and new evidence UI.
+7. Prove compliant, missing, expired, unable-to-verify and not-applicable cases.
+8. Prove one P0/P1 item dominates the overview/action list.
+9. Link a corrective task, submit closure evidence and recheck.
+10. Finalize and compare snapshot, report detail and PDF.
+11. Test senior, scoped ops and staff boundaries.
+12. Test cross-tenant identifiers and export isolation.
+13. Prove pack supersession creates a new reevaluation without changing the old
     session.
-12. Remove temporary tenant data through supported workflows or restore backup.
+14. Remove temporary tenant data through supported workflows or restore backup.
 
 ## 17. Mandatory Legal And Regulatory Review Gate
 
@@ -597,7 +628,10 @@ An experienced private-ambulance operational reviewer must separately verify
 that evidence requests and corrective actions are practical. Legal and
 operational review decisions are versioned and auditable.
 
-## 18. Safe Implementation Sequence
+## 18. Add-On Track A1 Safe Implementation Sequence
+
+Historical stage identifiers are retained so existing commits, migrations,
+reviews and tracker evidence remain stable.
 
 ### B6.0 Source Acquisition And Legal-Pack Gate
 
@@ -647,6 +681,7 @@ Accepted evidence:
 
 Scope:
 
+- annual add-on and province-entitlement enforcement boundary;
 - tenant compliance profile;
 - generalized evidence record/link metadata;
 - scope confirmation and role enforcement;
@@ -709,7 +744,7 @@ Scope:
 
 Reasoning: High. Estimated credits: 700-1,200.
 
-Estimated Block 6 Codex total: 10,200-15,800 credits. This is a planning range,
+Estimated Add-On Track A1 Codex total: 10,200-15,800 credits. This is a planning range,
 not measured billing. External legal, regulatory-source acquisition and private
 EMS subject-matter review costs are excluded.
 
@@ -730,9 +765,9 @@ Stop before implementation or activation if:
 - work expands into AI, billing, production infrastructure, website or unrelated
   roadmap blocks.
 
-## Block 6 Acceptance Criteria
+## Add-On Track A1 Acceptance Criteria
 
-Block 6 may close only when:
+Add-On Track A1 may close technically only when:
 
 1. The active source pack has exact, dated, retained primary sources and legal
    approval.
@@ -748,24 +783,29 @@ Block 6 may close only when:
 8. Report detail and downloadable evidence pack agree.
 9. Staff, ops, senior and cross-tenant scope tests pass.
 10. Azure staging acceptance and legal/operational review pass.
+11. Annual entitlement, province purchase, renewal, expiry, suspension,
+    read-only history, export and offboarding behavior pass.
+12. Commercial claims and pricing truth state clearly that this is a separately
+    licensed inspection-preparation add-on, not regulator approval.
 
 ## Current Controlled Boundary
 
-B6.1 is complete. No regulatory requirement, jurisdiction, pack, tenant
-compliance record or conclusion was inserted or activated. B6.0 remains the
-next gate because the research baseline is not a legally approved source pack.
-B6.2 may not begin until its dependency and stop conditions are reviewed through
-the single progress tracker.
+B6.1 is complete and now forms the accepted product-governance foundation of
+Add-On Track A1. No regulatory requirement, jurisdiction, pack, tenant
+compliance record or conclusion was inserted or activated. B6.0 public-source
+acquisition and remediation evidence is committed, but the gate remains blocked
+pending authority responses and qualified legal and private-EMS operational
+review. B6.2 may not begin until those external gates and its stop conditions
+are resolved through the single progress tracker. A1 does not block core
+AcuityOps launch.
 
 Recommended next instruction:
 
-> Use High reasoning. Propose the smallest safe B6.0 Source Acquisition and
-> Legal-Pack Gate batch from the Block 6 blueprint and authoritative source
-> register. Do not edit product source. Define only the exact primary-source
-> acquisition, retained-artifact hashing, clause extraction, province-specific
-> completeness review, legal/operational review queue and approval evidence
-> required before any pack can activate. Do not activate requirements, create
-> tenant compliance data, apply migrations, deploy or enter B6.2.
+> Use High reasoning. Proceed with B6.0 External Review Intake Preparation only.
+> Finalize the authority-response intake, retained-artifact hashing,
+> independent extraction and qualified legal/private-EMS operational review
+> handoff. Do not activate requirements, create tenant compliance data, apply
+> migrations, deploy or enter B6.2.
 
 ## Reasoning Guidance
 
