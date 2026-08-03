@@ -133,9 +133,10 @@ public sealed class IdentityProvisioningService
         IdentityProvisioningManifest manifest,
         Func<string, string?> secretResolver,
         bool execute,
+        bool resetExisting = false,
         CancellationToken cancellationToken = default)
     {
-        var validation = await ValidateAsync(manifest, secretResolver, cancellationToken);
+        var validation = await ValidateAsync(manifest, secretResolver, resetExisting, cancellationToken);
         if (validation.Errors.Count > 0)
         {
             return new IdentityProvisioningResult(false, false, validation.Rows, validation.Errors);
@@ -154,7 +155,67 @@ public sealed class IdentityProvisioningService
             {
                 if (item.ExistingIdentity is not null)
                 {
-                    createdRows.Add(item.Row with { Status = "Already provisioned; unchanged" });
+                    if (!resetExisting)
+                    {
+                        createdRows.Add(item.Row with { Status = "Already provisioned; unchanged" });
+                        continue;
+                    }
+
+                    var identityToReset = item.ExistingIdentity;
+                    var resetToken = await _userManager.GeneratePasswordResetTokenAsync(identityToReset);
+                    var resetResult = await _userManager.ResetPasswordAsync(identityToReset, resetToken, item.TemporaryPassword);
+                    if (!resetResult.Succeeded)
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        _db.ChangeTracker.Clear();
+                        return new IdentityProvisioningResult(
+                            false,
+                            false,
+                            validation.Rows,
+                            resetResult.Errors.Select(error => error.Description).ToList());
+                    }
+
+                    identityToReset.IsLoginEnabled = true;
+                    identityToReset.MustChangePassword = true;
+                    identityToReset.LockoutEnabled = true;
+                    identityToReset.AccessFailedCount = 0;
+                    identityToReset.LockoutEnd = null;
+                    identityToReset.UpdatedAtUtc = DateTime.UtcNow;
+                    var updateResult = await _userManager.UpdateAsync(identityToReset);
+                    if (!updateResult.Succeeded)
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        _db.ChangeTracker.Clear();
+                        return new IdentityProvisioningResult(
+                            false,
+                            false,
+                            validation.Rows,
+                            updateResult.Errors.Select(error => error.Description).ToList());
+                    }
+
+                    var stampResult = await _userManager.UpdateSecurityStampAsync(identityToReset);
+                    if (!stampResult.Succeeded)
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        _db.ChangeTracker.Clear();
+                        return new IdentityProvisioningResult(
+                            false,
+                            false,
+                            validation.Rows,
+                            stampResult.Errors.Select(error => error.Description).ToList());
+                    }
+
+                    _db.AuditLogs.Add(new AuditLog
+                    {
+                        CompanyId = item.Profile.CompanyId,
+                        AppUserId = item.Profile.Id,
+                        Action = "Login identity recovery reset",
+                        EntityType = nameof(ApplicationIdentityUser),
+                        EntityId = item.Profile.Id,
+                        Details = $"Login identity recovery reset completed for {item.Profile.FullName}; password replacement required at first sign-in.",
+                        CreatedAtUtc = DateTime.UtcNow
+                    });
+                    createdRows.Add(item.Row with { Status = "Reset; password replacement required" });
                     continue;
                 }
 
@@ -204,6 +265,7 @@ public sealed class IdentityProvisioningService
     private async Task<ValidationState> ValidateAsync(
         IdentityProvisioningManifest manifest,
         Func<string, string?> secretResolver,
+        bool resetExisting,
         CancellationToken cancellationToken)
     {
         var errors = new List<string>();
@@ -302,19 +364,28 @@ public sealed class IdentityProvisioningService
                         identity.AppUserId == entry.AppUserId,
                         cancellationToken);
 
-                if (existingIdentity is not null)
+                if (resetExisting && existingIdentity is null)
+                {
+                    entryErrors.Add("Reset mode requires an existing login identity and never creates one.");
+                }
+                else if (existingIdentity is not null && !resetExisting)
                 {
                     if (!existingIdentity.IsLoginEnabled || existingIdentity.MustChangePassword == false)
                     {
                         entryErrors.Add("An existing identity has a different state and will not be changed by bootstrap provisioning.");
                     }
                 }
-                else
+                else if (existingIdentity is null)
                 {
                     prospectiveIdentity = CreateProspectiveIdentity(profile);
+                }
+
+                var passwordIdentity = existingIdentity ?? prospectiveIdentity;
+                if (passwordIdentity is not null && (resetExisting || existingIdentity is null))
+                {
                     foreach (var validator in _userManager.PasswordValidators)
                     {
-                        var passwordResult = await validator.ValidateAsync(_userManager, prospectiveIdentity, temporaryPassword);
+                        var passwordResult = await validator.ValidateAsync(_userManager, passwordIdentity, temporaryPassword);
                         if (!passwordResult.Succeeded)
                         {
                             entryErrors.AddRange(passwordResult.Errors.Select(error => error.Description));
@@ -332,7 +403,9 @@ public sealed class IdentityProvisioningService
                 displayName,
                 entry.Email,
                 role,
-                existingIdentity is null ? "Planned" : "Already provisioned; unchanged");
+                resetExisting
+                    ? existingIdentity is null ? "Reset blocked" : "Reset planned"
+                    : existingIdentity is null ? "Planned" : "Already provisioned; unchanged");
             rows.Add(row);
 
             if (entryErrors.Count > 0)

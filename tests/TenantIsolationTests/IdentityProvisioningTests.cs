@@ -70,12 +70,13 @@ internal static class IdentityProvisioningTests
         Ensure((await fixture.Db.LoginIdentities.SingleAsync()).PasswordHash == passwordHash,
             "Replay-safe provisioning reset an existing password.");
 
-        await VerifyCommandSafeguardsAsync(fixture, command);
+        await VerifyCommandSafeguardsAsync(fixture, command, userManager);
     }
 
     private static async Task VerifyCommandSafeguardsAsync(
         ProvisioningFixture fixture,
-        IdentityProvisioningCommand command)
+        IdentityProvisioningCommand command,
+        UserManager<ApplicationIdentityUser> userManager)
     {
         var manifest = Manifest(fixture.CompanyB, fixture.StaffB, "Staff");
         var path = Path.Combine(Path.GetTempPath(), $"acuityops-identity-manifest-{Guid.NewGuid():N}.json");
@@ -125,6 +126,50 @@ internal static class IdentityProvisioningTests
             Ensure(!executeOutput.ToString().Contains(TemporaryPassword, StringComparison.Ordinal) &&
                    !executeError.ToString().Contains(TemporaryPassword, StringComparison.Ordinal),
                 "Execute output leaked the temporary password.");
+
+            var replacementPassword = "Recovery!Pass456";
+            Environment.SetEnvironmentVariable(PasswordEnvironmentVariable, replacementPassword);
+            var resetDryRunOutput = new StringWriter();
+            var resetDryRunExit = await command.RunAsync(
+                new[]
+                {
+                    IdentityProvisioningCommand.CommandName,
+                    "--manifest", path,
+                    "--reset-existing"
+                },
+                resetDryRunOutput,
+                new StringWriter());
+            var existing = await fixture.Db.LoginIdentities.SingleAsync(item => item.AppUserId == fixture.StaffB.Id);
+            Ensure(resetDryRunExit == 0 && await userManager.CheckPasswordAsync(existing, TemporaryPassword),
+                "Reset dry-run changed an existing identity.");
+
+            var resetOutput = new StringWriter();
+            var resetError = new StringWriter();
+            var resetExit = await command.RunAsync(
+                new[]
+                {
+                    IdentityProvisioningCommand.CommandName,
+                    "--manifest", path,
+                    "--reset-existing",
+                    "--execute",
+                    "--confirm-sha256", hash
+                },
+                resetOutput,
+                resetError);
+            existing = await fixture.Db.LoginIdentities.SingleAsync(item => item.AppUserId == fixture.StaffB.Id);
+            Ensure(resetExit == 0 && existing.IsLoginEnabled && existing.MustChangePassword &&
+                   existing.LockoutEnd is null && existing.AccessFailedCount == 0 &&
+                   await userManager.CheckPasswordAsync(existing, replacementPassword) &&
+                   !await userManager.CheckPasswordAsync(existing, TemporaryPassword),
+                "Hash-confirmed recovery reset did not securely replace the existing password.");
+            Ensure(await fixture.Db.AuditLogs.AnyAsync(log =>
+                    log.CompanyId == fixture.CompanyB.Id &&
+                    log.AppUserId == fixture.StaffB.Id &&
+                    log.Action == "Login identity recovery reset"),
+                "Recovery reset did not create tenant-scoped audit evidence.");
+            Ensure(!resetOutput.ToString().Contains(replacementPassword, StringComparison.Ordinal) &&
+                   !resetError.ToString().Contains(replacementPassword, StringComparison.Ordinal),
+                "Recovery reset output leaked the replacement password.");
         }
         finally
         {

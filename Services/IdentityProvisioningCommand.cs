@@ -10,6 +10,7 @@ public sealed class IdentityProvisioningCommand
     private const string InventoryOption = "--inventory";
     private const string ManifestOption = "--manifest";
     private const string ExecuteOption = "--execute";
+    private const string ResetExistingOption = "--reset-existing";
     private const string ConfirmationOption = "--confirm-sha256";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -33,12 +34,13 @@ public sealed class IdentityProvisioningCommand
     {
         var inventory = HasOption(args, InventoryOption);
         var execute = HasOption(args, ExecuteOption);
+        var resetExisting = HasOption(args, ResetExistingOption);
         var manifestPath = GetOptionValue(args, ManifestOption);
         var confirmedHash = GetOptionValue(args, ConfirmationOption);
 
         if (inventory)
         {
-            if (execute || manifestPath is not null || confirmedHash is not null)
+            if (execute || resetExisting || manifestPath is not null || confirmedHash is not null)
             {
                 await error.WriteLineAsync("Inventory mode cannot be combined with manifest or execute options.");
                 return 2;
@@ -102,6 +104,7 @@ public sealed class IdentityProvisioningCommand
                 manifest,
                 Environment.GetEnvironmentVariable,
                 execute,
+                resetExisting,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -112,6 +115,7 @@ public sealed class IdentityProvisioningCommand
 
         await output.WriteLineAsync($"Manifest SHA-256: {actualHash}");
         await output.WriteLineAsync(execute ? "Mode: execute" : "Mode: dry-run (no writes)");
+        await output.WriteLineAsync(resetExisting ? "Operation: reset existing identities" : "Operation: provision missing identities");
         await output.WriteLineAsync(JsonSerializer.Serialize(result.Accounts, JsonOptions));
         if (!result.Succeeded)
         {
