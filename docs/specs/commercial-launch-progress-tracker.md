@@ -27,7 +27,7 @@ Add-on completion and first add-on purchase are reported separately.
 | --- | --- |
 | Total mandatory core commercial-launch blocks | 12 |
 | Accepted and locked | 5 |
-| Active core block | 0 (next core block not yet authorized) |
+| Active core block | Block 7 (B7.1 source verified; provisioning and staging acceptance pending) |
 | Remaining | 7 |
 | Blocked core blocks | 0 |
 | Overall core commercial-launch progress | 48.9% (45 accepted core points / 92 core points) |
@@ -345,7 +345,7 @@ Status: Accepted and locked; 5/5 batches accepted
 
 ### Block 7: Premium AI And Knowledge Intelligence
 
-Status: Planning only; 0/3 parts accepted; 0/12 points earned
+Status: In progress; 0/3 parts accepted; 0/12 points earned
 
 Proposed authorities:
 
@@ -354,14 +354,35 @@ Proposed authorities:
 
 | Part | Objective | Status | Core boundary |
 | --- | --- | --- | --- |
-| B7.1 | Premium AI Import Intelligence | Not started | AI suggestions must enter the accepted Block 5 deterministic review, validation, commit and publication contract |
+| B7.1 | Premium AI Import Intelligence | Source and privacy hardening committed; Azure provisioning and staging acceptance pending | AI suggestions must enter the accepted Block 5 deterministic review, validation, commit and publication contract |
 | B7.2 | SOP/CPG Knowledge System | Not started | Immutable tenant sources, reviewed extraction, tenant-scoped search, and cited Q&A; no A1 conclusions |
 | B7.3 | Operational Forecasting And Integrated Closure | Not started | 3/6/12-month operational findings and explanations only; no regulatory compliance forecasting |
 
-Planning documentation earns no core points. Block 7 changes from 0 to 12
-accepted points only after all three parts pass the complete safety, tenant,
-human-review, cost, staging, and audit acceptance gate. Overall core progress
-therefore remains `45 / 92 = 48.9%`.
+B7.1 source evidence:
+
+- Commit `93a719c` implemented Premium AI import intelligence behind Premium
+  entitlement, saved permission, tenant AI policy, strict structured output,
+  bounded cost controls, human review and the accepted Block 5 mutation
+  boundary.
+- Commit `f307578` approved GlobalStandard for the bounded B7.1 operational
+  import use case and hardened the privacy boundary: explicit patient-data
+  exclusion confirmation, server-side patient-identifier screening, complete
+  omission of staff row values and identifying source metadata from AI prompts,
+  and generic failure recording without prompt or response bodies.
+- Release build passed with `0` warnings and `0` errors.
+- The complete tenant/security executable passed, including Premium AI tenant
+  scope, cost limits, manager-role boundary, Block 5 handoff, no staff login
+  creation, privacy confirmation, staff-value prompt omission, patient-field
+  detection and raw-provider-output exclusion from failure records.
+- No Azure AI resource was provisioned, no active database migration was
+  applied, no deployment occurred, and no B7.2 work began during this evidence
+  slice.
+
+Source completion does not accept B7.1. B7.1 remains open until the approved
+provider is provisioned/configured and the controlled staging acceptance matrix
+passes. Block 7 changes from 0 to 12 accepted points only after all three parts
+pass the complete safety, tenant, human-review, cost, staging, and audit
+acceptance gate. Overall core progress therefore remains `45 / 92 = 48.9%`.
 
 ## Add-On Track A1: South African DOH Compliance Pack
 
@@ -468,13 +489,14 @@ requirements but no longer controls progress calculations.
 
 ## Next Approved Action
 
-Review and commit the proposed Block 7 blueprint, provider/data-residency ADR,
-and roadmap/tracker reconciliation as one docs-only change. After approval,
-propose `B7.1 Premium AI Import Intelligence` as the first implementation part.
-Keep core AI import, operational forecasting and SOP/CPG intelligence
-independent of Add-On Track A1. Do not implement add-on-specific compliance
-forecasting, activate requirements or enter B6.2. Do not reopen Blocks 1-5
-without an explicit instruction or a Verified-Work Finality Rule trigger.
+Propose the smallest safe B7.1 Azure provisioning and controlled staging
+acceptance batch using the approved GlobalStandard privacy contract. The batch
+must run live SKU/cost checks before resource creation, preserve managed
+identity and the existing staging budget, apply only the already-verified
+additive migration after backup, and execute the synthetic non-patient B7.1
+acceptance matrix. Do not enter B7.2, activate Add-On Track A1 requirements, or
+reopen Blocks 1-5 without an explicit instruction or a Verified-Work Finality
+Rule trigger.
 
 ## Update Rules
 
