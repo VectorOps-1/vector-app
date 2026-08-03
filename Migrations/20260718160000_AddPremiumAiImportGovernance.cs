@@ -7,7 +7,7 @@ using vector_app_local.Data;
 namespace vector_app_local.Migrations;
 
 [DbContext(typeof(VectorDbContext))]
-[Migration("20260729120000_AddPremiumAiImportGovernance")]
+[Migration("20260718160000_AddPremiumAiImportGovernance")]
 public partial class AddPremiumAiImportGovernance : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

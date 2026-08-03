@@ -223,7 +223,7 @@ internal static class PremiumAiImportTests
         await db.Database.ExecuteSqlRawAsync("CREATE TABLE AppUsers (Id INTEGER NOT NULL PRIMARY KEY);");
         await db.Database.ExecuteSqlRawAsync("CREATE TABLE ImportBatches (Id INTEGER NOT NULL PRIMARY KEY);");
         await db.Database.ExecuteSqlRawAsync("CREATE TABLE __EFMigrationsHistory (MigrationId TEXT NOT NULL PRIMARY KEY, ProductVersion TEXT NOT NULL);");
-        const string migrationId = "20260729120000_AddPremiumAiImportGovernance";
+        const string migrationId = "20260718160000_AddPremiumAiImportGovernance";
         var migrations = db.GetService<IMigrationsAssembly>().Migrations.Keys.OrderBy(item => item).ToList();
         foreach (var prior in migrations.Where(item => string.CompareOrdinal(item, migrationId) < 0))
             await db.Database.ExecuteSqlRawAsync("INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, '8.0.0');", prior);
