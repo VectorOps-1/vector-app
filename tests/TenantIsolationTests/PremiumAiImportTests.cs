@@ -13,11 +13,38 @@ internal static class PremiumAiImportTests
 {
     public static async Task RunAllAsync()
     {
+        await ManagedIdentityTokensRemainAudienceScopedAsync();
         await SuggestionsRemainTenantScopedAndEnterBlockFiveOnlyAfterReviewAsync();
         await InvalidProviderOutputFailsWithoutDomainWritesAsync();
         RedactionTreatsSourceAsData();
         SourceSafetyDetectsPatientIdentifiers();
         await MigrationAppliesAndRollsBackAsync();
+    }
+
+    private static async Task ManagedIdentityTokensRemainAudienceScopedAsync()
+    {
+        var previousEndpoint = Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT");
+        var previousHeader = Environment.GetEnvironmentVariable("IDENTITY_HEADER");
+        try
+        {
+            Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", "http://managed-identity.test/token");
+            Environment.SetEnvironmentVariable("IDENTITY_HEADER", "test-header");
+            var handler = new ManagedIdentityHandler();
+            var source = new AzureManagedIdentityTokenSource(new StaticHttpClientFactory(handler));
+
+            var cognitive = await source.GetTokenAsync("https://cognitiveservices.azure.com/.default", CancellationToken.None);
+            var storage = await source.GetTokenAsync("https://storage.azure.com/.default", CancellationToken.None);
+            var cognitiveAgain = await source.GetTokenAsync("https://cognitiveservices.azure.com/.default", CancellationToken.None);
+
+            Ensure(cognitive != storage, "A managed-identity token was reused across Azure resource audiences.");
+            Ensure(cognitive == cognitiveAgain, "A valid managed-identity token was not cached for its own audience.");
+            Ensure(handler.RequestCount == 2, "Managed-identity caching did not issue exactly one request per audience.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", previousEndpoint);
+            Environment.SetEnvironmentVariable("IDENTITY_HEADER", previousHeader);
+        }
     }
 
     private static async Task SuggestionsRemainTenantScopedAndEnterBlockFiveOnlyAfterReviewAsync()
@@ -253,6 +280,31 @@ internal static class PremiumAiImportTests
         public bool IsConfigured => true;
         public Task<AiStructuredOutputResult> CompleteAsync(AiStructuredOutputRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new AiStructuredOutputResult(_json, "test-request", "test", "test", "test", 100, 50));
+    }
+
+    private sealed class StaticHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpClient _client;
+        public StaticHttpClientFactory(HttpMessageHandler handler) => _client = new HttpClient(handler);
+        public HttpClient CreateClient(string name) => _client;
+    }
+
+    private sealed class ManagedIdentityHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            var token = request.RequestUri!.Query.Contains("storage", StringComparison.OrdinalIgnoreCase)
+                ? "storage-token"
+                : "cognitive-token";
+            var expires = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent($"{{\"access_token\":\"{token}\",\"expires_on\":\"{expires}\"}}", Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private sealed class CapturingProvider : IAiStructuredOutputProvider

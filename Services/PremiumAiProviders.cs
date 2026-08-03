@@ -128,8 +128,8 @@ public sealed class AzureManagedIdentityTokenSource
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private string? _token;
-    private DateTimeOffset _expiresAtUtc;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedToken> _tokens =
+        new(StringComparer.Ordinal);
 
     public AzureManagedIdentityTokenSource(IHttpClientFactory httpClientFactory)
     {
@@ -138,11 +138,13 @@ public sealed class AzureManagedIdentityTokenSource
 
     public async Task<string> GetTokenAsync(string resource, CancellationToken cancellationToken)
     {
-        if (_token is not null && _expiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5)) return _token;
+        if (_tokens.TryGetValue(resource, out var cached) && cached.ExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
+            return cached.Value;
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            if (_token is not null && _expiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5)) return _token;
+            if (_tokens.TryGetValue(resource, out cached) && cached.ExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
+                return cached.Value;
             var endpoint = Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT");
             var header = Environment.GetEnvironmentVariable("IDENTITY_HEADER");
             if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(header))
@@ -156,19 +158,22 @@ public sealed class AzureManagedIdentityTokenSource
                 .SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            _token = json.RootElement.GetProperty("access_token").GetString()
+            var token = json.RootElement.GetProperty("access_token").GetString()
                 ?? throw new InvalidOperationException("Azure managed identity returned no access token.");
             var expiresRaw = json.RootElement.GetProperty("expires_on").GetString();
-            _expiresAtUtc = long.TryParse(expiresRaw, out var epoch)
+            var expiresAtUtc = long.TryParse(expiresRaw, out var epoch)
                 ? DateTimeOffset.FromUnixTimeSeconds(epoch)
                 : DateTimeOffset.UtcNow.AddMinutes(30);
-            return _token;
+            _tokens[resource] = new CachedToken(token, expiresAtUtc);
+            return token;
         }
         finally
         {
             _lock.Release();
         }
     }
+
+    private sealed record CachedToken(string Value, DateTimeOffset ExpiresAtUtc);
 }
 
 public sealed class AzureOpenAiStructuredOutputProvider : IAiStructuredOutputProvider
