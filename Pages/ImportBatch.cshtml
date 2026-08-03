@@ -40,6 +40,14 @@
                 {
                     <form method="post" asp-page-handler="RequestAi">
                         <input type="hidden" name="importBatchId" value="@batch.Id" />
+                        <label class="checkbox-line">
+                            <input asp-for="ConfirmNoPatientData" />
+                            <span>I confirm this operational import contains no patient records or patient-identifying information.</span>
+                        </label>
+                        @if (string.Equals(batch.TargetType, ImportTargetTypes.Staff, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <small>Staff records are imported normally, but names, IDs, contact details, practitioner numbers, and other staff values are not sent to AI.</small>
+                        }
                         <button class="button primary" type="submit">Generate AI suggestions</button>
                     </form>
                 }

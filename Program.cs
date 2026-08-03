@@ -65,6 +65,7 @@ builder.Services.AddScoped<ImportGovernanceService>();
 builder.Services.AddSingleton<AzureManagedIdentityTokenSource>();
 builder.Services.AddScoped<IAiPromptRegistry, AiPromptRegistry>();
 builder.Services.AddScoped<IAiRedactionService, AiRedactionService>();
+builder.Services.AddScoped<IAiSourceSafetyService, AiSourceSafetyService>();
 builder.Services.AddScoped<IAiStructuredOutputProvider, AzureOpenAiStructuredOutputProvider>();
 builder.Services.AddScoped<IDocumentExtractionProvider, AzureDocumentExtractionProvider>();
 builder.Services.AddScoped<IAiJobQueue, AzureStorageAiJobQueue>();

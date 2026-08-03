@@ -60,6 +60,7 @@ public class ImportBatchModel : PageModel
     [BindProperty] public string AiDecision { get; set; } = AiHumanDecisions.Accept;
     [BindProperty] public string? AiCorrectedValue { get; set; }
     [BindProperty] public string? AiReviewNote { get; set; }
+    [BindProperty] public bool ConfirmNoPatientData { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int importBatchId, string? confirmation, CancellationToken cancellationToken)
     {
@@ -86,7 +87,7 @@ public class ImportBatchModel : PageModel
     {
         return await ExecuteAsync(importBatchId, cancellationToken, async user =>
         {
-            await _ai.RequestAsync(user, importBatchId, cancellationToken);
+            await _ai.RequestAsync(user, importBatchId, ConfirmNoPatientData, cancellationToken);
             return RedirectToPage(new { importBatchId, confirmation = "ai-ready" });
         });
     }

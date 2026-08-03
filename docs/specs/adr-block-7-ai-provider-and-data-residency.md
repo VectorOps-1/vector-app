@@ -1,6 +1,6 @@
 # ADR: Block 7 AI Provider And Data Residency
 
-Status: Proposed for approval
+Status: Approved for B7.1 implementation
 
 Date: 2026-07-29
 
@@ -12,12 +12,17 @@ search, queue, secret, and observability services behind application-owned
 interfaces. The application must not call the public OpenAI API directly in the
 initial Block 7 implementation.
 
-The preferred processing region is `South Africa North`.
+The Azure AI resource, application data, retained files, and operational logs
+remain in `South Africa North`. B7.1 deliberately uses an Azure
+`GlobalStandard` model deployment because the structured-output models required
+by B7.1 are not available as a regional Standard deployment in South Africa
+North. GlobalStandard inference may be processed outside South Africa; this is
+an explicit architecture decision, not an automatic fallback.
 
-Use a regional model deployment only when the required structured-output model
-and capacity are available in the approved region. Do not silently switch to a
-Global or Data Zone deployment. Those deployment types can change where
-processing occurs.
+GlobalStandard is production-capable for the B7.1 operational import use case
+only when every privacy control in this ADR is enforced. It is not approved for
+patient records, patient-identifiable clinical data, or unminimized staff
+personal values.
 
 `West Europe` is a conditional fallback, not an automatic fallback. It requires
 all of:
@@ -44,7 +49,7 @@ not replace it.
 
 | Capability | Initial provider decision | Activation part |
 | --- | --- | --- |
-| Structured AI output | Azure-hosted model deployment supporting strict JSON schema | B7.1 |
+| Structured AI output | Azure GlobalStandard deployment supporting strict JSON schema | B7.1 |
 | PDF/OCR/layout extraction | Azure AI Document Intelligence | B7.1 for checklist PDF; B7.2 for knowledge |
 | DOCX extraction | Server-side Open XML parser | B7.2 |
 | Immutable original and normalized artifacts | Tenant-scoped Azure Blob Storage | B7.2 |
@@ -87,22 +92,37 @@ changes by region and deployment type.
 
 ## Data Residency And Privacy Rules
 
-1. South Africa North is preferred for storage and processing.
+1. South Africa North is mandatory for application data at rest, retained
+   source files, operational logs, and the Azure AI resource.
 2. Regional services must be colocated where required for private connectivity
    and managed-identity access.
-3. Global/Data Zone model deployments are disabled unless separately approved.
+3. GlobalStandard is approved only for B7.1 structured-output inference. Data
+   Zone and any silent regional/deployment fallback remain disabled.
 4. Tenant files, extracted text, prompts, retrieved chunks, embeddings,
    suggestions, answers, and forecasts remain tenant-bound.
 5. Send only minimized fields required for the approved feature.
-6. Patient-specific records and patient advice are outside Block 7.
-7. Staff personal data is redacted or omitted unless the feature explicitly
-   requires it and has an approved lawful purpose.
+6. Patient records, patient-identifiable clinical data, and patient advice are
+   prohibited from B7.1. The user must confirm this before an AI request, and
+   the server must reject detected patient-identifying source fields.
+7. Staff imports remain fully supported by Block 5, but B7.1 sends only column
+   headings and canonical schema metadata to AI. Staff names, IDs, contact
+   details, practitioner numbers, licence data, CPD data, and other row values
+   remain in the deterministic tenant import pipeline and never enter the AI
+   prompt.
 8. Provider prompts and outputs must not be used to train shared models without
    explicit contractual and product approval.
 9. Abuse-monitoring, content-retention, and support-access behavior must be
    documented for the selected Azure deployment before production activation.
 10. Original files and retained artifacts follow the tenant's later Block 10
     retention/export/deletion contract.
+11. Prompt and response bodies are excluded from application logs, audit logs,
+    failure records, telemetry, and support diagnostics. Logs may retain only
+    job identifiers, tenant-owned metadata, provider/deployment/model version,
+    token usage, cost, status, correlation identifiers, and generic failure
+    categories.
+12. Commercial activation requires the Microsoft contractual safeguards and a
+    recorded POPIA Section 72 cross-border-processing review. This is a legal
+    activation gate, not a runtime tenant setting.
 
 ## Tenant Isolation
 
@@ -176,10 +196,11 @@ This ADR does not provision resources. The later provisioning sequence is:
 
 ### B7.1
 
-1. Confirm South Africa North model and Document Intelligence availability.
+1. Confirm the approved GlobalStandard structured-output model and South Africa
+   North Azure AI resource availability, plus Document Intelligence availability.
 2. Reuse existing staging Key Vault, App Service managed identity, storage
    account, Application Insights, and budget where suitable.
-3. Create only the required regional structured-output deployment, extraction
+3. Create only the approved GlobalStandard structured-output deployment, extraction
    resource, and Storage Queue.
 4. Add resource-scoped RBAC.
 5. Configure Key Vault references or managed identity.
@@ -236,7 +257,9 @@ boundaries.
 ### Global deployment as an automatic availability fallback
 
 Rejected because processing geography may differ and cannot be changed without
-an explicit privacy/data-residency decision.
+an explicit privacy/data-residency decision. This rejection remains in force;
+the approved B7.1 GlobalStandard deployment is deliberate, named, privacy-
+hardened, and cannot be selected through automatic fallback logic.
 
 ### Provisioned throughput for staging
 
@@ -249,11 +272,14 @@ readable when the provider is unavailable.
 
 ## Verification Gate
 
-Before implementation begins, confirm:
+Before provisioning or commercial activation, confirm:
 
-- the selected regional services and models are available;
+- the approved GlobalStandard structured-output model is available;
 - structured outputs are supported;
 - exact processing geography is documented;
+- the patient-data exclusion gate and staff-value prompt omission tests pass;
+- prompt and response bodies do not appear in logs or failure records;
+- the POPIA Section 72 and contractual safeguard review is recorded;
 - projected staging cost fits the approved budget;
 - managed identity/RBAC is supported;
 - tenant filters can be server-enforced;

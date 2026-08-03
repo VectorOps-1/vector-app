@@ -16,6 +16,7 @@ internal static class PremiumAiImportTests
         await SuggestionsRemainTenantScopedAndEnterBlockFiveOnlyAfterReviewAsync();
         await InvalidProviderOutputFailsWithoutDomainWritesAsync();
         RedactionTreatsSourceAsData();
+        SourceSafetyDetectsPatientIdentifiers();
         await MigrationAppliesAndRollsBackAsync();
     }
 
@@ -74,9 +75,13 @@ internal static class PremiumAiImportTests
             """));
 
         Ensure(!await ai.CanUseAsync(staff), "A staff user could invoke Premium AI despite the manager-role boundary.");
-        var review = await ai.RequestAsync(actor, batch.Id);
+        await EnsureThrowsAsync<InvalidOperationException>(() => ai.RequestAsync(actor, batch.Id, false),
+            "AI assistance ran without the patient-data exclusion confirmation.");
+        Ensure(!await fixture.Db.AiProcessingJobs.AnyAsync(item => item.ImportBatchId == batch.Id),
+            "A rejected privacy confirmation created an AI job.");
+        var review = await ai.RequestAsync(actor, batch.Id, true);
         Ensure(review.SuggestionSet.Suggestions.Count == 2, "AI mapping suggestions were not persisted.");
-        var repeatedReview = await ai.RequestAsync(actor, batch.Id);
+        var repeatedReview = await ai.RequestAsync(actor, batch.Id, true);
         Ensure(repeatedReview.Job.Id == review.Job.Id, "A repeated request created a duplicate AI job.");
         Ensure(await fixture.Db.AiProcessingJobs.CountAsync(item =>
             item.CompanyId == actor.CompanyId && item.ImportBatchId == batch.Id) == 1,
@@ -121,7 +126,7 @@ internal static class PremiumAiImportTests
         {
             CompanyId = actor.CompanyId, UploadedByUserId = actor.Id,
             LinkedEntityType = SetupUploadService.RegisterUploadEntityType, Category = "Staff Register",
-            OriginalFileName = "staff.csv", ContentType = "text/csv", StorageProvider = "test",
+            OriginalFileName = "Jane Doe staff.csv", ContentType = "text/csv", StorageProvider = "test",
             StoragePath = "test/company/staff.csv", SizeBytes = 50
         };
         fixture.Db.AssetFiles.Add(file);
@@ -131,20 +136,37 @@ internal static class PremiumAiImportTests
             new ImportSourceProfile(1, new string('B', 64), "CSV", 1, 2, 4,
                 [new ImportWorksheetProfile("Sheet 1", 2, 2, 4)]), DateTime.UtcNow);
         await fixture.Db.SaveChangesAsync();
-        var reader = new StaticReader();
+        var reader = new StaffReader();
         var workflow = new ImportRegisterWorkflowService(fixture.Db, batches, new ImportFieldRegistry(), reader);
         await workflow.SelectSourceAsync(actor, batch.Id, "Sheet 1", 1);
         var beforeProfiles = await fixture.Db.AppUsers.CountAsync();
         var beforeIdentities = await fixture.Db.LoginIdentities.CountAsync();
-        var ai = Service(fixture.Db, reader, new StaticProvider("""
+        var provider = new CapturingProvider("""
             {"domain":"Staff","mappings":[{"sourceColumnIndex":0,"canonicalFieldKey":"staff.password","transformationKey":"trim","confidence":1,"explanation":"unsafe","warnings":[]}],"warnings":[]}
-            """));
-        await EnsureThrowsAsync<InvalidOperationException>(() => ai.RequestAsync(actor, batch.Id),
+            """);
+        var ai = Service(fixture.Db, reader, provider);
+        await EnsureThrowsAsync<InvalidOperationException>(() => ai.RequestAsync(actor, batch.Id, true),
             "Unknown canonical provider output was accepted.");
+        var capturedRequest = provider.LastRequest
+            ?? throw new InvalidOperationException("The staff mapping request did not reach the test provider.");
+        Ensure(!capturedRequest.UserContent.Contains("Jane Doe", StringComparison.Ordinal)
+               && !capturedRequest.UserContent.Contains("jane@example.org", StringComparison.OrdinalIgnoreCase)
+               && !capturedRequest.UserContent.Contains("9001011234088", StringComparison.Ordinal),
+            "A staff personal value entered the AI prompt.");
+        Ensure(capturedRequest.UserContent.Contains("Full name", StringComparison.Ordinal)
+               && capturedRequest.UserContent.Contains("Email", StringComparison.Ordinal),
+            "Staff column structure was not retained for AI mapping.");
         Ensure(await fixture.Db.AppUsers.CountAsync() == beforeProfiles, "Failed AI output created a staff profile.");
         Ensure(await fixture.Db.LoginIdentities.CountAsync() == beforeIdentities, "Failed AI output created login access.");
         Ensure(await fixture.Db.AiProcessingJobs.AnyAsync(item => item.CompanyId == actor.CompanyId && item.Status == AiProcessingStatuses.Failed),
             "Provider/schema failure was not recorded safely.");
+        var failureText = string.Join(' ', await fixture.Db.AiJobAttempts
+            .Where(item => item.CompanyId == actor.CompanyId)
+            .Select(item => item.FailureSummary)
+            .ToListAsync());
+        Ensure(!failureText.Contains("staff.password", StringComparison.OrdinalIgnoreCase)
+               && !failureText.Contains("unsafe", StringComparison.OrdinalIgnoreCase),
+            "Raw provider output was stored in an AI failure record.");
     }
 
     private static void RedactionTreatsSourceAsData()
@@ -153,6 +175,15 @@ internal static class PremiumAiImportTests
         Ensure(!redacted.Contains("jane@example.org") && !redacted.Contains("9001011234088"),
             "Configured sensitive values were not redacted.");
         Ensure(redacted.Contains("ignore system"), "Source text was executed or silently removed instead of treated as data.");
+    }
+
+    private static void SourceSafetyDetectsPatientIdentifiers()
+    {
+        var safety = new AiSourceSafetyService();
+        Ensure(safety.Inspect("Patient name, MRN, and date of birth").ContainsProhibitedPatientData,
+            "Patient-identifying source fields were not detected.");
+        Ensure(!safety.Inspect("Patient compartment condition and oxygen stock level").ContainsProhibitedPatientData,
+            "Ordinary operational wording was incorrectly classified as patient-identifying data.");
     }
 
     private static async Task MigrationAppliesAndRollsBackAsync()
@@ -191,7 +222,7 @@ internal static class PremiumAiImportTests
         return new PremiumAiImportService(
             db, new PremiumFeatureAccess(), new UserActionPermissionService(db), new ImportFieldRegistry(),
             reader, new EmptyFileStorage(), provider, new NoDocuments(), new AiPromptRegistry(),
-            new AiRedactionService(), options,
+            new AiRedactionService(), new AiSourceSafetyService(), options,
             new ChecklistImportConversionService(db, batches, reader, new UserActionPermissionService(db)));
     }
 
@@ -224,6 +255,19 @@ internal static class PremiumAiImportTests
             Task.FromResult(new AiStructuredOutputResult(_json, "test-request", "test", "test", "test", 100, 50));
     }
 
+    private sealed class CapturingProvider : IAiStructuredOutputProvider
+    {
+        private readonly string _json;
+        public CapturingProvider(string json) => _json = json;
+        public bool IsConfigured => true;
+        public AiStructuredOutputRequest? LastRequest { get; private set; }
+        public Task<AiStructuredOutputResult> CompleteAsync(AiStructuredOutputRequest request, CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return Task.FromResult(new AiStructuredOutputResult(_json, "test-request", "test", "test", "test", 100, 50));
+        }
+    }
+
     private sealed class PremiumFeatureAccess : IFeatureAccessService
     {
         public Task<string> GetCurrentSubscriptionTierAsync(CancellationToken cancellationToken = default) => Task.FromResult(SubscriptionTiers.Premium);
@@ -240,6 +284,21 @@ internal static class PremiumAiImportTests
                     new ImportSourceColumn(1, "Call sign", ["A01"])
                 ],
                 [new ImportSourceRow(2, new Dictionary<int, string?> { [0] = "DEM-101", [1] = "A01" })]));
+    }
+
+    private sealed class StaffReader : IImportTabularReader
+    {
+        public Task<ImportTabularData> ReadAsync(AssetFile sourceFile, string? worksheet, int headerRowNumber, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ImportTabularData("Jane Doe records", 1,
+                [
+                    new ImportSourceColumn(0, "Full name", ["Jane Doe"]),
+                    new ImportSourceColumn(1, "Email", ["jane@example.org"]),
+                    new ImportSourceColumn(2, "National ID", ["9001011234088"])
+                ],
+                [new ImportSourceRow(2, new Dictionary<int, string?>
+                {
+                    [0] = "Jane Doe", [1] = "jane@example.org", [2] = "9001011234088"
+                })]));
     }
 
     private sealed class NoDocuments : IDocumentExtractionProvider

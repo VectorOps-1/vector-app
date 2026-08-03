@@ -29,6 +29,7 @@ public sealed class PremiumAiImportService
     private readonly IDocumentExtractionProvider _documents;
     private readonly IAiPromptRegistry _prompts;
     private readonly IAiRedactionService _redaction;
+    private readonly IAiSourceSafetyService _sourceSafety;
     private readonly PremiumAiOptions _options;
     private readonly ChecklistImportConversionService _checklists;
 
@@ -43,6 +44,7 @@ public sealed class PremiumAiImportService
         IDocumentExtractionProvider documents,
         IAiPromptRegistry prompts,
         IAiRedactionService redaction,
+        IAiSourceSafetyService sourceSafety,
         Microsoft.Extensions.Options.IOptions<PremiumAiOptions> options,
         ChecklistImportConversionService checklists)
     {
@@ -56,6 +58,7 @@ public sealed class PremiumAiImportService
         _documents = documents;
         _prompts = prompts;
         _redaction = redaction;
+        _sourceSafety = sourceSafety;
         _options = options.Value;
         _checklists = checklists;
     }
@@ -90,9 +93,15 @@ public sealed class PremiumAiImportService
         return new AiImportReview(job, set, import, checklist);
     }
 
-    public async Task<AiImportReview> RequestAsync(AppUser user, int importBatchId, CancellationToken cancellationToken = default)
+    public async Task<AiImportReview> RequestAsync(
+        AppUser user,
+        int importBatchId,
+        bool noPatientDataConfirmed,
+        CancellationToken cancellationToken = default)
     {
         await RequireAccessAsync(user, cancellationToken);
+        if (!noPatientDataConfirmed)
+            throw new InvalidOperationException("Confirm that the source contains no patient-identifiable clinical data before using AI assistance.");
         var batch = await _db.ImportBatches
             .Include(item => item.SourceAssetFile)
             .Include(item => item.ColumnMappings)
@@ -162,6 +171,8 @@ public sealed class PremiumAiImportService
         };
         _db.AiProcessingJobs.Add(job);
         await _db.SaveChangesAsync(cancellationToken);
+        _db.AuditLogs.Add(Audit(user, "Premium AI source privacy confirmed", nameof(ImportBatch), batch.Id,
+            $"Job {job.Id}: patient-identifiable data exclusion confirmed; staff source values remain outside the AI prompt."));
 
         Exception? lastFailure = null;
         var maximumAttempts = Math.Clamp(_options.MaximumAttempts, 1, 3);
@@ -230,7 +241,7 @@ public sealed class PremiumAiImportService
                 lastFailure = ex;
                 attempt.Status = AiProcessingStatuses.Failed;
                 attempt.FailureCode = ex is JsonException ? "SchemaRejected" : "ProviderFailure";
-                attempt.FailureSummary = SafeFailure(ex.Message);
+                attempt.FailureSummary = SafeFailure(ex);
                 attempt.CompletedAtUtc = DateTime.UtcNow;
                 await _db.SaveChangesAsync(cancellationToken);
             }
@@ -238,7 +249,7 @@ public sealed class PremiumAiImportService
 
         job.Status = AiProcessingStatuses.Failed;
         job.FailureCode = "BoundedAttemptsExhausted";
-        job.FailureSummary = SafeFailure(lastFailure?.Message ?? "The AI provider did not return a usable result.");
+        job.FailureSummary = SafeFailure(lastFailure);
         job.CompletedAtUtc = DateTime.UtcNow;
         _db.AuditLogs.Add(Audit(user, "Premium AI import assistance failed", nameof(ImportBatch), batch.Id,
             $"Job {job.Id} failed safely. Deterministic guided import remains available."));
@@ -400,6 +411,7 @@ public sealed class PremiumAiImportService
                 throw new InvalidOperationException("Checklist PDF extraction is not configured. Spreadsheet checklist import remains available.");
             await using var stream = await _files.OpenReadAsync(batch.SourceAssetFile.StoragePath, cancellationToken);
             var extracted = await _documents.ExtractLayoutAsync(stream, batch.SourceAssetFile.ContentType, cancellationToken);
+            RejectProhibitedPatientData(extracted.Markdown);
             return JsonSerializer.Serialize(new
             {
                 source = new { fileName = _redaction.Minimize(batch.OriginalFileName), batch.FileHash, type = "PDF", warnings = extracted.Warnings },
@@ -410,21 +422,30 @@ public sealed class PremiumAiImportService
         if (batch.HeaderRowNumber is null || batch.ColumnMappings.Count == 0)
             throw new InvalidOperationException("Read the source columns before requesting AI mapping assistance.");
         var tabular = await _reader.ReadAsync(batch.SourceAssetFile, batch.SelectedWorksheet, batch.HeaderRowNumber.Value, cancellationToken);
+        foreach (var column in tabular.Columns) RejectProhibitedPatientData(column.Heading);
+        var omitSourceValues = string.Equals(batch.TargetType, ImportTargetTypes.Staff, StringComparison.OrdinalIgnoreCase);
+        if (!omitSourceValues)
+        {
+            foreach (var sample in tabular.Columns.SelectMany(column => column.Samples.Take(3)))
+                RejectProhibitedPatientData(sample);
+        }
         return JsonSerializer.Serialize(new
         {
             source = new
             {
-                fileName = _redaction.Minimize(batch.OriginalFileName),
+                fileName = omitSourceValues ? "staff-import" : _redaction.Minimize(batch.OriginalFileName),
                 batch.FileHash,
                 batch.TargetType,
-                worksheet = _redaction.Minimize(tabular.Worksheet),
+                worksheet = omitSourceValues ? "staff-worksheet" : _redaction.Minimize(tabular.Worksheet),
                 batch.ParserContractVersion
             },
             columns = tabular.Columns.Select(column => new
             {
                 column.Index,
                 heading = _redaction.Minimize(column.Heading),
-                samples = column.Samples.Take(3).Select(_redaction.Minimize)
+                samples = omitSourceValues
+                    ? Array.Empty<string>()
+                    : column.Samples.Take(3).Select(_redaction.Minimize)
             }),
             canonicalFields = canonical
         }, JsonOptions);
@@ -570,7 +591,21 @@ public sealed class PremiumAiImportService
             : document.RootElement.GetRawText();
     }
 
-    private static string SafeFailure(string value) => value.Length > 1200 ? value[..1200] : value;
+    private void RejectProhibitedPatientData(string value)
+    {
+        if (_sourceSafety.Inspect(value).ContainsProhibitedPatientData)
+            throw new InvalidOperationException(
+                "AI assistance cannot process patient-identifiable clinical data. Remove those fields and use an approved operational import file.");
+    }
+
+    private static string SafeFailure(Exception? exception) => exception switch
+    {
+        JsonException => "The provider output did not match the required AcuityOps schema.",
+        TaskCanceledException => "The AI provider request exceeded its configured time limit.",
+        HttpRequestException => "The AI provider request failed.",
+        InvalidOperationException => "The AI request did not pass an AcuityOps safety or validation rule.",
+        _ => "The AI provider did not return a usable result."
+    };
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static AuditLog Audit(AppUser user, string action, string entityType, int entityId, string details) => new()
     {
