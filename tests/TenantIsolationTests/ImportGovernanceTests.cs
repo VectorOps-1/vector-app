@@ -11,9 +11,8 @@ internal static class ImportGovernanceTests
     public static async Task RunAllAsync()
     {
         await using var fixture = await TenantFixture.CreateAsync();
-        foreach (var company in await fixture.Db.Companies.Where(item => item.Id == fixture.TenantA.CompanyId || item.Id == fixture.TenantB.CompanyId).ToListAsync())
-            company.SubscriptionTier = SubscriptionTiers.Pro;
-        await fixture.Db.SaveChangesAsync();
+        await TestEntitlementHelper.GrantAsync(fixture.Db, fixture.TenantA.CompanyId, SubscriptionTiers.Pro);
+        await TestEntitlementHelper.GrantAsync(fixture.Db, fixture.TenantB.CompanyId, SubscriptionTiers.Pro);
         var actor = await fixture.Db.AppUsers.Include(user => user.AppRole).SingleAsync(user => user.Id == fixture.TenantA.SeniorUserId);
         var foreignActor = await fixture.Db.AppUsers.Include(user => user.AppRole).SingleAsync(user => user.Id == fixture.TenantB.SeniorUserId);
         var batches = new ImportBatchService(fixture.Db, new UserActionPermissionService(fixture.Db));
@@ -57,9 +56,7 @@ internal static class ImportGovernanceTests
         Ensure(blocked.Blocked == 1 && await fixture.Db.StockItems.AnyAsync(item => item.Id == changed.Id),
             "Rollback removed a record changed after import.");
 
-        var companyA = await fixture.Db.Companies.SingleAsync(item => item.Id == actor.CompanyId);
-        companyA.SubscriptionTier = SubscriptionTiers.Base;
-        await fixture.Db.SaveChangesAsync();
+        await TestEntitlementHelper.RevokeAsync(fixture.Db, actor.CompanyId);
         Ensure(!(await batches.CanPrepareAsync(actor)).Allowed, "Base retained access to guided import tools.");
         Ensure(await fixture.Db.StockItems.AnyAsync(item => item.Id == changed.Id), "Downgrade removed imported domain data.");
 

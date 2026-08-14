@@ -180,4 +180,6 @@ public class Company
     public ICollection<ImportRowResult> ImportRowResults { get; set; } = new List<ImportRowResult>();
     public ICollection<ImportEntityChange> ImportEntityChanges { get; set; } = new List<ImportEntityChange>();
     public ICollection<ImportMappingProfile> ImportMappingProfiles { get; set; } = new List<ImportMappingProfile>();
+    public PilotEntitlement? PilotEntitlement { get; set; }
+    public ICollection<PilotEntitlementEvent> PilotEntitlementEvents { get; set; } = new List<PilotEntitlementEvent>();
 }

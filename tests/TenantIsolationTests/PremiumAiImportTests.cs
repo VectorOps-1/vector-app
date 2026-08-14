@@ -51,7 +51,7 @@ internal static class PremiumAiImportTests
     {
         await using var fixture = await TenantFixture.CreateAsync();
         var company = await fixture.Db.Companies.SingleAsync(item => item.Id == fixture.TenantA.CompanyId);
-        company.SubscriptionTier = SubscriptionTiers.Premium;
+        await TestEntitlementHelper.GrantAsync(fixture.Db, company.Id, SubscriptionTiers.Premium);
         var actor = await fixture.Db.AppUsers.Include(item => item.AppRole).SingleAsync(item => item.Id == fixture.TenantA.SeniorUserId);
         var foreign = await fixture.Db.AppUsers.Include(item => item.AppRole).SingleAsync(item => item.Id == fixture.TenantB.SeniorUserId);
         fixture.Db.CompanyAiUsagePolicies.Add(new CompanyAiUsagePolicy
@@ -141,7 +141,7 @@ internal static class PremiumAiImportTests
     {
         await using var fixture = await TenantFixture.CreateAsync();
         var company = await fixture.Db.Companies.SingleAsync(item => item.Id == fixture.TenantA.CompanyId);
-        company.SubscriptionTier = SubscriptionTiers.Premium;
+        await TestEntitlementHelper.GrantAsync(fixture.Db, company.Id, SubscriptionTiers.Premium);
         var actor = await fixture.Db.AppUsers.Include(item => item.AppRole).SingleAsync(item => item.Id == fixture.TenantA.SeniorUserId);
         fixture.Db.CompanyAiUsagePolicies.Add(new CompanyAiUsagePolicy
         {
@@ -324,7 +324,9 @@ internal static class PremiumAiImportTests
     {
         public Task<string> GetCurrentSubscriptionTierAsync(CancellationToken cancellationToken = default) => Task.FromResult(SubscriptionTiers.Premium);
         public Task<bool> CanUseFeatureAsync(string featureKey, CancellationToken cancellationToken = default) => Task.FromResult(true);
-        public bool CanUseFeature(string? subscriptionTier, string featureKey) => true;
+        public Task<FeatureAccessDecision> GetFeatureAccessAsync(string featureKey, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new FeatureAccessDecision(featureKey, FeatureAccessMode.Full, SubscriptionTiers.Premium,
+                PilotEntitlementStatuses.Active, "Test Premium entitlement is active."));
     }
 
     private sealed class StaticReader : IImportTabularReader

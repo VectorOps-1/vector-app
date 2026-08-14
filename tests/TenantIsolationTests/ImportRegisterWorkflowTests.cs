@@ -8,7 +8,7 @@ internal static class ImportRegisterWorkflowTests
     {
         await using var fixture = await TenantFixture.CreateAsync();
         var company = await fixture.Db.Companies.SingleAsync(item => item.Id == fixture.TenantA.CompanyId);
-        company.SubscriptionTier = SubscriptionTiers.Pro;
+        await TestEntitlementHelper.GrantAsync(fixture.Db, company.Id, SubscriptionTiers.Pro);
         fixture.Db.VehicleFunctionSetups.Add(new VehicleFunctionSetup { CompanyId = company.Id, Name = "Ambulance", Status = "Active" });
         fixture.Db.StaffQualificationSetups.Add(new StaffQualificationSetup { CompanyId = company.Id, Name = "ILS", Status = "Active" });
         await fixture.Db.SaveChangesAsync();

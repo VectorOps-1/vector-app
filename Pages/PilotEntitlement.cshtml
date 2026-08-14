@@ -1,0 +1,94 @@
+@page
+@model PilotEntitlementModel
+@using vector_app_local.Models
+@{
+    ViewData["Title"] = "Premium Pilot Access";
+}
+
+<div class="content-shell entitlement-page">
+    <header class="page-heading compact-heading">
+        <div>
+            <div class="eyebrow">Tenant lifecycle</div>
+            <h1>Premium Pilot Access</h1>
+            <p>Manage the company-owned twelve-month pilot entitlement. Expiry or revocation never deletes company data.</p>
+        </div>
+        <span class="status-pill @(Model.Snapshot.IsFullAccess ? "published" : Model.Snapshot.IsReadOnlyExport ? "warning" : "neutral")">
+            @Model.Snapshot.EffectiveStatus
+        </span>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="inline-notice @(Model.StatusSuccess ? "success" : "error")">@Model.StatusMessage</div>
+    }
+
+    <section class="summary-strip entitlement-summary" aria-label="Premium pilot entitlement summary">
+        <div><span>Plan</span><strong>@(Model.Snapshot.EntitlementId.HasValue ? Model.Snapshot.Tier : "Not configured")</strong></div>
+        <div><span>Starts</span><strong>@(Model.Snapshot.StartsAtUtc?.ToString("yyyy-MM-dd") ?? "N/A")</strong></div>
+        <div><span>Expires</span><strong data-date-status-field="expiry">@(Model.Snapshot.ExpiresAtUtc?.ToString("yyyy-MM-dd") ?? "N/A")</strong></div>
+        <div><span>Access</span><strong>@(Model.Snapshot.IsFullAccess ? "Full" : Model.Snapshot.IsReadOnlyExport ? "Read-only / export" : "Unavailable")</strong></div>
+    </section>
+
+    <div class="inline-notice">@Model.Snapshot.Notice</div>
+
+    <section class="workflow-section">
+        <div class="section-heading"><h2>@(Model.Snapshot.EntitlementId.HasValue ? "Lifecycle controls" : "Activate pilot")</h2></div>
+        @if (!Model.Snapshot.EntitlementId.HasValue || Model.Snapshot.IsReadOnlyExport)
+        {
+            <form method="post" asp-page-handler="Activate" class="form-grid two-column">
+                <label>Start date<input asp-for="StartDate" type="date" required /></label>
+                <label>Activation note<input asp-for="Note" maxlength="500" placeholder="Optional approval reference" /></label>
+                <button class="primary-action" type="submit">Activate 12-month Premium pilot</button>
+            </form>
+        }
+
+        @if (Model.Snapshot.EntitlementId.HasValue)
+        {
+            <form method="post" asp-page-handler="Extend" class="form-grid two-column">
+                <label>New expiry date<input asp-for="NewExpiryDate" type="date" required /></label>
+                <label>Extension note<input asp-for="Note" maxlength="500" placeholder="Reason for extension" /></label>
+                <button class="secondary-action" type="submit">Extend access</button>
+            </form>
+
+            @if (!string.Equals(Model.Snapshot.EffectiveStatus, PilotEntitlementStatuses.Revoked, StringComparison.OrdinalIgnoreCase))
+            {
+                <form method="post" asp-page-handler="Revoke" class="form-grid two-column" data-confirm-title="Revoke Premium pilot access?" data-confirm-message="Existing data will remain available in read-only/export mode.">
+                    <label>Revocation reason<input asp-for="RevocationReason" maxlength="500" required /></label>
+                    <button class="danger-action" type="submit">Revoke access</button>
+                </form>
+            }
+        }
+    </section>
+
+    <section class="workflow-section">
+        <div class="section-heading"><h2>Audit history</h2><span>@Model.History.Count event(s)</span></div>
+        @if (Model.History.Count == 0)
+        {
+            <div class="empty-panel">No entitlement lifecycle events have been recorded.</div>
+        }
+        else
+        {
+            <div class="compact-list">
+                @foreach (var item in Model.History)
+                {
+                    <div class="compact-list-row">
+                        <strong>@item.EventType</strong>
+                        <span>@item.OccurredAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                        <span>@(item.PreviousStatus ?? "N/A") -> @item.NewStatus</span>
+                        <span>Expiry: @item.NewExpiresAtUtc.ToString("yyyy-MM-dd")</span>
+                        <small>@(item.Details ?? "No note")</small>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<style>
+    .entitlement-page { max-width: 1060px; margin: 0 auto; }
+    .entitlement-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .entitlement-page form + form { margin-top: 18px; padding-top: 18px; border-top: 1px solid #d7dee8; }
+    .entitlement-page .primary-action, .entitlement-page .secondary-action, .entitlement-page .danger-action { min-height: 44px; align-self: end; }
+    .entitlement-page .danger-action { background: #9b2c2c; color: #fff; border: 1px solid #9b2c2c; }
+    @@media (max-width: 720px) { .entitlement-summary { grid-template-columns: 1fr 1fr; } }
+</style>

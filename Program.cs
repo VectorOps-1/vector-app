@@ -42,6 +42,7 @@ builder.Services.AddSession(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<PremiumAiOptions>(builder.Configuration.GetSection("PremiumAi"));
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<IdentityAuthenticationService>();
@@ -49,6 +50,7 @@ builder.Services.AddScoped<IdentityAccountService>();
 builder.Services.AddScoped<IdentityProvisioningService>();
 builder.Services.AddScoped<IdentityProvisioningCommand>();
 builder.Services.AddScoped<IFeatureAccessService, FeatureAccessService>();
+builder.Services.AddScoped<PilotEntitlementService>();
 builder.Services.AddScoped<IUserActionPermissionService, UserActionPermissionService>();
 builder.Services.AddScoped<IUserActionAuthorizationService, UserActionAuthorizationService>();
 builder.Services.AddScoped<IFileSecurityScanner, NoOpFileSecurityScanner>();

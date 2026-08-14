@@ -23,15 +23,16 @@ public sealed class ImportBatchService
 
     public async Task<ImportAccessDecision> CanPrepareAsync(AppUser user, CancellationToken cancellationToken = default)
     {
-        var tier = await _db.Companies
-            .AsNoTracking()
-            .Where(company => company.Id == user.CompanyId && company.Status == "Active")
-            .Select(company => company.SubscriptionTier)
-            .SingleOrDefaultAsync(cancellationToken);
+        var companyIsActive = await _db.Companies.AsNoTracking()
+            .AnyAsync(company => company.Id == user.CompanyId && company.Status == "Active", cancellationToken);
+        var entitlement = await PilotEntitlementAccess.LoadAsync(_db, user.CompanyId, DateTime.UtcNow, cancellationToken);
 
-        if (!SubscriptionTiers.IsAtLeast(tier, SubscriptionTiers.Pro))
+        if (!companyIsActive || !entitlement.IsFullAccess ||
+            !SubscriptionTiers.IsAtLeast(entitlement.Tier, SubscriptionTiers.Pro))
         {
-            return ImportAccessDecision.Deny("Guided Excel and CSV importing is available on Pro and higher tiers.");
+            return ImportAccessDecision.Deny(entitlement.IsReadOnlyExport
+                ? "The Premium pilot entitlement is no longer active. Existing import evidence remains read-only and exportable."
+                : "Guided Excel and CSV importing requires an active Pro or Premium entitlement.");
         }
 
         return await _permissions.HasPermissionAsync(user, UserActionPermissions.ImportsPrepare, cancellationToken)

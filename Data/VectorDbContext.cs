@@ -81,6 +81,8 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
     public DbSet<ComplianceRequirementPackSource> ComplianceRequirementPackSources => Set<ComplianceRequirementPackSource>();
     public DbSet<ComplianceRequirementSourceClause> ComplianceRequirementSourceClauses => Set<ComplianceRequirementSourceClause>();
     public DbSet<ComplianceGovernanceEvent> ComplianceGovernanceEvents => Set<ComplianceGovernanceEvent>();
+    public DbSet<PilotEntitlement> PilotEntitlements => Set<PilotEntitlement>();
+    public DbSet<PilotEntitlementEvent> PilotEntitlementEvents => Set<PilotEntitlementEvent>();
 
     public override int SaveChanges()
     {
@@ -171,6 +173,53 @@ public class VectorDbContext : IdentityUserContext<ApplicationIdentityUser>
             .HasOne(permission => permission.Company)
             .WithMany(company => company.AppUserAccessPermissions)
             .HasForeignKey(permission => permission.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlement>()
+            .HasIndex(entitlement => entitlement.CompanyId)
+            .IsUnique();
+
+        modelBuilder.Entity<PilotEntitlement>()
+            .Property(entitlement => entitlement.ConcurrencyToken)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<PilotEntitlement>()
+            .HasOne(entitlement => entitlement.Company)
+            .WithOne(company => company.PilotEntitlement)
+            .HasForeignKey<PilotEntitlement>(entitlement => entitlement.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlement>()
+            .HasOne(entitlement => entitlement.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(entitlement => entitlement.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlement>()
+            .HasOne(entitlement => entitlement.RevokedByUser)
+            .WithMany()
+            .HasForeignKey(entitlement => entitlement.RevokedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlementEvent>()
+            .HasIndex(evt => new { evt.CompanyId, evt.OccurredAtUtc });
+
+        modelBuilder.Entity<PilotEntitlementEvent>()
+            .HasOne(evt => evt.Company)
+            .WithMany(company => company.PilotEntitlementEvents)
+            .HasForeignKey(evt => evt.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlementEvent>()
+            .HasOne(evt => evt.PilotEntitlement)
+            .WithMany(entitlement => entitlement.Events)
+            .HasForeignKey(evt => evt.PilotEntitlementId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PilotEntitlementEvent>()
+            .HasOne(evt => evt.ActorUser)
+            .WithMany()
+            .HasForeignKey(evt => evt.ActorUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ImportBatch>()

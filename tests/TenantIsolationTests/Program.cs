@@ -29,6 +29,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("import governance keeps mappings tenant scoped and rollback conservative", ImportGovernanceTests.RunAllAsync)
     ,("province-aware compliance source registry is governed and provider compatible", CompliancePackGovernanceTests.RunAllAsync)
     ,("premium AI import suggestions are tenant scoped, cost bounded, and Block 5 controlled", PremiumAiImportTests.RunAllAsync)
+    ,("Premium pilot entitlement lifecycle is tenant scoped and preserves data", PilotEntitlementTests.RunAllAsync)
 };
 
 var testFilter = Environment.GetEnvironmentVariable("ACUITYOPS_TEST_FILTER");
@@ -99,9 +100,7 @@ static async Task ImportSourceInspectorHandlesQuotedCsvAsync()
 static async Task ImportFoundationIsTenantScopedAsync()
 {
     await using var fixture = await TenantFixture.CreateAsync();
-    var companyA = await fixture.Db.Companies.SingleAsync(company => company.Id == fixture.TenantA.CompanyId);
-    companyA.SubscriptionTier = SubscriptionTiers.Pro;
-    await fixture.Db.SaveChangesAsync();
+    await TestEntitlementHelper.GrantAsync(fixture.Db, fixture.TenantA.CompanyId, SubscriptionTiers.Pro);
 
     var actorA = await fixture.Db.AppUsers.Include(user => user.AppRole)
         .SingleAsync(user => user.Id == fixture.TenantA.SeniorUserId);

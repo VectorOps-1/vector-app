@@ -16,7 +16,7 @@
 <section class="content-panel ai-policy">
     <header class="heading-row">
         <div><span class="section-kicker">Current month</span><h2>USD @Model.CurrentMonthUsageUsd.ToString("0.0000") used</h2></div>
-        <span class="status-pill @(Model.PremiumAvailable ? "published" : "neutral")">@(Model.PremiumAvailable ? "Premium available" : "Premium required")</span>
+        <span class="status-pill @(Model.PremiumAvailable ? "published" : Model.PremiumReadOnly ? "warning" : "neutral")">@(Model.PremiumAvailable ? "Premium available" : Model.PremiumReadOnly ? "Read-only / export" : "Premium required")</span>
     </header>
     <form method="post">
         <label class="toggle-line"><input asp-for="Enabled" type="checkbox" /> Enable Premium AI Import Intelligence for this company</label>

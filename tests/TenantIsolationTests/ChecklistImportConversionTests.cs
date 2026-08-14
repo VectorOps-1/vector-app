@@ -11,9 +11,7 @@ internal static class ChecklistImportConversionTests
     public static async Task RunAllAsync()
     {
         await using var fixture = await TenantFixture.CreateAsync();
-        var company = await fixture.Db.Companies.SingleAsync(item => item.Id == fixture.TenantA.CompanyId);
-        company.SubscriptionTier = SubscriptionTiers.Pro;
-        await fixture.Db.SaveChangesAsync();
+        await TestEntitlementHelper.GrantAsync(fixture.Db, fixture.TenantA.CompanyId, SubscriptionTiers.Pro);
         var actor = await fixture.Db.AppUsers.Include(user => user.AppRole)
             .SingleAsync(user => user.Id == fixture.TenantA.SeniorUserId);
 
@@ -95,9 +93,7 @@ internal static class ChecklistImportConversionTests
         var prepared = await PrepareAsync(fixture, actor, reader, ChecklistImportLayouts.Matrix, "Tenant A Checklist", "Checklist");
         var foreignActor = await fixture.Db.AppUsers.Include(user => user.AppRole)
             .SingleAsync(user => user.Id == fixture.TenantB.SeniorUserId);
-        var foreignCompany = await fixture.Db.Companies.SingleAsync(item => item.Id == fixture.TenantB.CompanyId);
-        foreignCompany.SubscriptionTier = SubscriptionTiers.Pro;
-        await fixture.Db.SaveChangesAsync();
+        await TestEntitlementHelper.GrantAsync(fixture.Db, fixture.TenantB.CompanyId, SubscriptionTiers.Pro);
         await EnsureThrowsAsync<InvalidOperationException>(
             () => prepared.Service.CommitDraftAsync(foreignActor, prepared.Batch.Id),
             "A second tenant committed another company's checklist import.");

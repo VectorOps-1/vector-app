@@ -20,7 +20,7 @@
         <div class="setup-section-title">Source Uploads</div>
         @if (!Model.GuidedImportAvailable)
         {
-            <div class="inline-notice">Guided Excel and CSV importing is available on Pro and Premium. Existing imported records remain available after a downgrade.</div>
+            <div class="inline-notice">@(Model.GuidedImportReadOnly ? "Premium import access is read-only. Existing import history and records remain available, but new uploads and changes are blocked." : "Guided Excel and CSV importing requires an active Pro or Premium entitlement.")</div>
         }
         <div class="setup-grid">
             <a class="module-card primary @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/UploadVehicleRegister" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
@@ -48,7 +48,7 @@
                 <span>Import medication names, schedules, quantities, batches, expiry dates, and locations</span>
             </a>
 
-            <a class="module-card @(Model.GuidedImportAvailable ? "" : "locked")" href="@(Model.GuidedImportAvailable ? "/ImportHistory" : "#")" aria-disabled="@(!Model.GuidedImportAvailable)">
+            <a class="module-card @(Model.GuidedImportAvailable || Model.GuidedImportReadOnly ? "" : "locked")" href="@(Model.GuidedImportAvailable || Model.GuidedImportReadOnly ? "/ImportHistory" : "#")" aria-disabled="@(!Model.GuidedImportAvailable && !Model.GuidedImportReadOnly)">
                 <strong>Import History</strong>
                 <span>Review completed imports, mapping activity, and safe rollback status</span>
             </a>
@@ -73,6 +73,10 @@
             <a class="module-card" href="/AiUsageSettings">
                 <strong>Premium AI Usage</strong>
                 <span>Enable AI import assistance and set monthly, per-job, and concurrency limits</span>
+            </a>
+            <a class="module-card" href="/PilotEntitlement">
+                <strong>Premium Pilot Access</strong>
+                <span>Activate, review, extend, or revoke the company-owned twelve-month pilot entitlement</span>
             </a>
         </div>
     </div>

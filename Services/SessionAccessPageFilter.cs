@@ -124,6 +124,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         ["/CreateOperationalStaffAccess"] = SeniorAccess,
         ["/TaskCommunicationSetup"] = SeniorAccess,
         ["/AuditLog"] = SeniorAccess,
+        ["/PilotEntitlement"] = SeniorAccess,
         ["/Onboarding"] = SeniorAccess
     };
 
@@ -140,6 +141,7 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/AssetRegisterSetup",
         "/ChecklistSetup",
         "/ReadinessEngineSetup",
+        "/PilotEntitlement",
         "/ChangePassword"
     };
 
@@ -169,6 +171,32 @@ public class SessionAccessPageFilter : IAsyncPageFilter
         "/MedicationRegisterPreview",
         "/ImportBatch",
         "/ImportHistory"
+    };
+
+    public const string FeatureAccessDecisionItemKey = "AcuityOps.FeatureAccessDecision";
+
+    private static readonly Dictionary<string, string> FeaturePageRules = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["/EquipmentService"] = VectorFeatures.EquipmentServiceTracking,
+        ["/EditEquipmentItem"] = VectorFeatures.EquipmentServiceTracking,
+        ["/StaffFiles"] = VectorFeatures.StaffFiles,
+        ["/UploadStaffFiles"] = VectorFeatures.StaffFiles,
+        ["/Stock"] = VectorFeatures.StockRegister,
+        ["/StockRegister"] = VectorFeatures.StockRegister,
+        ["/EditStockItem"] = VectorFeatures.StockRegister,
+        ["/StockOrders"] = VectorFeatures.StockRegister,
+        ["/PlaceStockOrder"] = VectorFeatures.StockRegister,
+        ["/StockOrderAction"] = VectorFeatures.StockRegister,
+        ["/Medication"] = VectorFeatures.MedicationRegister,
+        ["/MedicationRegister"] = VectorFeatures.MedicationRegister,
+        ["/EditMedicationItem"] = VectorFeatures.MedicationRegister,
+        ["/Readiness"] = VectorFeatures.ReadinessAnalytics,
+        ["/ReadinessDashboard"] = VectorFeatures.ReadinessAnalytics,
+        ["/ReadinessEngine"] = VectorFeatures.ReadinessAnalytics,
+        ["/ReadinessMetric"] = VectorFeatures.ReadinessAnalytics,
+        ["/ReadinessMetricDetail"] = VectorFeatures.ReadinessAnalytics,
+        ["/ReadinessAlerts"] = VectorFeatures.ReadinessAnalytics,
+        ["/AiUsageSettings"] = VectorFeatures.AiImportIntelligence
     };
 
     private sealed record PermissionRequirement(
@@ -238,16 +266,26 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             return;
         }
 
-        if (GuidedImportPages.Contains(pagePath))
+        var featureKey = await ResolveFeatureKeyAsync(context, pagePath);
+        if (!string.IsNullOrWhiteSpace(featureKey))
         {
             var featureAccess = context.HttpContext.RequestServices.GetRequiredService<IFeatureAccessService>();
-            var featureKey = pagePath is "/UploadChecklist" or "/ChecklistPreview"
-                ? VectorFeatures.GuidedChecklistImport
-                : VectorFeatures.GuidedRegisterImport;
-            if (!await featureAccess.CanUseFeatureAsync(featureKey, context.HttpContext.RequestAborted))
+            var decision = await featureAccess.GetFeatureAccessAsync(featureKey, context.HttpContext.RequestAborted);
+            if (decision.Mode == FeatureAccessMode.Unavailable)
             {
-                context.Result = new RedirectToPageResult("/Home", new { featureUnavailable = "guided-import" });
+                context.Result = new RedirectToPageResult("/Home", new { featureUnavailable = featureKey });
                 return;
+            }
+
+            if (decision.IsReadOnlyExport)
+            {
+                if (HttpMethods.IsPost(context.HttpContext.Request.Method))
+                {
+                    context.Result = new RedirectToPageResult("/Home", new { entitlementReadOnly = "true" });
+                    return;
+                }
+
+                context.HttpContext.Items[FeatureAccessDecisionItemKey] = decision;
             }
         }
 
@@ -284,6 +322,36 @@ public class SessionAccessPageFilter : IAsyncPageFilter
             .FirstOrDefaultAsync();
 
         return company is null || CompanySetupState.RequiresSetupWizard(company);
+    }
+
+    private static async Task<string?> ResolveFeatureKeyAsync(PageHandlerExecutingContext context, string pagePath)
+    {
+        if (GuidedImportPages.Contains(pagePath))
+        {
+            return pagePath is "/UploadChecklist" or "/ChecklistPreview"
+                ? VectorFeatures.GuidedChecklistImport
+                : VectorFeatures.GuidedRegisterImport;
+        }
+
+        if (FeaturePageRules.TryGetValue(pagePath, out var featureKey))
+        {
+            return featureKey;
+        }
+
+        if (pagePath == "/AddItem")
+        {
+            var type = await GetRequestValueAsync(context.HttpContext.Request, "Type")
+                ?? context.HttpContext.Request.Query["type"].ToString();
+            return type?.Trim().ToLowerInvariant() switch
+            {
+                "stock" => VectorFeatures.StockRegister,
+                "medication" => VectorFeatures.MedicationRegister,
+                "equipment" => VectorFeatures.EquipmentServiceTracking,
+                _ => null
+            };
+        }
+
+        return null;
     }
 
     private static async Task<bool> HasRequiredActionPermissionAsync(PageHandlerExecutingContext context, string pagePath)

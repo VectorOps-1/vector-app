@@ -1,8 +1,10 @@
 @using vector_app_local.Services
+@inject PilotEntitlementService PilotEntitlements
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
     var currentAccessView = Context.Session.GetString(CurrentUserService.AccessViewSessionKey);
-    var hasCompanySession = Context.Session.GetInt32(CurrentUserService.CompanyIdSessionKey).HasValue;
+    var companyId = Context.Session.GetInt32(CurrentUserService.CompanyIdSessionKey);
+    var hasCompanySession = companyId.HasValue;
     var currentUserId = Context.Session.GetInt32(CurrentUserService.UserIdSessionKey);
     var hasAccessLogin = currentUserId.HasValue
         && !string.IsNullOrWhiteSpace(currentAccessView);
@@ -23,6 +25,13 @@
     var currentClientRole = string.IsNullOrWhiteSpace(currentAccessView)
         ? null
         : CurrentUserService.AccessViewToClientRole(currentAccessView);
+    var featureAccessDecision = Context.Items[SessionAccessPageFilter.FeatureAccessDecisionItemKey] as FeatureAccessDecision;
+    var entitlementSnapshot = companyId.HasValue
+        ? await PilotEntitlements.GetAsync(companyId.Value, Context.RequestAborted)
+        : null;
+    var showEntitlementReminder = hasAccessLogin && entitlementSnapshot is not null && entitlementSnapshot.EntitlementId.HasValue &&
+        ((entitlementSnapshot.IsReadOnlyExport && featureAccessDecision is null) ||
+         (entitlementSnapshot.IsFullAccess && entitlementSnapshot.DaysRemaining.HasValue && entitlementSnapshot.DaysRemaining.Value <= 60));
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -58,6 +67,27 @@
 
         body {
             background: #F4F7FB;
+        }
+
+        .entitlement-readonly-banner {
+            margin: 0 0 14px;
+            padding: 12px 16px;
+            border: 1px solid #f0b36a;
+            border-left: 5px solid #c65d00;
+            border-radius: 6px;
+            background: #fff7ed;
+            color: #713f12;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.4;
+        }
+
+        .entitlement-readonly-banner strong { display: block; color: #8a3300; }
+        .entitlement-readonly [data-mutating-action],
+        .entitlement-readonly form[method="post"] button[type="submit"],
+        .entitlement-readonly form[method="post"] input[type="submit"] {
+            opacity: .5;
+            cursor: not-allowed;
         }
 
         .top-bar {
@@ -671,6 +701,20 @@
     <div class="page-shell">
         <div class="container">
             <main role="main">
+                @if (showEntitlementReminder)
+                {
+                    <div class="entitlement-readonly-banner" role="status">
+                        <strong>Premium pilot access</strong>
+                        @entitlementSnapshot!.Notice
+                    </div>
+                }
+                @if (featureAccessDecision?.IsReadOnlyExport == true)
+                {
+                    <div class="entitlement-readonly-banner" role="status">
+                        <strong>Premium access is read-only</strong>
+                        @featureAccessDecision.Message Existing records and supported exports remain available; changes are blocked.
+                    </div>
+                }
                 @RenderBody()
             </main>
         </div>
@@ -782,6 +826,23 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if (featureAccessDecision?.IsReadOnlyExport == true)
+    {
+        <script>
+            document.documentElement.classList.add("entitlement-readonly");
+            document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function (form) {
+                form.addEventListener("submit", function (event) {
+                    event.preventDefault();
+                });
+                form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (control) {
+                    control.disabled = true;
+                    control.setAttribute("aria-disabled", "true");
+                    control.title = "Premium access is read-only. Existing data can still be viewed or exported.";
+                });
+            });
+        </script>
+    }
 
     <script>
         const vectorQueuedConfirmations = window.VectorPendingConfirmations || [];

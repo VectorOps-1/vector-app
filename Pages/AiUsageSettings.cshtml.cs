@@ -28,6 +28,7 @@ public class AiUsageSettingsModel : PageModel
     [BindProperty] public int MaxConcurrentJobs { get; set; } = 1;
     [BindProperty] public bool AllowHighCapabilityModel { get; set; }
     public bool PremiumAvailable { get; private set; }
+    public bool PremiumReadOnly { get; private set; }
     public decimal CurrentMonthUsageUsd { get; private set; }
     public string? StatusMessage { get; private set; }
 
@@ -44,7 +45,9 @@ public class AiUsageSettingsModel : PageModel
     {
         var user = await RequireSeniorAsync(cancellationToken);
         if (user is null) return RedirectToPage("/Access");
-        PremiumAvailable = await _features.CanUseFeatureAsync(VectorFeatures.AiImportIntelligence, cancellationToken);
+        var access = await _features.GetFeatureAccessAsync(VectorFeatures.AiImportIntelligence, cancellationToken);
+        PremiumAvailable = access.IsFullAccess;
+        PremiumReadOnly = access.IsReadOnlyExport;
         if (!PremiumAvailable)
         {
             ModelState.AddModelError(string.Empty, "Premium AI Import Intelligence requires the Premium plan.");
@@ -100,7 +103,9 @@ public class AiUsageSettingsModel : PageModel
 
     private async Task LoadAsync(AppUser user, CancellationToken cancellationToken)
     {
-        PremiumAvailable = await _features.CanUseFeatureAsync(VectorFeatures.AiImportIntelligence, cancellationToken);
+        var access = await _features.GetFeatureAccessAsync(VectorFeatures.AiImportIntelligence, cancellationToken);
+        PremiumAvailable = access.IsFullAccess;
+        PremiumReadOnly = access.IsReadOnlyExport;
         var policy = await _db.CompanyAiUsagePolicies.AsNoTracking().SingleOrDefaultAsync(item => item.CompanyId == user.CompanyId, cancellationToken);
         if (policy is not null)
         {

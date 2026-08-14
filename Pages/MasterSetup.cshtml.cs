@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
-using vector_app_local.Data;
 using vector_app_local.Models;
 using vector_app_local.Services;
 
@@ -9,22 +7,23 @@ namespace vector_app_local.Pages;
 public class MasterSetupModel : PageModel
 {
     private readonly CurrentUserService _currentUser;
-    private readonly VectorDbContext _db;
+    private readonly IFeatureAccessService _features;
 
-    public MasterSetupModel(CurrentUserService currentUser, VectorDbContext db)
+    public MasterSetupModel(CurrentUserService currentUser, IFeatureAccessService features)
     {
         _currentUser = currentUser;
-        _db = db;
+        _features = features;
     }
 
     public bool GuidedImportAvailable { get; private set; }
+    public bool GuidedImportReadOnly { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         var user = await _currentUser.GetCurrentUserAsync();
         if (user is null) return;
-        var tier = await _db.Companies.AsNoTracking().Where(company => company.Id == user.CompanyId)
-            .Select(company => company.SubscriptionTier).SingleOrDefaultAsync(cancellationToken);
-        GuidedImportAvailable = SubscriptionTiers.IsAtLeast(tier, SubscriptionTiers.Pro);
+        var access = await _features.GetFeatureAccessAsync(VectorFeatures.GuidedRegisterImport, cancellationToken);
+        GuidedImportAvailable = access.IsFullAccess;
+        GuidedImportReadOnly = access.IsReadOnlyExport;
     }
 }
