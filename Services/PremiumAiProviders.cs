@@ -178,7 +178,7 @@ public sealed class AzureManagedIdentityTokenSource
 
 public sealed class AzureOpenAiStructuredOutputProvider : IAiStructuredOutputProvider
 {
-    private const string CognitiveScope = "https://cognitiveservices.azure.com/.default";
+    private const string CognitiveResource = "https://cognitiveservices.azure.com/";
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AzureManagedIdentityTokenSource _tokens;
     private readonly PremiumAiOptions _options;
@@ -219,7 +219,7 @@ public sealed class AzureOpenAiStructuredOutputProvider : IAiStructuredOutputPro
         var endpoint = _options.OpenAiEndpoint.TrimEnd('/');
         var uri = $"{endpoint}/openai/deployments/{Uri.EscapeDataString(_options.OpenAiDeployment)}/chat/completions?api-version={Uri.EscapeDataString(_options.OpenAiApiVersion)}";
         using var message = new HttpRequestMessage(HttpMethod.Post, uri);
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveScope, cancellationToken));
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveResource, cancellationToken));
         message.Headers.Add("x-ms-client-request-id", request.CorrelationId);
         message.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -245,7 +245,7 @@ public sealed class AzureOpenAiStructuredOutputProvider : IAiStructuredOutputPro
 
 public sealed class AzureDocumentExtractionProvider : IDocumentExtractionProvider
 {
-    private const string CognitiveScope = "https://cognitiveservices.azure.com/.default";
+    private const string CognitiveResource = "https://cognitiveservices.azure.com/";
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AzureManagedIdentityTokenSource _tokens;
     private readonly PremiumAiOptions _options;
@@ -268,7 +268,7 @@ public sealed class AzureDocumentExtractionProvider : IDocumentExtractionProvide
         var endpoint = _options.DocumentIntelligenceEndpoint.TrimEnd('/');
         var uri = $"{endpoint}/documentintelligence/documentModels/prebuilt-layout:analyze?api-version={Uri.EscapeDataString(_options.DocumentIntelligenceApiVersion)}&outputContentFormat=markdown";
         using var request = new HttpRequestMessage(HttpMethod.Post, uri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveScope, cancellationToken));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveResource, cancellationToken));
         request.Content = new StreamContent(content);
         request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         using var response = await _httpClientFactory.CreateClient(nameof(AzureDocumentExtractionProvider))
@@ -282,7 +282,7 @@ public sealed class AzureDocumentExtractionProvider : IDocumentExtractionProvide
         {
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             using var pollRequest = new HttpRequestMessage(HttpMethod.Get, operation);
-            pollRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveScope, cancellationToken));
+            pollRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(CognitiveResource, cancellationToken));
             using var pollResponse = await _httpClientFactory.CreateClient(nameof(AzureDocumentExtractionProvider))
                 .SendAsync(pollRequest, cancellationToken);
             pollResponse.EnsureSuccessStatusCode();
@@ -302,7 +302,7 @@ public sealed class AzureDocumentExtractionProvider : IDocumentExtractionProvide
 
 public sealed class AzureStorageAiJobQueue : IAiJobQueue
 {
-    private const string StorageScope = "https://storage.azure.com/.default";
+    private const string StorageResource = "https://storage.azure.com/";
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AzureManagedIdentityTokenSource _tokens;
     private readonly PremiumAiOptions _options;
@@ -329,7 +329,7 @@ public sealed class AzureStorageAiJobQueue : IAiJobQueue
         var uri = $"{endpoint}/{Uri.EscapeDataString(_options.QueueName)}/messages";
         var body = $"<QueueMessage><MessageText>{SecurityElement.Escape(Convert.ToBase64String(Encoding.UTF8.GetBytes(message)))}</MessageText></QueueMessage>";
         using var request = new HttpRequestMessage(HttpMethod.Post, uri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(StorageScope, cancellationToken));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _tokens.GetTokenAsync(StorageResource, cancellationToken));
         request.Headers.Add("x-ms-version", "2023-11-03");
         request.Headers.Add("x-ms-date", DateTime.UtcNow.ToString("R"));
         request.Content = new StringContent(body, Encoding.UTF8, "application/xml");

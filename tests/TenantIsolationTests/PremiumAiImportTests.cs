@@ -80,13 +80,18 @@ internal static class PremiumAiImportTests
             var handler = new ManagedIdentityHandler();
             var source = new AzureManagedIdentityTokenSource(new StaticHttpClientFactory(handler));
 
-            var cognitive = await source.GetTokenAsync("https://cognitiveservices.azure.com/.default", CancellationToken.None);
-            var storage = await source.GetTokenAsync("https://storage.azure.com/.default", CancellationToken.None);
-            var cognitiveAgain = await source.GetTokenAsync("https://cognitiveservices.azure.com/.default", CancellationToken.None);
+            var cognitive = await source.GetTokenAsync("https://cognitiveservices.azure.com/", CancellationToken.None);
+            var storage = await source.GetTokenAsync("https://storage.azure.com/", CancellationToken.None);
+            var cognitiveAgain = await source.GetTokenAsync("https://cognitiveservices.azure.com/", CancellationToken.None);
 
             Ensure(cognitive != storage, "A managed-identity token was reused across Azure resource audiences.");
             Ensure(cognitive == cognitiveAgain, "A valid managed-identity token was not cached for its own audience.");
             Ensure(handler.RequestCount == 2, "Managed-identity caching did not issue exactly one request per audience.");
+            Ensure(handler.RequestedResources.SetEquals([
+                    "https://cognitiveservices.azure.com/",
+                    "https://storage.azure.com/"
+                ]),
+                "Managed-identity token requests did not use App Service resource URIs.");
         }
         finally
         {
@@ -340,10 +345,13 @@ internal static class PremiumAiImportTests
     private sealed class ManagedIdentityHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
+        public HashSet<string> RequestedResources { get; } = new(StringComparer.Ordinal);
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             RequestCount++;
+            var resource = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query)["resource"];
+            if (!string.IsNullOrWhiteSpace(resource)) RequestedResources.Add(resource);
             var token = request.RequestUri!.Query.Contains("storage", StringComparison.OrdinalIgnoreCase)
                 ? "storage-token"
                 : "cognitive-token";
