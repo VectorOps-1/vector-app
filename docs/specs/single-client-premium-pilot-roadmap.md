@@ -57,9 +57,9 @@ not a client-specific fork. The following boundaries are mandatory:
 | Measure | Current value |
 | --- | --- |
 | Mandatory pilot blocks | 8 |
-| Accepted evidence points | 53 / 100 |
-| Overall Premium pilot readiness | 53% |
-| Active block | P2 Pilot Infrastructure And Tenant Lifecycle |
+| Accepted evidence points | 60 / 100 |
+| Overall Premium pilot readiness | 60% |
+| Active block | P4 Premium Import, Knowledge, And Forecasting |
 | Locked completed product evidence | Historical B1-B5 evidence migrated below |
 | Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
 | Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
@@ -73,10 +73,11 @@ The previous accepted points are preserved exactly:
 - historical B5 contributes `10` accepted points to P4;
 - historical B4 contributes `8` accepted points to P5.
 
-Those `45` historical points plus the `8` accepted P1 points are measured
-against the complete 100-point pilot target, so readiness is `53%`. Implemented
-but unaccepted B7.1 work remains recorded as evidence and earns no additional
-points until its live acceptance gate passes.
+Those `45` historical points plus the `8` accepted P1 points and the `7`
+accepted P2 completion points are measured against the complete 100-point pilot
+target, so readiness is `60%`. Implemented but unaccepted B7.1 work remains
+recorded as evidence and earns no additional points until its live acceptance
+gate passes.
 
 ## Verified-Work Finality Rule
 
@@ -109,7 +110,7 @@ points until its live acceptance gate passes.
 | ID | Block | Points | Accepted | Status | Primary acceptance gate |
 | --- | --- | ---: | ---: | --- | --- |
 | P1 | Azure Cost Stabilization | 8 | 8 | Accepted and locked | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
-| P2 | Pilot Infrastructure And Tenant Lifecycle | 14 | 7 | In progress | Stable GitHub-controlled pilot environment, ordinary tenant provisioning, dated Premium entitlement, backup/restore, observability, and rollback pass |
+| P2 | Pilot Infrastructure And Tenant Lifecycle | 14 | 14 | Accepted and locked | Stable GitHub-controlled pilot environment, ordinary tenant provisioning, dated Premium entitlement, backup/restore, observability, and rollback pass |
 | P3 | Core Operational Product Completion | 20 | 20 | Accepted and locked | Setup, registers, movement, tasks/issues, checklist source of truth, daily work, permissions, and manual operations remain accepted |
 | P4 | Premium Import, Knowledge, And Forecasting | 18 | 10 | In progress | Deterministic import remains locked; AI import, SOP/CPG knowledge, and 3/6/12-month operational forecasting pass human-review and tenant gates |
 | P5 | Notifications And Evidence | 10 | 8 | In progress | Immutable report/PDF evidence remains locked; required email/SMS events, preferences, delivery audit, failure handling, and evidence links pass |
@@ -237,6 +238,32 @@ Acceptance requires:
   rollback verified; and
 - a documented path for adding another tenant later without client-specific
   code or schema changes.
+
+P2 closed on 2026-08-14 with `14/14` points accepted. Completion evidence:
+
+- source commits `14afbe4` and `717b64a` implement the tenant-owned Premium
+  entitlement lifecycle and preserve Import History in read-only mode;
+- additive migration `20260814150000_AddPilotEntitlementLifecycle` was verified
+  in disposable provider tests before controlled staging application;
+- protected pre-migration backup
+  `pre-p2-entitlement-20260814-174622.bacpac` was retained in the approved
+  database archive and verified before the staging write;
+- Release build and the targeted tenant-isolation suite passed with zero build
+  errors or warnings;
+- GitHub deployment runs `31811506015` and `31821360229` completed through the
+  approved Linux staging workflow, including static-asset checks;
+- staging verified activation, exact twelve-month expiry, reminders, manual
+  revocation/reactivation, persisted audit history, restart persistence, and an
+  active final entitlement ending 2027-08-14;
+- revoked access preserved existing imports and tenant data, exposed explicit
+  read-only/export behavior, and removed Import History mutation actions;
+- owner/senior administration, staff/operational-manager default denial,
+  company scoping, and no automatic entitlement creation were verified by the
+  targeted authorization and isolation tests; and
+- no Azure resource was added and no new fixed monthly infrastructure cost was
+  introduced. The previously pending compliance-source foundation migration
+  was applied as inert product-owned schema only; it created no regulatory,
+  tenant, or add-on data and did not reopen Add-on Track A1.
 
 ### P3 Core Operational Product Completion
 
@@ -795,14 +822,13 @@ progress or execution order.
 
 ## Next Authorized Action
 
-Begin P2 with one bounded Premium pilot entitlement-lifecycle batch. Implement
-an explicit tenant-owned twelve-month Premium pilot entitlement with start,
-expiry, status, audit history, reminders, manual extension and revocation, and
-an expiry state that preserves tenant data while limiting unavailable Premium
-features to read-only/export behavior. Reuse the accepted tenant-isolation,
-setup, GitHub deployment, backup, monitoring, and rollback evidence already
-mapped to P2. Do not add automated billing, seed entitlements, client-specific
-code, or reopen P1/P3 without a reproducible regression.
+Proceed to P4 Premium Import, Knowledge, And Forecasting. First close the
+confirmed live B7.1 structured-mapping acceptance defect while preserving the
+accepted Block 5 deterministic import mutation boundary, tenant isolation,
+human review, privacy controls, and cost caps. Then complete the SOP/CPG
+knowledge and 3/6/12-month operational forecasting acceptance gates. Do not
+enter Add-on Track A1, claim regulatory compliance forecasting, or reopen
+P1-P3 without a reproducible regression.
 
 ## Update Rules
 
