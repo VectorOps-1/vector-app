@@ -147,12 +147,13 @@ internal static class PremiumAiImportTests
         batch = (await workflow.LoadAsync(actor, batch.Id))!;
         var beforeVehicles = await fixture.Db.Vehicles.CountAsync();
         var beforeIdentities = await fixture.Db.LoginIdentities.CountAsync();
-        var ai = Service(fixture.Db, reader, new StaticProvider("""
+        var provider = new CapturingProvider("""
             {"domain":"Vehicle","mappings":[
               {"sourceColumnIndex":0,"canonicalFieldKey":"vehicle.registration_number","transformationKey":"trim","confidence":0.99,"explanation":"Registration heading and sample align.","warnings":[]},
               {"sourceColumnIndex":1,"canonicalFieldKey":"vehicle.callsign","transformationKey":"trim","confidence":0.92,"explanation":"Callsign heading aligns.","warnings":[]}
             ],"warnings":[]}
-            """));
+            """);
+        var ai = Service(fixture.Db, reader, provider);
 
         Ensure(!await ai.CanUseAsync(staff), "A staff user could invoke Premium AI despite the manager-role boundary.");
         await EnsureThrowsAsync<InvalidOperationException>(() => ai.RequestAsync(actor, batch.Id, false),
@@ -161,6 +162,23 @@ internal static class PremiumAiImportTests
             "A rejected privacy confirmation created an AI job.");
         var review = await ai.RequestAsync(actor, batch.Id, true);
         Ensure(review.SuggestionSet.Suggestions.Count == 2, "AI mapping suggestions were not persisted.");
+        using (var mappingSchema = JsonDocument.Parse(provider.LastRequest?.JsonSchema
+                   ?? throw new InvalidOperationException("The mapping request schema was not captured.")))
+        {
+            var properties = mappingSchema.RootElement.GetProperty("properties");
+            var domain = properties.GetProperty("domain").GetProperty("enum")[0].GetString();
+            var mappingProperties = properties.GetProperty("mappings").GetProperty("items").GetProperty("properties");
+            var sourceIndexes = mappingProperties.GetProperty("sourceColumnIndex").GetProperty("enum")
+                .EnumerateArray().Select(item => item.GetInt32()).ToArray();
+            var canonicalFields = mappingProperties.GetProperty("canonicalFieldKey").GetProperty("enum")
+                .EnumerateArray().Select(item => item.GetString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            Ensure(domain == ImportTargetTypes.Vehicle, "The mapping schema did not lock the selected register domain.");
+            Ensure(sourceIndexes.SequenceEqual([0, 1]), "The mapping schema did not lock the detected source columns.");
+            Ensure(canonicalFields.Contains("vehicle.registration_number")
+                   && canonicalFields.Contains("vehicle.callsign")
+                   && !canonicalFields.Contains("staff.password"),
+                "The mapping schema did not constrain suggestions to the selected register contract.");
+        }
         var repeatedReview = await ai.RequestAsync(actor, batch.Id, true);
         Ensure(repeatedReview.Job.Id == review.Job.Id, "A repeated request created a duplicate AI job.");
         Ensure(await fixture.Db.AiProcessingJobs.CountAsync(item =>
@@ -244,6 +262,10 @@ internal static class PremiumAiImportTests
             .Where(item => item.CompanyId == actor.CompanyId)
             .Select(item => item.FailureSummary)
             .ToListAsync());
+        Ensure(await fixture.Db.AiJobAttempts
+                .Where(item => item.CompanyId == actor.CompanyId)
+                .AllAsync(item => item.FailureCode == "UnknownCanonicalField"),
+            "The safe failure code did not identify the target-contract violation.");
         Ensure(!failureText.Contains("staff.password", StringComparison.OrdinalIgnoreCase)
                && !failureText.Contains("unsafe", StringComparison.OrdinalIgnoreCase),
             "Raw provider output was stored in an AI failure record.");

@@ -16,7 +16,7 @@ public sealed record AiImportReview(
 public sealed class PremiumAiImportService
 {
     public const string FeatureKey = "premium-ai-import-intelligence";
-    public const string MappingSchemaVersion = "register-mapping-v1";
+    public const string MappingSchemaVersion = "register-mapping-v2";
     public const string ChecklistSchemaVersion = "checklist-draft-v1";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly VectorDbContext _db;
@@ -116,7 +116,7 @@ public sealed class PremiumAiImportService
 
         var schema = string.Equals(batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
             ? ChecklistJsonSchema
-            : MappingJsonSchema;
+            : BuildMappingJsonSchema(batch);
         var schemaVersion = string.Equals(batch.TargetType, ImportTargetTypes.Checklist, StringComparison.OrdinalIgnoreCase)
             ? ChecklistSchemaVersion
             : MappingSchemaVersion;
@@ -240,7 +240,9 @@ public sealed class PremiumAiImportService
             {
                 lastFailure = ex;
                 attempt.Status = AiProcessingStatuses.Failed;
-                attempt.FailureCode = ex is JsonException ? "SchemaRejected" : "ProviderFailure";
+                attempt.FailureCode = ex is AiContractException contractFailure
+                    ? contractFailure.Code
+                    : ex is JsonException ? "SchemaRejected" : "ProviderFailure";
                 attempt.FailureSummary = SafeFailure(ex);
                 attempt.CompletedAtUtc = DateTime.UtcNow;
                 await _db.SaveChangesAsync(cancellationToken);
@@ -456,12 +458,23 @@ public sealed class PremiumAiImportService
         var response = JsonSerializer.Deserialize<MappingResponse>(json, JsonOptions)
             ?? throw new JsonException("The mapping result is empty.");
         if (!string.Equals(response.Domain, batch.TargetType, StringComparison.OrdinalIgnoreCase))
-            throw new JsonException("The suggested domain does not match the selected deterministic import target.");
+            throw new AiContractException("DomainMismatch", "The suggested domain does not match the selected deterministic import target.");
+        var target = _fieldRegistry.FindTarget(batch.TargetType)
+            ?? throw new AiContractException("TargetContractMissing", "The selected deterministic import target is unavailable.");
         var sourceIndexes = batch.ColumnMappings.Select(item => item.SourceColumnIndex).ToHashSet();
-        if (response.Mappings.Count == 0 || response.Mappings.Any(item =>
-                !sourceIndexes.Contains(item.SourceColumnIndex) ||
-                _fieldRegistry.FindField(item.CanonicalFieldKey) is null))
-            throw new JsonException("The provider returned an unknown source column or canonical field.");
+        var canonicalFields = target.Fields.Select(field => field.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (response.Mappings.Count == 0)
+            throw new AiContractException("EmptyMappings", "The provider returned no reviewable mappings.");
+        if (response.Mappings.Any(item => !sourceIndexes.Contains(item.SourceColumnIndex)))
+            throw new AiContractException("UnknownSourceColumn", "The provider returned an unknown source column.");
+        if (response.Mappings.Any(item => !canonicalFields.Contains(item.CanonicalFieldKey)))
+            throw new AiContractException("UnknownCanonicalField", "The provider returned a field outside the selected target contract.");
+        if (response.Mappings.Any(item => !MappingTransformations.Contains(item.TransformationKey)))
+            throw new AiContractException("UnknownTransformation", "The provider returned an unsupported transformation.");
+        if (response.Mappings.GroupBy(item => item.SourceColumnIndex).Any(group => group.Count() > 1))
+            throw new AiContractException("DuplicateSourceColumn", "The provider mapped a source column more than once.");
+        if (response.Mappings.GroupBy(item => item.CanonicalFieldKey, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+            throw new AiContractException("DuplicateCanonicalField", "The provider mapped a target field more than once.");
         var set = new AiSuggestionSet
         {
             CompanyId = user.CompanyId,
@@ -607,6 +620,59 @@ public sealed class PremiumAiImportService
         _ => "The AI provider did not return a usable result."
     };
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private string BuildMappingJsonSchema(ImportBatch batch)
+    {
+        var target = _fieldRegistry.FindTarget(batch.TargetType)
+            ?? throw new InvalidOperationException("The selected deterministic import target is unavailable.");
+        var sourceIndexes = batch.ColumnMappings
+            .Select(mapping => mapping.SourceColumnIndex)
+            .Distinct()
+            .OrderBy(index => index)
+            .ToArray();
+        var canonicalFields = target.Fields
+            .Select(field => field.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (sourceIndexes.Length == 0 || canonicalFields.Length == 0)
+            throw new InvalidOperationException("Read the source columns before requesting AI mapping assistance.");
+
+        var schema = new
+        {
+            type = "object",
+            additionalProperties = false,
+            required = new[] { "domain", "mappings", "warnings" },
+            properties = new
+            {
+                domain = new { type = "string", @enum = new[] { batch.TargetType } },
+                warnings = new { type = "array", items = new { type = "string" } },
+                mappings = new
+                {
+                    type = "array",
+                    minItems = 1,
+                    maxItems = sourceIndexes.Length,
+                    items = new
+                    {
+                        type = "object",
+                        additionalProperties = false,
+                        required = new[] { "sourceColumnIndex", "canonicalFieldKey", "transformationKey", "confidence", "explanation", "warnings" },
+                        properties = new
+                        {
+                            sourceColumnIndex = new { type = "integer", @enum = sourceIndexes },
+                            canonicalFieldKey = new { type = "string", @enum = canonicalFields },
+                            transformationKey = new { type = "string", @enum = MappingTransformations.OrderBy(value => value, StringComparer.Ordinal).ToArray() },
+                            confidence = new { type = "number", minimum = 0, maximum = 1 },
+                            explanation = new { type = "string" },
+                            warnings = new { type = "array", items = new { type = "string" } }
+                        }
+                    }
+                }
+            }
+        };
+        return JsonSerializer.Serialize(schema, JsonOptions);
+    }
+
     private static AuditLog Audit(AppUser user, string action, string entityType, int entityId, string details) => new()
     {
         CompanyId = user.CompanyId,
@@ -620,21 +686,19 @@ public sealed class PremiumAiImportService
 
     private sealed record MappingResponse(string Domain, IReadOnlyList<MappingSuggestion> Mappings, IReadOnlyList<string> Warnings);
     private sealed record MappingSuggestion(int SourceColumnIndex, string CanonicalFieldKey, string TransformationKey, decimal Confidence, string Explanation, IReadOnlyList<string> Warnings);
+    private sealed class AiContractException(string code, string message) : JsonException(message)
+    {
+        public string Code { get; } = code;
+    }
     private sealed record ChecklistResponse(string Name, string Layout, decimal Confidence, string Explanation, IReadOnlyList<string> Warnings, IReadOnlyList<string> Citations, IReadOnlyList<ChecklistSectionResponse> Sections);
     private sealed record ChecklistSectionResponse(string Name, IReadOnlyList<ChecklistItemResponse> Items);
     private sealed record ChecklistItemResponse(string Prompt, string ParentPrompt, string ResponseType, bool IsRequired, bool AffectsReadiness, string RegisterSource, IReadOnlyList<ChecklistColumnResponse> Columns);
     private sealed record ChecklistColumnResponse(string Heading, string ResponseType, bool IsRequired, bool AffectsReadiness, string RegisterSource);
 
-    private const string MappingJsonSchema = """
-    {"type":"object","additionalProperties":false,"required":["domain","mappings","warnings"],"properties":{
-      "domain":{"type":"string"},"warnings":{"type":"array","items":{"type":"string"}},
-      "mappings":{"type":"array","items":{"type":"object","additionalProperties":false,
-        "required":["sourceColumnIndex","canonicalFieldKey","transformationKey","confidence","explanation","warnings"],
-        "properties":{"sourceColumnIndex":{"type":"integer"},"canonicalFieldKey":{"type":"string"},
-        "transformationKey":{"type":"string","enum":["trim","date","integer","boolean","status","tenant-reference"]},
-        "confidence":{"type":"number","minimum":0,"maximum":1},"explanation":{"type":"string"},
-        "warnings":{"type":"array","items":{"type":"string"}}}}}}}
-    """;
+    private static readonly IReadOnlySet<string> MappingTransformations = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "trim", "date", "integer", "boolean", "status", "tenant-reference"
+    };
 
     private const string ChecklistJsonSchema = """
     {"type":"object","additionalProperties":false,"required":["name","layout","confidence","explanation","warnings","citations","sections"],"properties":{
