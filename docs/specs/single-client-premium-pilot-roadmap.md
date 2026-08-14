@@ -57,9 +57,9 @@ not a client-specific fork. The following boundaries are mandatory:
 | Measure | Current value |
 | --- | --- |
 | Mandatory pilot blocks | 8 |
-| Accepted evidence points | 52 / 100 |
-| Overall Premium pilot readiness | 52% |
-| Active block | P1 Azure Cost Stabilization |
+| Accepted evidence points | 53 / 100 |
+| Overall Premium pilot readiness | 53% |
+| Active block | P2 Pilot Infrastructure And Tenant Lifecycle |
 | Locked completed product evidence | Historical B1-B5 evidence migrated below |
 | Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
 | Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
@@ -73,9 +73,10 @@ The previous accepted points are preserved exactly:
 - historical B5 contributes `10` accepted points to P4;
 - historical B4 contributes `8` accepted points to P5.
 
-Those `45` points are now measured against the complete 100-point pilot target,
-so readiness is `45%`. Implemented but unaccepted B7.1 work remains recorded as
-evidence and earns no additional points until its live acceptance gate passes.
+Those `45` historical points plus the `8` accepted P1 points are measured
+against the complete 100-point pilot target, so readiness is `53%`. Implemented
+but unaccepted B7.1 work remains recorded as evidence and earns no additional
+points until its live acceptance gate passes.
 
 ## Verified-Work Finality Rule
 
@@ -107,7 +108,7 @@ evidence and earns no additional points until its live acceptance gate passes.
 
 | ID | Block | Points | Accepted | Status | Primary acceptance gate |
 | --- | --- | ---: | ---: | --- | --- |
-| P1 | Azure Cost Stabilization | 8 | 7 | In progress: cost-bearing cleanup complete; monitoring guardrail remains | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
+| P1 | Azure Cost Stabilization | 8 | 8 | Accepted and locked | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
 | P2 | Pilot Infrastructure And Tenant Lifecycle | 14 | 7 | In progress | Stable GitHub-controlled pilot environment, ordinary tenant provisioning, dated Premium entitlement, backup/restore, observability, and rollback pass |
 | P3 | Core Operational Product Completion | 20 | 20 | Accepted and locked | Setup, registers, movement, tasks/issues, checklist source of truth, daily work, permissions, and manual operations remain accepted |
 | P4 | Premium Import, Knowledge, And Forecasting | 18 | 10 | In progress | Deterministic import remains locked; AI import, SOP/CPG knowledge, and 3/6/12-month operational forecasting pass human-review and tenant gates |
@@ -174,7 +175,7 @@ P1 accepted-point breakdown:
 | P1-C Inactive live SQL database-copy retirement | 1 | Accepted and locked |
 | P1-D Legacy Qatar environment and deployment-identity retirement | 2 | Accepted and locked |
 | P1-E GitHub deployment and staging availability after cleanup | 1 | Accepted and locked |
-| P1-F Budget thresholds, forecast alerts, and monitoring ingestion cap | 1 | Not accepted |
+| P1-F Budget thresholds, forecast alerts, and monitoring ingestion cap | 1 | Accepted and locked |
 
 P1 Phase B and Phase C evidence, 2026-08-14:
 
@@ -203,11 +204,20 @@ P1 Phase B and Phase C evidence, 2026-08-14:
   `USD 75` ceiling retained. The confirmed fixed monthly reduction is
   approximately `USD 117.41`: `USD 57.18` from retiring eight live SQL copies
   and `USD 60.23` from retiring the Qatar Windows B1 environment.
-- P1-F remains open because the existing budget has actual thresholds at
-  50/80/100 percent, not the required 50/75/90/100 actual and forecast
-  thresholds, and the retained Log Analytics workspace has no daily ingestion
-  cap. Phase C explicitly excluded changes to retained staging monitoring, so
-  this gap was not silently altered or marked complete.
+- P1-F closed on 2026-08-14. Budget `budget-acuityops-stg-monthly` remains at
+  `USD 75` and now sends both actual and forecast notifications at 50%, 75%,
+  90%, and 100% to `admin@vectoropsgroup.com`.
+- Log Analytics workspace `log-acuityops-stg-za-001` now has a `0.1 GB/day`
+  ingestion cap, retains 30 days of logs, remains on `PerGB2018`, and was
+  healthy after the change. The preceding 30-day billable-ingestion query
+  returned zero usage, so the cap preserves substantial diagnostic headroom
+  while bounding a runaway logger to approximately 3 GB/month.
+- Application Insights remains provisioned in Log Analytics ingestion mode and
+  linked to the retained workspace. App Service availability remained Normal;
+  GitHub staging workflow run `31805070116` remained successful; and the public
+  root, workspace login, CSS, and AcuityOps logo all returned HTTP 200.
+- No product source, tenant data, database data, or Azure resource topology was
+  changed for P1-F. P1 is accepted and locked at `8/8`.
 
 ### P2 Pilot Infrastructure And Tenant Lifecycle
 
@@ -785,13 +795,14 @@ progress or execution order.
 
 ## Next Authorized Action
 
-Complete P1-F as one bounded Azure cost-control configuration batch: preserve
-the `USD 75` monthly ceiling, replace the current 50/80/100 actual-only budget
-notifications with required 50/75/90/100 actual and forecast notifications,
-and propose the smallest safe Log Analytics daily ingestion cap before changing
-it. Verify alert recipients, retained diagnostic coverage and staging health.
-Do not provision resources, edit product source or data, reopen P1-A through
-P1-E, or mix P4 AI defect work into P1.
+Begin P2 with one bounded Premium pilot entitlement-lifecycle batch. Implement
+an explicit tenant-owned twelve-month Premium pilot entitlement with start,
+expiry, status, audit history, reminders, manual extension and revocation, and
+an expiry state that preserves tenant data while limiting unavailable Premium
+features to read-only/export behavior. Reuse the accepted tenant-isolation,
+setup, GitHub deployment, backup, monitoring, and rollback evidence already
+mapped to P2. Do not add automated billing, seed entitlements, client-specific
+code, or reopen P1/P3 without a reproducible regression.
 
 ## Update Rules
 
