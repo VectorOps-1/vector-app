@@ -1,6 +1,9 @@
 # AcuityOps Master Build Spec
 
-This file is the controlling execution spec for AcuityOps. Work must follow this file unless the user explicitly changes the spec. Do not introduce hidden phases, hidden prerequisites, or undocumented shortcuts.
+This file is the controlling product-requirements spec for AcuityOps. The
+Single-Client Premium Pilot Roadmap controls current execution order and
+progress. Do not introduce hidden phases, hidden prerequisites, or undocumented
+shortcuts.
 
 ## Non-Deviation Rules
 
@@ -14,10 +17,10 @@ This file is the controlling execution spec for AcuityOps. Work must follow this
 8. Keep `http://localhost:5000` as the stable local app URL for verification.
 9. Commit only intentional source changes in logical slices after verification.
 10. If a change reveals a better product decision, report it as a suggested improvement before continuing.
-11. `docs/specs/commercial-launch-progress-tracker.md` is the mandatory execution gate. Codex may execute only its single authorized action unless the user approves a tracker change.
+11. `docs/specs/single-client-premium-pilot-roadmap.md` is the mandatory execution gate. Codex may execute only its single authorized action unless the user approves an authority change.
 12. Codex must not invent blocks, batches, phases, prerequisites, or continuation work.
 13. Before implementation, Codex must confirm the authorized batch, allowed and forbidden scope, required reasoning level, verification, and stop condition.
-14. Accepted and locked work may be reopened only under the Verified-Work Finality Rule in the progress tracker.
+14. Accepted and locked work may be reopened only under the Verified-Work Finality Rule in the pilot roadmap.
 15. After an accepted batch, update its evidence once. Do not create repeated alignment, reconciliation, closeout, or verification work.
 16. Documentation-only changes are allowed only when explicitly requested and must not be mixed with product source changes.
 
@@ -44,7 +47,7 @@ Mandatory cost-control rules:
 9. Codex must stop before risky uncertainty instead of exploring broadly. Risky uncertainty includes unclear tenant ownership, unclear source of truth, destructive data changes, provider choice, legal/compliance uncertainty, billing consequences, or security implications.
 10. Major unfinished capabilities must never be mixed into cleanup batches.
 11. If a batch reveals a new major feature, provider decision, legal dependency, or architecture dependency, Codex must record it as future work and stop before coding it.
-12. The Commercial Launch Progress Tracker remains the execution gate. Batching does not permit undocumented work or silent scope expansion.
+12. The Single-Client Premium Pilot Roadmap remains the execution gate. Batching does not permit undocumented work or silent scope expansion.
 
 Dedicated major-capability rule:
 
@@ -68,10 +71,10 @@ Roadmap preservation rule:
 
 The product vision and phase order below remain valid. The Credit Control Protocol changes execution discipline, not the product direction. If a roadmap conflict is found, Codex must document the conflict in this spec or tracker and stop; it must not silently change phase order or product scope.
 
-## Commercial Launch Progress Gate
+## Premium Pilot Progress Gate
 
 The master spec defines detailed product requirements. The sole progress and
-execution authority is `docs/specs/commercial-launch-progress-tracker.md`.
+execution authority is `docs/specs/single-client-premium-pilot-roadmap.md`.
 
 Mandatory operating rules:
 
@@ -2490,7 +2493,7 @@ Legal review rules:
 ## Progress And Execution Status
 
 All percentages, block status, accepted evidence, and execution authorization are
-maintained only in `docs/specs/commercial-launch-progress-tracker.md`. This spec
+maintained only in `docs/specs/single-client-premium-pilot-roadmap.md`. This spec
 must not contain a second progress ledger.
 
 ## Change Control

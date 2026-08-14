@@ -1,59 +1,81 @@
-# AcuityOps Commercial Launch Progress Tracker
+# AcuityOps Single-Client Premium Pilot Roadmap
 
-Status: Active and sole progress authority
+Status: Active and sole roadmap, progress, and execution authority
 
-Updated: 2026-07-29
+Updated: 2026-08-14
 
 ## Authority
 
-This is the only AcuityOps document permitted to calculate completion, report
-block status, or nominate the authorized execution action. The recovery roadmap and
-commercial completion roadmap define requirements. Implementation blueprints
-define approved block scope. This tracker records accepted evidence and controls
-movement between blocks.
+This file is the only AcuityOps document permitted to calculate completion,
+report execution status, order mandatory work, or nominate the next authorized
+action. Requirement specifications, architecture decisions, runbooks, add-on
+contracts, and implementation blueprints remain binding within their approved
+scope, but they do not calculate progress or change execution order.
 
-`100%` means the first real customer has successfully completed subscription
-payment, received an isolated production tenant, signed in, and reached the
-onboarding flow. Plans, documentation, partially implemented work, test tenants,
-and staging demonstrations do not earn completion unless their block acceptance
-gate has passed.
+The prior commercial-launch sequence is replaced by this pilot-first sequence.
+Its accepted evidence has been migrated below and is not discarded. Git history
+retains the previous authority as historical context.
 
-The first customer may subscribe to the core product without Add-On Track A1.
-Add-on completion and first add-on purchase are reported separately.
+`100%` means one real pilot client has:
+
+1. received an ordinary, isolated tenant through the supported provisioning and
+   Setup Wizard paths;
+2. received a dated twelve-month Premium pilot entitlement without hardcoded
+   identity, seed data, or billing dependency;
+3. entered or imported its own operational data;
+4. operated every approved pilot workflow on desktop and mobile;
+5. passed the complete pilot acceptance, security, restore, export, evidence,
+   support, and data-isolation gates; and
+6. reached normal daily use on the stable pilot environment.
+
+Payment, automated subscriptions, a public website, public trials, enterprise
+scaling, and Add-on Track A1 are not part of this 100% definition. They remain
+post-pilot requirements and may not delay or expand the pilot critical path.
+
+## Pilot Product Boundary
+
+The pilot is a real product environment for one client, not a demo tenant and
+not a client-specific fork. The following boundaries are mandatory:
+
+- all tenant-owned records retain `CompanyId` isolation and every existing
+  cross-tenant test remains binding;
+- the pilot client is created and managed as an ordinary removable tenant;
+- no company name, workspace, credential, checklist, register, entitlement, or
+  fallback is hardcoded or seeded;
+- product-owned schematic and future global libraries remain separate from
+  tenant assignments;
+- the data model and supported provisioning path continue to allow additional
+  tenants later without schema redesign;
+- only one client is operationally provisioned during this roadmap;
+- Premium pilot access is an explicit entitlement with start, expiry, status,
+  audit history, and expiry behavior, not a permanent bypass;
+- Add-on Track A1 is separately licensed and remains inactive unless explicitly
+  resumed after its source and legal gates pass.
 
 ## Progress Dashboard
 
 | Measure | Current value |
 | --- | --- |
-| Total mandatory core commercial-launch blocks | 12 |
-| Accepted and locked | 5 |
-| Active core block | Block 7 (B7.1 source verified; provisioning and staging acceptance pending) |
-| Remaining | 7 |
-| Blocked core blocks | 0 |
-| Overall core commercial-launch progress | 48.9% (45 accepted core points / 92 core points) |
-| Add-On Track A1 progress | 12.5% (1/8 stages accepted; B6.1 locked) |
-| Add-On Track A1 commercial availability | Not available; B6.0 externally blocked |
-| Estimated remaining core implementation credits | 84,900-146,400 |
-| Credit estimate basis | Planning range; actual usage is not reliably metered by block |
+| Mandatory pilot blocks | 8 |
+| Accepted evidence points | 45 / 100 |
+| Overall Premium pilot readiness | 45% |
+| Active block | P1 Azure Cost Stabilization |
+| Locked completed product evidence | Historical B1-B5 evidence migrated below |
+| Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
+| Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
+| Current Azure month-to-date spend | USD 32.83 reported on 2026-08-14 |
+| Pilot Azure monthly ceiling | USD 75 total; approval required before a forecast above USD 60 |
 
-The overall core score is the sum of accepted core points divided by the
-92-point mandatory core pool. Partial block work does not earn weighted
-progress. Blocks 1 through 5 contribute
-`7 + 8 + 12 + 8 + 10 = 45` accepted core points, so current progress is
-`45 / 92 = 48.9%`. The South African DOH Compliance Pack is separately tracked
-as Add-On Track A1 and neither contributes to nor blocks core launch progress.
-The increase from 45% to 48.9% is a denominator correction after separating the
-optional add-on, not newly completed implementation.
+The previous accepted points are preserved exactly:
 
-## Reasoning Levels
+- historical B1 contributes `7` accepted points to P2;
+- historical B2 and B3 contribute `20` accepted points to P3;
+- historical B5 contributes `10` accepted points to P4;
+- historical B4 contributes `8` accepted points to P5.
 
-- `Medium`: routine implementation, targeted verification, UI, documentation,
-  and isolated workflow fixes.
-- `High`: migrations, tenant isolation, permissions, imports, billing,
-  production architecture, security, or compliance data contracts.
-- `XHigh`: an irreversible AI/provider/data-residency decision not resolved by
-  an approved ADR, or a critical production security/release review. It is not
-  used for routine AI design or implementation.
+Those `45` points are now measured against the complete 100-point pilot target,
+so readiness is `45%`. Implemented but unaccepted B7.1 work remains recorded as
+evidence and earns no additional points until its live acceptance gate passes.
 
 ## Verified-Work Finality Rule
 
@@ -81,36 +103,266 @@ optional add-on, not newly completed implementation.
 10. A proposed batch that only repeats current accepted evidence must be
     rejected.
 
-## Commercial Block Register
+## Pilot Block Register
 
-| ID | Block | Core weight points | Status | Dependencies | Acceptance gate | Reasoning | Estimated credits |
-| --- | --- | ---: | --- | --- | --- | --- | ---: |
-| B1 | Stable staging and committed-source foundation | 7 | Accepted and locked | None | GitHub-controlled deployment serves the app and static assets from stable Azure staging; login and first evidence path pass | Medium/High | Actual not reliably metered |
-| B2 | Base commercial foundation | 8 | Accepted and locked | B1 | Setup gate, core vehicle/staff/equipment registers, checklist source of truth, action permissions, and evidence baseline pass | Medium/High | Actual not reliably metered |
-| B3 | Base manual operations completion | 12 | Accepted and locked | B2 | All six batches pass staging with no seed/fallback data and no regression of locked evidence | Medium; High only for an approved migration | 8,900-13,400 |
-| B4 | PDF evidence and report reliability | 8 | Accepted and locked | B3 | Every submitted checklist has complete, professional, tenant-scoped report/PDF evidence; reporting drilldowns and role scopes pass staging | High | 7,000-10,000 |
-| B5 | Pro import, column matching, and conversion | 10 | Accepted and locked | B4 | Validated Excel register/checklist import, preview, correction, deduplication, mapping, audit, and explicit publishing pass | High | 14,000-24,000 |
-| B7 | Premium AI and knowledge intelligence | 12 points | Planned; three-part blueprint proposed, no implementation accepted | B5 | Human-reviewed AI import, 3/6/12-month operational forecasting, failure/shortage analytics, and cited SOP/CPG ingestion pass safety and audit gates; A1 compliance forecasting remains a separate extension | High for architecture, migrations, isolation and evidence; Medium for bounded implementation | 24,000-40,000 |
-| B8 | Operational communications and product libraries | 6 | Not started; not yet decomposed | B3 | SMS/email notification delivery, preferences, audit/failure handling, and the product-owned global vehicle schematic library pass cross-tenant and mobile checks | High | 8,000-15,000 |
-| B9 | Production Azure SaaS platform | 11 | Not started; not yet decomposed | B3, B4 | Production tenant/storage isolation, managed database/blob/secrets, CI/CD, client-specific release controls, backups, observability, incident response, and rollback pass | High; XHigh for final security review | 18,000-30,000 |
-| B10 | Billing, tiers, subscriptions, and data lifecycle | 7 | Not started; not yet decomposed | B9 | Base/Pro/Premium/Enterprise and separately licensed add-on enforcement, invoices, VAT/tax, payment failure/grace/refund, downgrade/cancel, export, deletion, retention, and offboarding pass | High | 10,000-18,000 |
-| B11 | Legal, security, support, and client success | 4 points | Not started; not yet decomposed | B9, B10 | Core POPIA/legal review, liability/trademark decisions, security evidence, support SLAs, training, documentation, escalation, and feedback loops are approved; A1 legal review remains separate | High | 6,000-12,000 |
-| B12 | Website, trial, and public truth control | 3 | Not started; not yet decomposed | B7, B10, B11 | Website, pricing, signup/demo/trial flows, analytics, SEO, and every public claim match verified product/tier/legal truth; A1 may be advertised only after its separate commercial gate passes | Medium; High for legal/billing review | 6,000-10,000 |
-| B13 | Production release and first customer activation | 4 points | Not started; not yet decomposed | Core B1-B5 and B7-B12 | Release/security/mobile/tenant/payment tests pass and the first real customer pays, receives an isolated tenant, signs in, and reaches onboarding; A1 is not required | High; XHigh for final release/security gate | 4,000-8,000 |
+| ID | Block | Points | Accepted | Status | Primary acceptance gate |
+| --- | --- | ---: | ---: | --- | --- |
+| P1 | Azure Cost Stabilization | 8 | 0 | Active | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
+| P2 | Pilot Infrastructure And Tenant Lifecycle | 14 | 7 | In progress | Stable GitHub-controlled pilot environment, ordinary tenant provisioning, dated Premium entitlement, backup/restore, observability, and rollback pass |
+| P3 | Core Operational Product Completion | 20 | 20 | Accepted and locked | Setup, registers, movement, tasks/issues, checklist source of truth, daily work, permissions, and manual operations remain accepted |
+| P4 | Premium Import, Knowledge, And Forecasting | 18 | 10 | In progress | Deterministic import remains locked; AI import, SOP/CPG knowledge, and 3/6/12-month operational forecasting pass human-review and tenant gates |
+| P5 | Notifications And Evidence | 10 | 8 | In progress | Immutable report/PDF evidence remains locked; required email/SMS events, preferences, delivery audit, failure handling, and evidence links pass |
+| P6 | Security, Data Lifecycle, And Support | 12 | 0 | Not started | Security review, restore drill, export, deletion, retention, offboarding, incident process, support path, and pilot legal documents pass |
+| P7 | Full UI And Mobile Quality | 8 | 0 | Not started | Every pilot route uses the shared app shell and passes desktop/mobile workflow, accessibility, empty/loading/error, and visual consistency checks |
+| P8 | Pilot Onboarding And Acceptance | 10 | 0 | Not started | A real pilot tenant completes onboarding, enters/imports its own data, operates every approved workflow, and signs off the acceptance matrix |
 
-Mandatory core weights total `92 points` and are normalized to `100%` for the
-core commercial-launch percentage. Historical block IDs remain unchanged.
+Total pilot weight is exactly `100` points. Points move only when a named child
+gate with recorded evidence is accepted. Existing locked evidence is never
+retested merely to earn points.
 
-### Separately Licensed Add-On Register
+## Mandatory Execution Order
 
-| Add-on | Product | Progress | Commercial availability | Dependency | Acceptance gate | Reasoning | Estimated credits |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 (historical B6) | South African DOH Compliance Pack | 12.5% (1/8 stages accepted) | Not available; B6.0 externally blocked | B4, B5 and approved national/provincial sources | B6.0-B6.7, annual entitlement lifecycle, legal/private-EMS review, tenant isolation, evidence/export parity and public-claim controls pass | High; XHigh only for unresolved legal/source conflicts | 10,000-18,000 plus external review costs |
+1. `P1` Azure Cost Stabilization.
+2. Close the remaining `P2` pilot infrastructure and entitlement gates.
+3. Complete the remaining `P4` Premium intelligence gates.
+4. Complete the remaining `P5` notification gates while preserving locked
+   evidence behavior.
+5. Complete `P6` security, data lifecycle, restore, and support controls.
+6. Complete `P7` as one bounded full pilot-route UI quality program.
+7. Complete `P8` with the real pilot client.
 
-Add-On Track A1 is governed by
-`docs/specs/sa-doh-compliance-pack-add-on-contract.md`. Its completion and
-commercial availability are reported separately and do not affect the core
-percentage.
+`P3` is already locked. It is not reopened unless the Verified-Work Finality
+Rule is triggered.
+
+## Block Acceptance Contracts
+
+### P1 Azure Cost Stabilization
+
+Scope:
+
+- identify the current resource-level cost and retain one necessary pilot
+  resource set;
+- verify and retire obsolete App Service environments only after backup and
+  dependency checks;
+- replace billable SQL database-copy backups with approved built-in restore or
+  Blob/BACPAC retention;
+- retain one active pilot database and no persistent verification database;
+- cap Application Insights ingestion and retention;
+- configure actual and forecast alerts at 50%, 75%, 90%, and 100%; and
+- record fixed baseline and variable AI/document costs independently.
+
+Cost gates:
+
+- persistent fixed pilot infrastructure target: `<= USD 45/month`;
+- AI and document-processing allowance: `<= USD 20/month` unless explicitly
+  approved;
+- total monthly budget: `USD 75`;
+- no new provisioning when forecast reaches `USD 60` without approval;
+- no copied billable database may remain beyond 24 hours after its controlled
+  verification purpose ends.
+
+Acceptance requires a resource inventory, cost-by-resource evidence, confirmed
+backup/restore path, deletion plan approval, post-cleanup forecast, and no loss
+of app availability or recoverability.
+
+### P2 Pilot Infrastructure And Tenant Lifecycle
+
+Acceptance requires:
+
+- one stable pilot URL deployed from committed GitHub source through CI;
+- one ordinary pilot tenant with no seed/fallback identity;
+- tenant-owned storage paths, database queries, sessions, uploads, AI jobs,
+  reports, audit logs, and assignments scoped by company;
+- a twelve-month Premium pilot entitlement with start, expiry, status, audit,
+  reminder, expiry, and manual extension/revocation behavior;
+- expiry never deletes tenant data and changes unavailable Premium functions to
+  an explicit read-only/export state;
+- Setup Wizard completion, owner/senior/ops/staff access, and first-operation
+  guidance;
+- managed identity, Key Vault, backups, restore, telemetry, deployment, and
+  rollback verified; and
+- a documented path for adding another tenant later without client-specific
+  code or schema changes.
+
+### P3 Core Operational Product Completion
+
+This gate is accepted and locked from historical B2-B3 evidence. It covers:
+
+- company setup and operational structure;
+- staff, vehicle, equipment, stock, and medication registers;
+- movement, allocation, service, expiry, tasks, issues, and feedback;
+- role and area boundaries;
+- blank checklist authoring, scoped publishing, daily checks, and checklist
+  source-of-truth behavior; and
+- no seed, fixed-form, or fallback product data.
+
+### P4 Premium Import, Knowledge, And Forecasting
+
+Acceptance requires:
+
+- locked deterministic Excel/CSV mapping, validation, correction, duplicate,
+  transactional commit, removal, and checklist conversion behavior;
+- AI suggestions that remain advisory, tenant-scoped, budgeted, privacy-safe,
+  human-reviewed, and unable to bypass deterministic mutation controls;
+- AI-assisted register imports support operational staff, asset, stock, and
+  medication source structures without granting login access;
+- SOP/CPG PDF and Word uploads become immutable, versioned, cited, searchable
+  tenant knowledge with human review and no invented clinical guidance;
+- 3/6/12-month forecasts use tenant operational evidence to identify likely
+  shortages, failures, expiry, service pressure, recurring issues, and data
+  quality limitations in clear language;
+- forecasting never claims legal or regulatory compliance and never invokes
+  Add-on Track A1; and
+- all AI use has cost ledgers, per-company limits, provider-failure fallback,
+  retention controls, and prompt/response privacy boundaries.
+
+### P5 Notifications And Evidence
+
+Acceptance requires:
+
+- locked immutable report detail and PDF parity remain unchanged;
+- event definitions for assignment, issue, task, checklist failure, expiry,
+  service, import completion/failure, access activation, and pilot entitlement
+  expiry;
+- email/SMS preferences, recipient scope, templates, provider abstraction,
+  retries, opt-out where permitted, delivery status, failure handling, and audit;
+- messages contain no unnecessary sensitive or patient-identifiable data; and
+- notification links resolve to authorized evidence or work items only.
+
+### P6 Security, Data Lifecycle, And Support
+
+Acceptance requires:
+
+- targeted application security, dependency, secrets, access, tenant,
+  upload/file, audit, and operational threat review;
+- successful backup restore and release rollback drills;
+- complete tenant export with manifest, records, evidence, files, audit data,
+  and integrity hashes;
+- governed deletion, retention, legal hold, cancellation, and offboarding paths;
+- pilot privacy, processing, acceptable-use, support, incident, backup, data
+  ownership, and feedback terms reviewed with qualified counsel;
+- support contacts, severity levels, response targets, escalation, incident
+  evidence, and change communication; and
+- no pilot data is used to train product AI models.
+
+### P7 Full UI And Mobile Quality
+
+Acceptance requires one consolidated pilot-route sweep covering:
+
+- shared AcuityOps shell and authenticated tenant branding;
+- setup, Home, all registers, movement, tasks/issues, checklist management,
+  daily work, reports/PDF, imports, knowledge, forecasts, notifications,
+  profile/access, and export/offboarding routes;
+- desktop and representative phone widths;
+- app-style actions, list density, grouping/collapse, sticky horizontal controls,
+  responsive text, forms, confirmations, success/error/loading/empty states,
+  keyboard access, contrast, and no dead ends; and
+- no page-specific duplicate navigation, placeholder control, missing asset, or
+  prototype artifact.
+
+### P8 Pilot Onboarding And Acceptance
+
+Acceptance requires:
+
+- the pilot client is provisioned through supported paths and receives the
+  dated Premium entitlement;
+- the client completes Setup Wizard and adds/imports its own staff, operational
+  structure, assets, stock, medication, checklists, and documents;
+- staff, operational managers, senior managers, and owner complete the signed
+  role-based acceptance matrix;
+- one complete daily operational cycle, issue/task cycle, movement cycle,
+  checklist/report/PDF cycle, import cycle, knowledge query, forecast, and
+  notification cycle passes;
+- restore, export, support, incident, entitlement-expiry, and offboarding
+  rehearsals pass without deleting pilot data;
+- all severity-one and severity-two defects are closed; and
+- the client reaches stable normal use with a documented support and change
+  process.
+
+## Explicit Deferrals
+
+The following remain valid future requirements but are excluded from pilot
+progress and execution:
+
+- automated billing, invoices, VAT/tax, payment providers, failed-payment
+  automation, refunds, downgrade automation, and paid renewal;
+- public website, SEO, public pricing, lead capture, demos, public trials, and
+  sales conversion;
+- enterprise client-specific releases, multiple production regions, dedicated
+  databases per large tenant, and large-client Azure scaling;
+- complete global schematic-library expansion beyond the schematics necessary
+  for the pilot's real fleet; and
+- Add-on Track A1, including every B6.2+ implementation step.
+
+Deferral does not delete these requirements. It prevents them from consuming
+pilot budget or delaying the first operational client.
+
+## Cost-Control Execution Rules
+
+1. Work uses the fewest coherent batches; row-by-row micro-work is prohibited.
+2. Before source work, state scope, exclusions, risk, verification, commit plan,
+   and cost impact.
+3. Inspect only direct dependencies. Full-app audits occur only at P7, P8, a
+   security gate, or by explicit instruction.
+4. Reuse locked evidence. Reverification requires a reproducible regression.
+5. Use one build, one source commit, one deployment, and one evidence update per
+   coherent passing batch unless a declared risk requires separation.
+6. Prefer existing resources, libraries, provider abstractions, and accepted
+   contracts over new services or parallel implementations.
+7. Fake tenant data may be used only for controlled functional verification and
+   must be ordinary removable tenant data.
+8. No Azure resource is created, upgraded, or retained without a monthly cost,
+   owner, purpose, deletion condition, and approval.
+9. A budget is an alert, not a cap. Forecast and resource-level cost are checked
+   before provisioning and after deployment.
+10. Major unfinished capability work is never mixed into cleanup or UI batches.
+
+## Verification Rules
+
+1. Automated Release build and targeted tests precede browser verification.
+2. Browser verification covers changed routes and one directly dependent flow.
+3. Tenant or permission changes require two-tenant and role-boundary tests.
+4. Migration changes require disposable SQLite apply/rollback and SQL Server
+   script review before active-environment application.
+5. Controlled active writes require backup, supported UI or governed command,
+   acceptance evidence, and safe cleanup.
+6. Pilot evidence and reports are never backfilled, inferred, or rewritten.
+7. GitHub CI is the committed-source gate; Azure deployment uses the accepted
+   workflow only.
+8. Documentation-only changes require no build, database, browser, or Azure use.
+
+## Reasoning Levels
+
+- `Medium`: bounded implementation, UI, documentation, routine tests, builds,
+  deployment, and targeted verification.
+- `High`: migrations, tenant isolation, authentication, permissions, evidence
+  integrity, AI privacy, data lifecycle, cost-bearing resource deletion, and
+  cross-module source-of-truth changes.
+- `XHigh`: only irreversible production security, tenancy, provider,
+  data-residency, or legal architecture decisions not resolved by an approved
+  decision record.
+
+## Hard Stops
+
+Stop before proceeding when:
+
+- a destructive or unverified migration is required;
+- tenant data, historical evidence, product-owned assets, or login access could
+  be lost, rewritten, leaked, or silently recreated;
+- safe backup, restore, cleanup, or rollback is unavailable;
+- Azure forecast reaches USD 60 or a new recurring resource is required without
+  approval;
+- authentication, external legal review, provider ownership, or client action
+  requires the user;
+- a requirement conflicts with this pilot boundary; or
+- work would enter an explicit deferral or Add-on Track A1.
+
+## Historical Add-On Evidence
+
+Add-on Track A1 remains separately governed by
+`docs/specs/sa-doh-compliance-pack-add-on-contract.md`. Historical B6.0 and B6.1
+evidence is retained later in this file but contributes no pilot points and
+creates no pilot dependency.
 
 ## Accepted Evidence
 
@@ -167,8 +419,8 @@ Authority: `docs/specs/block-3-base-manual-operations-execution-blueprint.md`
 | B3.5 | Manual Checklist Authoring Completion | B2 checklist source of truth | Accepted and locked | Blank builder supports sections/items/subitems/columns/notes/register links and correct scoped publish/live display | Medium; High if migration is required | 2,400-3,600 | Accepted from targeted staging authoring and live-check verification |
 | B3.6 | Base Manual Operations Closure Regression | B3.1-B3.5 | Accepted and locked | One targeted staging pass proves all Block 3 workflows and locked B2 boundaries | Medium | 600-1,000 | Accepted from 2026-07-13 Slice 1-3 evidence; no regression trigger found |
 
-Block 3 earns its `12%` only when all six batches and the blueprint closure gate
-are accepted.
+Historical Block 3 acceptance is retained as P3 evidence. The historical block
+percentage is superseded by the pilot point model above.
 
 ### Block 3 Slice 1 Evidence
 
@@ -354,7 +606,7 @@ Proposed authorities:
 
 | Part | Objective | Status | Core boundary |
 | --- | --- | --- | --- |
-| B7.1 | Premium AI Import Intelligence | Source and privacy hardening committed; Azure provisioning and staging acceptance pending | AI suggestions must enter the accepted Block 5 deterministic review, validation, commit and publication contract |
+| B7.1 | Premium AI Import Intelligence | Source, privacy controls, Azure resources, managed identity, migration, and feature configuration implemented; live structured-mapping acceptance blocked by a confirmed validation defect | AI suggestions must enter the accepted Block 5 deterministic review, validation, commit and publication contract |
 | B7.2 | SOP/CPG Knowledge System | Not started | Immutable tenant sources, reviewed extraction, tenant-scoped search, and cited Q&A; no A1 conclusions |
 | B7.3 | Operational Forecasting And Integrated Closure | Not started | 3/6/12-month operational findings and explanations only; no regulatory compliance forecasting |
 
@@ -374,15 +626,27 @@ B7.1 source evidence:
   scope, cost limits, manager-role boundary, Block 5 handoff, no staff login
   creation, privacy confirmation, staff-value prompt omission, patient-field
   detection and raw-provider-output exclusion from failure records.
-- No Azure AI resource was provisioned, no active database migration was
-  applied, no deployment occurred, and no B7.2 work began during this evidence
-  slice.
+- Azure OpenAI resource `oai-acuityops-stg-za-001` and GlobalStandard deployment
+  `ai-structured-low-cost` were provisioned for the approved bounded use case.
+- Azure Document Intelligence resource `di-acuityops-stg-za-001`, queue
+  `premium-ai-import`, managed-identity role assignments, tenant AI policy, and
+  feature configuration were established for staging.
+- Staging backup `sqldb-acuityops-stg-before-b7-1-20260803-124057` was taken
+  before additive migration `20260718160000_AddPremiumAiImportGovernance` was
+  applied.
+- Controlled synthetic stock-import acceptance reached the AI suggestion path
+  but failed strict structured-output validation. The page also exposed
+  `ChecklistLayout` and `AiDecision` as required form fields. No stock record
+  was written, and the defect remains the direct B7.1 acceptance blocker.
+- Commits `b460fed` and `29d561f` contain the related guarded B7.1 staging and
+  identity work. B7.2 did not begin.
 
-Source completion does not accept B7.1. B7.1 remains open until the approved
-provider is provisioned/configured and the controlled staging acceptance matrix
-passes. Block 7 changes from 0 to 12 accepted points only after all three parts
-pass the complete safety, tenant, human-review, cost, staging, and audit
-acceptance gate. Overall core progress therefore remains `45 / 92 = 48.9%`.
+Provisioning does not accept B7.1. B7.1 remains open until the confirmed
+structured-output and form-validation defect is fixed and the controlled
+staging acceptance matrix passes. Under this pilot roadmap, the accepted
+deterministic Block 5 evidence already contributes `10` points to P4. Further
+P4 points are awarded only at named AI, knowledge, and forecasting acceptance
+gates.
 
 ## Add-On Track A1: South African DOH Compliance Pack
 
@@ -451,61 +715,51 @@ Authorities:
   province-specific private-EMS operational review. B6.2 may not begin while
   this gate remains blocked.
 
-## Shortest Safe Remaining Order
+## Migrated Historical Roadmap Reconciliation
 
-1. Complete B7 core AI and knowledge functions against accepted import and
-   evidence contracts. Keep A1 compliance extensions excluded.
-2. Complete B8 communications and global schematic expansion without coupling
-   either to seed or tenant identity.
-3. Complete B9 production architecture before billing or real client data.
-4. Complete B10 commercial controls and data lifecycle.
-5. Complete B11 core legal/security/support approval.
-6. Complete B12 public website and trial truth controls only after product and
-   commercial behavior are verified.
-7. Complete B13 release gate and first customer activation.
-8. Resume Add-On Track A1 independently when B6.0 external review evidence is
-   available; it does not delay steps 1-7.
+- Historical B1 maps to P2 and contributes `7` accepted points.
+- Historical B2-B3 map to P3 and contribute `20` accepted points.
+- Historical B4 maps to P5 and contributes `8` accepted points.
+- Historical B5 maps to P4 and contributes `10` accepted points.
+- Historical B7 maps to the unfinished portion of P4. Its implemented but
+  unaccepted B7.1 evidence is retained without receiving points prematurely.
+- Historical B8 notification work maps to P5. Global schematic-library
+  expansion is deferred except for models required by the pilot's actual fleet.
+- Historical B9 infrastructure and security requirements map to P2 and P6.
+- Historical B10 export, retention, and offboarding requirements map to P6.
+  Automated billing and subscription commerce are deferred.
+- Historical B11 support, incident, legal, and operating requirements map to
+  P6.
+- Historical B12 public website, pricing, trial, and sales work is deferred.
+- Historical B13 customer activation is replaced by P8's real pilot onboarding
+  and acceptance gate.
+- Historical B6.0-B6.7 remain Add-on Track A1 and contribute no pilot points.
 
-No requirement is removed by this consolidation. Detailed batches for B5-B13
-remain intentionally undecomposed until the preceding dependency is close to
-acceptance.
+No requirement or accepted evidence is deleted by this mapping. Deferred work
+is retained in the requirement roadmaps and Git history, but cannot alter pilot
+progress or execution order.
 
-## Roadmap Reconciliation
+## Next Authorized Action
 
-- Recovery `R1` maps to B1.
-- Recovery `R2` and commercial `C1` map to B2-B3.
-- Recovery `R3` and commercial `C2` map to B4.
-- Recovery `R4` and commercial `C3` map to B5.
-- Recovery `R5` and commercial `C4` now map to Add-On Track A1 while preserving
-  historical B6.0-B6.7 identifiers.
-- Recovery `R6-R8` and commercial `C5-C6` map to B7.
-- SMS/email notifications and the product-owned schematic-library expansion map
-  to B8 rather than being hidden inside cleanup work.
-- Recovery `R9` and commercial `C7-C8` map to B9-B11.
-- Recovery `R10` and commercial `C9` map to B12-B13.
-
-No ordering conflict remains. The master spec retains detailed product
-requirements but no longer controls progress calculations.
-
-## Next Approved Action
-
-Propose the smallest safe B7.1 Azure provisioning and controlled staging
-acceptance batch using the approved GlobalStandard privacy contract. The batch
-must run live SKU/cost checks before resource creation, preserve managed
-identity and the existing staging budget, apply only the already-verified
-additive migration after backup, and execute the synthetic non-patient B7.1
-acceptance matrix. Do not enter B7.2, activate Add-On Track A1 requirements, or
-reopen Blocks 1-5 without an explicit instruction or a Verified-Work Finality
-Rule trigger.
+Execute P1 Azure Cost Stabilization as a verification-first cost-control batch:
+produce the resource-level current-cost and dependency inventory, identify the
+single pilot resource set, verify backup and restore coverage, and propose the
+exact retirement plan for obsolete SQL copies or environments. Do not delete or
+resize a resource until its dependency, retention, rollback, and projected-cost
+evidence is approved. Do not mix P4 AI defect work into P1.
 
 ## Update Rules
 
-1. Only this file may report overall core or add-on completion percentages.
-2. Only accepted mandatory core block gates change the overall core percentage.
-   Add-on acceptance changes only the relevant add-on progress and commercial
-   availability state.
-3. Each accepted batch updates current-block numerator, evidence, actual credits
-   when known, and remaining risk in one docs commit associated with that batch.
-4. The authorized execution action must always name exactly one batch or docs action.
-5. Any proposed deviation requires an explicit tracker change approved by the
-   user before implementation.
+1. Only this file may report overall pilot or add-on completion percentages,
+   block status, execution order, or the next authorized action.
+2. Only accepted named pilot gates change the overall pilot percentage. Add-on
+   acceptance changes only the add-on progress and availability state.
+3. Each accepted coherent batch updates its block numerator, evidence, actual
+   cost or credits when known, and remaining risk in one docs commit.
+4. The next authorized action must name exactly one pilot block and the smallest
+   coherent batch within it.
+5. Any execution-order, scope, weight, or 100%-definition change requires an
+   explicit approved edit to this file before implementation.
+6. Requirement roadmaps, blueprints, ADRs, contracts, and runbooks may define
+   implementation detail but may not publish a competing percentage, block
+   status, execution order, or next action.

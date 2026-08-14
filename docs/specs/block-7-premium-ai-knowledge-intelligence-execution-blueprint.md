@@ -1,6 +1,6 @@
 # Block 7 Premium AI And Knowledge Intelligence Execution Blueprint
 
-Status: Proposed for approval; no implementation accepted
+Status: Active P4 implementation blueprint; B7.1 live acceptance remains blocked
 
 Updated: 2026-07-29
 
@@ -8,14 +8,14 @@ Updated: 2026-07-29
 
 This blueprint decomposes core commercial block `B7` from:
 
-- `docs/specs/commercial-launch-progress-tracker.md`
+- `docs/specs/single-client-premium-pilot-roadmap.md`
 - `docs/specs/acuityops-recovery-roadmap.md`
 - `docs/specs/commercial-completion-roadmap.md`
 - `docs/specs/acuityops-master-build-spec.md`
 - `docs/specs/block-5-pro-import-execution-blueprint.md`
 - `docs/specs/adr-block-7-ai-provider-and-data-residency.md`
 
-The Commercial Launch Progress Tracker remains the sole progress authority.
+The Single-Client Premium Pilot Roadmap remains the sole progress authority.
 This document controls only Block 7 implementation scope.
 
 Block 7 contains three parts:
@@ -945,7 +945,7 @@ For each part:
 11. Provision or configure only the resources approved for that part.
 12. Run the targeted staging acceptance matrix.
 13. Remove temporary data through supported workflows.
-14. Record evidence in the Commercial Launch Progress Tracker.
+14. Record evidence in the Single-Client Premium Pilot Roadmap.
 15. Commit the tracker/docs evidence and lock the part.
 
 Part order is mandatory: `B7.1 -> B7.2 -> B7.3`.

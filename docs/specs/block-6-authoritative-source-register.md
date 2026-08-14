@@ -4,7 +4,7 @@ Status: Research baseline; B6.1 governance foundation implemented; no source or 
 
 Verified on: 2026-07-19
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
 ## Purpose
 

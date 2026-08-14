@@ -4,7 +4,7 @@ Status: Proposed controlling commercial and module-boundary contract
 
 Updated: 2026-07-29
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
 Regulatory design authority:
 `docs/specs/block-6-sa-private-ambulance-inspection-mode-blueprint.md`

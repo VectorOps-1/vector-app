@@ -1,15 +1,22 @@
 # AcuityOps Commercial Completion Roadmap
 
-Status: Active commercial requirements roadmap
+Status: Retained post-pilot commercial requirements roadmap
 
 Created: 2026-07-12
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
-This roadmap defines commercial requirements. It does not calculate progress or
-authorize the next implementation action.
+This roadmap retains the complete commercial requirements beyond the Premium
+pilot. It does not calculate progress, control pilot execution order, or
+authorize the next implementation action. Automated billing, public website,
+trials, enterprise scaling, and other work explicitly deferred by the pilot
+authority begin only after the pilot gate permits them.
 
-This document controls the path from the current Azure staging foundation to the finished commercial AcuityOps SaaS platform. It is not a pilot-readiness or sales-demo plan. Fake tenant data may be used only to test functions and must never become seed data, fallback data, product identity, or required app data.
+This document records the complete post-pilot path from the Azure staging
+foundation to the finished commercial AcuityOps SaaS platform. It does not
+override the active pilot sequence. Fake tenant data may be used only to test
+functions and must never become seed data, fallback data, product identity, or
+required app data.
 
 ## Current Foundation
 
@@ -447,5 +454,5 @@ Expected credit scale:
 ## Execution Mapping
 
 Current block status, accepted evidence, credit estimates, and execution order are
-maintained only in `docs/specs/commercial-launch-progress-tracker.md`. This
+maintained only in `docs/specs/single-client-premium-pilot-roadmap.md`. This
 requirements roadmap does not contain a separate current-block plan.

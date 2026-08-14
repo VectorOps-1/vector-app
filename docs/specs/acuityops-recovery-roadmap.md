@@ -1,14 +1,15 @@
 # AcuityOps Recovery Roadmap
 
-Status: Active controlling roadmap
+Status: Retained requirement roadmap; execution order superseded by the pilot roadmap
 
 Created: 2026-06-26
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
-This roadmap defines required product direction. The Commercial Launch Progress
-Tracker is the sole block-status, percentage, and next-action authority. Git
-history preserves superseded execution records.
+This roadmap retains required product direction. The Single-Client Premium
+Pilot Roadmap is the sole block-status, percentage, execution-order, and
+next-action authority. Post-pilot requirements in this document do not expand
+the pilot critical path. Git history preserves superseded execution records.
 
 ## Controlling Rule
 
@@ -119,9 +120,9 @@ This protocol is mandatory.
 
 ## Anti-Deviation Rules
 
-1. This file is the active roadmap.
+1. This file is retained requirements input; the Single-Client Premium Pilot Roadmap is the active execution roadmap.
 2. Superseded progress models must not be used or recreated.
-3. Codex may execute only the action identified by the Commercial Launch Progress Tracker unless the user explicitly approves a tracker change.
+3. Codex may execute only the action identified by the Single-Client Premium Pilot Roadmap unless the user explicitly approves an authority change.
 4. If a requested task conflicts with this roadmap, Codex must stop and identify the conflict.
 5. Every batch must preserve the product direction in this roadmap.
 6. Every implementation batch must end with:
@@ -273,7 +274,7 @@ are controlled by
 `docs/specs/sa-doh-compliance-pack-add-on-contract.md`.
 
 Historical Block 6 identifiers and evidence remain attached to Add-on Track A1.
-A1 does not contribute to or block core commercial-launch progress.
+A1 does not contribute to or block Premium pilot progress.
 
 ### Phase R6: Premium AI Import And AI Assistance
 
@@ -474,5 +475,5 @@ The user must approve the batch before implementation.
 ## Current Execution Direction
 
 Current completion, active-block status, and the only authorized next action are
-maintained in `docs/specs/commercial-launch-progress-tracker.md`. Requirements in
+maintained in `docs/specs/single-client-premium-pilot-roadmap.md`. Requirements in
 this roadmap do not independently authorize implementation.

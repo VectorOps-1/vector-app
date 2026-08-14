@@ -1,8 +1,8 @@
 # Block 3 Base Manual Operations Completion Execution Blueprint
 
-Status: Proposed execution blueprint
+Status: Historical implementation blueprint; accepted evidence is locked by the pilot roadmap
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
 Block status, percentage, and authorization to begin a batch come only from the
 progress authority.

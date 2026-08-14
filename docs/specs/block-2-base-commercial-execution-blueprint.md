@@ -2,7 +2,7 @@
 
 Status: Closed
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
 Block 2 acceptance is locked in the progress authority. This blueprint remains
 the detailed evidence and scope record only.

@@ -1,10 +1,10 @@
 # Block 5: Pro Import, Column Matching, And Conversion
 
-Status: Design complete; implementation not started
+Status: Historical implementation blueprint; accepted evidence is locked by the pilot roadmap
 
 Authority:
 
-- Progress and execution status: `commercial-launch-progress-tracker.md`
+- Progress and execution status: `single-client-premium-pilot-roadmap.md`
 - Product requirements: `acuityops-recovery-roadmap.md` Phase R4
 - Commercial requirements: `commercial-completion-roadmap.md` Phase C3
 
@@ -541,8 +541,9 @@ queue claim that does not exist.
 
 ## Implementation Slices
 
-Block 5 is decomposed into five coherent batches. Overall commercial progress
-remains 35% until all five pass and Block 5 closes.
+Block 5 is decomposed into five coherent batches. Its accepted evidence is
+retained by the Single-Client Premium Pilot Roadmap; this blueprint does not
+calculate a percentage or control current execution order.
 
 ### B5.1 Import Foundation And Contract
 
@@ -653,7 +654,7 @@ Scope:
 
 Acceptance:
 
-- the Block 5 acceptance gate in the Commercial Launch Progress Tracker passes;
+- the Block 5 acceptance evidence retained in the Single-Client Premium Pilot Roadmap passes;
 - no seed/fallback data is created;
 - no cross-tenant source, staging row, mapping, record, or checklist is visible;
 - explicit publication is the only route to a live imported checklist;

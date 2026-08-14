@@ -5,7 +5,7 @@ implemented and verified; B6.0 externally blocked; no requirement pack active
 
 Designed: 2026-07-19
 
-Progress authority: `docs/specs/commercial-launch-progress-tracker.md`
+Progress authority: `docs/specs/single-client-premium-pilot-roadmap.md`
 
 Source authority: `docs/specs/block-6-authoritative-source-register.md`
 
