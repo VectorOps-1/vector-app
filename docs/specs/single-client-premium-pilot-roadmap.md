@@ -57,13 +57,13 @@ not a client-specific fork. The following boundaries are mandatory:
 | Measure | Current value |
 | --- | --- |
 | Mandatory pilot blocks | 8 |
-| Accepted evidence points | 45 / 100 |
-| Overall Premium pilot readiness | 45% |
+| Accepted evidence points | 52 / 100 |
+| Overall Premium pilot readiness | 52% |
 | Active block | P1 Azure Cost Stabilization |
 | Locked completed product evidence | Historical B1-B5 evidence migrated below |
 | Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
 | Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
-| Current Azure month-to-date spend | USD 32.83 reported on 2026-08-14 |
+| Current Azure month-to-date spend | USD 32.83 last confirmed on 2026-08-14; Cost Management was throttled during the post-cleanup query |
 | Pilot Azure monthly ceiling | USD 75 total; approval required before a forecast above USD 60 |
 
 The previous accepted points are preserved exactly:
@@ -107,7 +107,7 @@ evidence and earns no additional points until its live acceptance gate passes.
 
 | ID | Block | Points | Accepted | Status | Primary acceptance gate |
 | --- | --- | ---: | ---: | --- | --- |
-| P1 | Azure Cost Stabilization | 8 | 0 | Active | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
+| P1 | Azure Cost Stabilization | 8 | 7 | In progress: cost-bearing cleanup complete; monitoring guardrail remains | One necessary pilot resource set remains; obsolete SQL copies and environments are safely retired; fixed and variable cost controls pass |
 | P2 | Pilot Infrastructure And Tenant Lifecycle | 14 | 7 | In progress | Stable GitHub-controlled pilot environment, ordinary tenant provisioning, dated Premium entitlement, backup/restore, observability, and rollback pass |
 | P3 | Core Operational Product Completion | 20 | 20 | Accepted and locked | Setup, registers, movement, tasks/issues, checklist source of truth, daily work, permissions, and manual operations remain accepted |
 | P4 | Premium Import, Knowledge, And Forecasting | 18 | 10 | In progress | Deterministic import remains locked; AI import, SOP/CPG knowledge, and 3/6/12-month operational forecasting pass human-review and tenant gates |
@@ -164,6 +164,50 @@ Cost gates:
 Acceptance requires a resource inventory, cost-by-resource evidence, confirmed
 backup/restore path, deletion plan approval, post-cleanup forecast, and no loss
 of app availability or recoverability.
+
+P1 accepted-point breakdown:
+
+| Gate | Points | Status |
+| --- | ---: | --- |
+| P1-A Resource and dependency inventory | 1 | Accepted and locked |
+| P1-B Protected database archive and disposable restore proof | 2 | Accepted and locked |
+| P1-C Inactive live SQL database-copy retirement | 1 | Accepted and locked |
+| P1-D Legacy Qatar environment and deployment-identity retirement | 2 | Accepted and locked |
+| P1-E GitHub deployment and staging availability after cleanup | 1 | Accepted and locked |
+| P1-F Budget thresholds, forecast alerts, and monitoring ingestion cap | 1 | Not accepted |
+
+P1 Phase B and Phase C evidence, 2026-08-14:
+
+- Nine BACPACs and their SHA-256 manifest are retained under protected Blob
+  prefix `p1-phase-b/20260814-145021/`; a disposable restore of the active
+  database archive succeeded before the eight inactive live database copies
+  were deleted.
+- The no-secret legacy configuration, RBAC, OIDC and workflow recovery manifest
+  is retained under `p1-phase-c/20260814-162641/`. The post-cleanup evidence file
+  `cleanup-result.json` has SHA-256
+  `230acd2574a22038a9e237fab133dd5f1e45135dee3b7a0ff43e1289a0957766`.
+- GitHub workflow run `31805070116` completed successfully from `main` using
+  staging-owned identity `id-acuityops-gh-stg-za-001`, branch-specific OIDC and
+  `Website Contributor` permission at the staging App Service scope only.
+- The legacy Qatar web app, Windows B1 plan, Application Insights component,
+  Smart Detection action group, two obsolete managed identities, Qatar Log
+  Analytics workspace and both empty Qatar resource groups were deleted only
+  after replacement deployment and dependency verification passed.
+- Only `rg-acuityops-stg-za-001` remains. The retained SQL server contains one
+  active Basic database, `sqldb-acuityops-stg`, plus the system `master`
+  database. The staging Linux app is running and the root, workspace login,
+  CSS and rendered AcuityOps logo returned HTTP 200 after cleanup; the user
+  confirmed authenticated staging login.
+- Fixed monthly infrastructure is projected at approximately `USD 24.89`.
+  Normal one-client usage is projected at `USD 25-45/month`, with the existing
+  `USD 75` ceiling retained. The confirmed fixed monthly reduction is
+  approximately `USD 117.41`: `USD 57.18` from retiring eight live SQL copies
+  and `USD 60.23` from retiring the Qatar Windows B1 environment.
+- P1-F remains open because the existing budget has actual thresholds at
+  50/80/100 percent, not the required 50/75/90/100 actual and forecast
+  thresholds, and the retained Log Analytics workspace has no daily ingestion
+  cap. Phase C explicitly excluded changes to retained staging monitoring, so
+  this gap was not silently altered or marked complete.
 
 ### P2 Pilot Infrastructure And Tenant Lifecycle
 
@@ -741,12 +785,13 @@ progress or execution order.
 
 ## Next Authorized Action
 
-Execute P1 Azure Cost Stabilization as a verification-first cost-control batch:
-produce the resource-level current-cost and dependency inventory, identify the
-single pilot resource set, verify backup and restore coverage, and propose the
-exact retirement plan for obsolete SQL copies or environments. Do not delete or
-resize a resource until its dependency, retention, rollback, and projected-cost
-evidence is approved. Do not mix P4 AI defect work into P1.
+Complete P1-F as one bounded Azure cost-control configuration batch: preserve
+the `USD 75` monthly ceiling, replace the current 50/80/100 actual-only budget
+notifications with required 50/75/90/100 actual and forecast notifications,
+and propose the smallest safe Log Analytics daily ingestion cap before changing
+it. Verify alert recipients, retained diagnostic coverage and staging health.
+Do not provision resources, edit product source or data, reopen P1-A through
+P1-E, or mix P4 AI defect work into P1.
 
 ## Update Rules
 
