@@ -13,13 +13,20 @@ public class ImportHistoryModel : PageModel
     private readonly CurrentUserService _currentUser;
     private readonly ImportBatchService _imports;
     private readonly ImportGovernanceService _governance;
+    private readonly IFeatureAccessService _features;
 
-    public ImportHistoryModel(VectorDbContext db, CurrentUserService currentUser, ImportBatchService imports, ImportGovernanceService governance)
+    public ImportHistoryModel(
+        VectorDbContext db,
+        CurrentUserService currentUser,
+        ImportBatchService imports,
+        ImportGovernanceService governance,
+        IFeatureAccessService features)
     {
         _db = db;
         _currentUser = currentUser;
         _imports = imports;
         _governance = governance;
+        _features = features;
     }
 
     public IReadOnlyList<ImportHistoryRow> Rows { get; private set; } = [];
@@ -63,9 +70,25 @@ public class ImportHistoryModel : PageModel
 
     private async Task LoadAsync(AppUser user, CancellationToken cancellationToken)
     {
-        var prepare = await _imports.CanPrepareAsync(user, cancellationToken);
-        if (!prepare.Allowed) throw new UnauthorizedAccessException(prepare.Message);
-        CanRollback = (await _imports.CanCommitAsync(user, cancellationToken)).Allowed;
+        var featureAccess = await _features.GetFeatureAccessAsync(
+            VectorFeatures.GuidedRegisterImport,
+            cancellationToken);
+        if (!featureAccess.IsFullAccess && !featureAccess.IsReadOnlyExport)
+        {
+            throw new UnauthorizedAccessException("Guided import history is not available for this company.");
+        }
+
+        if (featureAccess.IsFullAccess)
+        {
+            var prepare = await _imports.CanPrepareAsync(user, cancellationToken);
+            if (!prepare.Allowed) throw new UnauthorizedAccessException(prepare.Message);
+            CanRollback = (await _imports.CanCommitAsync(user, cancellationToken)).Allowed;
+        }
+        else
+        {
+            CanRollback = false;
+        }
+
         Rows = await _db.ImportBatches.AsNoTracking()
             .Where(batch => batch.CompanyId == user.CompanyId
                 && batch.SourceAssetFile != null && batch.SourceAssetFile.CompanyId == user.CompanyId)
