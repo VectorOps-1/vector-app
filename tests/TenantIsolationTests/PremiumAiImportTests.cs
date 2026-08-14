@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,58 @@ internal static class PremiumAiImportTests
     public static async Task RunAllAsync()
     {
         await ManagedIdentityTokensRemainAudienceScopedAsync();
+        await AzureProviderUsesGptFiveCompatiblePayloadAsync();
         await SuggestionsRemainTenantScopedAndEnterBlockFiveOnlyAfterReviewAsync();
         await InvalidProviderOutputFailsWithoutDomainWritesAsync();
         RedactionTreatsSourceAsData();
         SourceSafetyDetectsPatientIdentifiers();
         await MigrationAppliesAndRollsBackAsync();
+    }
+
+    private static async Task AzureProviderUsesGptFiveCompatiblePayloadAsync()
+    {
+        var previousEndpoint = Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT");
+        var previousHeader = Environment.GetEnvironmentVariable("IDENTITY_HEADER");
+        try
+        {
+            Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", "http://managed-identity.test/token");
+            Environment.SetEnvironmentVariable("IDENTITY_HEADER", "test-header");
+            var handler = new AzureProviderContractHandler();
+            var factory = new StaticHttpClientFactory(handler);
+            var provider = new AzureOpenAiStructuredOutputProvider(
+                factory,
+                new AzureManagedIdentityTokenSource(factory),
+                Options.Create(new PremiumAiOptions
+                {
+                    Enabled = true,
+                    OpenAiEndpoint = "https://test.openai.azure.com",
+                    OpenAiDeployment = "ai-structured-low-cost",
+                    OpenAiModel = "gpt-5-mini",
+                    MaximumOutputTokens = 512
+                }));
+
+            await provider.CompleteAsync(new AiStructuredOutputRequest(
+                "Return JSON only.",
+                "Return ok true.",
+                "provider_contract",
+                """{"type":"object","additionalProperties":false,"required":["ok"],"properties":{"ok":{"type":"boolean"}}}""",
+                Guid.NewGuid().ToString("N")));
+
+            using var payload = JsonDocument.Parse(handler.ProviderRequestBody
+                ?? throw new InvalidOperationException("The provider request body was not captured."));
+            Ensure(payload.RootElement.TryGetProperty("max_completion_tokens", out var maximum)
+                   && maximum.GetInt32() == 512,
+                "The Azure provider did not use the GPT-5 completion-token parameter.");
+            Ensure(!payload.RootElement.TryGetProperty("max_tokens", out _),
+                "The Azure provider sent the unsupported legacy max_tokens parameter.");
+            Ensure(!payload.RootElement.TryGetProperty("temperature", out _),
+                "The Azure provider sent an unsupported GPT-5 temperature override.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", previousEndpoint);
+            Environment.SetEnvironmentVariable("IDENTITY_HEADER", previousHeader);
+        }
     }
 
     private static async Task ManagedIdentityTokensRemainAudienceScopedAsync()
@@ -304,6 +352,32 @@ internal static class PremiumAiImportTests
             {
                 Content = new StringContent($"{{\"access_token\":\"{token}\",\"expires_on\":\"{expires}\"}}", Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    private sealed class AzureProviderContractHandler : HttpMessageHandler
+    {
+        public string? ProviderRequestBody { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.Host == "managed-identity.test")
+            {
+                var expires = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent($"{{\"access_token\":\"cognitive-token\",\"expires_on\":\"{expires}\"}}", Encoding.UTF8, "application/json")
+                };
+            }
+
+            ProviderRequestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"choices":[{"message":{"content":"{\"ok\":true}"}}],"usage":{"prompt_tokens":12,"completion_tokens":4}}""",
+                    Encoding.UTF8,
+                    "application/json")
+            };
         }
     }
 

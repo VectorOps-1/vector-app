@@ -209,8 +209,7 @@ public sealed class AzureOpenAiStructuredOutputProvider : IAiStructuredOutputPro
                 new { role = "system", content = request.SystemPrompt },
                 new { role = "user", content = request.UserContent }
             },
-            temperature = 0,
-            max_tokens = Math.Clamp(_options.MaximumOutputTokens, 256, 8000),
+            max_completion_tokens = Math.Clamp(_options.MaximumOutputTokens, 256, 8000),
             response_format = new
             {
                 type = "json_schema",

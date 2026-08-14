@@ -51,13 +51,13 @@ public class ImportBatchModel : PageModel
     [BindProperty] public List<MappingInputModel> Mappings { get; set; } = [];
     [BindProperty] public RowCorrectionInputModel RowCorrection { get; set; } = new();
     [BindProperty] public string? ChecklistName { get; set; }
-    [BindProperty] public string ChecklistLayout { get; set; } = ChecklistImportLayouts.ExplicitColumns;
+    [BindProperty] public string? ChecklistLayout { get; set; }
     public ChecklistImportDraft? ChecklistDraft { get; private set; }
     public IReadOnlyList<ImportMappingProfile> MappingProfiles { get; private set; } = [];
     [BindProperty] public string? MappingProfileName { get; set; }
     [BindProperty] public int SelectedMappingProfileId { get; set; }
     [BindProperty] public int AiSuggestionId { get; set; }
-    [BindProperty] public string AiDecision { get; set; } = AiHumanDecisions.Accept;
+    [BindProperty] public string? AiDecision { get; set; }
     [BindProperty] public string? AiCorrectedValue { get; set; }
     [BindProperty] public string? AiReviewNote { get; set; }
     [BindProperty] public bool ConfirmNoPatientData { get; set; }
@@ -97,7 +97,7 @@ public class ImportBatchModel : PageModel
         return await ExecuteAsync(importBatchId, cancellationToken, async user =>
         {
             await _ai.ReviewSuggestionAsync(
-                user, AiSuggestionId, AiDecision, AiCorrectedValue, AiReviewNote, cancellationToken);
+                user, AiSuggestionId, AiDecision ?? string.Empty, AiCorrectedValue, AiReviewNote, cancellationToken);
             return RedirectToPage(new { importBatchId, confirmation = "ai-reviewed" });
         });
     }
@@ -181,7 +181,8 @@ public class ImportBatchModel : PageModel
         return await ExecuteAsync(importBatchId, cancellationToken, async user =>
         {
             await _checklistConversion.PrepareAsync(
-                user, importBatchId, ChecklistName ?? string.Empty, ChecklistLayout,
+                user, importBatchId, ChecklistName ?? string.Empty,
+                ChecklistLayout ?? ChecklistImportLayouts.ExplicitColumns,
                 Worksheet, HeaderRowNumber, cancellationToken);
             return RedirectToPage(new { importBatchId, confirmation = "validated" });
         });
