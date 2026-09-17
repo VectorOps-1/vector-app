@@ -38,6 +38,23 @@ The next authorized action is explicit owner approval to resume AcuityOps from
 the verified hibernation recovery package. Until then, no product implementation,
 deployment, migration, or tenant verification work is authorized.
 
+Hibernation completion evidence:
+
+- recovery source checkpoint `b41e785` is pushed and tagged
+  `acuityops-hibernation-20260917-154643`;
+- current SQL BACPAC export and disposable restore proof passed;
+- active and restored migration signatures matched exactly;
+- storage and no-secret configuration archives passed independent remote hash
+  verification;
+- both GitHub workflows are disabled;
+- continuously billed runtime resources were deleted; and
+- retained Azure resources are limited to Blob recovery storage, Key Vault,
+  the SQL logical server with system `master`, the OpenAI account without a
+  deployment, and the GitHub deployment identity/OIDC.
+
+The authoritative recovery evidence and restart sequence are in
+`docs/specs/acuityops-hibernation-restart-runbook.md`.
+
 `100%` means one real pilot client has:
 
 1. received an ordinary, isolated tenant through the supported provisioning and
@@ -85,7 +102,8 @@ not a client-specific fork. The following boundaries are mandatory:
 | Locked completed product evidence | Historical B1-B5 evidence migrated below |
 | Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
 | Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
-| Current Azure month-to-date spend | Billing lag applies; final hibernation inventory records remaining cost exposure |
+| Current Azure month-to-date spend | Exact value unavailable at closure because Cost Management returned HTTP 429 and consumption records omitted amounts; accrued pre-hibernation charges remain payable |
+| Hibernated Azure run rate | Expected USD 0-2/month; conservative ceiling below USD 5/month |
 | Pilot Azure monthly ceiling | USD 75 total; approval required before a forecast above USD 60 |
 
 The previous accepted points are preserved exactly:

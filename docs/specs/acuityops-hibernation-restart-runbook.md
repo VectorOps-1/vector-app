@@ -1,6 +1,6 @@
 # AcuityOps Controlled Hibernation And Restart Runbook
 
-Status: Recovery package verified; controlled shutdown authorized
+Status: Controlled hibernation completed and verified
 
 Recovery ID: `20260917-154643`
 
@@ -126,3 +126,36 @@ or Log Analytics ingestion. Expected steady-state Azure cost is approximately
 Blob, Key Vault operations, and incidental storage transactions. The first
 invoice after hibernation can be higher because it includes charges accrued
 before deletion and retained-log or billing-reporting lag.
+
+## Completion Evidence
+
+Controlled hibernation completed on 2026-09-17 after every recovery gate
+passed.
+
+- GitHub `main` contains recovery documentation commit `b41e785` and the
+  annotated tag `acuityops-hibernation-20260917-154643` dereferences to that
+  commit.
+- GitHub workflows `CI` and `Deploy Azure Staging` are both
+  `disabled_manually`; neither workflow contains a scheduled trigger.
+- Premium AI and web-log retention were disabled and the web app was stopped
+  before deletion.
+- The BACPAC was imported into a disposable Basic database. Its 32-entry
+  migration signature matched the active database exactly, after which the
+  disposable database was deleted.
+- The storage archive, storage manifest, and configuration manifest were
+  downloaded independently after upload and all three SHA-256 values matched.
+- The App Service, B1 plan, active SQL user database, OpenAI model deployment,
+  Document Intelligence account, Application Insights component, and Log
+  Analytics workspace were deleted successfully.
+- Final Azure inventory contains only `kv-acuityops-stg-001`, the
+  `sql-acuityops-stg-za-001` logical server with system `master`,
+  `stacuityopsstg001`, `oai-acuityops-stg-za-001` with no deployment, and
+  `id-acuityops-gh-stg-za-001` plus its OIDC federation. The resource group is
+  retained.
+- All six recorded Key Vault secrets remain enabled. No secret values were
+  written to source, documentation, or the recovery manifest.
+- Azure Cost Management returned HTTP 429 during the final exact-cost query,
+  and the subscription consumption ledger exposed usage records without
+  monetary amounts. The retained topology still supports the stated
+  `USD 0-2/month` steady-state estimate and conservative `< USD 5/month`
+  ceiling; accrued pre-hibernation charges remain payable.
