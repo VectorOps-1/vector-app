@@ -1,8 +1,8 @@
 # AcuityOps Single-Client Premium Pilot Roadmap
 
-Status: Active and sole roadmap, progress, and execution authority
+Status: Hibernated; sole roadmap and preserved progress authority
 
-Updated: 2026-08-14
+Updated: 2026-09-17
 
 ## Authority
 
@@ -15,6 +15,28 @@ scope, but they do not calculate progress or change execution order.
 The prior commercial-launch sequence is replaced by this pilot-first sequence.
 Its accepted evidence has been migrated below and is not discarded. Git history
 retains the previous authority as historical context.
+
+## Controlled Hibernation
+
+The owner placed AcuityOps into controlled hibernation on 2026-09-17 to stop
+continuously billed development infrastructure while preserving the complete
+recoverable product state. Hibernation pauses execution; it does not reopen,
+invalidate, or reduce accepted product evidence.
+
+- preserved pilot readiness remains `60 / 100` (`60%`);
+- no implementation block may advance while the environment is hibernated;
+- GitHub source, specifications, migrations, tenant data, uploads, schematics,
+  database archives, Key Vault, deployment identity, and recovery evidence are
+  retained;
+- billable runtime resources are removed only after current database restore
+  proof and storage/configuration archives pass;
+- resumption must follow
+  `docs/specs/acuityops-hibernation-restart-runbook.md`; and
+- Add-on Track A1 remains deferred and outside pilot progress.
+
+The next authorized action is explicit owner approval to resume AcuityOps from
+the verified hibernation recovery package. Until then, no product implementation,
+deployment, migration, or tenant verification work is authorized.
 
 `100%` means one real pilot client has:
 
@@ -58,12 +80,12 @@ not a client-specific fork. The following boundaries are mandatory:
 | --- | --- |
 | Mandatory pilot blocks | 8 |
 | Accepted evidence points | 60 / 100 |
-| Overall Premium pilot readiness | 60% |
-| Active block | P4 Premium Import, Knowledge, And Forecasting |
+| Overall Premium pilot readiness | 60% preserved |
+| Active block | None; controlled hibernation |
 | Locked completed product evidence | Historical B1-B5 evidence migrated below |
 | Premium intelligence status | B7.1 source, privacy controls, Azure resources, and migration implemented; live structured-mapping acceptance has a confirmed defect |
 | Add-on Track A1 | Deferred and outside pilot progress; B6.0 externally blocked, B6.1 accepted |
-| Current Azure month-to-date spend | USD 32.83 last confirmed on 2026-08-14; Cost Management was throttled during the post-cleanup query |
+| Current Azure month-to-date spend | Billing lag applies; final hibernation inventory records remaining cost exposure |
 | Pilot Azure monthly ceiling | USD 75 total; approval required before a forecast above USD 60 |
 
 The previous accepted points are preserved exactly:
